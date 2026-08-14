@@ -106,7 +106,12 @@ function baseChar(parts) {
     body: { ...DEFAULT_BODY },
     look: {},
     fighting: {
-      startup: 1, dmg: 1, reach: 1, recovery: 1, speed: 1, hp: 1,
+      // dmg is deliberately off 1 (not the neutral baseline) so this fixture
+      // prices to a NONZERO cost. A fixture that prices to 0 on both sides of
+      // the parts-pricing test below would pass that test even if someone
+      // wired parts.length into the pricer proportionally — 0 * anything is
+      // still 0. See "parts are NOT priced" for why that matters.
+      startup: 1, dmg: 1.03, reach: 1, recovery: 1, speed: 1, hp: 1,
       moves: { special: { archetype: 'strike' }, signature: null },
     },
     commandNormals: [],
@@ -130,6 +135,10 @@ test('parts are NOT priced — they are render-only like shoulders and stride', 
   const without = validateCharacter(baseChar(undefined)).cost;
   const heavy = Array.from({ length: 6 }, (_, i) => ({ ...good(), id: 'p' + i }));
   const with6 = validateCharacter(baseChar(heavy)).cost;
+  // baseChar's fighting profile must price to something other than zero, or
+  // this assertion is vacuous: a proportional pricing bug (cost * (1 + k *
+  // parts.length)) still maps 0 to 0 and would slip straight through.
+  assert.notEqual(without, 0, 'fixture must price to a nonzero cost or this test proves nothing');
   assert.equal(with6, without, 'adding parts must not move the power budget');
 });
 
