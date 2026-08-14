@@ -69,6 +69,20 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.4 — you can tell them apart with the lights off
+
+The cast had a sameness that survived three rounds of art work, and this time we measured it instead of arguing about it. Strip the colour out and flatten all nine to flat white shapes, and they collapse into **two**: five near-identical narrow columns (Lizbeth, Kim, Cathie, Elo, Scam) and three wide blocky ones (Adam, Carl, Jeff). Only Steve was instantly nameable, and not because of his body — because one arm sticks out.
+
+That is the difference between the two fighting games everyone compares us to. One differentiates by costume; the original ninjas were a single sprite in several colours. The other differentiates by *shape*, so you know who it is from the outline. We were accidentally the first one.
+
+- 🧰 **Everyone carries something now.** Lizbeth wears a sample vial, Adam a rolled mat, Steve holds the device up mid-presentation, Kim has a ring light haloing her head, Cathie carries a tablet, Carl never puts the briefcase down, Elo straps a booster to his back, Jeff has a parcel under one arm, and Scam trails a single enormous paperclip. He knows what he did.
+- 🧥 **Cathie has a coat**, and it swings — the first garment that trails the body instead of riding it rigidly.
+- 👁️ **Nine outlines, nine places they break.** Hip, shoulder, forward hand, head, chest, waist, back, and one big slab off the side. No two are the same, and the two-family read is gone.
+
+None of it touches the fight. Props are drawn where the shading and outline passes can see them, so they belong to the silhouette rather than sitting on top of it — but nothing carries a hitbox, nothing is priced by the power budget, and a prop can never make a punch land further than it looks. If a thing should hit you, that's a move, and moves cost.
+
+A note on how this was built, because it kept mattering: a prop can be perfectly present and still invisible, and it happened four separate ways — a colour that matched the suit underneath, a shape drawn behind a body wider than it was, a paperclip traced as a wire when the renderer fills outlines, and a state filter nothing was checking. The build now measures every prop's ink and refuses the ones that draw nothing. It caught one the eye had already passed twice.
+
 ## What's new in v3.3 — the free five-second parry is closed
 
 The power budget prices everything a character can do, so that a custom founder can be strong in one direction only by being weak in another. It had one blind spot, and it was a big one.
