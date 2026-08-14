@@ -130,8 +130,8 @@ export const FIGHTERS = [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
       // ava — LIZBETH HOLMEZ, THERAMOS. The sample vial, worn at the hip.
-      { id: 'vial', shape: 'capsule', anchor: 'hip', dx: -26, dy: -4,
-        w: 16, h: 38, fill: 'accent', z: 'front' },
+      { id: 'vial', shape: 'capsule', anchor: 'hip', dx: -34, dy: 2,
+        w: 22, h: 58, fill: 'accent', z: 'front' },
     ],
   },
   {
