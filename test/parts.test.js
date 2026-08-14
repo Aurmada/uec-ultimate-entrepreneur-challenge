@@ -59,6 +59,14 @@ test('a duplicate id within one character is rejected', () => {
 test('more than the cap is rejected', () => {
   const many = Array.from({ length: 7 }, (_, i) => ({ ...good(), id: 'p' + i }));
   assert.match(validateParts(many)[0], /at most/);
+
+  // The cap must not mask the rest. An author fixing one error at a time,
+  // re-running between each, is exactly the loop this validator exists to avoid.
+  const alsoBroken = [...many];
+  alsoBroken[3] = { ...alsoBroken[3], shape: 'blob' };
+  const errs = validateParts(alsoBroken);
+  assert.ok(errs.some((e) => /at most/.test(e)), 'cap error still reported');
+  assert.ok(errs.some((e) => /shape/.test(e)), 'per-part errors survive the cap error');
 });
 
 test('a path needs at least 3 points and at most 24', () => {

@@ -174,9 +174,9 @@ function inRange(v, [lo, hi]) {
 export function validateParts(parts) {
   if (parts === undefined || parts === null) return [];
   if (!Array.isArray(parts)) return ['parts must be an array'];
-  if (parts.length > PARTS.MAX) return [`parts: at most ${PARTS.MAX} per character`];
 
   const errors = [];
+  if (parts.length > PARTS.MAX) errors.push(`parts: at most ${PARTS.MAX} per character`);
   const seen = new Set();
 
   parts.forEach((p, i) => {
@@ -198,10 +198,10 @@ export function validateParts(parts) {
       errors.push(`${at}.anchor ${JSON.stringify(p.anchor)} is not one of ${PART_ANCHORS.join(', ')}`);
     }
     if (!PART_Z.includes(p.z)) {
-      errors.push(`${at}.z must be 'front' or 'behind'`);
+      errors.push(`${at}.z ${JSON.stringify(p.z)} must be 'front' or 'behind'`);
     }
     if (typeof p.fill !== 'string' || (!FILL_ROLES.includes(p.fill) && !HEX.test(p.fill))) {
-      errors.push(`${at}.fill must be a role (${FILL_ROLES.join(', ')}) or a #rrggbb hex`);
+      errors.push(`${at}.fill ${JSON.stringify(p.fill)} must be a role (${FILL_ROLES.join(', ')}) or a #rrggbb hex`);
     }
 
     for (const k of ['dx', 'dy']) {
@@ -225,7 +225,7 @@ export function validateParts(parts) {
         errors.push(`${at}.pts must be [x, y] pairs inside the offset range`);
       }
     } else if (p.shape === 'ellipse') {
-      if (!inRange(p.r, PARTS.SIZE)) errors.push(`${at}.r ${p.r} outside [${PARTS.SIZE.join(', ')}]`);
+      if (!inRange(p.r, PARTS.SIZE)) errors.push(`${at}.r ${p.r} outside [${PARTS.SIZE[0]}, ${PARTS.SIZE[1]}]`);
     } else {
       for (const k of ['w', 'h']) {
         if (!inRange(p[k], PARTS.SIZE)) {
