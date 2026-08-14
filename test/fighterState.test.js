@@ -110,3 +110,36 @@ test('positional state still resets, and still depends on side', () => {
   assert.equal(a.hp, a.maxHp);
   assert.notEqual(a.x, b.x, 'the two sides must start apart');
 });
+
+import { hashGameState, SIM_VERSION } from '../src/net/online.js';
+
+// A minimal game-shaped object: hashGameState only reads these.
+function fakeGame() {
+  const f = () => { const x = mk(); return x; };
+  return { fighters: [f(), f()], timer: 60, roundWins: [0, 0], projectiles: [], drops: [] };
+}
+
+test('every hashed key actually moves the fingerprint', () => {
+  for (const e of FIGHTER_STATE) {
+    if (!e.hash) continue;
+    const g = fakeGame();
+    const before = hashGameState(g);
+    g.fighters[0][e.key] = e.hash === 'enum' ? 'capabilities'
+                         : typeof e.init === 'boolean' ? !e.init : (e.init || 0) + 5;
+    assert.notEqual(hashGameState(g), before, `${e.key} declares hash but does not affect it`);
+  }
+});
+
+test('an unhashed key never moves the fingerprint', () => {
+  for (const e of FIGHTER_STATE) {
+    if (e.hash) continue;
+    const g = fakeGame();
+    const before = hashGameState(g);
+    g.fighters[0][e.key] = typeof e.init === 'boolean' ? !e.init : (e.init || 0) + 5;
+    assert.equal(hashGameState(g), before, `${e.key} declares hash:false but changed it`);
+  }
+});
+
+test('the simulation version was bumped for the behaviour change', () => {
+  assert.equal(SIM_VERSION, 5);
+});
