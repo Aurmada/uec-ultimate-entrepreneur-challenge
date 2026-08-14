@@ -37,6 +37,12 @@ test('absent parts are valid — most characters have none', () => {
   assert.deepEqual(validateParts([]), []);
 });
 
+test('a non-array parts value is rejected outright', () => {
+  const e = validateParts({});
+  assert.equal(e.length, 1);
+  assert.match(e[0], /array/);
+});
+
 test('an unknown shape is rejected', () => {
   const e = validateParts([{ ...good(), shape: 'blob' }]);
   assert.equal(e.length, 1);
@@ -48,6 +54,11 @@ test('an unknown anchor is rejected', () => {
   assert.match(e[0], /anchor/);
 });
 
+test('z is required and enum-checked', () => {
+  assert.match(validateParts([{ ...good(), z: undefined }])[0], /\.z /);
+  assert.match(validateParts([{ ...good(), z: 'side' }])[0], /\.z /);
+});
+
 test('an unknown fill role is rejected, but a hex is allowed', () => {
   assert.match(validateParts([{ ...good(), fill: 'leather' }])[0], /fill/);
   assert.deepEqual(validateParts([{ ...good(), fill: '#6b4a2b' }]), []);
@@ -56,6 +67,11 @@ test('an unknown fill role is rejected, but a hex is allowed', () => {
 test('an out-of-range offset is rejected, not clamped', () => {
   const e = validateParts([{ ...good(), dx: 999 }]);
   assert.match(e[0], /dx/);
+});
+
+test('an id outside the [a-z0-9-]{2,16} format is rejected', () => {
+  const e = validateParts([{ ...good(), id: 'Bad_ID' }]);
+  assert.match(e[0], /id/);
 });
 
 test('a duplicate id within one character is rejected', () => {
@@ -84,6 +100,31 @@ test('a path needs at least 3 points and at most 24', () => {
   assert.match(validateParts([path(2)])[0], /points/);
   assert.match(validateParts([path(25)])[0], /points/);
   assert.deepEqual(validateParts([path(4)]), []);
+});
+
+test('pts entries must be [x, y] pairs inside the offset range', () => {
+  const path = (pts) => ({
+    id: 'coat', shape: 'path', anchor: 'hip', dx: 0, dy: 0, fill: 'suit2', z: 'behind', pts,
+  });
+  // Right length (4, inside the 3-24 bound), but the last point is way outside
+  // the offset range — this must fail on the VALUES, not the count.
+  const e = validateParts([path([[0, 0], [1, 1], [2, 2], [999, 0]])]);
+  assert.match(e[0], /pts/);
+});
+
+test('ellipse r outside the size range is rejected', () => {
+  const e = validateParts([{ ...good(), shape: 'ellipse', r: 999 }]);
+  assert.match(e[0], /\.r /);
+});
+
+test('w/h outside the size range is rejected for a non-path, non-ellipse shape', () => {
+  const e = validateParts([{ ...good(), w: 999 }]);
+  assert.match(e[0], /\.w /);
+});
+
+test('rot outside -π..π is rejected', () => {
+  const e = validateParts([{ ...good(), rot: 10 }]);
+  assert.match(e[0], /rot/);
 });
 
 test('follow outside 0..1 is rejected', () => {
