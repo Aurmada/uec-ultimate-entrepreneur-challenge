@@ -8,6 +8,7 @@
 </style>
 <button id="check">CHECK against baseline</button>
 <button id="isolate">CHECK isolation (big bodies first)</button>
+<button id="parts">CHECK every part draws</button>
 <button id="write">WRITE new baseline</button>
 <div id="out">ready</div>
 <canvas id="c" width="360" height="380" style="display:none"></canvas>
@@ -105,6 +106,67 @@ document.getElementById('isolate').onclick = async () => {
   out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length
     ? r.bad.length + ' MISMATCH of ' + r.total + ' after big bodies rendered — buffers are leaking between characters'
     : 'ISOLATED — all ' + r.total + ' still match after extreme bodies rendered'}</span>\n\n`
+    + r.detail.join('\n');
+};
+
+// Renders every declared part twice — once alone, once with parts stripped —
+// and counts how many pixels differ between the two. A part that never
+// changes a pixel is a part that never drew, but "never zero" is too weak a
+// bar: Scam's first paperclip traced the wire's centreline instead of its
+// outline, self-intersected, and filled to 118 visible pixels — technically
+// non-zero, and on screen nothing. 400px is the bar a real prop clears.
+const PART_MIN_PIXELS = 400;
+
+function countDiffPixels(a, b) {
+  let n = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2] || a[i + 3] !== b[i + 3]) n++;
+  }
+  return n;
+}
+
+function renderPixels(def, c) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawFighter(ctx, stubFighter(def, c), c.t);
+  return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+}
+
+window.checkParts = async () => {
+  const detail = [];
+  const bad = [];
+  let min = Infinity;
+  Math.random = () => 0.5;
+  try {
+    for (const def of FIGHTERS) {
+      if (!def.parts || !def.parts.length) continue;
+      for (const part of def.parts) {
+        // No `states` means the part is always on, so any case will do — an
+        // idle one keeps this close to how the part is normally seen.
+        const states = part.states || ['idle'];
+        const c = CASES.find(cc => states.includes(cc.state));
+        const key = `${def.id}/${part.id}`;
+        if (!c) { detail.push(`${key}: NO CASE covers states ${JSON.stringify(states)}`); bad.push(key); continue; }
+        const withPart = renderPixels({ ...def, parts: [part] }, c);
+        const without = renderPixels({ ...def, parts: [] }, c);
+        const diff = countDiffPixels(withPart, without);
+        min = Math.min(min, diff);
+        const pass = diff >= PART_MIN_PIXELS;
+        if (!pass) bad.push(key);
+        detail.push(`${key} @ ${c.state}: ${diff}px${pass ? '' : ' — FAIL (< ' + PART_MIN_PIXELS + 'px)'}`);
+      }
+    }
+  } finally {
+    Math.random = realRandom;
+  }
+  return { total: detail.length, bad, min: Number.isFinite(min) ? min : 0, detail };
+};
+
+document.getElementById('parts').onclick = async () => {
+  const r = await window.checkParts();
+  out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length
+    ? r.bad.length + ' of ' + r.total + ' parts FAILED to draw'
+    : 'all ' + r.total + ' parts draw (min ' + r.min + 'px)'}</span>\n\n`
     + r.detail.join('\n');
 };
 

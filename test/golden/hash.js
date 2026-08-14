@@ -25,4 +25,7 @@ export const CASES = [
   { state: 'attack', t: 0.5, kind: 'punch', stateT: 0.08 },
   { state: 'attack', t: 0.5, kind: 'kick', stateT: 0.14 },
   { state: 'attack', t: 0.5, kind: 'launch', stateT: 0.11 },
+  // Parts ride the pose, so they need coverage in a state that MOVES the
+  // anchors — an idle-only case would pass with a part welded to the origin.
+  { state: 'walk', t: 0.9, walkPhase: 4.2 },
 ];
