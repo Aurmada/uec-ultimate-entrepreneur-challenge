@@ -345,9 +345,18 @@ export const FIGHTERS = [
       { id: 'tablet', shape: 'roundRect', anchor: 'armB', dx: 20, dy: -10,
         w: 34, h: 46, rot: -0.2, fill: 'accent', z: 'front' },
       // A coat, and the first use of cloth lag: it trails the hips and settles.
-      { id: 'coat', shape: 'path', anchor: 'hip', dx: 0, dy: 0,
-        pts: [[-16, -4], [16, -4], [22, 46], [-22, 46]],
-        fill: 'suit2', z: 'behind', follow: 0.35 },
+      //
+      // `hair` (#f2ece0), not `suit2`. suit2 is #111a3d against a #1c2a5e suit
+      // AND a dark navy arena — dark on dark twice over, and it vanished. A
+      // garment behind the body cannot rely on shape alone when the backdrop is
+      // the same value as the fighter. The cream reads as a long coat over the
+      // suit, which is also more the part.
+      // It must also FLARE past the body. Drawn behind, a 44px-wide coat is
+      // entirely covered by the legs; only a hem wider than the silhouette
+      // actually reads as a coat.
+      { id: 'coat', shape: 'path', anchor: 'hip', dx: 0, dy: -6,
+        pts: [[-18, 0], [18, 0], [40, 74], [-40, 74]],
+        fill: 'hair', z: 'behind', follow: 0.35 },
     ],
   },
   {
