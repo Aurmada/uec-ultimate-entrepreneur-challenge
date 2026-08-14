@@ -59,3 +59,54 @@ test('quantisers match what hashGameState already does', () => {
   assert.equal(quantise('enum', 'safety'), quantise('enum', 'safety'));
   assert.notEqual(quantise('enum', 'safety'), quantise('enum', 'capabilities'));
 });
+
+import { Fighter } from '../src/engine/fighter.js';
+import { FIGHTERS } from '../src/data/fighters.js';
+
+const mk = (side = 0) => new Fighter(FIGHTERS[0], side, { isHuman: false, update() {} });
+
+test('a fresh fighter has every registry key at its declared init', () => {
+  const f = mk();
+  for (const e of FIGHTER_STATE) {
+    const want = typeof e.init === 'function' ? e.init() : e.init;
+    assert.deepEqual(f[e.key], want, `${e.key} did not initialise from the registry`);
+  }
+});
+
+test('a round transition resets every reset key and leaves every keep key alone', () => {
+  const f = mk();
+  // Dirty everything, so a field that is silently skipped shows up.
+  for (const e of FIGHTER_STATE) {
+    f[e.key] = typeof e.init === 'boolean' ? !e.init
+             : typeof e.init === 'number' ? e.init + 7
+             : 'safety';
+  }
+  const keptBefore = Object.fromEntries(
+    FIGHTER_STATE.filter((e) => e.round === 'keep').map((e) => [e.key, f[e.key]]));
+
+  f.resetForRound(0);
+
+  for (const e of FIGHTER_STATE) {
+    const want = typeof e.init === 'function' ? e.init() : e.init;
+    if (e.round === 'reset') {
+      assert.deepEqual(f[e.key], want, `${e.key} declares reset but survived the round`);
+    } else {
+      assert.deepEqual(f[e.key], keptBefore[e.key], `${e.key} declares keep but was cleared`);
+    }
+  }
+});
+
+test('energy specifically survives a round — the rule the registry made explicit', () => {
+  const f = mk();
+  f.energy = 55;
+  f.resetForRound(0);
+  assert.equal(f.energy, 55);
+});
+
+test('positional state still resets, and still depends on side', () => {
+  const a = mk(0), b = mk(1);
+  a.x = b.x = 999; a.hp = b.hp = 3;
+  a.resetForRound(0); b.resetForRound(1);
+  assert.equal(a.hp, a.maxHp);
+  assert.notEqual(a.x, b.x, 'the two sides must start apart');
+});

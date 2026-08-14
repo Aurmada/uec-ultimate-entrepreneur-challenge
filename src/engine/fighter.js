@@ -6,6 +6,7 @@ import { SPECIALS } from '../data/fighters.js';
 import { clampBody } from './proportions.js';
 import { shapeAttack, ARCHETYPE_TICKS } from './moves.js';
 import { slotButton, NO_SWING } from '../data/schema.js';
+import { initState, resetState } from './fighterState.js';
 
 function blankPad() {
   return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false };
@@ -30,27 +31,15 @@ export class Fighter {
     };
     this.maxHp = this.stats.hp;
     this.hp = this.maxHp;
-    this.energy = 0;
     this.x = side === 0 ? 300 : 660;
     this.y = STAGE.FLOOR;
     this.vx = 0;                            // knockback velocity (decays)
     this.vy = 0;
-    this.moveVx = 0;                        // walk intent this frame
     this.facing = side === 0 ? 1 : -1;
     this.state = 'idle';
-    this.stateT = 0;
-    this.stunT = 0;
     this.attack = null;
     this.pad = blankPad();
     this.prevPad = blankPad();
-    this.walkPhase = 0;
-    this.airborne = false;
-    this.airAttackUsed = false;
-    this.flashT = 0;
-    this.unicornT = 0;
-    this.movingBack = false;
-    this.comboTaken = 0;                    // hits in the current stun chain (victim-side)
-    this.comboDropT = 0;
     this.special = SPECIALS[def.special] || SPECIALS.pitchdeck;
     // The character's own vocabulary, indexed by input. Everyone shares the
     // same grammar — movement, block, the four basics, the universal moves —
@@ -60,13 +49,8 @@ export class Fighter {
     for (const cn of def.commandNormals || []) {
       if (cn && cn.slot) this.cmdBySlot.set(cn.slot, cn);
     }
-    this.dashCD = 0;
-    this.dashDir = 1;
-    this.stealCD = 0;
-    // mystery-drop buffs
-    this.speedBuffT = 0;
-    this.dmgBuffT = 0;
-    this.shieldT = 0;
+    // Everything the simulation remembers, from one declaration.
+    initState(this);
   }
 
   resetForRound(side) {
@@ -76,19 +60,10 @@ export class Fighter {
     this.vx = this.vy = 0;
     this.facing = side === 0 ? 1 : -1;
     this.state = 'idle';
-    this.stateT = 0;
     this.attack = null;
-    this.airborne = false;
-    this.unicornT = 0;
-    this.flashT = 0;
-    this.comboTaken = 0;
     this.pad = blankPad();
     this.prevPad = blankPad();
-    this.dashCD = 0;
-    this.stealCD = 0;
-    this.speedBuffT = 0;
-    this.dmgBuffT = 0;
-    this.shieldT = 0;
+    resetState(this);
   }
 
   get grounded() { return !this.airborne; }
