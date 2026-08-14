@@ -730,6 +730,9 @@ export function toCharacter(def) {
     // A character's own vocabulary. Absent means "universal grammar only",
     // which is a complete character — most of the base bodies are exactly that.
     commandNormals: def.commandNormals || [],
+    // Render-only, but it travels: a rival's props must draw on our screen or
+    // their silhouette is not the character they picked.
+    parts: def.parts || [],
     ai: {
       aggr: def.ai?.aggr ?? 0.6,
       jump: def.ai?.jump ?? 0.35,

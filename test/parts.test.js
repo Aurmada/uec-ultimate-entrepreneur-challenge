@@ -12,6 +12,8 @@ import {
 } from '../src/data/schema.js';
 import { resolveParts, anchorPoint } from '../src/engine/parts.js';
 import { STYLIZE } from '../src/config.js';
+import { toCharacter } from '../src/data/fighters.js';
+import { CHARACTER_WIRE_VERSION } from '../src/net/online.js';
 
 const good = () => ({
   id: 'case', shape: 'roundRect', anchor: 'armB',
@@ -214,4 +216,18 @@ test('the head anchor is clamped up to the neck, never below it', () => {
   const high = samplePose();         // headY numerically above headTop — must pass through
   high.headY = headTop + 40;
   assert.equal(anchorPoint('head', high).y, headTop + 40, 'a head above the neck is left alone');
+});
+
+test('toCharacter carries parts through to the validated character', () => {
+  const def = { id: 'x', name: 'X', style: 'balanced', special: 'pitchdeck', parts: [good()] };
+  assert.deepEqual(toCharacter(def).parts, [good()]);
+});
+
+test('a character with no parts carries an empty array, never undefined', () => {
+  const def = { id: 'x', name: 'X', style: 'balanced', special: 'pitchdeck' };
+  assert.deepEqual(toCharacter(def).parts, []);
+});
+
+test('the wire version was bumped for the new payload field', () => {
+  assert.equal(CHARACTER_WIRE_VERSION, 2);
 });
