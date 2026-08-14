@@ -57,6 +57,14 @@ export const SPECIALS = {
     desc: 'An unblockable seizure of assets at close range. Jump to escape it.',
     dmg: 20, reach: 118, startup: 0.20, recovery: 0.55, kb: 520, kbUp: -300,
   },
+  alignmentshift: {
+    id: 'alignmentshift',
+    name: 'ALIGNMENT SHIFT',
+    icon: '⚖️',
+    type: 'stance',
+    desc: 'Toggles between SAFETY and CAPABILITIES. One survives; the other wins faster.',
+    startup: 0.10, recovery: 0.18,
+  },
 };
 
 export const UNICORN_META = {
@@ -513,7 +521,7 @@ export const FIGHTERS = [
     // MOTION (render-only): Understated on the way in and lingering on the way out — it reads as less
     // than it was until it has already happened to you.
     motion: { windup: 0.85, follow: 1.05, drop: 2, squash: 0.04, brace: 5, thrust: 2 },
-    special: 'pivot', style: 'trickster',
+    special: 'alignmentshift', style: 'trickster',
     // Soft and unbothered — the man who was fired on Friday and back by
     // Wednesday does not look worried. TRICKSTER is expensive, so the comfort
     // is also what pays for it.

@@ -375,6 +375,25 @@ export const BODY = {
   head:      [0.90, 1.12],
 };
 
+// ---- STANCE SWITCH ---------------------------------------------------------
+// A toggle, not a timer: you stay in a stance until you switch back, the round
+// ends, or you are KO'd. Neither set is strictly better than neutral, which is
+// what keeps a stance from being a free upgrade — `taken` is the price.
+//
+// These STACK multiplicatively with Unicorn Mode, deliberately. A stance is a
+// trade and Unicorn is a pure buff, so capabilities+Unicorn is dangerous but
+// also takes 15% extra damage for exactly the six seconds the opponent most
+// wants to punish. This is the call in the design most likely to be wrong on
+// contact with play; if it proves oppressive, make Unicorn force `safety`.
+export const STANCE = {
+  CD: 0.8,          // seconds between switches
+  COST: 0,          // meter cost; 0 in v1 — pricing a toggle is unresolved
+  SETS: {
+    safety:       { startup: 1.15, dmg: 0.85, recovery: 0.90, speed: 0.95, taken: 0.85 },
+    capabilities: { startup: 0.90, dmg: 1.20, recovery: 1.15, speed: 1.05, taken: 1.15 },
+  },
+};
+
 // ---------------------------------------------------------------------------
 // POWER BUDGET
 //
