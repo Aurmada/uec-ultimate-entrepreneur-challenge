@@ -323,6 +323,42 @@ proportions were retuned only one moved. Fighters stood at the old skeleton and
 snapped to the new one to throw a punch, growing 27 percent mid swing for the
 whole length of every attack.
 
+### Character parts
+
+A character may carry `parts` — render-only geometry outside its body outline. A
+held prop, a coat, a cape: all one system, differing only by anchor joint and
+z-layer.
+
+`resolveParts()` in `engine/parts.js` is pure — parts plus pose in, absolute
+coordinates out — which is what makes placement unit-testable in a suite with no
+canvas. `drawParts()` paints them, and is called twice from `drawFighter` **inside
+the offscreen buffer**: `behind` before the back limbs, `front` after the front arm.
+Drawing inside the buffer is what earns cel shading, rim light, the key line and
+membership in the silhouette for free.
+
+Parts are validated by the shared `validateCharacter` and are **never priced** — they
+are free, like shoulders, stride and head. They do travel on the wire, which is why
+`CHARACTER_WIRE_VERSION` is 2. Cost is under the measurement noise floor: with two
+parts-bearing fighters on screen, 1.106 ms/frame with parts against 1.123 ms without,
+a difference smaller than the 0.13 ms run-to-run variance.
+
+The one rule: **a prop must never read as extending reach.** Same failure as the
+`applyMotion` rule above — the simulation stays correct, but the game lies to the
+player about where a hit lands. Props on the rear hand, back, head and hips are
+unrestricted; a prop on `armF` must stay inside the hand's own silhouette during the
+active window.
+
+Three ways a part can be present and still invisible, all found while authoring the
+first nine and all worth checking before adjusting offsets:
+
+* **Colour.** A fill role that resolves near the character's own suit. Cathie's
+  tablet was `suit2` (#111a3d) against a #1c2a5e suit and vanished.
+* **Fill versus stroke.** `blob()` FILLS a path. Scam's paperclip first traced the
+  wire's centreline, which self-intersects and filled to 118 visible pixels. A `path`
+  part must describe an OUTLINE.
+* **Occlusion.** A `behind` part narrower than the body is covered by it. A coat only
+  reads when the hem flares past the silhouette.
+
 ---
 
 ## 8. Where numbers live

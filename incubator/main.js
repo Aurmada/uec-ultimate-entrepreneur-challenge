@@ -503,6 +503,7 @@ function toModule() {
     headwear: draft.headwear, eyewear: draft.eyewear, facialHair: draft.facialHair,
   };
   if (draft.commandNormals.length) clean.commandNormals = draft.commandNormals;
+  if (draft.parts && draft.parts.length) clean.parts = draft.parts;
   // Render-only, but it belongs to the character, so it ships in the module.
   //
   // Each track is stamped with the rig it was posed against. The editor seeds
