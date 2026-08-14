@@ -139,9 +139,13 @@ export const DEFAULT_BODY = { height: 1, build: 1, reach: 1, stride: 1, shoulder
 // rather than folding into `strike`, because the shipped behaviour must be
 // preserved exactly. `counter` and `trap` are the two new fight patterns —
 // they exist so the roster can hold characters that differ in kind, not
-// merely in degree.
+// merely in degree. `stance` is the tenth, added for ALIGNMENT SHIFT
+// (fighter-state-foundation, 2026-08-14): a toggle that changes `stanceId`
+// rather than swinging, hitting or placing anything. It is a known archetype
+// for `fighting.moves.special`/`signature` only — see the commandNormals
+// guard below for why it is rejected as a command-normal archetype.
 export const ARCHETYPES = [
-  'strike', 'projectile', 'aoe', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap',
+  'strike', 'projectile', 'aoe', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap', 'stance',
 ];
 export const STANCES = ['ready', 'coiled', 'heavy', 'poised', 'loose', 'flair'];
 export const PREF_RANGES = ['close', 'mid', 'far'];
@@ -349,6 +353,19 @@ export function validateCharacter(ch) {
         }
         if (!ARCHETYPES.includes(cn.archetype)) {
           errors.push(`${at}.archetype ${JSON.stringify(cn.archetype)} is not a known archetype`);
+          cmdsOk = false;
+        } else if (cn.archetype === 'stance') {
+          // A stance is a toggle, not a swing, and neither half of the command
+          // normal machinery knows what to do with one: BUDGET.CMD.ARCHETYPE
+          // has no entry for it (it would silently price as free, same as
+          // `strike`), and fighter.js only intercepts `type: 'stance'` for a
+          // character's special — a command normal's archetype instead becomes
+          // its attack `kind` with no engine branch to run it. That is the
+          // shipped-valid-and-silently-broken failure this whole test suite
+          // exists to catch, so it is rejected here rather than left to be
+          // found by rosterMoves.test.js. Roster-only for now; see
+          // docs/superpowers/specs/2026-08-14-fighter-state-foundation-design.md §7.
+          errors.push(`${at}.archetype 'stance' is not usable as a command normal yet`);
           cmdsOk = false;
         }
         if (typeof cn.displayName !== 'string' || !cn.displayName.length) {
