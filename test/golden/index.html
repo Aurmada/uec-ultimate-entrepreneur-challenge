@@ -155,6 +155,28 @@ function renderPixels(def, c) {
 // silhouette, e.g. a prop held out past the reach limit) is reported as
 // "no overlap", not scored zero and failed — it has nothing to blend into by
 // definition, and that is not the failure this metric is built to catch.
+//
+// MEASURED, and why `z` is now a parameter instead of being ignored: with a
+// browser finally available, this was run against the shipped roster with a
+// part's fill flipped in memory and restored — the score is reversible, not a
+// stale-read artifact — and the direction split cleanly on `z`:
+//
+//   part               z       broken   fixed
+//   eleanor/tablet      front    94.5    228.6
+//   max/mat             behind  179.2     61.0
+//   eleanor/coat        behind  186.4     95.9
+//
+// The one `front` part moved the intended way — the fix scored far higher.
+// Both `behind` parts moved BACKWARDS: the broken version scored roughly
+// triple the fixed one. The mechanism: a `behind` part is drawn under the
+// body, so it never changes a body pixel — its only "overlap" pixels (per
+// the loop below) sit at the silhouette edge, where the key line and
+// `shadeBuffer()` recompute because the silhouette's outline changed shape.
+// For a `behind` part this number measures the shading pass reacting to a
+// changed outline, not contrast against anything the part sits on. An
+// enforced threshold would have failed the two good parts here and passed
+// the two broken ones — the opposite of the intent. `behind` parts are
+// therefore not scored at all: see the call site in `checkParts`.
 function contrastForPart(withPart, without) {
   let sum = 0, n = 0;
   for (let i = 0; i < without.length; i += 4) {
@@ -167,6 +189,17 @@ function contrastForPart(withPart, without) {
   }
   return n === 0 ? { overlap: 0, mean: null } : { overlap: n, mean: sum / n };
 }
+
+// `ava/vial` reports contrast 8.7 over just 26px of overlap — it sits almost
+// entirely off the body, so 26 edge pixels are all there is to measure. The
+// `overlap === 0` guard above treats that as a real measurement; it is noise,
+// and under any enforced threshold it would be the first false failure. 100
+// is chosen because it clears that real case with room to spare while
+// excluding nothing else today: the next-smallest front-part sample in the
+// shipped roster is 337px, so 100 sits in a wide gap between the one known-bad
+// sample and everything else.
+const PART_CONTRAST_MIN_OVERLAP = 100;
+
 // THE THRESHOLD, or the deliberate lack of one: base fill hex alone gives a
 // tempting number. suit2 (#d15505) vs the suit underneath it (#ff7a1a) on
 // max's original mat is Euclidean RGB distance ~63; the shipped fix, shoe
@@ -175,24 +208,30 @@ function contrastForPart(withPart, without) {
 // (#f2ece0) on the same pants is ~342. eleanor's original tablet, suit2 vs
 // the suit (#1c2a5e), is ~38; accent (#ffd23f) is ~284. Every known-broken
 // case sits under 65 and every known-fixed one sits over 250 — a huge gap,
-// and a threshold somewhere in between looks obviously justified.
-// It is not, and here is why: those numbers are the DECLARED fill colours,
-// and no part ever reaches the canvas as its declared colour. `drawFighter`
-// composites everything inside an offscreen buffer and then runs
-// `shadeBuffer()` over the whole silhouette — key light, mid/floor gradients,
-// side gradients, rim light (see ARCHITECTURE.md §7) — before any pixel is
-// read. That pass is why the same `suit2` hex reads differently on different
-// characters and different states in the first place. The three known pairs
-// above are the only data point I have without opening a browser, which this
-// task does not permit, and three anecdotes from PRE-shading hex codes are
-// not enough to justify a number that will DECIDE pass/fail against the
-// POST-shading pixels the metric actually measures. An unjustified threshold
-// that fails a good part is worse than no threshold, so this ships
+// and a threshold somewhere in between looked obviously justified.
+//
+// It was not, and now there are real post-shading numbers to say why. Even
+// restricted to `front` parts (see above — `behind` parts are excluded
+// entirely, their number measures something else), the shipped roster does
+// not separate:
+//
+//   front:  8.7, 86.9, 90.2, 91.1, 99.7, 108.8, 114.6, 127.4, 128.2, 145.0,
+//           148.2, 150.0, 196.3, 228.6
+//   behind: 61.0, 95.9, 136.0, 200.4, 226.2  (shown for reference only —
+//           not comparable, see above)
+//
+// The front-part range runs 8.7 (the `ava/vial` sample-size artifact the
+// overlap floor above exists to exclude) to 228.6, with no gap anywhere in
+// between to put a line through. A single global contrast threshold is not
+// merely unjustified — it is the wrong shape for this problem. The metric is
+// only interpretable for `front` parts at all, and even restricted to those
+// the distribution does not separate good parts from bad ones; there is no
+// number that passes the good and fails the broken in this data. This ships
 // REPORTED-BUT-NOT-ENFORCED: `checkParts` prints the contrast figure next to
-// every part and never adds it to `bad`. Whoever next has a real browser
-// should run this against the shipped roster, look at the actual distribution
-// of post-shading numbers, and pick a threshold from THAT — not from this
-// comment.
+// every part and never adds it to `bad`. Making this enforceable needs either
+// per-part expected values instead of one global bar, or a different metric
+// entirely — for example comparing the part's own pixels against the body
+// pixels immediately surrounding it, rather than against what it replaced.
 //
 // LIMITATION this metric cannot see at all: the canvas here is transparent,
 // with no arena behind the fighter. Half of the eleanor/coat bug was suit2
@@ -205,8 +244,11 @@ function contrastForPart(withPart, without) {
 // vanish into its own wearer".
 const PART_CONTRAST_ENFORCED = false; // see the comment above before flipping this on
 
-function contrastLabel(part) {
-  return part.overlap === 0 ? 'no overlap with body' : `contrast ${part.mean.toFixed(1)} over ${part.overlap}px`;
+function contrastLabel(part, z) {
+  if (z === 'behind') return 'not comparable (drawn behind the body)';
+  if (part.overlap === 0) return 'no overlap with body';
+  if (part.overlap < PART_CONTRAST_MIN_OVERLAP) return `sample too small (${part.overlap}px)`;
+  return `contrast ${part.mean.toFixed(1)} over ${part.overlap}px`;
 }
 
 window.checkParts = async () => {
@@ -228,14 +270,17 @@ window.checkParts = async () => {
         const withPart = renderPixels({ ...def, parts: [part] }, c);
         const without = renderPixels({ ...def, parts: [] }, c);
         const diff = countDiffPixels(withPart, without);
-        const contrast = contrastForPart(withPart, without);
+        // Contrast is only meaningful for `z: 'front'` parts — see the
+        // measurements above contrastForPart. A `behind` part is never
+        // computed at all rather than computed and discarded.
+        const contrast = part.z === 'front' ? contrastForPart(withPart, without) : { overlap: 0, mean: null };
         min = Math.min(min, diff);
         // PART_CONTRAST_ENFORCED is false — see the comment above contrastForPart.
         // Contrast is reported in `detail`/`parts` but never joins `bad`.
         const pass = diff >= PART_MIN_PIXELS;
         if (!pass) bad.push(key);
         parts.push({ key, state: c.state, diffPixels: diff, pass, overlapPixels: contrast.overlap, contrastMean: contrast.mean });
-        detail.push(`${key} @ ${c.state}: ${diff}px${pass ? '' : ' — FAIL (< ' + PART_MIN_PIXELS + 'px)'} — ${contrastLabel(contrast)}`);
+        detail.push(`${key} @ ${c.state}: ${diff}px${pass ? '' : ' — FAIL (< ' + PART_MIN_PIXELS + 'px)'} — ${contrastLabel(contrast, part.z)}`);
       }
     }
   } finally {
