@@ -176,8 +176,11 @@ export const FIGHTERS = [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
       // max — ADAM WEUMANN, WEWERK. The rolled mat across the back.
-      { id: 'mat', shape: 'capsule', anchor: 'shoulder', dx: -18, dy: 26,
-        w: 14, h: 62, rot: 0.35, fill: 'suit2', z: 'behind' },
+      // `shoe` (#f5f5f5), not suit2 (#d15505) — dark orange on a #ff7a1a suit,
+      // behind the widest body in the cast, drew 149px and read as nothing.
+      // Wider and pushed clear of the shoulder so it actually leaves the outline.
+      { id: 'mat', shape: 'capsule', anchor: 'shoulder', dx: -36, dy: 30,
+        w: 22, h: 86, rot: 0.35, fill: 'shoe', z: 'behind' },
     ],
   },
   {
