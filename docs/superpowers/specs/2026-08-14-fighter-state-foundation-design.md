@@ -11,11 +11,11 @@ Unlike the parts work, **everything here is simulation.** `SIM_VERSION` must bum
 
 ## 1. The problem
 
-Persistent per-fighter state is currently governed by **two hand-maintained lists**, and
+Persistent per-fighter state is governed by **two hand-maintained lists**, and
 both have already drifted.
 
-`Fighter.resetForRound()` clears twenty fields by name. Six more are set in the
-constructor and never cleared between rounds: `stunT`, `comboDropT`, `airAttackUsed`,
+`Fighter.resetForRound()` clears twenty fields by name. Eight more are set in the
+constructor and never cleared between rounds: `stunT`, `comboDropT`, `airAttackUsed`, `energy`, `moveVx`,
 `walkPhase`, `movingBack`, `dashDir`. None is live-broken — each is masked by `state`
 resetting to `'idle'`, or recomputed every frame — but none was *decided*, either.
 
@@ -63,7 +63,7 @@ Every entry declares four things, and **none of them has a default**:
 | `ai` | accessor name, optional | Exposes the value to the AI under a stable name. |
 | `why` | string | Mandatory whenever `round: 'keep'` or `hash: false`. |
 
-Making `why` mandatory for the two opt-outs is the load-bearing detail. The six drifted
+Making `why` mandatory for the two opt-outs is the load-bearing detail. The drifted
 fields did not drift because anyone decided they should persist — they drifted because
 declaring nothing was easier than declaring something. An opt-out that costs a sentence
 of justification is an opt-out people take deliberately.
@@ -97,21 +97,34 @@ registry cannot: someone adding a field directly and never opening the registry 
 
 ---
 
-## 3. Classifying the six drifted fields
+## 3. Classifying the drifted fields
 
-Part of this step, decided rather than inherited:
+Every field set in the `Fighter` constructor and absent from `resetForRound`, decided
+rather than inherited. Eight, not six — the first pass grepped for timer-shaped names and
+missed two. Config and identity fields (`def`, `body`, `side`, `controller`, `stats`,
+`maxHp`, `special`, `cmdBySlot`) are excluded: they are per-character, correctly
+constructor-only, and out of the registry's scope.
 
 | Field | Decision | Why |
 |---|---|---|
 | `stunT` | `reset` | Hitstun must not survive a round. Harmless today only because `state` masks it; that is coincidence, not design. |
 | `comboDropT` | `reset` | Same. The combo chain should begin each round from nothing. |
 | `airAttackUsed` | `reset` | A fighter starts a round grounded with its air attack available. Cleared on landing today, which is a different guarantee. |
+| `energy` | `keep` | **Meter carries between rounds. That is a real design property and it has never been written down anywhere.** Set to 0 in the constructor only; nothing resets it. Already hashed, so it is consistent — just undeclared. |
 | `walkPhase` | `keep` | Animation phase. Snapping it to zero is visibly worse than letting it continue, and nothing reads it in the simulation. |
 | `movingBack` | `keep` | Recomputed from the pad every frame before any read. |
+| `moveVx` | `keep` | Walk intent, zeroed at the top of every `update()` before use. |
 | `dashDir` | `keep` | A direction, meaningless until a dash starts, and a dash always sets it. |
 
-All six get a `why` in the registry, including the three that reset — the table above is
-the source text.
+All eight get a `why` in the registry, including the three that reset — the table above
+is the source text.
+
+`energy` is worth dwelling on, because it is the registry's argument in miniature.
+Cross-round meter carryover is a genuine balance decision that shapes how round two
+plays, and the only place it is currently recorded is the *absence* of a line in
+`resetForRound`. Nobody reading that method can tell whether it was decided or
+forgotten. That is precisely the failure the `why` field exists to prevent, and it was
+already live before any new verb was added.
 
 ---
 
@@ -202,7 +215,7 @@ Note the state hash grows. That is not a compatibility break on its own, because
 | Determinism | Two runs, same seed and scripted inputs, with stance switching in the script, produce identical hashes. |
 
 **The round-transition test is the one that did not exist before.** No test file
-currently references `resetForRound` or `roundWins`, which is precisely why six fields
+currently references `resetForRound` or `roundWins`, which is precisely why eight fields
 could drift out of the reset list without anything going red.
 
 ---
@@ -229,7 +242,7 @@ could drift out of the reset list without anything going red.
 
 * `npm test` green, including the new round-transition test
 * The structural backstop verified to fail when a timer is added outside the registry
-* Six drifted fields classified, each with a `why`
+* All eight drifted fields classified, each with a `why`
 * `SIM_VERSION` is 5; `SCHEMA_VERSION` and `CHARACTER_WIRE_VERSION` unchanged
 * `scam` throws `alignmentshift`; `ava` owns `pivot` alone
 * Golden baseline re-checked — stance changes frame data, so attack frames legitimately
