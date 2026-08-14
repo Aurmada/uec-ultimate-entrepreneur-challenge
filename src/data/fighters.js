@@ -124,6 +124,12 @@ export const FIGHTERS = [
         params: { window: 0.16, dmg: 6, kb: 240 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+    ],
   },
   {
     id: 'max', name: 'ADAM WEUMANN', title: 'THE BURNER', company: 'WEWERK',
@@ -160,6 +166,12 @@ export const FIGHTERS = [
         frameData: { startup: 0.075, active: 0.06, recovery: 0.13, dmg: 9, reach: 84 },
         params: { hits: 3, hitInterval: 0.10, speed: 560, duration: 0.42, kb: 130 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
     ],
   },
   {
@@ -203,6 +215,12 @@ export const FIGHTERS = [
         params: { dmg: 11, kb: 300, kbUp: -200 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+    ],
   },
   {
     id: 'zara', name: 'KIM KOINDASHIAN', title: 'THE RUG-PULLER', company: 'SKIMZCOIN',
@@ -243,6 +261,12 @@ export const FIGHTERS = [
         frameData: { startup: 0.115, active: 0.09, recovery: 0.187, dmg: 12, reach: 60 },
         params: { lifetime: 5.5, radius: 78, armTime: 0.35, dmg: 12, maxActive: 1 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
     ],
     // Restless: two bounces per breath, never quite still.
     animOverrides: {
@@ -298,6 +322,12 @@ export const FIGHTERS = [
         params: { dmg: 5, count: 2, energyRefund: 4 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+    ],
   },
   {
     id: 'dex', name: 'CARL ICAHNT', title: 'THE ASSET STRIPPER', company: 'ICAHNT HOLDINGS',
@@ -331,6 +361,12 @@ export const FIGHTERS = [
           dmg: 16, reach: 70, hitY: -95, kb: 300, kbUp: -180, stun: 0.34,
         },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
     ],
     // A slow, heavy shift of weight. He does not fidget — he waits.
     animOverrides: {
@@ -376,6 +412,12 @@ export const FIGHTERS = [
         params: { reach: 118, kb: 300, kbUp: -140 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+    ],
   },
   {
     id: 'bozo', name: 'JEFF BOZO', title: 'THE EVERYTHING GUY', company: 'PRIMEZON',
@@ -406,6 +448,12 @@ export const FIGHTERS = [
         tags: ['low'],
         frameData: { startup: 0.095, active: 0.08, recovery: 0.19, dmg: 11, reach: 100, hitY: -46, kb: 240 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
     ],
   },
   {
@@ -442,6 +490,12 @@ export const FIGHTERS = [
         frameData: { startup: 0.07, active: 0.06, recovery: 0.17, dmg: 6, reach: 78 },
         params: { count: 2, speed: 520, interval: 0.12 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
     ],
   },
 ];

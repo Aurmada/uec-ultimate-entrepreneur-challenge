@@ -238,7 +238,7 @@ function computePose(f, t) {
   // stood at the old skeleton and grew 54px the instant they threw a punch.
   const P = {
     ...restPose(),
-    face: 'idle', briefcase: false,
+    face: 'idle',
   };
   const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;   // walk head bounce
   const st = f.state;
@@ -474,7 +474,7 @@ function computePose(f, t) {
     P.crouch = 8; P.hipY += 8; P.headY += 10; P.shoulderY += 8;
     P.armF = { x: 26, y: -144 }; P.armB = { x: 24, y: -138 };
     P.legF = { x: 20, y: 0 }; P.legB = { x: -10, y: 0 };
-    P.briefcase = true; P.face = 'block'; P.bodyLean = -0.06;
+    P.face = 'block'; P.bodyLean = -0.06;
   } else if (st === 'hitstun') {
     const k = Math.min(1, f.stateT * 10);
     // snap hard on impact, then settle — the recoil sells the hit landing
@@ -1002,13 +1002,6 @@ function drawTorso(ctx, def, P) {
   }
 }
 
-function drawBriefcase(ctx, x, y, accent) {
-  blob(ctx, () => { ctx.roundRect(x - 20, y - 16, 40, 32, 5); }, '#6b4a2b');
-  ctx.fillStyle = accent;
-  ctx.fillRect(x - 20, y - 4, 40, 6);
-  blob(ctx, () => { ctx.roundRect(x - 8, y - 22, 16, 8, 3); }, '#57391f');
-}
-
 // ---- Street-Fighter-style shading -----------------------------------------
 // The fighter is rendered once into an offscreen buffer, then a cel-shading +
 // directional-light pass is composited over the whole silhouette at once. Doing
@@ -1343,9 +1336,6 @@ export function drawFighter(ctx, f, t) {
   // IN FRONT of the body: held props. Still inside the buffer, so the shading
   // pass and key line treat them as part of the silhouette.
   if (parts.length) drawParts(g, parts, 'front', blob);
-
-  // The universal block guard. Not a character part — every fighter raises one.
-  if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
 
   if (B) {
     INK = 1;                   // reset before shading/blit
