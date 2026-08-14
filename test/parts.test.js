@@ -210,7 +210,7 @@ test('a fill ROLE resolves to the character colour, a hex passes through', () =>
   assert.equal(hex.fill, '#6b4a2b');
 });
 
-test('a part anchored to the front hand tracks the reach-scaled joint', () => {
+test('a part follows its anchor joint wherever the pose puts it', () => {
   const near = samplePose();
   const far = samplePose();
   far.armF.x = 90;                       // as an attack re-scale would move it
@@ -219,7 +219,7 @@ test('a part anchored to the front hand tracks the reach-scaled joint', () => {
   assert.equal(b.x - a.x, 56, 'the part must follow the hand, not sit at a fixed offset');
 });
 
-test('parts split into their z layers, preserving author order', () => {
+test('z survives resolution, and author order is preserved within a layer', () => {
   const P = samplePose();
   const out = resolveParts([
     { ...good(), id: 'a', z: 'behind' },
@@ -229,7 +229,7 @@ test('parts split into their z layers, preserving author order', () => {
   assert.deepEqual(out.filter((p) => p.z === 'behind').map((p) => p.id), ['a', 'c']);
 });
 
-test('absent or empty parts resolve to nothing, allocating no array churn', () => {
+test('absent or empty parts resolve to an empty list', () => {
   assert.deepEqual(resolveParts(undefined, samplePose(), COLOURS), []);
   assert.deepEqual(resolveParts([], samplePose(), COLOURS), []);
 });
@@ -286,10 +286,16 @@ test('parts stay local — they are deliberately not on the wire', () => {
 
 test('a rigid part (follow 0) sits exactly on its anchor every frame', () => {
   const st = partLagState();
-  const a = applyFollow(st, 'coat', { x: 10, y: 10 }, 0);
-  const b = applyFollow(st, 'coat', { x: 90, y: 10 }, 0);
-  assert.deepEqual(a, { x: 10, y: 10 });
-  assert.deepEqual(b, { x: 90, y: 10 });
+  // A handful of frames with the anchor jumping around, not just two calls —
+  // "every frame" should mean every frame, not "the first two".
+  const targets = [
+    { x: 10, y: 10 }, { x: 90, y: 10 }, { x: 90, y: 80 },
+    { x: 0, y: 0 }, { x: -40, y: 25 }, { x: 15, y: -60 },
+  ];
+  for (const target of targets) {
+    const got = applyFollow(st, 'coat', target, 0);
+    assert.deepEqual(got, target);
+  }
 });
 
 test('a following part trails its anchor and then catches up', () => {
