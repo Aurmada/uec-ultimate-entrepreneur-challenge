@@ -157,3 +157,49 @@ test('a timer added to Fighter outside the registry fails the suite', () => {
     `these timers are set on Fighter but not declared in fighterState.js: ${stray.join(', ')}. `
     + 'Undeclared state is state the hash cannot see and resetForRound will not clear.');
 });
+
+import { STANCE } from '../src/config.js';
+
+test('switching stance toggles between the two sets', () => {
+  const f = mk();
+  assert.equal(f.stanceId, null);
+  f.switchStance();
+  assert.equal(f.stanceId, 'safety');
+  f.stanceCD = 0;
+  f.switchStance();
+  assert.equal(f.stanceId, 'capabilities');
+});
+
+test('the cooldown blocks a second switch', () => {
+  const f = mk();
+  f.switchStance();
+  const first = f.stanceId;
+  f.switchStance();                       // cooldown still running
+  assert.equal(f.stanceId, first, 'switched twice inside STANCE.CD');
+  assert.ok(f.stanceCD > 0);
+});
+
+test('a stance multiplies damage dealt and damage taken', () => {
+  const f = mk();
+  const baseOut = f.dmgMult, baseIn = f.takenMult;
+  f.stanceId = 'capabilities';
+  assert.ok(f.dmgMult > baseOut, 'capabilities should hit harder');
+  assert.ok(f.takenMult > baseIn, 'capabilities should also hurt more');
+  f.stanceId = 'safety';
+  assert.ok(f.dmgMult < baseOut && f.takenMult < baseIn);
+});
+
+test('stance and Unicorn stack multiplicatively', () => {
+  const f = mk();
+  f.stanceId = 'capabilities';
+  const stanceOnly = f.dmgMult;
+  f.unicornT = 5;
+  assert.ok(f.dmgMult > stanceOnly, 'Unicorn must still add on top of a stance');
+});
+
+test('a stance does not survive the round', () => {
+  const f = mk();
+  f.switchStance();
+  f.resetForRound(0);
+  assert.equal(f.stanceId, null);
+});

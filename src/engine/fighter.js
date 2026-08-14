@@ -1,7 +1,7 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS, STANCE } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 import { clampBody } from './proportions.js';
 import { shapeAttack, ARCHETYPE_TICKS } from './moves.js';
@@ -76,8 +76,24 @@ export class Fighter {
   get dmgMult() {
     return this.stats.power
       * (this.unicornT > 0 ? UNICORN.DMG_MULT : 1)
-      * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1);
+      * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1)
+      * (this.stanceSet ? this.stanceSet.dmg : 1);
   }
+
+  // A toggle, gated by its own cooldown. Order is fixed (null -> safety ->
+  // capabilities -> safety) so two peers stepping the same inputs land in the
+  // same stance — an order derived from Object.keys would depend on source
+  // layout, which is not something lockstep should ever depend on.
+  switchStance() {
+    if (this.stanceCD > 0) return false;
+    this.stanceId = this.stanceId === 'safety' ? 'capabilities' : 'safety';
+    this.stanceCD = STANCE.CD;
+    return true;
+  }
+
+  get stanceSet() { return this.stanceId ? STANCE.SETS[this.stanceId] : null; }
+
+  get takenMult() { return this.stanceSet ? this.stanceSet.taken : 1; }
   get actionable() {
     return this.state === 'idle' || this.state === 'walk' || this.state === 'jump'
       || this.state === 'block' || this.state === 'crouch';
@@ -169,6 +185,7 @@ export class Fighter {
     this.flashT = Math.max(0, this.flashT - dt);
     this.dashCD = Math.max(0, this.dashCD - dt);
     this.stealCD = Math.max(0, this.stealCD - dt);
+    this.stanceCD = Math.max(0, this.stanceCD - dt);
     this.speedBuffT = Math.max(0, this.speedBuffT - dt);
     this.dmgBuffT = Math.max(0, this.dmgBuffT - dt);
     this.shieldT = Math.max(0, this.shieldT - dt);
@@ -439,6 +456,17 @@ export class Fighter {
   startSpecial(game) {
     if (this.airborne) return;                       // specials are grounded
     const sp = this.special;
+    // A stance switch is a toggle, not a strike — it never becomes an attack.
+    // Intercepted here, before the attack object is built, so it does not
+    // fall through to `kind: 'stance'` with no engine branch to run it.
+    if (sp.type === 'stance') {
+      this.energy -= METER.SPECIAL_COST;
+      this.switchStance();
+      this.attack = null;
+      this.setState('idle');
+      game.onSpecialStart(this, sp);
+      return;
+    }
     this.energy -= METER.SPECIAL_COST;
     const a = {
       kind: sp.type, special: sp, hasHit: false,
