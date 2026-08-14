@@ -10,6 +10,7 @@ import {
   validateParts, PART_SHAPES, PART_ANCHORS, FILL_ROLES,
   validateCharacter, SCHEMA_VERSION, DEFAULT_BODY,
 } from '../src/data/schema.js';
+import { resolveParts, anchorPoint } from '../src/engine/parts.js';
 
 const good = () => ({
   id: 'case', shape: 'roundRect', anchor: 'armB',
@@ -119,4 +120,71 @@ test('parts are NOT priced — they are render-only like shoulders and stride', 
   const heavy = Array.from({ length: 6 }, (_, i) => ({ ...good(), id: 'p' + i }));
   const with6 = validateCharacter(baseChar(heavy)).cost;
   assert.equal(with6, without, 'adding parts must not move the power budget');
+});
+
+function samplePose() {
+  return {
+    hipY: -88, shoulderY: -156, headX: 0, headY: -182, rot: 0, crouch: 0,
+    armF: { x: 34, y: -146 }, armB: { x: 13, y: -144 },
+    legF: { x: 26, y: 0 }, legB: { x: -25, y: 0 },
+    bodyLean: 0, sx: 1, sy: 1, headR: 18,
+  };
+}
+
+const COLOURS = { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9',
+                  accent: '#29d9ff', hair: '#e8dcc0', pants: '#23294f', shoe: '#eef1ff' };
+
+test('a part resolves to absolute coordinates at its anchor plus offset', () => {
+  const P = samplePose();
+  const [r] = resolveParts([{ ...good(), anchor: 'armB', dx: 6, dy: 4 }], P, COLOURS);
+  assert.equal(r.x, P.armB.x + 6);
+  assert.equal(r.y, P.armB.y + 4);
+});
+
+test('a fill ROLE resolves to the character colour, a hex passes through', () => {
+  const P = samplePose();
+  const [role] = resolveParts([{ ...good(), fill: 'accent' }], P, COLOURS);
+  assert.equal(role.fill, COLOURS.accent);
+  const [hex] = resolveParts([{ ...good(), fill: '#6b4a2b' }], P, COLOURS);
+  assert.equal(hex.fill, '#6b4a2b');
+});
+
+test('a part anchored to the front hand tracks the reach-scaled joint', () => {
+  const near = samplePose();
+  const far = samplePose();
+  far.armF.x = 90;                       // as an attack re-scale would move it
+  const [a] = resolveParts([{ ...good(), anchor: 'armF', dx: 0, dy: 0 }], near, COLOURS);
+  const [b] = resolveParts([{ ...good(), anchor: 'armF', dx: 0, dy: 0 }], far, COLOURS);
+  assert.equal(b.x - a.x, 56, 'the part must follow the hand, not sit at a fixed offset');
+});
+
+test('parts split into their z layers, preserving author order', () => {
+  const P = samplePose();
+  const out = resolveParts([
+    { ...good(), id: 'a', z: 'behind' },
+    { ...good(), id: 'b', z: 'front' },
+    { ...good(), id: 'c', z: 'behind' },
+  ], P, COLOURS);
+  assert.deepEqual(out.filter((p) => p.z === 'behind').map((p) => p.id), ['a', 'c']);
+});
+
+test('absent or empty parts resolve to nothing, allocating no array churn', () => {
+  assert.deepEqual(resolveParts(undefined, samplePose(), COLOURS), []);
+  assert.deepEqual(resolveParts([], samplePose(), COLOURS), []);
+});
+
+test('every anchor name in the vocabulary resolves to a finite point', () => {
+  const P = samplePose();
+  for (const a of PART_ANCHORS) {
+    const pt = anchorPoint(a, P);
+    assert.ok(Number.isFinite(pt.x) && Number.isFinite(pt.y), `${a} did not resolve`);
+  }
+});
+
+test('a body lean swings the hip and shoulder sockets but not the hands', () => {
+  const up = samplePose();
+  const leaned = samplePose();
+  leaned.bodyLean = 0.4;
+  assert.notEqual(anchorPoint('hip', leaned).x, anchorPoint('hip', up).x);
+  assert.equal(anchorPoint('armB', leaned).x, anchorPoint('armB', up).x);
 });
