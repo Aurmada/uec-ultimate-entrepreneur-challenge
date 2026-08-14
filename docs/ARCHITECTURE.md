@@ -439,6 +439,61 @@ The tell is almost always **uniformity**. If a measurement says every one of nin
 characters is broken in the same way, suspect the harness first. That heuristic
 has been right every time it has come up.
 
+### `test/golden/` — the pixel-level checks, and how to run them without clicking
+
+`npm test` has no canvas, so the two pixel guarantees live in a browser page
+instead: `test/golden/index.html`, served by `python3 dev-server.py 4173`
+(plain `http.server` caches modules and serves stale ones).
+
+Three checks, one write action, all on that one page:
+
+| Button | What it does |
+| --- | --- |
+| CHECK against baseline | Renders every fighter × `CASES` in `hash.js`, hashes the pixels, diffs against `baseline.json`. 126 cases as of v3.3. |
+| CHECK isolation (big bodies first) | Renders three extreme bodies into a scratch canvas, THEN re-runs the baseline check — catches shading state leaking between fighters (see above). |
+| CHECK every part draws | Renders each declared `parts` entry with and without itself, twice, and reports a pixel-diff count plus a contrast figure per part (see below). |
+| WRITE new baseline | Captures the current renders and PUTs them to `baseline.json` — requires `dev-server.py`, which is the only server here with a PUT handler. |
+
+**The parts check also reports contrast, but does not fail on it.**
+`countDiffPixels` only asks whether a part changed any byte, which is size and
+occlusion, not visibility — a part painted a shade away from the body under it
+clears the pixel-count bar and still reads as invisible. Alongside that count,
+`checkParts` now computes the mean RGB distance between the with-part and
+without-part renders, restricted to pixels where the part draws over an
+already-opaque body pixel (extension past the silhouette is excluded — that's
+the pixel count's job). This number is REPORTED, not enforced: it is not
+added to `bad` and cannot fail the check. The reasoning is in the comment
+above `contrastForPart` in `index.html` — short version, `drawFighter` runs
+every part through `shadeBuffer()` (§7) before a pixel is read, so a part's
+declared fill hex is not what lands on the canvas, and there isn't enough
+real post-shading data on hand to defend a specific cutoff. Pick one from an
+actual run, not a guess. **This also cannot see "dark part on dark stage"**
+— the canvas here is transparent with no arena behind the fighter, so
+fighter-vs-stage contrast (half of the eleanor/coat bug, historically) is
+entirely outside what this file measures. `lab/silhouette.js` and
+`lab/contrast.js` are the tools for that; they need a live match, not this
+harness.
+
+**Running by hand**: open `http://localhost:4173/test/golden/index.html` and
+click a button; results render into the page.
+
+**Running by URL**: append `?run=baseline`, `?run=isolate`, or `?run=parts` to
+the same URL and the matching check runs on load, no click needed. Two places
+to read the result from:
+
+* `window.__goldenResult` — `{ run, pass, total, badCount, bad, detail, ... }`
+  (`parts`/`min` on the parts run), for anything that can execute JS in the
+  page and read a variable.
+* `document.title` — a one-line summary (`PASS parts 12/12 draw`,
+  `FAIL baseline 3/126 mismatched`), for anything that can only read a page
+  title.
+
+**This is not CI.** There is no `.github`, no workflow file, and nothing in
+this repo opens a browser on its own — `?run=` only makes the page itself
+drivable once something (a screenshot tool, a scripted browser session, a
+person) has already opened the URL. `window.captureGolden` on the same page
+exists for the same reason: hooks for a driver that isn't committed yet.
+
 ---
 
 ## 11. Hazards worth knowing before you touch things

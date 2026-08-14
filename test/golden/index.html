@@ -73,12 +73,6 @@ window.checkGolden = async () => {
   return { total: keys.length, bad, detail: bad.map(k => `${k}: ${baseline[k] ?? '(new)'} → ${current[k] ?? '(gone)'}`) };
 };
 
-document.getElementById('check').onclick = async () => {
-  const r = await window.checkGolden();
-  out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length ? r.bad.length + ' MISMATCH of ' + r.total : 'ALL ' + r.total + ' MATCH'}</span>\n\n`
-    + r.detail.join('\n');
-};
-
 // Renders extreme bodies first, then re-checks the neutral roster.
 //
 // This exists because of a real bug: the shading buffer used to be shared and
@@ -99,14 +93,6 @@ window.checkIsolation = async () => {
     drawFighter(cx, { ...stubFighter(FIGHTERS[0], { state: 'idle' }), body: clampBody(body), x: 300, y: 500 }, 0.5);
   }
   return window.checkGolden();
-};
-
-document.getElementById('isolate').onclick = async () => {
-  const r = await window.checkIsolation();
-  out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length
-    ? r.bad.length + ' MISMATCH of ' + r.total + ' after big bodies rendered — buffers are leaking between characters'
-    : 'ISOLATED — all ' + r.total + ' still match after extreme bodies rendered'}</span>\n\n`
-    + r.detail.join('\n');
 };
 
 // Renders every declared part twice — once alone, once with parts stripped —
@@ -258,12 +244,56 @@ window.checkParts = async () => {
   return { total: detail.length, bad, min: Number.isFinite(min) ? min : 0, detail, parts };
 };
 
-document.getElementById('parts').onclick = async () => {
-  const r = await window.checkParts();
+// Writes {pass, counts, per-item detail} to a stable global so anything that
+// can read page state (not just click buttons) gets a structured verdict.
+// Called by every render* function below, so it's populated whether a check
+// was triggered by a click or by ?run= (see the bottom of this file).
+function publishResult(kind, r) {
+  window.__goldenResult = { run: kind, pass: r.bad.length === 0, total: r.total, badCount: r.bad.length, bad: r.bad, detail: r.detail };
+  if (r.min !== undefined) window.__goldenResult.min = r.min;
+  if (r.parts) window.__goldenResult.parts = r.parts;
+  return window.__goldenResult;
+}
+
+// Below: the three render* functions each reproduce EXACTLY the innerHTML a
+// button produced before window.__goldenResult / ?run= existed — that output
+// is unchanged, only now also published and returned as a title-safe string.
+
+function renderCheckOutput(r) {
+  out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length ? r.bad.length + ' MISMATCH of ' + r.total : 'ALL ' + r.total + ' MATCH'}</span>\n\n`
+    + r.detail.join('\n');
+  publishResult('baseline', r);
+  return r.bad.length ? `FAIL baseline ${r.bad.length}/${r.total} mismatched` : `PASS baseline ${r.total}/${r.total} match`;
+}
+
+function renderIsolationOutput(r) {
+  out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length
+    ? r.bad.length + ' MISMATCH of ' + r.total + ' after big bodies rendered — buffers are leaking between characters'
+    : 'ISOLATED — all ' + r.total + ' still match after extreme bodies rendered'}</span>\n\n`
+    + r.detail.join('\n');
+  publishResult('isolate', r);
+  return r.bad.length ? `FAIL isolate ${r.bad.length}/${r.total} mismatched` : `PASS isolate ${r.total}/${r.total} match`;
+}
+
+function renderPartsOutput(r) {
   out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length
     ? r.bad.length + ' of ' + r.total + ' parts FAILED to draw'
     : 'all ' + r.total + ' parts draw (min ' + r.min + 'px)'}</span>\n\n`
     + r.detail.join('\n');
+  publishResult('parts', r);
+  return r.bad.length ? `FAIL parts ${r.bad.length}/${r.total} failed` : `PASS parts ${r.total}/${r.total} draw`;
+}
+
+document.getElementById('check').onclick = async () => {
+  renderCheckOutput(await window.checkGolden());
+};
+
+document.getElementById('isolate').onclick = async () => {
+  renderIsolationOutput(await window.checkIsolation());
+};
+
+document.getElementById('parts').onclick = async () => {
+  renderPartsOutput(await window.checkParts());
 };
 
 document.getElementById('write').onclick = async () => {
@@ -271,4 +301,24 @@ document.getElementById('write').onclick = async () => {
   const res = await fetch('./baseline.json', { method: 'PUT', body });
   out.textContent = res.ok ? 'baseline written — commit it' : 'PUT failed: run under dev-server.py';
 };
+
+// ?run=baseline|parts|isolate drives this page with no click, for anything
+// that can open a URL and read a value back — a screenshot tool, a page-title
+// poller, a human glancing at the tab. This is NOT a CI runner: nothing here
+// opens a browser on its own, something still has to load this URL. See
+// docs/ARCHITECTURE.md §10 for how to point something at it.
+//
+// The buttons above are untouched by this — same handlers, same output — so
+// clicking still works exactly as it did before this existed.
+const RUN = new URLSearchParams(location.search).get('run');
+if (RUN === 'baseline' || RUN === 'isolate' || RUN === 'parts') {
+  (async () => {
+    const title = RUN === 'baseline' ? renderCheckOutput(await window.checkGolden())
+      : RUN === 'isolate' ? renderIsolationOutput(await window.checkIsolation())
+      : renderPartsOutput(await window.checkParts());
+    document.title = title;
+  })();
+} else if (RUN) {
+  document.title = `UNKNOWN run=${RUN}`;
+}
 </script>
