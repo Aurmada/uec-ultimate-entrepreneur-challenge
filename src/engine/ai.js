@@ -119,6 +119,12 @@ export class AIController {
     f.pad = pad;
   }
 
+  // Below a third HP, survive; above it, close the round out. Exposed as its
+  // own method so the threshold is testable without driving a whole match.
+  preferredStance(f) {
+    return f.hp / f.maxHp < 0.34 ? 'safety' : 'capabilities';
+  }
+
   decide(f, opp, game) {
     const L = this.level, P = this.persona;
     const dist = Math.abs(opp.x - f.x);
@@ -148,6 +154,19 @@ export class AIController {
         this.dir = toward;
         return;
       }
+    }
+
+    // --- stance ---
+    // A toggle, not a resource spend — STANCE.COST is 0, so unlike the
+    // specials handled below this is never gated on energy. Checked here
+    // (after threat response, so a fighter still blocks/jumps out of real
+    // danger first) rather than folded into the `sp === archetype` fits-list
+    // below it, because that list is keyed off `f.energy >= METER.SPECIAL_COST`.
+    if (f.special.type === 'stance' && f.stanceCD <= 0
+      && this.preferredStance(f) !== f.stanceId) {
+      this.pulse.special = true;
+      this.dir = 0;
+      return;
     }
 
     // --- race to a mystery drop if one is up for grabs ---

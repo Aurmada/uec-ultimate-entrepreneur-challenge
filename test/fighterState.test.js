@@ -203,3 +203,21 @@ test('a stance does not survive the round', () => {
   f.resetForRound(0);
   assert.equal(f.stanceId, null);
 });
+
+import { AIController } from '../src/engine/ai.js';
+
+function aiFighter(hpFrac) {
+  const f = mk(1);
+  f.def = { ...f.def, special: 'alignmentshift' };
+  f.special = { id: 'alignmentshift', type: 'stance' };
+  f.hp = f.maxHp * hpFrac;
+  f.controller = new AIController('mogul', f.def);
+  return f;
+}
+
+test('a hurt AI prefers safety, a healthy one prefers capabilities', () => {
+  const hurt = aiFighter(0.2);
+  assert.equal(hurt.controller.preferredStance(hurt), 'safety');
+  const fine = aiFighter(0.9);
+  assert.equal(fine.controller.preferredStance(fine), 'capabilities');
+});
