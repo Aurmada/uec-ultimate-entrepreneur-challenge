@@ -138,11 +138,11 @@ test('simulation modules never read animation data', () => {
     'src/engine/ai.js',
     'src/net/online.js',
   ];
-  const FORBIDDEN = /\banimOverrides\b|\bkeyframes?\b|\bsampleTrack\b|from '\.\/anim\.js'|from '\.\.\/engine\/anim\.js'/;
+  const FORBIDDEN = /\banimOverrides\b|\bkeyframes?\b|\bsampleTrack\b|\bresolveParts\b|\bdrawParts\b|\bdef\.parts\b|from '\.\/anim\.js'|from '\.\.\/engine\/anim\.js'|from '\.\/parts\.js'|from '\.\.\/engine\/parts\.js'/;
   for (const file of SIM) {
     const src = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
     const hit = src.split('\n').findIndex(l => FORBIDDEN.test(l) && !l.trim().startsWith('//'));
     assert.equal(hit, -1,
-      `${file}:${hit + 1} reads animation data — pose is render-only, and lockstep depends on it`);
+      `${file}:${hit + 1} reads render-only data (pose or parts) — lockstep depends on it staying out of the sim`);
   }
 });
