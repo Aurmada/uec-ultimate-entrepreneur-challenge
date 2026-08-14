@@ -67,12 +67,7 @@ export class MaskController {
 //
 // Bump when the shape of the carried character changes. Peers on different
 // versions refuse rather than guess.
-//
-// v2: characters carry `parts` — render-only geometry outside the body outline
-// (held props, coats). Behaviour is unchanged, so SIM_VERSION stays put; but
-// the SHAPE of the carried character changed, and that is exactly what this
-// version guards.
-export const CHARACTER_WIRE_VERSION = 2;
+export const CHARACTER_WIRE_VERSION = 1;
 
 // The version of the SIMULATION itself, as distinct from the character payload
 // format above. Two peers can agree perfectly on what a character IS and still

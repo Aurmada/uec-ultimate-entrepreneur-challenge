@@ -337,10 +337,17 @@ Drawing inside the buffer is what earns cel shading, rim light, the key line and
 membership in the silhouette for free.
 
 Parts are validated by the shared `validateCharacter` and are **never priced**. They
-are free, like shoulders, stride and head. They do travel on the wire, which is why
-`CHARACTER_WIRE_VERSION` is 2. Cost is under the measurement noise floor: with two
-parts-bearing fighters on screen, 1.106 ms/frame with parts against 1.123 ms without,
-a difference smaller than the 0.13 ms run-to-run variance.
+are free, like shoulders, stride and head. They do **not** travel on the wire: `toCharacter`
+does not emit `parts`, and `specToDef` in `main.js` never reads `spec.ch.parts`. Each
+peer already owns its own copy of every roster fighter, keyed by the same id both sides
+agree on, so a rival's props are drawn from that local copy, never from anything sent
+over the network — a `parts` array from an untrusted peer would be a per-frame render
+input, and no player-authored character can carry its own parts yet anyway, since
+`buildCustomFighter` takes them from the base roster def. That is also why
+`CHARACTER_WIRE_VERSION` did not need to move: the payload shape it guards is unchanged.
+Cost is under the measurement noise floor: with two parts-bearing fighters on screen,
+1.106 ms/frame with parts against 1.123 ms without, a difference smaller than the
+0.13 ms run-to-run variance.
 
 The one rule: **a prop must never read as extending reach.** Same failure as the
 `applyMotion` rule above: the simulation stays correct, but the game lies to the

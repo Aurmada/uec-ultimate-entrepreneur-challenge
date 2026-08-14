@@ -235,18 +235,12 @@ test('the head anchor is clamped up to the neck, never below it', () => {
   assert.equal(anchorPoint('head', high).y, headTop + 40, 'a head above the neck is left alone');
 });
 
-test('toCharacter carries parts through to the validated character', () => {
+test('parts stay local — they are deliberately not on the wire', () => {
   const def = { id: 'x', name: 'X', style: 'balanced', special: 'pitchdeck', parts: [good()] };
-  assert.deepEqual(toCharacter(def).parts, [good()]);
-});
-
-test('a character with no parts carries an empty array, never undefined', () => {
-  const def = { id: 'x', name: 'X', style: 'balanced', special: 'pitchdeck' };
-  assert.deepEqual(toCharacter(def).parts, []);
-});
-
-test('the wire version was bumped for the new payload field', () => {
-  assert.equal(CHARACTER_WIRE_VERSION, 2);
+  assert.equal(toCharacter(def).parts, undefined,
+    'a peer renders its own copy of a roster character; shipping geometry it never reads ' +
+    'would be a validated-then-discarded field and an extra untrusted render input');
+  assert.equal(CHARACTER_WIRE_VERSION, 1, 'no payload shape change, so no bump');
 });
 
 test('a rigid part (follow 0) sits exactly on its anchor every frame', () => {

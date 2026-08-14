@@ -833,9 +833,16 @@ export function toCharacter(def) {
     // A character's own vocabulary. Absent means "universal grammar only",
     // which is a complete character — most of the base bodies are exactly that.
     commandNormals: def.commandNormals || [],
-    // Render-only, but it travels: a rival's props must draw on our screen or
-    // their silhouette is not the character they picked.
-    parts: def.parts || [],
+    // `parts` is deliberately NOT emitted here. It is render-only geometry, and
+    // each peer already has its own copy of every roster fighter — a rival's
+    // parts are drawn from OUR local def, keyed by the id both sides agree on,
+    // never from anything sent over the wire. `specToDef` in main.js never reads
+    // `spec.ch.parts` for exactly this reason: a validated-then-discarded field
+    // is worse than no field, because it makes the protocol look like it does
+    // something it doesn't. And there is nothing to lose today — no
+    // player-authored character can carry its own parts yet, since
+    // buildCustomFighter takes them from the base roster def. When that changes,
+    // wire it up then, deliberately, with the receiver actually reading it.
     ai: {
       aggr: def.ai?.aggr ?? 0.6,
       jump: def.ai?.jump ?? 0.35,
