@@ -206,6 +206,35 @@ Two shipped examples are recorded in the comments at the constant:
 Render only changes never need a bump. A v3.1 and a v3.2 client see different
 hair colours and simulate identically.
 
+### What the simulation remembers
+
+Persistent per-fighter state is declared once in `engine/fighterState.js`, not
+assigned by hand in three places. Each entry carries its default, whether it resets at a
+round boundary, how it enters the state hash, and whether the AI can read it.
+`Fighter`'s constructor, `Fighter.resetForRound()` and `hashGameState()` all iterate the
+registry.
+
+Both opt-outs — `round: 'keep'` and `hash: false` — require a written `why`. That is the
+mechanism, not decoration: before the registry existed, `resetForRound` named twenty
+fields and eight more had drifted out of it unnoticed. One of those eight was `energy`,
+which meant meter carries between rounds — a real balance rule whose only record was the
+absence of a line.
+
+A structural test backs it up: a `this.<name>T` timer set on `Fighter` and not declared
+in the registry fails the suite.
+
+Stance switch (ALIGNMENT SHIFT, scam's special) is the first verb built against the
+registry, and the reason `SIM_VERSION` moved to 5: a fighter in `capabilities` resolves
+the same inputs to different damage dealt and taken than one in `safety` or neutral, so
+two peers on either side of the version bump would shake hands and then diverge the first
+time either stance mattered. `stance` also joined `ARCHETYPES` (§6) as a tenth entry —
+appended, not inserted, so the wire codec's archetype index (`state.js`, append-only by
+contract) stays stable and needed no `CHARACTER_WIRE_VERSION` bump. It is a known
+archetype for a character's special only: it is explicitly rejected as a command-normal
+archetype, because neither the command-normal budget (`BUDGET.CMD.ARCHETYPE`) nor
+`fighter.js`'s command-normal routing have any behaviour for it — only the special/
+signature path intercepts `type === 'stance'` before an attack object is even built.
+
 ---
 
 ## 6. The character format and the power budget
@@ -231,8 +260,8 @@ matters.
 
 ### Archetypes
 
-Nine are legal: `strike`, `projectile`, `aoe`, `rush`, `grab`, `teleport`,
-`rain`, `counter`, `trap`. Each has an optional shape applied once
+Ten are legal: `strike`, `projectile`, `aoe`, `rush`, `grab`, `teleport`,
+`rain`, `counter`, `trap`, `stance`. Each has an optional shape applied once
 (`ARCHETYPE_SHAPES`) and an optional per frame tick (`ARCHETYPE_TICKS`).
 
 `counter` and `trap` are grouped as `NO_SWING`, meaning the move is not the
@@ -242,6 +271,12 @@ attack. A counter does need someone to swing at it; a trap is placed whether or
 not anyone attacks, and an attacking opponent actually beats it out of its
 startup. Conflating those two readings will send you looking for a bug that is
 not there.
+
+`stance` (§5, "What the simulation remembers") is legal for a character's
+special or signature but rejected by `validateCharacter` as a command-normal
+archetype — neither the pricing table nor the command-normal dispatch in
+`fighter.js` have any behaviour for it, so allowing it there would validate,
+price as free, and fire as a no-op.
 
 ### What the budget prices
 
