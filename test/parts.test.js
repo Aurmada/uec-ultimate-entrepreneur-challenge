@@ -90,6 +90,14 @@ test('follow outside 0..1 is rejected', () => {
   assert.match(validateParts([{ ...good(), follow: 1.5 }])[0], /follow/);
 });
 
+test('a states list must be an array of known pose states', () => {
+  assert.match(validateParts([{ ...good(), states: 5 }])[0], /states/);
+  assert.match(validateParts([{ ...good(), states: 'block' }])[0], /states/);
+  assert.match(validateParts([{ ...good(), states: [] }])[0], /states/);
+  assert.match(validateParts([{ ...good(), states: ['blok'] }])[0], /states/);
+  assert.deepEqual(validateParts([{ ...good(), states: ['block', 'crouch'] }]), []);
+});
+
 function baseChar(parts) {
   return {
     schema: SCHEMA_VERSION,

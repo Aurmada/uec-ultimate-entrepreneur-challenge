@@ -166,6 +166,18 @@ export const FILL_ROLES = ['skin', 'suit', 'suit2', 'accent', 'hair', 'pants', '
 const PART_Z = ['front', 'behind'];
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
+// The pose states a part can be restricted to. Closed, because `states: ['blok']`
+// would otherwise validate clean and make the part permanently invisible — the
+// same present-but-invisible failure the fill and occlusion bugs produced.
+//
+// This is the real set Fighter.state is ever assigned, not a guess: fighter.js's
+// setState() calls and drawFighter.js's computePose() branches on `st ===` both
+// agree on these ten. (`dash` and `victory` are easy to miss if you only skim
+// fighter.js's own state checks — victory is set from game.js on the winner.)
+export const POSE_STATES = [
+  'idle', 'walk', 'jump', 'crouch', 'block', 'attack', 'dash', 'hitstun', 'ko', 'victory',
+];
+
 function inRange(v, [lo, hi]) {
   return typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
 }
@@ -214,6 +226,17 @@ export function validateParts(parts) {
     }
     if (p.follow !== undefined && !inRange(p.follow, PARTS.FOLLOW)) {
       errors.push(`${at}.follow ${p.follow} outside [0, 1]`);
+    }
+    if (p.states !== undefined) {
+      if (!Array.isArray(p.states) || !p.states.length) {
+        errors.push(`${at}.states ${JSON.stringify(p.states)} must be a non-empty array of pose states`);
+      } else {
+        for (const s of p.states) {
+          if (!POSE_STATES.includes(s)) {
+            errors.push(`${at}.states contains ${JSON.stringify(s)}, not one of ${POSE_STATES.join(', ')}`);
+          }
+        }
+      }
     }
 
     if (p.shape === 'path') {
