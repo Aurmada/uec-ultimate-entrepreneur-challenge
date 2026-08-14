@@ -57,14 +57,38 @@ export function anchorPoint(anchor, P) {
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
+// Cloth lag. A part with follow > 0 trails its anchor instead of riding it, so
+// a coat swings when the fighter does.
+//
+// This is a RENDER-SIDE smoother holding per-fighter state, and it is allowed
+// to be frame-rate dependent and non-deterministic precisely because nothing in
+// the simulation can see it. That freedom is exactly what the structural guard
+// in determinism.test.js exists to protect — if a part ever became a hurtbox,
+// this smoother would desync a live match on the first swing.
+export function partLagState() {
+  return new Map();
+}
+
+export function applyFollow(state, id, target, follow) {
+  if (!follow) return target;
+  const prev = state.get(id);
+  if (!prev) { state.set(id, { ...target }); return target; }
+  // Exponential approach. follow 1 would never arrive, so cap the lag at 0.9.
+  const k = 1 - Math.min(0.9, follow);
+  const next = { x: prev.x + (target.x - prev.x) * k, y: prev.y + (target.y - prev.y) * k };
+  state.set(id, next);
+  return next;
+}
+
 // parts + pose + the character's palette => drawable descriptors.
 // Author order is preserved inside each z layer.
-export function resolveParts(parts, P, colours) {
+export function resolveParts(parts, P, colours, lag) {
   if (!parts || !parts.length) return [];
   const out = [];
   for (const p of parts) {
     if (p.states && !p.states.includes(P.partState)) continue;
-    const at = anchorPoint(p.anchor, P);
+    const raw = anchorPoint(p.anchor, P);
+    const at = (lag && p.follow) ? applyFollow(lag, p.id, raw, p.follow) : raw;
     out.push({
       id: p.id,
       shape: p.shape,

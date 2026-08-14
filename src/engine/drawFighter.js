@@ -8,7 +8,7 @@ import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
-import { resolveParts, drawParts } from './parts.js';
+import { resolveParts, drawParts, partLagState } from './parts.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
@@ -1255,7 +1255,8 @@ export function drawFighter(ctx, f, t) {
   // palette, so a part with a role fill recolours with the fighter — including
   // a player founder whose colours were sampled from their photo.
   P.partState = f.state;
-  const parts = resolveParts(def.parts, P, c);
+  f._partLag ||= partLagState();
+  const parts = resolveParts(def.parts, P, c, f._partLag);
 
   // Elbow bow, per character. One global ELBOW meant both arms bent the same
   // way, so an arm folded close to the body just fused into the torso and the

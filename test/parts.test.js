@@ -10,7 +10,7 @@ import {
   validateParts, PART_SHAPES, PART_ANCHORS, FILL_ROLES,
   validateCharacter, SCHEMA_VERSION, DEFAULT_BODY,
 } from '../src/data/schema.js';
-import { resolveParts, anchorPoint } from '../src/engine/parts.js';
+import { resolveParts, anchorPoint, partLagState, applyFollow } from '../src/engine/parts.js';
 import { STYLIZE } from '../src/config.js';
 import { toCharacter } from '../src/data/fighters.js';
 import { CHARACTER_WIRE_VERSION } from '../src/net/online.js';
@@ -230,4 +230,31 @@ test('a character with no parts carries an empty array, never undefined', () => 
 
 test('the wire version was bumped for the new payload field', () => {
   assert.equal(CHARACTER_WIRE_VERSION, 2);
+});
+
+test('a rigid part (follow 0) sits exactly on its anchor every frame', () => {
+  const st = partLagState();
+  const a = applyFollow(st, 'coat', { x: 10, y: 10 }, 0);
+  const b = applyFollow(st, 'coat', { x: 90, y: 10 }, 0);
+  assert.deepEqual(a, { x: 10, y: 10 });
+  assert.deepEqual(b, { x: 90, y: 10 });
+});
+
+test('a following part trails its anchor and then catches up', () => {
+  const st = partLagState();
+  applyFollow(st, 'cape', { x: 0, y: 0 }, 0.5);
+  const moved = applyFollow(st, 'cape', { x: 100, y: 0 }, 0.5);
+  assert.ok(moved.x > 0 && moved.x < 100, `expected lag, got ${moved.x}`);
+  let last = moved.x;
+  for (let i = 0; i < 20; i++) last = applyFollow(st, 'cape', { x: 100, y: 0 }, 0.5).x;
+  assert.ok(Math.abs(last - 100) < 0.5, `expected catch-up, got ${last}`);
+});
+
+test('lag state is per fighter, so two fighters never share a cape', () => {
+  const one = partLagState(), two = partLagState();
+  applyFollow(one, 'cape', { x: 0, y: 0 }, 0.5);
+  applyFollow(two, 'cape', { x: 100, y: 0 }, 0.5);
+  const a = applyFollow(one, 'cape', { x: 100, y: 0 }, 0.5).x;
+  const b = applyFollow(two, 'cape', { x: 100, y: 0 }, 0.5).x;
+  assert.notEqual(a, b);
 });

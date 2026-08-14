@@ -344,6 +344,10 @@ export const FIGHTERS = [
       // the first version was dark navy on dark navy and vanished.
       { id: 'tablet', shape: 'roundRect', anchor: 'armB', dx: 20, dy: -10,
         w: 34, h: 46, rot: -0.2, fill: 'accent', z: 'front' },
+      // A coat, and the first use of cloth lag: it trails the hips and settles.
+      { id: 'coat', shape: 'path', anchor: 'hip', dx: 0, dy: 0,
+        pts: [[-16, -4], [16, -4], [22, 46], [-22, 46]],
+        fill: 'suit2', z: 'behind', follow: 0.35 },
     ],
   },
   {
