@@ -460,8 +460,12 @@ export class Fighter {
     // Intercepted here, before the attack object is built, so it does not
     // fall through to `kind: 'stance'` with no engine branch to run it.
     if (sp.type === 'stance') {
+      // Charge only if the switch ACTUALLY happens. switchStance() refuses
+      // while its own cooldown runs, and taking 50 meter for a no-op is a trap
+      // rather than a cost — the player gets no feedback that the press was
+      // eaten, only that the meter is gone.
+      if (!this.switchStance()) return;
       this.energy -= METER.SPECIAL_COST;
-      this.switchStance();
       this.attack = null;
       this.setState('idle');
       game.onSpecialStart(this, sp);

@@ -221,3 +221,26 @@ test('a hurt AI prefers safety, a healthy one prefers capabilities', () => {
   const fine = aiFighter(0.9);
   assert.equal(fine.controller.preferredStance(fine), 'capabilities');
 });
+
+// A refused switch must not bill the player.
+//
+// startSpecial charged METER.SPECIAL_COST before asking switchStance() whether
+// the switch could happen, so pressing special during the cooldown took 50
+// meter and did nothing. The player gets no feedback that the press was eaten,
+// only that the meter is gone — a trap rather than a cost.
+test('a stance switch refused by its cooldown costs no meter', async () => {
+  const { METER } = await import('../src/config.js');
+  const f = mk();
+  f.special = { id: 'alignmentshift', type: 'stance', name: 'ALIGNMENT SHIFT' };
+  const game = { onSpecialStart() {} };
+
+  f.energy = METER.MAX;
+  f.startSpecial(game);
+  assert.equal(f.stanceId, 'safety', 'the first press should switch');
+  assert.equal(f.energy, METER.MAX - METER.SPECIAL_COST, 'and should be paid for');
+
+  const banked = f.energy;
+  f.startSpecial(game);                       // cooldown still running
+  assert.equal(f.stanceId, 'safety', 'the second press is refused');
+  assert.equal(f.energy, banked, 'and must not be charged for');
+});
