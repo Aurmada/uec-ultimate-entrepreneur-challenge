@@ -8,6 +8,7 @@ import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
+import { resolveParts, drawParts } from './parts.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
@@ -1257,6 +1258,12 @@ export function drawFighter(ctx, f, t) {
   const [hipFx, hipFy] = socket(8, P.hipY);
   const [hipBx, hipBy] = socket(-8, P.hipY);
 
+  // Resolved once and reused by both layers. `c` is the character's live
+  // palette, so a part with a role fill recolours with the fighter — including
+  // a player founder whose colours were sampled from their photo.
+  P.partState = f.state;
+  const parts = resolveParts(def.parts, P, c);
+
   // Elbow bow, per character. One global ELBOW meant both arms bent the same
   // way, so an arm folded close to the body just fused into the torso and the
   // silhouette lost it — "hands on hips" and "arms crossed" were invisible.
@@ -1266,6 +1273,9 @@ export function drawFighter(ctx, f, t) {
   const stanceEl = f.state === 'idle' ? (f.def?.stance || null) : null;
   const elbowF = stanceEl?.elbowF ?? STYLIZE.ELBOW;
   const elbowB = stanceEl?.elbowB ?? STYLIZE.ELBOW;
+
+  // BEHIND the body: capes, coat tails, anything the torso should overlap.
+  if (parts.length) drawParts(g, parts, 'behind', blob);
 
   // back arm, back leg — one shade back so the near side reads in front
   blob(g, () => { g.arc(shBx, shBy, upperArm * 0.9 * STYLIZE.DELTOID * 0.5, 0, 7); }, c.suit2);
@@ -1330,6 +1340,11 @@ export function drawFighter(ctx, f, t) {
           c.suit, elbowF, STYLIZE.ARM_SPAN);
   blob(g, () => { g.arc(P.armF.x, P.armF.y, handF, 0, 7); }, c.skin);
 
+  // IN FRONT of the body: held props. Still inside the buffer, so the shading
+  // pass and key line treat them as part of the silhouette.
+  if (parts.length) drawParts(g, parts, 'front', blob);
+
+  // The universal block guard. Not a character part — every fighter raises one.
   if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
 
   if (B) {

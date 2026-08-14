@@ -82,3 +82,41 @@ export function resolveParts(parts, P, colours) {
   }
   return out;
 }
+
+// Paint resolved parts of one z layer.
+//
+// `blob` is passed in rather than imported: it lives in drawFighter.js and
+// closes over that module's INK/OUTLINE state, so importing it here would be a
+// cycle. Passing it also keeps this module free of canvas globals, which is
+// what lets the half above stay pure.
+//
+// MUST be called INSIDE the offscreen buffer, before shadeBuffer(). That is the
+// whole reason parts get cel shading, rim light and the key line for free, and
+// the reason they join the silhouette instead of looking pasted on.
+export function drawParts(ctx, resolved, layer, blob) {
+  for (const p of resolved) {
+    if (p.z !== layer) continue;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    if (p.rot) ctx.rotate(p.rot);
+    switch (p.shape) {
+      case 'roundRect':
+        blob(ctx, () => { ctx.roundRect(-p.w / 2, -p.h / 2, p.w, p.h, Math.min(5, p.w / 4)); }, p.fill);
+        break;
+      case 'ellipse':
+        blob(ctx, () => { ctx.ellipse(0, 0, p.r, p.r, 0, 0, 7); }, p.fill);
+        break;
+      case 'capsule':
+        blob(ctx, () => { ctx.roundRect(-p.w / 2, -p.h / 2, p.w, p.h, Math.min(p.w, p.h) / 2); }, p.fill);
+        break;
+      case 'path':
+        blob(ctx, () => {
+          ctx.moveTo(p.pts[0][0], p.pts[0][1]);
+          for (let i = 1; i < p.pts.length; i++) ctx.lineTo(p.pts[i][0], p.pts[i][1]);
+          ctx.closePath();
+        }, p.fill);
+        break;
+    }
+    ctx.restore();
+  }
+}
