@@ -554,7 +554,7 @@ export function resolveParts(parts, P, colours) {
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `node --test test/parts.test.js`
-Expected: PASS, 21 tests
+Expected: PASS, 23 tests (21 from the plan as written, plus 2 added in review — see below)
 
 - [ ] **Step 5: Commit**
 
@@ -618,7 +618,7 @@ export function drawParts(ctx, resolved, layer, blob) {
 - [ ] **Step 2: Verify the module still loads and the pure half is unaffected**
 
 Run: `node --test test/parts.test.js`
-Expected: PASS, 21 tests (unchanged — `drawParts` is not called headless)
+Expected: PASS, 23 tests (unchanged — `drawParts` is not called headless)
 
 - [ ] **Step 3: Commit**
 
@@ -679,7 +679,7 @@ Replace line `if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);` with:
 No character has `parts` yet, so `parts.length` is 0 everywhere and rendering must be identical.
 
 Run: `npm test`
-Expected: 236 pass, 0 fail
+Expected: 238 pass, 0 fail
 
 Then start the dev server and check the golden baseline:
 
@@ -763,7 +763,7 @@ export const CHARACTER_WIRE_VERSION = 2;
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `npm test`
-Expected: 239 pass, 0 fail
+Expected: 241 pass, 0 fail
 
 - [ ] **Step 5: Commit**
 
@@ -812,7 +812,7 @@ this step is how you know it pins something.
 - [ ] **Step 3: Run to verify it passes**
 
 Run: `npm test`
-Expected: 239 pass, 0 fail
+Expected: 241 pass, 0 fail
 
 - [ ] **Step 4: Commit**
 
@@ -897,7 +897,7 @@ a single `blob`. The honest test is therefore visual equivalence plus a re-basel
 not a hash match. If you want the stripe and handle back, they are two more parts.
 
 Run: `npm test`
-Expected: 239 pass, 0 fail
+Expected: 241 pass, 0 fail
 
 - [ ] **Step 6: Commit**
 
@@ -963,7 +963,7 @@ rear hand, shoulder.
 - [ ] **Step 2: Validate every character still passes**
 
 Run: `npm test`
-Expected: 239 pass, 0 fail — `rosterMoves.test.js` and `roster.test.js` both build
+Expected: 241 pass, 0 fail — `rosterMoves.test.js` and `roster.test.js` both build
 every character, so a malformed part fails here.
 
 - [ ] **Step 3: Look at them**
@@ -1270,7 +1270,7 @@ export function applyFollow(state, id, target, follow) {
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `node --test test/parts.test.js`
-Expected: PASS, 27 tests
+Expected: PASS, 29 tests
 
 - [ ] **Step 5: Wire lag into the resolve path**
 
@@ -1312,7 +1312,7 @@ cheapest way to give her a shape below the waist:
 - [ ] **Step 7: Verify**
 
 Run: `npm test`
-Expected: 242 pass, 0 fail
+Expected: 244 pass, 0 fail
 
 Open `http://localhost:4173/?debug=1`, start a fight as `eleanor`, and walk back and
 forth. The coat should trail the hips and settle. Re-baseline the golden harness.
@@ -1377,7 +1377,7 @@ active window.
 - [ ] **Step 3: Verify and commit**
 
 Run: `npm test`
-Expected: 242 pass, 0 fail
+Expected: 244 pass, 0 fail
 
 ```bash
 git add incubator/main.js docs/ARCHITECTURE.md
@@ -1388,7 +1388,7 @@ git commit -m "docs(parts): architecture section, Incubator carries parts on exp
 
 ## Acceptance
 
-- [ ] `npm test` green, 242 tests
+- [ ] `npm test` green, 244 tests
 - [ ] Golden harness matches its baseline
 - [ ] **CHECK every part draws** reports zero dead parts
 - [ ] Parts cost under 0.3 ms/frame, measured and written into `ARCHITECTURE.md` §7
