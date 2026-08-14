@@ -3,7 +3,7 @@
 // Shared by the game's load path and the Incubator authoring tool, so a
 // character that validates here is playable there and vice versa.
 
-import { BODY, BUDGET, ATTACKS } from '../config.js';
+import { BODY, BUDGET, ATTACKS, PARTS } from '../config.js';
 
 export const SCHEMA_VERSION = 2;
 
@@ -148,6 +148,95 @@ export const PREF_RANGES = ['close', 'mid', 'far'];
 
 const TEXT_CAPS = { name: 22, title: 24, company: 20, tagline: 64, rap: 40 };
 const FIGHTING_KEYS = ['startup', 'dmg', 'reach', 'recovery', 'speed', 'hp'];
+
+// ---------------------------------------------------------------- parts
+//
+// RENDER-ONLY geometry a character carries outside its body: a held prop, a
+// coat, a cape. Never priced by the budget (like shoulders, stride and head),
+// never read by the simulation, never a hurtbox. If a prop should hit someone
+// that is a MOVE, and moves are priced.
+export const PART_SHAPES = ['roundRect', 'ellipse', 'capsule', 'path'];
+export const PART_ANCHORS = ['armF', 'armB', 'legF', 'legB', 'head', 'shoulder', 'hip', 'torso'];
+
+// A part's colour is a ROLE, not a hex, so it recolours with the character —
+// including a player founder whose palette was sampled from their photo. A
+// literal hex stays legal for something genuinely fixed, like leather.
+export const FILL_ROLES = ['skin', 'suit', 'suit2', 'accent', 'hair', 'pants', 'shoe'];
+
+const PART_Z = ['front', 'behind'];
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
+function inRange(v, [lo, hi]) {
+  return typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
+}
+
+// Returns an array of error strings. Empty means valid.
+export function validateParts(parts) {
+  if (parts === undefined || parts === null) return [];
+  if (!Array.isArray(parts)) return ['parts must be an array'];
+  if (parts.length > PARTS.MAX) return [`parts: at most ${PARTS.MAX} per character`];
+
+  const errors = [];
+  const seen = new Set();
+
+  parts.forEach((p, i) => {
+    const at = `parts[${i}]`;
+    if (!p || typeof p !== 'object') { errors.push(`${at} is not an object`); return; }
+
+    if (typeof p.id !== 'string' || !/^[a-z0-9-]{2,16}$/.test(p.id)) {
+      errors.push(`${at}.id must match [a-z0-9-]{2,16}`);
+    } else if (seen.has(p.id)) {
+      errors.push(`${at}.id ${JSON.stringify(p.id)} is a duplicate`);
+    } else {
+      seen.add(p.id);
+    }
+
+    if (!PART_SHAPES.includes(p.shape)) {
+      errors.push(`${at}.shape ${JSON.stringify(p.shape)} is not one of ${PART_SHAPES.join(', ')}`);
+    }
+    if (!PART_ANCHORS.includes(p.anchor)) {
+      errors.push(`${at}.anchor ${JSON.stringify(p.anchor)} is not one of ${PART_ANCHORS.join(', ')}`);
+    }
+    if (!PART_Z.includes(p.z)) {
+      errors.push(`${at}.z must be 'front' or 'behind'`);
+    }
+    if (typeof p.fill !== 'string' || (!FILL_ROLES.includes(p.fill) && !HEX.test(p.fill))) {
+      errors.push(`${at}.fill must be a role (${FILL_ROLES.join(', ')}) or a #rrggbb hex`);
+    }
+
+    for (const k of ['dx', 'dy']) {
+      if (!inRange(p[k], PARTS.OFFSET)) {
+        errors.push(`${at}.${k} ${p[k]} outside [${PARTS.OFFSET[0]}, ${PARTS.OFFSET[1]}]`);
+      }
+    }
+    if (p.rot !== undefined && !inRange(p.rot, PARTS.ROT)) {
+      errors.push(`${at}.rot ${p.rot} outside [-π, π]`);
+    }
+    if (p.follow !== undefined && !inRange(p.follow, PARTS.FOLLOW)) {
+      errors.push(`${at}.follow ${p.follow} outside [0, 1]`);
+    }
+
+    if (p.shape === 'path') {
+      const n = Array.isArray(p.pts) ? p.pts.length : 0;
+      if (n < PARTS.MIN_POINTS || n > PARTS.MAX_POINTS) {
+        errors.push(`${at}.pts needs ${PARTS.MIN_POINTS}-${PARTS.MAX_POINTS} points, got ${n}`);
+      } else if (!p.pts.every((q) => Array.isArray(q) && q.length === 2
+                              && inRange(q[0], PARTS.OFFSET) && inRange(q[1], PARTS.OFFSET))) {
+        errors.push(`${at}.pts must be [x, y] pairs inside the offset range`);
+      }
+    } else if (p.shape === 'ellipse') {
+      if (!inRange(p.r, PARTS.SIZE)) errors.push(`${at}.r ${p.r} outside [${PARTS.SIZE.join(', ')}]`);
+    } else {
+      for (const k of ['w', 'h']) {
+        if (!inRange(p[k], PARTS.SIZE)) {
+          errors.push(`${at}.${k} ${p[k]} outside [${PARTS.SIZE[0]}, ${PARTS.SIZE[1]}]`);
+        }
+      }
+    }
+  });
+
+  return errors;
+}
 
 // Returns { ok, errors[], warnings[], cost, band }.
 // `ok` is false for anything that must not reach the game; warn-band
