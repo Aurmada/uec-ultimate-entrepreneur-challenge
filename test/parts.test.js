@@ -6,7 +6,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateParts, PART_SHAPES, PART_ANCHORS, FILL_ROLES } from '../src/data/schema.js';
+import {
+  validateParts, PART_SHAPES, PART_ANCHORS, FILL_ROLES,
+  validateCharacter, SCHEMA_VERSION, DEFAULT_BODY,
+} from '../src/data/schema.js';
 
 const good = () => ({
   id: 'case', shape: 'roundRect', anchor: 'armB',
@@ -81,4 +84,39 @@ test('a path needs at least 3 points and at most 24', () => {
 
 test('follow outside 0..1 is rejected', () => {
   assert.match(validateParts([{ ...good(), follow: 1.5 }])[0], /follow/);
+});
+
+function baseChar(parts) {
+  return {
+    schema: SCHEMA_VERSION,
+    id: 'tester',
+    identity: { name: 'TEST', title: 'THE TEST', company: 'TESTCO', tagline: 'x', rap: 'y' },
+    body: { ...DEFAULT_BODY },
+    look: {},
+    fighting: {
+      startup: 1, dmg: 1, reach: 1, recovery: 1, speed: 1, hp: 1,
+      moves: { special: { archetype: 'strike' }, signature: null },
+    },
+    commandNormals: [],
+    ai: { aggr: 0.5, jump: 0.3, prefRange: 'mid' },
+    parts,
+  };
+}
+
+test('a character with a valid part validates clean', () => {
+  const r = validateCharacter(baseChar([good()]));
+  assert.equal(r.ok, true, r.errors.join('; '));
+});
+
+test('a character with a broken part is rejected', () => {
+  const r = validateCharacter(baseChar([{ ...good(), anchor: 'nose' }]));
+  assert.equal(r.ok, false);
+  assert.ok(r.errors.some((e) => /anchor/.test(e)), r.errors.join('; '));
+});
+
+test('parts are NOT priced — they are render-only like shoulders and stride', () => {
+  const without = validateCharacter(baseChar(undefined)).cost;
+  const heavy = Array.from({ length: 6 }, (_, i) => ({ ...good(), id: 'p' + i }));
+  const with6 = validateCharacter(baseChar(heavy)).cost;
+  assert.equal(with6, without, 'adding parts must not move the power budget');
 });

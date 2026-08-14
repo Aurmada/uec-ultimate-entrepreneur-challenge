@@ -274,6 +274,10 @@ export function validateCharacter(ch) {
     errors.push(`look.stance ${JSON.stringify(look.stance)} is not a known stance`);
   }
 
+  // Render-only, but still authored data — so it is validated, and never
+  // priced. Nothing below adds to `cost`.
+  errors.push(...validateParts(ch.parts));
+
   const fighting = ch.fighting || {};
   for (const key of FIGHTING_KEYS) {
     const v = fighting[key];
