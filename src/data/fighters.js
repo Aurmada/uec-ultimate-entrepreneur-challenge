@@ -130,8 +130,8 @@ export const FIGHTERS = [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
       // ava — LIZBETH HOLMEZ, THERAMOS. The sample vial, worn at the hip.
-      { id: 'vial', shape: 'capsule', anchor: 'hip', dx: -14, dy: -6,
-        w: 10, h: 26, fill: 'accent', z: 'front' },
+      { id: 'vial', shape: 'capsule', anchor: 'hip', dx: -26, dy: -4,
+        w: 16, h: 38, fill: 'accent', z: 'front' },
     ],
   },
   {
@@ -340,8 +340,10 @@ export const FIGHTERS = [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
       // eleanor — CATHIE WOODZ, ARKK. The tablet, chart out.
-      { id: 'tablet', shape: 'roundRect', anchor: 'armB', dx: 2, dy: 2,
-        w: 30, h: 42, rot: -0.2, fill: 'suit2', z: 'front' },
+      // `accent`, not `suit2`: her suit2 is #111a3d against a #1c2a5e suit, so
+      // the first version was dark navy on dark navy and vanished.
+      { id: 'tablet', shape: 'roundRect', anchor: 'armB', dx: 20, dy: -10,
+        w: 34, h: 46, rot: -0.2, fill: 'accent', z: 'front' },
     ],
   },
   {
@@ -383,7 +385,7 @@ export const FIGHTERS = [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
       // dex — CARL ICAHNT. The briefcase he never puts down.
-      { id: 'case', shape: 'roundRect', anchor: 'armB', dx: 4, dy: 10,
+      { id: 'case', shape: 'roundRect', anchor: 'armB', dx: 18, dy: 26,
         w: 44, h: 34, fill: '#6b4a2b', z: 'front' },
     ],
     // A slow, heavy shift of weight. He does not fidget — he waits.
@@ -521,8 +523,11 @@ export const FIGHTERS = [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
       // scam — SCAM ALT, CLOSEDAI. A single enormous paperclip. He knows what he did.
-      { id: 'clip', shape: 'path', anchor: 'shoulder', dx: -20, dy: 18,
-        pts: [[0,0],[10,0],[10,44],[3,44],[3,10],[7,10],[7,38]],
+      // A hairpin OUTLINE, not a centreline. blob() fills the polygon, so the
+      // first version — which traced the wire of a paperclip — filled to 118
+      // visible pixels and read as nothing at all.
+      { id: 'clip', shape: 'path', anchor: 'shoulder', dx: -46, dy: -4,
+        pts: [[0,0],[22,0],[22,66],[14,66],[14,9],[8,9],[8,66],[0,66]],
         fill: 'shoe', z: 'behind' },
     ],
   },
