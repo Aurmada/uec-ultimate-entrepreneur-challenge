@@ -132,9 +132,101 @@ function renderPixels(def, c) {
   return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 }
 
+// CONTRAST — reported, not enforced. Read this whole comment before adding a
+// threshold; the short version is at the bottom.
+//
+// countDiffPixels only asks "did this part change any byte". That is size and
+// occlusion, and it is blind to colour: a part painted one shade off the body
+// underneath it changes every byte the pixel count wants and still reads as
+// nothing on screen. Three shipped bugs prove it — max/mat, eleanor/coat and
+// eleanor/tablet were all "present but invisible" fixes that were really just
+// a fill token one step away from disappearing again, and every one of them
+// clears PART_MIN_PIXELS today (1915px, 2364px, 1655px). The pixel count would
+// not catch a regression back to the broken colour on any of the three.
+//
+// This computes the mean RGB distance between the with-part and without-part
+// renders, restricted to pixels where the BODY was already opaque before the
+// part drew (i.e. pixels the part actually occludes, not pixels where it
+// extends past the silhouette into what was transparent canvas). Those
+// extension pixels have no "before" colour to compare against — their
+// distance is either meaningless or enormous depending on how you define
+// distance-from-transparent — and they are already the pixel count's job, so
+// they are excluded here rather than double-counted or faked.
+//
+// Restricting to CHANGED pixels (not every opaque body pixel in frame) matters
+// just as much: the canvas is mostly body and background that the part never
+// touches, and averaging over the whole frame would dilute any real signal
+// into noise — a part covering 2000px of a 136800px canvas would score
+// ~99% "no change" no matter how badly it blended. One edge case follows from
+// using "changed" as the footprint proxy: a pixel where the part's colour is
+// an EXACT match for the body underneath is indistinguishable from a pixel
+// the part never reached at all, so it is excluded too — that pixel would
+// have contributed a distance of 0 anyway, so leaving it out only makes an
+// already-bad score look very slightly better, never worse. It does not
+// affect any of the three real bugs above, none of which were an exact match.
+//
+// A part that overlaps no opaque body pixel at all (drawn entirely off the
+// silhouette, e.g. a prop held out past the reach limit) is reported as
+// "no overlap", not scored zero and failed — it has nothing to blend into by
+// definition, and that is not the failure this metric is built to catch.
+function contrastForPart(withPart, without) {
+  let sum = 0, n = 0;
+  for (let i = 0; i < without.length; i += 4) {
+    if (without[i + 3] === 0) continue; // transparent before the part — the pixel count's job, not this one's
+    if (withPart[i] === without[i] && withPart[i + 1] === without[i + 1]
+      && withPart[i + 2] === without[i + 2] && withPart[i + 3] === without[i + 3]) continue; // part never touched (or matched exactly) this pixel
+    const dr = withPart[i] - without[i], dg = withPart[i + 1] - without[i + 1], db = withPart[i + 2] - without[i + 2];
+    sum += Math.sqrt(dr * dr + dg * dg + db * db);
+    n++;
+  }
+  return n === 0 ? { overlap: 0, mean: null } : { overlap: n, mean: sum / n };
+}
+// THE THRESHOLD, or the deliberate lack of one: base fill hex alone gives a
+// tempting number. suit2 (#d15505) vs the suit underneath it (#ff7a1a) on
+// max's original mat is Euclidean RGB distance ~63; the shipped fix, shoe
+// (#f5f5f5) on the same suit, is ~251. eleanor's original coat, suit2
+// (#111a3d) against the pants underneath it (#141d42), is ~7; hair
+// (#f2ece0) on the same pants is ~342. eleanor's original tablet, suit2 vs
+// the suit (#1c2a5e), is ~38; accent (#ffd23f) is ~284. Every known-broken
+// case sits under 65 and every known-fixed one sits over 250 — a huge gap,
+// and a threshold somewhere in between looks obviously justified.
+// It is not, and here is why: those numbers are the DECLARED fill colours,
+// and no part ever reaches the canvas as its declared colour. `drawFighter`
+// composites everything inside an offscreen buffer and then runs
+// `shadeBuffer()` over the whole silhouette — key light, mid/floor gradients,
+// side gradients, rim light (see ARCHITECTURE.md §7) — before any pixel is
+// read. That pass is why the same `suit2` hex reads differently on different
+// characters and different states in the first place. The three known pairs
+// above are the only data point I have without opening a browser, which this
+// task does not permit, and three anecdotes from PRE-shading hex codes are
+// not enough to justify a number that will DECIDE pass/fail against the
+// POST-shading pixels the metric actually measures. An unjustified threshold
+// that fails a good part is worse than no threshold, so this ships
+// REPORTED-BUT-NOT-ENFORCED: `checkParts` prints the contrast figure next to
+// every part and never adds it to `bad`. Whoever next has a real browser
+// should run this against the shipped roster, look at the actual distribution
+// of post-shading numbers, and pick a threshold from THAT — not from this
+// comment.
+//
+// LIMITATION this metric cannot see at all: the canvas here is transparent,
+// with no arena behind the fighter. Half of the eleanor/coat bug was suit2
+// against a dark NAVY ARENA, not just against her own suit — "dark part on
+// dark stage" needs a real background to measure and this harness never
+// draws one. `lab/silhouette.js` and `lab/contrast.js` measure fighter-vs-
+// stage contrast in a live match; this file only ever measures fighter-vs-
+// fighter (a part against the body it sits on). Do not read a good score here
+// as "this part is visible in an arena" — it only means "this part doesn't
+// vanish into its own wearer".
+const PART_CONTRAST_ENFORCED = false; // see the comment above before flipping this on
+
+function contrastLabel(part) {
+  return part.overlap === 0 ? 'no overlap with body' : `contrast ${part.mean.toFixed(1)} over ${part.overlap}px`;
+}
+
 window.checkParts = async () => {
   const detail = [];
   const bad = [];
+  const parts = [];
   let min = Infinity;
   Math.random = () => 0.5;
   try {
@@ -150,16 +242,20 @@ window.checkParts = async () => {
         const withPart = renderPixels({ ...def, parts: [part] }, c);
         const without = renderPixels({ ...def, parts: [] }, c);
         const diff = countDiffPixels(withPart, without);
+        const contrast = contrastForPart(withPart, without);
         min = Math.min(min, diff);
+        // PART_CONTRAST_ENFORCED is false — see the comment above contrastForPart.
+        // Contrast is reported in `detail`/`parts` but never joins `bad`.
         const pass = diff >= PART_MIN_PIXELS;
         if (!pass) bad.push(key);
-        detail.push(`${key} @ ${c.state}: ${diff}px${pass ? '' : ' — FAIL (< ' + PART_MIN_PIXELS + 'px)'}`);
+        parts.push({ key, state: c.state, diffPixels: diff, pass, overlapPixels: contrast.overlap, contrastMean: contrast.mean });
+        detail.push(`${key} @ ${c.state}: ${diff}px${pass ? '' : ' — FAIL (< ' + PART_MIN_PIXELS + 'px)'} — ${contrastLabel(contrast)}`);
       }
     }
   } finally {
     Math.random = realRandom;
   }
-  return { total: detail.length, bad, min: Number.isFinite(min) ? min : 0, detail };
+  return { total: detail.length, bad, min: Number.isFinite(min) ? min : 0, detail, parts };
 };
 
 document.getElementById('parts').onclick = async () => {
