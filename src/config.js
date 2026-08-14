@@ -349,6 +349,23 @@ export const STYLIZE = {
   SHADE_FLOOR: 0.30,    // crush at the feet — do not soften, see above
 };
 
+// ---- CHARACTER PARTS -------------------------------------------------------
+// Render-only geometry a character carries outside its body outline: a held
+// prop, a coat, a cape. Limits live here rather than in the engine so a part
+// can be swept without editing render code.
+//
+// MAX is deliberately small. Six shapes is more than enough for a readable
+// silhouette, and a cap is what stops one character costing the frame budget.
+export const PARTS = {
+  MAX: 6,             // parts per character
+  MAX_POINTS: 24,     // vertices in a `path` part
+  MIN_POINTS: 3,
+  OFFSET: [-120, 120], // dx / dy range, rig px
+  SIZE: [1, 160],      // w / h / r range, rig px
+  ROT: [-Math.PI, Math.PI],
+  FOLLOW: [0, 1],      // cloth lag; 0 is rigid to the anchor
+};
+
 export const BODY = {
   height:    [0.82, 1.22],   // overall scale
   build:     [0.85, 1.25],   // torso + limb thickness
