@@ -328,6 +328,7 @@ function baseChar(parts) {
       moves: { special: { archetype: 'strike' }, signature: null },
     },
     commandNormals: [],
+    ai: { aggr: 0.5, jump: 0.3, prefRange: 'mid' },
     parts,
   };
 }
