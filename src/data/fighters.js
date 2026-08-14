@@ -129,6 +129,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // ava — LIZBETH HOLMEZ, THERAMOS. The sample vial, worn at the hip.
+      { id: 'vial', shape: 'capsule', anchor: 'hip', dx: -14, dy: -6,
+        w: 10, h: 26, fill: 'accent', z: 'front' },
     ],
   },
   {
@@ -172,6 +175,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // max — ADAM WEUMANN, WEWERK. The rolled mat across the back.
+      { id: 'mat', shape: 'capsule', anchor: 'shoulder', dx: -18, dy: 26,
+        w: 14, h: 62, rot: 0.35, fill: 'suit2', z: 'behind' },
     ],
   },
   {
@@ -220,6 +226,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // kai — STEVE NOJOBS, PEAR. The device, held out in the rear hand.
+      { id: 'device', shape: 'roundRect', anchor: 'armB', dx: 0, dy: 0,
+        w: 20, h: 34, fill: 'accent', z: 'front' },
     ],
   },
   {
@@ -267,6 +276,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // zara — KIM KOINDASHIAN, SKIMZCOIN. The ring light haloing the head.
+      { id: 'ringlight', shape: 'ellipse', anchor: 'head', dx: 0, dy: -4,
+        r: 34, fill: 'accent', z: 'behind' },
     ],
     // Restless: two bounces per breath, never quite still.
     animOverrides: {
@@ -327,6 +339,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // eleanor — CATHIE WOODZ, ARKK. The tablet, chart out.
+      { id: 'tablet', shape: 'roundRect', anchor: 'armB', dx: 2, dy: 2,
+        w: 30, h: 42, rot: -0.2, fill: 'suit2', z: 'front' },
     ],
   },
   {
@@ -367,6 +382,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // dex — CARL ICAHNT. The briefcase he never puts down.
+      { id: 'case', shape: 'roundRect', anchor: 'armB', dx: 4, dy: 10,
+        w: 44, h: 34, fill: '#6b4a2b', z: 'front' },
     ],
     // A slow, heavy shift of weight. He does not fidget — he waits.
     animOverrides: {
@@ -417,6 +435,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // elo — ELO MA, SPACEY-X. The booster on the back.
+      { id: 'booster', shape: 'capsule', anchor: 'shoulder', dx: -22, dy: 34,
+        w: 20, h: 74, fill: 'accent', z: 'behind' },
     ],
   },
   {
@@ -454,6 +475,9 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // bozo — JEFF BOZO, PRIMEZON. The parcel under the rear arm.
+      { id: 'parcel', shape: 'roundRect', anchor: 'armB', dx: -6, dy: 6,
+        w: 38, h: 30, rot: 0.15, fill: 'hair', z: 'front' },
     ],
   },
   {
@@ -496,6 +520,10 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // scam — SCAM ALT, CLOSEDAI. A single enormous paperclip. He knows what he did.
+      { id: 'clip', shape: 'path', anchor: 'shoulder', dx: -20, dy: 18,
+        pts: [[0,0],[10,0],[10,44],[3,44],[3,10],[7,10],[7,38]],
+        fill: 'shoe', z: 'behind' },
     ],
   },
 ];
