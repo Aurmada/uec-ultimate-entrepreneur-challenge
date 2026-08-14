@@ -108,6 +108,55 @@ careful state handling alone does not make safe.
 
 ---
 
+---
+
+## Step 1 design decision: a declared state registry
+
+Taken in the same session, after the sequence above. The spec document itself was
+deliberately not written here — see the note at the end.
+
+**Approach chosen: every piece of persistent fighter state is declared once**, in one
+registry, carrying its name, default, whether it resets per round, whether it enters the
+state hash, and how the AI reads it. `Fighter` initialises from the registry,
+`resetForRound` iterates it, `hashGameState` iterates it. Adding a verb's state without
+hashing or resetting it becomes impossible rather than merely discouraged.
+
+Two alternatives were considered and rejected. A single `ext` object hashed wholesale is
+less machinery, but hashing an object needs a stable key order and "hashed wholesale"
+makes it easy to put something in there that should not be hashed at all — it trades a
+clear contract for less code. Keeping ad-hoc fields behind a structural test (the way
+`determinism.test.js` guards the render boundary) is cheapest and closest to existing
+style, but it catches the mistake after you make it, and only for names it can
+pattern-match.
+
+### The evidence this is not hypothetical hygiene
+
+`resetForRound()` in `src/engine/fighter.js` clears twenty fields **by hand**, including
+every buff timer (`unicornT`, `speedBuffT`, `dmgBuffT`, `shieldT`, `dashCD`, `stealCD`).
+There is no round-to-round leak today; the existing code is disciplined.
+
+But it is a hand-maintained list and **it has already drifted**. These fields are set in
+the constructor and never cleared between rounds (verified, 2026-08-14):
+
+| Field | Why it is probably harmless today |
+|---|---|
+| `stunT` | Only read while `state === 'hitstun'`, and `state` is reset to `'idle'`. |
+| `comboDropT` | Same masking — the combo chain is re-entered from a clean state. |
+| `airAttackUsed` | Cleared on landing, and `airborne` is reset. |
+| `walkPhase` | Animation phase; render-only in effect. |
+| `movingBack` | Recomputed every frame from the pad. |
+| `dashDir` | A direction, not a timer; meaningless until a dash starts. |
+
+Every one is masked by something else rather than handled deliberately. That is the
+mechanism that will bite when four verbs each add state: `hashGameState` is a **second**
+hand-maintained list with the same weakness, and a resource value or a pending deferred
+timer has no `state === 'idle'` to hide behind.
+
+Part of step 1 is therefore to classify each of the six above as either "should reset"
+or "safe not to, and here is why" — recorded in the registry, not left to inference.
+
+---
+
 ## Deliberately not decided here
 
 * Which of the three sharing pairs gets which new signature, and whether the *other*
@@ -127,7 +176,22 @@ careful state handling alone does not make safe.
 
 Read, in this order: this note; `docs/superpowers/specs/2026-08-13-character-parts-design.md`
 as a worked example of the spec format and voice; `ARCHITECTURE.md` §5 on the three
-version numbers and why confusing them causes real damage. Then brainstorm step 1.
+version numbers and why confusing them causes real damage.
+
+**Step 1's approach is already decided** (declared state registry, above), so the next
+session does not re-brainstorm it — it writes the spec document for step 1 and takes it
+through the normal review gate. The design work that is still open for that spec:
+
+* the registry's exact shape, and where it lives (`config.js` holds every tunable
+  number; the registry is closer to schema than to tuning)
+* how the AI reads registry state — note v2.8's lesson that `decide()` runs every
+  ~0.25 s and cannot serve a mechanic with a short timing window; that needs a per-frame
+  reflex in `update()`
+* what stance switch actually does to frame data, and how it interacts with Unicorn Mode
+  (both are timed self-buffs; do they stack, override, or cancel?)
+* the classification of the six currently-unreset fields
+* testing: the existing suite has no round-transition test at all, which is what a state
+  leak would need to be caught by
 
 The parts work is merged to local `main` as v3.4 and is **not pushed** — `origin/main`
 is still at v3.3 (`119c3dc`).
