@@ -8,6 +8,7 @@ import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
+import { resolveParts, drawParts, partLagState } from './parts.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
@@ -237,7 +238,7 @@ function computePose(f, t) {
   // stood at the old skeleton and grew 54px the instant they threw a punch.
   const P = {
     ...restPose(),
-    face: 'idle', briefcase: false,
+    face: 'idle',
   };
   const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;   // walk head bounce
   const st = f.state;
@@ -473,7 +474,7 @@ function computePose(f, t) {
     P.crouch = 8; P.hipY += 8; P.headY += 10; P.shoulderY += 8;
     P.armF = { x: 26, y: -144 }; P.armB = { x: 24, y: -138 };
     P.legF = { x: 20, y: 0 }; P.legB = { x: -10, y: 0 };
-    P.briefcase = true; P.face = 'block'; P.bodyLean = -0.06;
+    P.face = 'block'; P.bodyLean = -0.06;
   } else if (st === 'hitstun') {
     const k = Math.min(1, f.stateT * 10);
     // snap hard on impact, then settle — the recoil sells the hit landing
@@ -1001,13 +1002,6 @@ function drawTorso(ctx, def, P) {
   }
 }
 
-function drawBriefcase(ctx, x, y, accent) {
-  blob(ctx, () => { ctx.roundRect(x - 20, y - 16, 40, 32, 5); }, '#6b4a2b');
-  ctx.fillStyle = accent;
-  ctx.fillRect(x - 20, y - 4, 40, 6);
-  blob(ctx, () => { ctx.roundRect(x - 8, y - 22, 16, 8, 3); }, '#57391f');
-}
-
 // ---- Street-Fighter-style shading -----------------------------------------
 // The fighter is rendered once into an offscreen buffer, then a cel-shading +
 // directional-light pass is composited over the whole silhouette at once. Doing
@@ -1257,6 +1251,13 @@ export function drawFighter(ctx, f, t) {
   const [hipFx, hipFy] = socket(8, P.hipY);
   const [hipBx, hipBy] = socket(-8, P.hipY);
 
+  // Resolved once and reused by both layers. `c` is the character's live
+  // palette, so a part with a role fill recolours with the fighter — including
+  // a player founder whose colours were sampled from their photo.
+  P.partState = f.state;
+  f._partLag ||= partLagState();
+  const parts = resolveParts(def.parts, P, c, f._partLag);
+
   // Elbow bow, per character. One global ELBOW meant both arms bent the same
   // way, so an arm folded close to the body just fused into the torso and the
   // silhouette lost it — "hands on hips" and "arms crossed" were invisible.
@@ -1266,6 +1267,9 @@ export function drawFighter(ctx, f, t) {
   const stanceEl = f.state === 'idle' ? (f.def?.stance || null) : null;
   const elbowF = stanceEl?.elbowF ?? STYLIZE.ELBOW;
   const elbowB = stanceEl?.elbowB ?? STYLIZE.ELBOW;
+
+  // BEHIND the body: capes, coat tails, anything the torso should overlap.
+  if (parts.length) drawParts(g, parts, 'behind', blob);
 
   // back arm, back leg — one shade back so the near side reads in front
   blob(g, () => { g.arc(shBx, shBy, upperArm * 0.9 * STYLIZE.DELTOID * 0.5, 0, 7); }, c.suit2);
@@ -1330,7 +1334,9 @@ export function drawFighter(ctx, f, t) {
           c.suit, elbowF, STYLIZE.ARM_SPAN);
   blob(g, () => { g.arc(P.armF.x, P.armF.y, handF, 0, 7); }, c.skin);
 
-  if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
+  // IN FRONT of the body: held props. Still inside the buffer, so the shading
+  // pass and key line treat them as part of the silhouette.
+  if (parts.length) drawParts(g, parts, 'front', blob);
 
   if (B) {
     INK = 1;                   // reset before shading/blit

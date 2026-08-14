@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.3';
+export const VERSION = 'v3.4';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -347,6 +347,23 @@ export const STYLIZE = {
   SHADE_KEY_MODE: 'overlay',
   SHADE_MID: 0.10,      // neutral through the torso
   SHADE_FLOOR: 0.30,    // crush at the feet — do not soften, see above
+};
+
+// ---- CHARACTER PARTS -------------------------------------------------------
+// Render-only geometry a character carries outside its body outline: a held
+// prop, a coat, a cape. Limits live here rather than in the engine so a part
+// can be swept without editing render code.
+//
+// MAX is deliberately small. Six shapes is more than enough for a readable
+// silhouette, and a cap is what stops one character costing the frame budget.
+export const PARTS = {
+  MAX: 6,             // parts per character
+  MAX_POINTS: 24,     // vertices in a `path` part
+  MIN_POINTS: 3,
+  OFFSET: [-120, 120], // dx / dy range, rig px
+  SIZE: [1, 160],      // w / h / r range, rig px
+  ROT: [-Math.PI, Math.PI],
+  FOLLOW: [0, 1],      // cloth lag; 0 is rigid to the anchor
 };
 
 export const BODY = {

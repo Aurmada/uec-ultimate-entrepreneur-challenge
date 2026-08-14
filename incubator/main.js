@@ -55,6 +55,16 @@ function blankDraft() {
     special: 'pitchdeck', style: 'balanced',
     body: { ...DEFAULT_BODY },
     commandNormals: [],
+    // No editor UI writes to this yet — there is no "add a prop" button. Parts
+    // are hand-written directly into the draft object (console, or by loading
+    // a roster fighter's def wholesale into window.INCUBATOR.draft) and then
+    // previewed live here. That is the deliberate authoring model for this
+    // vocabulary: hand-write the data, watch it render through the real
+    // drawFighter and validateCharacter, build a dedicated editor later once
+    // the vocabulary settles. Declaring the field here (rather than leaving it
+    // undefined) is what lets a hand-authored draft round-trip through the
+    // localStorage autosave without disappearing.
+    parts: [],
     ai: { aggr: 0.6, jump: 0.35, prefRange: 'mid' },
     c: {
       skin: '#e8b48c', suit: '#3d5afe', suit2: '#2438b8', accent: '#29d9ff',
@@ -503,6 +513,7 @@ function toModule() {
     headwear: draft.headwear, eyewear: draft.eyewear, facialHair: draft.facialHair,
   };
   if (draft.commandNormals.length) clean.commandNormals = draft.commandNormals;
+  if (draft.parts && draft.parts.length) clean.parts = draft.parts;
   // Render-only, but it belongs to the character, so it ships in the module.
   //
   // Each track is stamped with the rig it was posed against. The editor seeds

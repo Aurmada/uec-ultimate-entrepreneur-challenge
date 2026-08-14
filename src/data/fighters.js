@@ -124,6 +124,15 @@ export const FIGHTERS = [
         params: { window: 0.16, dmg: 6, kb: 240 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // ava — LIZBETH HOLMEZ, THERAMOS. The sample vial, worn at the hip.
+      { id: 'vial', shape: 'capsule', anchor: 'hip', dx: -34, dy: 2,
+        w: 22, h: 58, fill: 'accent', z: 'front' },
+    ],
   },
   {
     id: 'max', name: 'ADAM WEUMANN', title: 'THE BURNER', company: 'WEWERK',
@@ -160,6 +169,18 @@ export const FIGHTERS = [
         frameData: { startup: 0.075, active: 0.06, recovery: 0.13, dmg: 9, reach: 84 },
         params: { hits: 3, hitInterval: 0.10, speed: 560, duration: 0.42, kb: 130 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // max — ADAM WEUMANN, WEWERK. The rolled mat across the back.
+      // `shoe` (#f5f5f5), not suit2 (#d15505) — dark orange on a #ff7a1a suit,
+      // behind the widest body in the cast, drew 149px and read as nothing.
+      // Wider and pushed clear of the shoulder so it actually leaves the outline.
+      { id: 'mat', shape: 'capsule', anchor: 'shoulder', dx: -36, dy: 30,
+        w: 22, h: 86, rot: 0.35, fill: 'shoe', z: 'behind' },
     ],
   },
   {
@@ -203,6 +224,15 @@ export const FIGHTERS = [
         params: { dmg: 11, kb: 300, kbUp: -200 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // kai — STEVE NOJOBS, PEAR. The device, held out in the rear hand.
+      { id: 'device', shape: 'roundRect', anchor: 'armB', dx: 0, dy: 0,
+        w: 20, h: 34, fill: 'accent', z: 'front' },
+    ],
   },
   {
     id: 'zara', name: 'KIM KOINDASHIAN', title: 'THE RUG-PULLER', company: 'SKIMZCOIN',
@@ -243,6 +273,15 @@ export const FIGHTERS = [
         frameData: { startup: 0.115, active: 0.09, recovery: 0.187, dmg: 12, reach: 60 },
         params: { lifetime: 5.5, radius: 78, armTime: 0.35, dmg: 12, maxActive: 1 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // zara — KIM KOINDASHIAN, SKIMZCOIN. The ring light haloing the head.
+      { id: 'ringlight', shape: 'ellipse', anchor: 'head', dx: 0, dy: -4,
+        r: 34, fill: 'accent', z: 'behind' },
     ],
     // Restless: two bounces per breath, never quite still.
     animOverrides: {
@@ -298,6 +337,30 @@ export const FIGHTERS = [
         params: { dmg: 5, count: 2, energyRefund: 4 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // eleanor — CATHIE WOODZ, ARKK. The tablet, chart out.
+      // `accent`, not `suit2`: her suit2 is #111a3d against a #1c2a5e suit, so
+      // the first version was dark navy on dark navy and vanished.
+      { id: 'tablet', shape: 'roundRect', anchor: 'armB', dx: 20, dy: -10,
+        w: 34, h: 46, rot: -0.2, fill: 'accent', z: 'front' },
+      // A coat, and the first use of cloth lag: it trails the hips and settles.
+      //
+      // `hair` (#f2ece0), not `suit2`. suit2 is #111a3d against a #1c2a5e suit
+      // AND a dark navy arena — dark on dark twice over, and it vanished. A
+      // garment behind the body cannot rely on shape alone when the backdrop is
+      // the same value as the fighter. The cream reads as a long coat over the
+      // suit, which is also more the part.
+      // It must also FLARE past the body. Drawn behind, a 44px-wide coat is
+      // entirely covered by the legs; only a hem wider than the silhouette
+      // actually reads as a coat.
+      { id: 'coat', shape: 'path', anchor: 'hip', dx: 0, dy: -6,
+        pts: [[-18, 0], [18, 0], [40, 74], [-40, 74]],
+        fill: 'hair', z: 'behind', follow: 0.35 },
+    ],
   },
   {
     id: 'dex', name: 'CARL ICAHNT', title: 'THE ASSET STRIPPER', company: 'ICAHNT HOLDINGS',
@@ -331,6 +394,15 @@ export const FIGHTERS = [
           dmg: 16, reach: 70, hitY: -95, kb: 300, kbUp: -180, stun: 0.34,
         },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // dex — CARL ICAHNT. The briefcase he never puts down.
+      { id: 'case', shape: 'roundRect', anchor: 'armB', dx: 18, dy: 26,
+        w: 44, h: 34, fill: '#6b4a2b', z: 'front' },
     ],
     // A slow, heavy shift of weight. He does not fidget — he waits.
     animOverrides: {
@@ -376,6 +448,15 @@ export const FIGHTERS = [
         params: { reach: 118, kb: 300, kbUp: -140 },
       },
     ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // elo — ELO MA, SPACEY-X. The booster on the back.
+      { id: 'booster', shape: 'capsule', anchor: 'shoulder', dx: -22, dy: 34,
+        w: 20, h: 74, fill: 'accent', z: 'behind' },
+    ],
   },
   {
     id: 'bozo', name: 'JEFF BOZO', title: 'THE EVERYTHING GUY', company: 'PRIMEZON',
@@ -406,6 +487,15 @@ export const FIGHTERS = [
         tags: ['low'],
         frameData: { startup: 0.095, active: 0.08, recovery: 0.19, dmg: 11, reach: 100, hitY: -46, kb: 240 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // bozo — JEFF BOZO, PRIMEZON. The parcel under the rear arm.
+      { id: 'parcel', shape: 'roundRect', anchor: 'armB', dx: -6, dy: 6,
+        w: 38, h: 30, rot: 0.15, fill: 'hair', z: 'front' },
     ],
   },
   {
@@ -442,6 +532,19 @@ export const FIGHTERS = [
         frameData: { startup: 0.07, active: 0.06, recovery: 0.17, dmg: 6, reach: 78 },
         params: { count: 2, speed: 520, interval: 0.12 },
       },
+    ],
+    // The block guard, formerly a hardcoded draw call. Universal: every founder
+    // raises one. Anchored to the front hand so it tracks the guard pose.
+    parts: [
+      { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
+        w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
+      // scam — SCAM ALT, CLOSEDAI. A single enormous paperclip. He knows what he did.
+      // A hairpin OUTLINE, not a centreline. blob() fills the polygon, so the
+      // first version — which traced the wire of a paperclip — filled to 118
+      // visible pixels and read as nothing at all.
+      { id: 'clip', shape: 'path', anchor: 'shoulder', dx: -46, dy: -4,
+        pts: [[0,0],[22,0],[22,66],[14,66],[14,9],[8,9],[8,66],[0,66]],
+        fill: 'shoe', z: 'behind' },
     ],
   },
 ];
@@ -730,6 +833,16 @@ export function toCharacter(def) {
     // A character's own vocabulary. Absent means "universal grammar only",
     // which is a complete character — most of the base bodies are exactly that.
     commandNormals: def.commandNormals || [],
+    // `parts` is deliberately NOT emitted here. It is render-only geometry, and
+    // each peer already has its own copy of every roster fighter — a rival's
+    // parts are drawn from OUR local def, keyed by the id both sides agree on,
+    // never from anything sent over the wire. `specToDef` in main.js never reads
+    // `spec.ch.parts` for exactly this reason: a validated-then-discarded field
+    // is worse than no field, because it makes the protocol look like it does
+    // something it doesn't. And there is nothing to lose today — no
+    // player-authored character can carry its own parts yet, since
+    // buildCustomFighter takes them from the base roster def. When that changes,
+    // wire it up then, deliberately, with the receiver actually reading it.
     ai: {
       aggr: def.ai?.aggr ?? 0.6,
       jump: def.ai?.jump ?? 0.35,
