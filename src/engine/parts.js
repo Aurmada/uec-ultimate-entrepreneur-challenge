@@ -38,6 +38,9 @@ export function anchorPoint(anchor, P) {
       const headTop = P.shoulderY - (headR - STYLIZE.NECK_OVERLAP);
       return { x: P.headX + (P.bodyLean || 0) * 26, y: Math.max(P.headY, headTop) };
     }
+    // -10/-8 are drawFighter's BACK torso socket, not the front one. The back
+    // socket is the canonical anchor for parts — picked once here so a coat
+    // or strap doesn't visibly swap sides as the fighter turns.
     case 'shoulder': return socket(-10, P.shoulderY + 8, P);
     case 'hip': return socket(-8, P.hipY, P);
     case 'torso': {
@@ -45,7 +48,10 @@ export function anchorPoint(anchor, P) {
       const h = socket(-8, P.hipY, P);
       return { x: (s.x + h.x) / 2, y: (s.y + h.y) / 2 };
     }
-    default: return { x: 0, y: 0 };
+    // The vocabulary is closed and validated upstream (validateParts), so this
+    // is unreachable through normal authoring. It still throws rather than
+    // returning a plausible-looking (0,0): reject loudly, never silently repair.
+    default: throw new Error(`unknown part anchor ${JSON.stringify(anchor)}`);
   }
 }
 
@@ -67,6 +73,10 @@ export function resolveParts(parts, P, colours) {
       y: at.y + p.dy,
       w: p.w, h: p.h, r: p.r, pts: p.pts,
       rot: p.rot || 0,
+      // '#ff00ff' is a deliberate loud visual signal for an unresolved fill
+      // role, not an oversight against reject-loudly: this runs mid-frame in
+      // the render path, where throwing would take down the whole draw call
+      // over a colour. Magenta is easy to spot and cheap to ignore.
       fill: HEX.test(p.fill) ? p.fill : (colours[p.fill] || '#ff00ff'),
     });
   }

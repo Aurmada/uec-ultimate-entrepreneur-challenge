@@ -11,6 +11,7 @@ import {
   validateCharacter, SCHEMA_VERSION, DEFAULT_BODY,
 } from '../src/data/schema.js';
 import { resolveParts, anchorPoint } from '../src/engine/parts.js';
+import { STYLIZE } from '../src/config.js';
 
 const good = () => ({
   id: 'case', shape: 'roundRect', anchor: 'armB',
@@ -186,5 +187,31 @@ test('a body lean swings the hip and shoulder sockets but not the hands', () => 
   const leaned = samplePose();
   leaned.bodyLean = 0.4;
   assert.notEqual(anchorPoint('hip', leaned).x, anchorPoint('hip', up).x);
+  assert.notEqual(anchorPoint('shoulder', leaned).x, anchorPoint('shoulder', up).x);
   assert.equal(anchorPoint('armB', leaned).x, anchorPoint('armB', up).x);
+});
+
+test('a part with a states list only resolves in those states', () => {
+  const P = samplePose();
+  const part = { ...good(), states: ['block'] };
+
+  P.partState = 'block';
+  assert.equal(resolveParts([part], P, COLOURS).length, 1, 'should resolve in a listed state');
+
+  P.partState = 'idle';
+  assert.equal(resolveParts([part], P, COLOURS).length, 0, 'should be skipped in an unlisted state');
+
+  // A part with no states list is unconditional — most parts are.
+  assert.equal(resolveParts([good()], P, COLOURS).length, 1);
+});
+
+test('the head anchor is clamped up to the neck, never below it', () => {
+  const low = samplePose();          // headY below headTop — must clamp
+  const clamped = anchorPoint('head', low);
+  const headTop = low.shoulderY - (low.headR - STYLIZE.NECK_OVERLAP);
+  assert.equal(clamped.y, headTop, 'a head below the neck must be lifted to it');
+
+  const high = samplePose();         // headY numerically above headTop — must pass through
+  high.headY = headTop + 40;
+  assert.equal(anchorPoint('head', high).y, headTop + 40, 'a head above the neck is left alone');
 });
