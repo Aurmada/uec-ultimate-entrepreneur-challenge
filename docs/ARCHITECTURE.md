@@ -325,25 +325,25 @@ whole length of every attack.
 
 ### Character parts
 
-A character may carry `parts` — render-only geometry outside its body outline. A
+A character may carry `parts`, render-only geometry outside its body outline. A
 held prop, a coat, a cape: all one system, differing only by anchor joint and
 z-layer.
 
-`resolveParts()` in `engine/parts.js` is pure — parts plus pose in, absolute
-coordinates out — which is what makes placement unit-testable in a suite with no
+`resolveParts()` in `engine/parts.js` is pure (parts plus pose in, absolute
+coordinates out), which is what makes placement unit-testable in a suite with no
 canvas. `drawParts()` paints them, and is called twice from `drawFighter` **inside
 the offscreen buffer**: `behind` before the back limbs, `front` after the front arm.
 Drawing inside the buffer is what earns cel shading, rim light, the key line and
 membership in the silhouette for free.
 
-Parts are validated by the shared `validateCharacter` and are **never priced** — they
+Parts are validated by the shared `validateCharacter` and are **never priced**. They
 are free, like shoulders, stride and head. They do travel on the wire, which is why
 `CHARACTER_WIRE_VERSION` is 2. Cost is under the measurement noise floor: with two
 parts-bearing fighters on screen, 1.106 ms/frame with parts against 1.123 ms without,
 a difference smaller than the 0.13 ms run-to-run variance.
 
 The one rule: **a prop must never read as extending reach.** Same failure as the
-`applyMotion` rule above — the simulation stays correct, but the game lies to the
+`applyMotion` rule above: the simulation stays correct, but the game lies to the
 player about where a hit lands. Props on the rear hand, back, head and hips are
 unrestricted; a prop on `armF` must stay inside the hand's own silhouette during the
 active window.
@@ -379,7 +379,9 @@ what lets a measurement harness sweep a value without editing engine code.
 `npm test` runs the Node built in test runner. No framework, no mocks, no DOM.
 The simulation is fully headless, which is why the tests can drive real matches.
 
-215 tests across 11 files. The ones worth knowing:
+Run `npm test` for the current count; it was around 245 across 12 files when this
+was written, and a pinned number in a document is a number that rots. The files
+worth knowing:
 
 | File | What it protects |
 | --- | --- |

@@ -4,7 +4,7 @@ You are picking up a browser fighting game. This document gets you from a fresh
 clone to making a change with confidence. Read `ARCHITECTURE.md` afterwards when
 you want to know why the code is shaped the way it is.
 
-Expect to be productive within an hour. The codebase is about 10,000 lines of
+Expect to be productive within an hour. The codebase is roughly 11,000 lines of
 plain JavaScript with no framework to learn.
 
 ---
@@ -20,7 +20,7 @@ python3 dev-server.py 4173
 
 Open `http://localhost:4173/?debug=1`.
 
-That is the whole setup. The dev server is 40 lines and does two things a plain
+That is the whole setup. The dev server is under 40 lines and does two things a plain
 static server does not: it sends `Cache-Control: no-store` so a reload always
 picks up your edit, and it accepts `PUT` so browser side tools can write files
 back into the repo. Neither exists in production.
@@ -34,8 +34,9 @@ Run the tests:
 npm test
 ```
 
-215 tests, about a second, no framework. They should all pass on a clean
-checkout. If they do not, stop and find out why before changing anything.
+Roughly 245 tests at the time of writing, about a second, no framework. They
+should all pass on a clean checkout. If they do not, stop and find out why
+before changing anything.
 
 ---
 
@@ -122,14 +123,14 @@ UEC.startMatch({
   p1Def: getFighter('dex'),      // NOTE: p1Def is the HUMAN slot
   p2Def: getFighter('zara'),
   arena: getArena('boardroom'),
-  difficulty: 'founder',         // KEY, not label — see below
+  difficulty: 'founder',         // KEY, not label. See below.
   isChallenge: false,
 });
 ```
 
 Difficulty **keys** are `intern` / `founder` / `mogul`. The names on screen
 (`ROOKIE` / `CONTENDER` / `CHAMPION`) are labels in `AI_LEVELS` and are not
-accepted here — an unknown key falls back to `founder` without warning, so a
+accepted here. An unknown key falls back to `founder` without warning, so a
 typo looks like it worked.
 
 Other hooks that save time: `UEC.setHP(i, v)`, `UEC.setEnergy(i, v)`,
