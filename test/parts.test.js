@@ -10,7 +10,7 @@ import {
   validateParts, PART_SHAPES, PART_ANCHORS, FILL_ROLES,
   validateCharacter, SCHEMA_VERSION, DEFAULT_BODY,
 } from '../src/data/schema.js';
-import { resolveParts, anchorPoint, partLagState, applyFollow } from '../src/engine/parts.js';
+import { resolveParts, anchorPoint, partLagState, applyFollow, drawParts } from '../src/engine/parts.js';
 import { STYLIZE } from '../src/config.js';
 import { toCharacter } from '../src/data/fighters.js';
 import { CHARACTER_WIRE_VERSION } from '../src/net/online.js';
@@ -274,4 +274,93 @@ test('lag state is per fighter, so two fighters never share a cape', () => {
   const a = applyFollow(one, 'cape', { x: 100, y: 0 }, 0.5).x;
   const b = applyFollow(two, 'cape', { x: 100, y: 0 }, 0.5).x;
   assert.notEqual(a, b);
+});
+
+// ---------------------------------------------------------------- drawParts
+//
+// There is no canvas in the Node suite, which is exactly why resolveParts and
+// drawParts were split in the first place. But drawParts only needs a `ctx`
+// with the right method names and a `blob` callback — nothing browser-specific
+// — so it can be driven headlessly with a spy in place of both. This closes a
+// gap the split otherwise left open: deleting the z filter, or dropping rot /
+// pts / w / h / r on the way to the canvas, left all the OTHER tests green.
+
+// A minimal fake ctx: every method the drawing code calls gets recorded as
+// [name, args] so assertions can inspect exactly what reached the canvas.
+function fakeCtx() {
+  const calls = [];
+  const ctx = { calls };
+  for (const m of ['save', 'restore', 'translate', 'rotate', 'roundRect', 'ellipse', 'moveTo', 'lineTo', 'closePath']) {
+    ctx[m] = (...args) => calls.push([m, args]);
+  }
+  return ctx;
+}
+
+// A fake blob(ctx, path, fill) that just runs the path builder (so its ctx
+// calls get recorded) and records the fill it was given.
+function fakeBlob(fills) {
+  return (ctx, path, fill) => { path(); fills.push(fill); };
+}
+
+test('drawParts paints only the requested z layer', () => {
+  const ctx = fakeCtx();
+  const fills = [];
+  const front = { id: 'f', shape: 'roundRect', z: 'front', x: 0, y: 0, w: 10, h: 10, fill: '#111111' };
+  const behind = { id: 'b', shape: 'roundRect', z: 'behind', x: 0, y: 0, w: 10, h: 10, fill: '#222222' };
+  drawParts(ctx, [front, behind], 'front', fakeBlob(fills));
+  assert.deepEqual(fills, ['#111111'], 'only the front part should have painted');
+});
+
+test('rot reaches the canvas as a rotate call, and is skipped when absent', () => {
+  const withRot = fakeCtx();
+  const withoutRot = fakeCtx();
+  const blob = (ctx, path) => path();
+
+  drawParts(withRot, [{ id: 'r', shape: 'ellipse', z: 'front', x: 0, y: 0, r: 5, rot: 1.2, fill: '#fff' }], 'front', blob);
+  const rotateCalls = withRot.calls.filter(([m]) => m === 'rotate');
+  assert.deepEqual(rotateCalls, [['rotate', [1.2]]], 'a part with rot must call rotate with that value');
+
+  drawParts(withoutRot, [{ id: 'n', shape: 'ellipse', z: 'front', x: 0, y: 0, r: 5, fill: '#fff' }], 'front', blob);
+  assert.equal(withoutRot.calls.filter(([m]) => m === 'rotate').length, 0, 'a part with no rot must not call rotate at all');
+});
+
+test('geometry reaches the canvas intact: roundRect w/h, ellipse r, path pts', () => {
+  const ctx = fakeCtx();
+  const blob = (ctx, path) => path();
+
+  drawParts(ctx, [{ id: 'rr', shape: 'roundRect', z: 'front', x: 0, y: 0, w: 40, h: 24, fill: '#fff' }], 'front', blob);
+  const [, rrArgs] = ctx.calls.find(([m]) => m === 'roundRect');
+  assert.equal(rrArgs[2], 40, 'roundRect must receive w');
+  assert.equal(rrArgs[3], 24, 'roundRect must receive h');
+
+  const ctx2 = fakeCtx();
+  drawParts(ctx2, [{ id: 'el', shape: 'ellipse', z: 'front', x: 0, y: 0, r: 12, fill: '#fff' }], 'front', blob);
+  const [, elArgs] = ctx2.calls.find(([m]) => m === 'ellipse');
+  assert.equal(elArgs[2], 12, 'ellipse must receive r for radiusX');
+  assert.equal(elArgs[3], 12, 'ellipse must receive r for radiusY');
+
+  const ctx3 = fakeCtx();
+  const pts = [[1, 2], [3, 4], [5, 6]];
+  drawParts(ctx3, [{ id: 'pth', shape: 'path', z: 'front', x: 0, y: 0, pts, fill: '#fff' }], 'front', blob);
+  const moveTo = ctx3.calls.filter(([m]) => m === 'moveTo').map(([, a]) => a);
+  const lineTo = ctx3.calls.filter(([m]) => m === 'lineTo').map(([, a]) => a);
+  assert.deepEqual(moveTo, [[1, 2]], 'path must moveTo its first point');
+  assert.deepEqual(lineTo, [[3, 4], [5, 6]], 'path must lineTo every remaining point, in order');
+});
+
+test('save and restore stay balanced across several parts', () => {
+  const ctx = fakeCtx();
+  const blob = (ctx, path) => path();
+  const parts = [
+    { id: 'a', shape: 'roundRect', z: 'front', x: 0, y: 0, w: 10, h: 10, fill: '#fff' },
+    { id: 'b', shape: 'ellipse', z: 'front', x: 0, y: 0, r: 5, fill: '#fff' },
+    { id: 'c', shape: 'capsule', z: 'front', x: 0, y: 0, w: 8, h: 20, fill: '#fff' },
+    { id: 'd', shape: 'path', z: 'front', x: 0, y: 0, pts: [[0, 0], [1, 1], [2, 2]], fill: '#fff' },
+  ];
+  drawParts(ctx, parts, 'front', blob);
+  const saves = ctx.calls.filter(([m]) => m === 'save').length;
+  const restores = ctx.calls.filter(([m]) => m === 'restore').length;
+  assert.equal(saves, parts.length);
+  assert.equal(restores, parts.length);
+  assert.equal(saves, restores, 'every save must be matched by a restore');
 });
