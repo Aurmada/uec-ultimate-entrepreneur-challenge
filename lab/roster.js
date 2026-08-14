@@ -6,7 +6,10 @@
 //   import { sheet } from '/lab/roster.js';
 //   await sheet('/lab/roster-before.png', 'BEFORE');
 
-const IDS = ['ava', 'max', 'kai', 'zara', 'eleanor', 'dex'];
+// The WHOLE cast, not the six this started with — the cameo trio (elo/bozo/scam)
+// are roster fighters too, and a sheet that quietly omits a third of the cast is
+// the same failure this file warns about below.
+const IDS = ['ava', 'max', 'kai', 'zara', 'eleanor', 'dex', 'elo', 'bozo', 'scam'];
 
 // Find the fighter in the frame rather than assuming where they are.
 //
