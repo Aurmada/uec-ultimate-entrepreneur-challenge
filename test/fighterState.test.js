@@ -143,3 +143,17 @@ test('an unhashed key never moves the fingerprint', () => {
 test('the simulation version was bumped for the behaviour change', () => {
   assert.equal(SIM_VERSION, 5);
 });
+
+import { readFileSync } from 'node:fs';
+
+test('a timer added to Fighter outside the registry fails the suite', () => {
+  const src = readFileSync(new URL('../src/engine/fighter.js', import.meta.url), 'utf8');
+  const ctor = src.slice(src.indexOf('constructor('), src.indexOf('resetForRound'));
+  const declared = new Set(FIGHTER_STATE.map((e) => e.key));
+  const stray = [...ctor.matchAll(/this\.(\w+T) =/g)]
+    .map((m) => m[1])
+    .filter((k) => !declared.has(k));
+  assert.deepEqual(stray, [],
+    `these timers are set on Fighter but not declared in fighterState.js: ${stray.join(', ')}. `
+    + 'Undeclared state is state the hash cannot see and resetForRound will not clear.');
+});
