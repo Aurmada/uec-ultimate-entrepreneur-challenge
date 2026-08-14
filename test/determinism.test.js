@@ -17,6 +17,7 @@ import { Game } from '../src/engine/game.js';
 import { hashGameState } from '../src/net/online.js';
 import { FIGHTERS } from '../src/data/fighters.js';
 import { challengePayload } from '../src/state.js';
+import { METER } from '../src/config.js';
 
 // A controller that replays a fixed script — the AI uses Math.random, which
 // would make this test measure luck instead of determinism.
@@ -30,7 +31,7 @@ function scripted(script) {
       f.pad = {
         left: !!frame.l, right: !!frame.r, up: !!frame.u, down: !!frame.d,
         block: !!frame.b, slap: !!frame.s, punch: !!frame.p, kick: !!frame.k,
-        launch: !!frame.L, special: false, super: false, bomb: false,
+        launch: !!frame.L, special: !!frame.x, super: false, bomb: false,
         dash: false, steal: false,
       };
     },
@@ -38,10 +39,14 @@ function scripted(script) {
 }
 
 // deliberately busy: walks, attacks, blocks, and holds forward so command
-// normals resolve too
+// normals resolve too. `x` (special) is pressed twice, far enough apart
+// (fighter-state-foundation, 2026-08-14) to land on either side of
+// STANCE.CD once p1's energy is seeded — see runMatch — so a stance switch
+// actually lands inside the recorded match, not just a button press that
+// starves on cooldown.
 const SCRIPT_A = [
   { r: 1 }, { r: 1 }, { r: 1, p: 1 }, {}, {}, { r: 1, k: 1 }, {}, {}, {},
-  { b: 1 }, { b: 1 }, { l: 1 }, { s: 1 }, {}, { r: 1, L: 1 }, {}, {}, {},
+  { b: 1 }, { b: 1 }, { l: 1 }, { s: 1 }, {}, { r: 1, L: 1 }, {}, { x: 1 }, {},
 ];
 const SCRIPT_B = [
   { l: 1 }, { l: 1, k: 1 }, {}, {}, { p: 1 }, {}, { u: 1 }, {}, {},
@@ -52,17 +57,29 @@ const STUB_HUD = new Proxy({}, { get: () => () => {} });
 const STUB_ARENA = { id: 'test', name: 'TEST', draw() {}, mood: 'none' };
 
 // Runs a fixed match and fingerprints the simulation as it goes.
+//
+// p1 is 'scam' (was 'dex') so the `x` (special) presses in SCRIPT_A actually
+// exercise ALIGNMENT SHIFT — 'dex' and 'zara' both carry ordinary specials,
+// so a special press there would never touch stanceId at all and this test
+// would prove nothing about the new archetype.
 function runMatch(animOverrides) {
   const withAnim = (id) => {
     const def = FIGHTERS.find(f => f.id === id);
     return animOverrides === undefined ? def : { ...def, animOverrides };
   };
   const game = new Game({
-    p1: { def: withAnim('dex'), controller: scripted(SCRIPT_A) },
+    p1: { def: withAnim('scam'), controller: scripted(SCRIPT_A) },
     p2: { def: withAnim('zara'), controller: scripted(SCRIPT_B) },
     arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
     hud: STUB_HUD, onEnd: () => {}, seed: 20260731,
   });
+  // A stance switch costs METER.SPECIAL_COST same as any other special
+  // (startSpecial charges it unconditionally, before branching on type).
+  // Seeded here rather than earned through scripted hits so the switch is
+  // guaranteed to land deterministically instead of depending on exactly
+  // which frames connect — that would make this test measure combat luck,
+  // the same reason `scripted()` exists instead of driving the AI.
+  game.fighters[0].energy = METER.MAX;
   const hashes = [];
   for (let i = 0; i < 900; i++) {
     game.update(1 / 60);
