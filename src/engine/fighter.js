@@ -483,7 +483,7 @@ export class Fighter {
       // while its own cooldown runs, and taking 50 meter for a no-op is a trap
       // rather than a cost — the player gets no feedback that the press was
       // eaten, only that the meter is gone.
-      if (!this.switchStance(target)) return;
+      if (!this.switchStance(target)) { game.onSpecialDenied(this, 'stance'); return; }
       this.energy -= METER.SPECIAL_COST;
       this.attack = null;
       this.setState('idle');

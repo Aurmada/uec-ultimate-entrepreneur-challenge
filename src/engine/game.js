@@ -418,6 +418,7 @@ export class Game {
     let msg = null;
     if (kind === 'steal') msg = `💸 RECHARGING ${f.stealCD.toFixed(1)}s`;
     else if (kind === 'dash') msg = `💨 RECHARGING ${f.dashCD.toFixed(1)}s`;
+    else if (kind === 'stance') msg = `🔄 RECHARGING ${f.stanceCD.toFixed(1)}s`;
     else if (need[kind] !== undefined) {
       msg = `NEED ${Math.ceil(need[kind] - f.energy)} MORE ⚡`;
     }

@@ -256,25 +256,32 @@ test('a hurt AI prefers safety, a healthy one prefers capabilities', () => {
   assert.equal(fine.controller.preferredStance(fine), 'capabilities');
 });
 
-// A refused switch must not bill the player.
+// A refused switch must not bill the player, and must not be silently eaten.
 //
 // startSpecial charged METER.SPECIAL_COST before asking switchStance() whether
 // the switch could happen, so pressing special during the cooldown took 50
-// meter and did nothing. The player gets no feedback that the press was eaten,
-// only that the meter is gone — a trap rather than a cost.
-test('a stance switch refused by its cooldown costs no meter', async () => {
+// meter and did nothing. That part is fixed. But the caller had already
+// consumed pressed('special') for the frame, so a refusal that returns with no
+// signal at all still vanishes with no sound and no popup — "the worst feel in
+// a fighter" (game.js's own words for exactly this). A refusal must route
+// through game.onSpecialDenied(f, 'stance'), same as steal and dash already do
+// for their own cooldowns.
+test('a stance switch refused by its cooldown costs no meter and is not silently eaten', async () => {
   const { METER } = await import('../src/config.js');
   const f = mk();
   f.special = { id: 'alignmentshift', type: 'stance', name: 'ALIGNMENT SHIFT' };
-  const game = { onSpecialStart() {} };
+  const denials = [];
+  const game = { onSpecialStart() {}, onSpecialDenied(fighter, kind) { denials.push(kind); } };
 
   f.energy = METER.MAX;
   f.startSpecial(game);
   assert.equal(f.stanceId, 'safety', 'the first press should switch');
   assert.equal(f.energy, METER.MAX - METER.SPECIAL_COST, 'and should be paid for');
+  assert.deepEqual(denials, [], 'a successful switch must not report a denial');
 
   const banked = f.energy;
   f.startSpecial(game);                       // cooldown still running
   assert.equal(f.stanceId, 'safety', 'the second press is refused');
   assert.equal(f.energy, banked, 'and must not be charged for');
+  assert.deepEqual(denials, ['stance'], 'the refused press must be routed through onSpecialDenied');
 });
