@@ -52,6 +52,14 @@ const CMD_FRAME_KEYS = ['startup', 'active', 'recovery', 'dmg', 'reach'];
 // fighter.js has to resolve them the same way round or the price is a lie.
 export const NO_SWING = new Set(['counter', 'trap']);
 
+// `stance` is deliberately NOT in NO_SWING, even though a stance is obviously
+// not a swing. NO_SWING exists for PRICING — it tells commandCost to price off
+// `params` rather than frame data — and a stance cannot be a command normal at
+// all: validateCharacter rejects it outright below. Adding it here would imply
+// a pricing rule that has no caller and no meaning. If stances ever become
+// authorable as command normals, they need a real price first, and that
+// decision is what puts them in this set.
+
 // What one command normal costs, priced against the neutral basic it replaces.
 // Zero means "this is that basic, on a direction" — which is exactly free.
 export function commandCost(cmd) {

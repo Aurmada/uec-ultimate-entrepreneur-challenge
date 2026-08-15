@@ -387,7 +387,17 @@ export const BODY = {
 // contact with play; if it proves oppressive, make Unicorn force `safety`.
 export const STANCE = {
   CD: 0.8,          // seconds between switches
-  COST: 0,          // meter cost; 0 in v1 — pricing a toggle is unresolved
+  // NOT the price. A switch costs a full METER.SPECIAL_COST (50) because it
+  // goes through startSpecial like every other special; this is an ADDITIONAL
+  // surcharge on top, and it is 0. Reading this as the cost is what paralysed
+  // the AI once already — it skipped the energy check on the strength of it.
+  COST: 0,
+  // MEASURED CAVEAT: `taken` buys nothing against CHIP damage. Chip is
+  // Math.max(1, Math.round(dmg * BLOCK.CHIP * taken)) and lands at the floor
+  // either way — a 12-damage move chips 1.80 -> 2 neutral and 1.53 -> 2 under
+  // safety. The mitigation is real on normal hits, specials and grabs, and
+  // exactly zero on chip. Fixing it would mean changing how damage rounds
+  // game-wide, which is a far larger blast radius than one stance is worth.
   SETS: {
     safety:       { startup: 1.15, dmg: 0.85, recovery: 0.90, speed: 0.95, taken: 0.85 },
     capabilities: { startup: 0.90, dmg: 1.20, recovery: 1.15, speed: 1.05, taken: 1.15 },

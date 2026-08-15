@@ -57,7 +57,9 @@ export const FIGHTER_STATE = [
     why: 'animation phase; render-only in effect, and snapping it to zero looks worse '
        + 'than letting it run' },
   { key: 'movingBack',    init: false, round: 'keep',  hash: false,
-    why: 'recomputed from the pad every frame before any read' },
+    why: 'only assigned inside the walk branch, so it PERSISTS while standing still — '
+       + 'the opt-out stands not because it is recomputed but because nothing in the '
+       + 'simulation reads it; only the renderer does' },
   { key: 'moveVx',        init: 0,     round: 'keep',  hash: false,
     why: 'walk intent, zeroed at the top of every update() before use' },
   { key: 'dashDir',       init: 1,     round: 'keep',  hash: false,
