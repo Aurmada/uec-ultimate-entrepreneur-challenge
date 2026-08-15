@@ -175,7 +175,7 @@ test('an unhashed key never moves the fingerprint', () => {
 });
 
 test('the simulation version was bumped for the behaviour change', () => {
-  assert.equal(SIM_VERSION, 5);
+  assert.equal(SIM_VERSION, 6);
 });
 
 // initState() now assigns every registry field in the constructor, so the

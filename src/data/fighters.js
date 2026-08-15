@@ -175,6 +175,11 @@ export const FIGHTERS = [
     // through that keeps going after the hit has landed.
     motion: { windup: 1.35, follow: 1.30, drop: 7, squash: 0.10, brace: 12, thrust: 5 },
     special: 'burnrate', style: 'brawler',
+    // THE BURNER is the only character on the roster with a number going down.
+    // Opting in is the whole gate: `runway` is declared and hashed for everyone
+    // (see engine/fighterState.js), but only a fighter carrying this flag ever
+    // drains, and only a fighter who drains can ever be winded.
+    usesRunway: true,
     // Wide as a doorway and built low. Reads as the biggest thing on stage.
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
     stats: { speed: 0.95, power: 1.2, hp: 95 },

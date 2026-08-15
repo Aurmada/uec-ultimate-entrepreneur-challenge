@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -136,6 +136,7 @@ export class Game {
       this.audio.sfx('timeTick');
     }
 
+    this.drainRunway(dt);
     for (const f of this.fighters) f.update(dt, this, false);
     this.pushApart();
     this.updateProjectiles(dt);
@@ -161,6 +162,19 @@ export class Game {
       this.hud.announce('TIME UP');
       this.audio.sfx('round');
       this.endRound(winner, false);
+    }
+  }
+
+  // The clock only runs while the round does. This lives in updateFighting
+  // rather than in Fighter.update because THIS is the only place
+  // `state === 'fighting'` is already true: updateIntro, updateRoundEnd and
+  // updateMatchEnd all call Fighter.update too (locked), and Game.update
+  // returns early on `paused` and on hitstop before the switch is even reached.
+  // Scoping by call site means there is no condition here to get wrong later.
+  drainRunway(dt) {
+    for (const f of this.fighters) {
+      if (!f.usesRunway) continue;
+      f.runway = Math.max(0, f.runway - RUNWAY.DRAIN * dt);
     }
   }
 
