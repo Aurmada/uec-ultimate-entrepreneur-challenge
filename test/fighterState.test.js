@@ -123,6 +123,20 @@ test('energy specifically survives a round — the rule the registry made explic
   assert.equal(f.energy, 55);
 });
 
+// crouching (fighter.js, set from pad.down/grounded/state at the top of every
+// update()) was live simulation state living entirely outside the registry:
+// never initialised in the constructor, never reset, not hashed, no `why`.
+// It can't independently desync — it's recomputed from already-synced inputs
+// before any read each frame — but it contradicted the registry's contract,
+// and the structural backstop above now catches exactly this shape of gap.
+test('crouching is declared: kept (recomputed every frame before use, same as movingBack/moveVx) and unhashed (fully derived, cannot independently diverge)', () => {
+  const e = FIGHTER_STATE.find((x) => x.key === 'crouching');
+  assert.ok(e, 'crouching is not declared in fighterState.js');
+  assert.equal(e.round, 'keep');
+  assert.equal(e.hash, false);
+  assert.ok(typeof e.why === 'string' && e.why.length > 10);
+});
+
 test('positional state still resets, and still depends on side', () => {
   const a = mk(0), b = mk(1);
   a.x = b.x = 999; a.hp = b.hp = 3;

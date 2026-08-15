@@ -43,6 +43,10 @@ export const FIGHTER_STATE = [
   // ---- movement ------------------------------------------------------------
   { key: 'airborne',      init: false, round: 'reset', hash: 'int' },
   { key: 'airAttackUsed', init: false, round: 'reset', hash: 'int' },
+  { key: 'crouching',     init: false, round: 'keep',  hash: false,
+    why: 'recomputed from pad.down/grounded/state at the top of every update() before '
+       + 'any read (hurtbox(), the state machine), same as movingBack — it cannot '
+       + 'independently diverge because it is a pure function of already-synced inputs' },
 
   // ---- declared KEEPs ------------------------------------------------------
   { key: 'energy',        init: 0,     round: 'keep',  hash: 'q8',
