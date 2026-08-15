@@ -149,3 +149,101 @@ test('a fighter without usesRunway never drains, across a whole round', () => {
     assert.equal(f.winded, false);
   }
 });
+
+// A pad that presses one button for a few frames, then stops. `hold` outlives
+// a basic's startup so the swing actually comes out.
+function presser(keys, hold = 4) {
+  let i = 0;
+  return { isHuman: false, update(f) {
+    const on = i < hold; i++;
+    f.pad = { ...EMPTY };
+    for (const k of keys) f.pad[k] = on;
+  } };
+}
+
+// Runs a live round with p1 pressing `keys` at point-blank range and reports
+// every frame on which the tank went UP — a refill is the only thing that can
+// move it in that direction.
+function refillsWhilePressing(keys, { runway = 50, energy = 0, gap = 60, frames = 120,
+                                      p1 = 'max', dummy = idler() } = {}) {
+  const game = toFighting(match({ p1, c1: presser(keys), c2: dummy }));
+  const [a, b] = game.fighters;
+  a.x = 480; b.x = 480 + gap; a.y = b.y = 480;
+  a.runway = runway; a.energy = energy;
+  const hp0 = b.hp, defEnergy0 = b.energy;
+  const jumps = [];
+  for (let i = 0; i < frames; i++) {
+    const before = a.runway;
+    game.update(1 / 60);
+    if (a.runway > before) jumps.push(a.runway - before);
+    b.x = a.x + gap; b.vx = 0;             // hold range; knockback is not a miss
+  }
+  return { jumps, runway: a.runway, dmg: hp0 - b.hp, defEnergy: b.energy - defEnergy0 };
+}
+
+test('a landed hit refills the tank', () => {
+  const r = refillsWhilePressing(['punch']);
+  assert.ok(r.jumps.length > 0, 'a connecting punch never topped the tank up');
+  // The drain runs on the same frame, so the observed jump is REFILL minus one
+  // frame of drain. Anything near 15 is the refill; anything near 0 is not.
+  const jump = r.jumps[0] + RUNWAY.DRAIN / 60;
+  assert.ok(Math.abs(jump - RUNWAY.REFILL_ON_HIT) < 0.2,
+    `expected a jump of about ${RUNWAY.REFILL_ON_HIT}, saw ${r.jumps[0].toFixed(3)}`);
+});
+
+test('a refill is capped at MAX', () => {
+  const r = refillsWhilePressing(['punch'], { runway: RUNWAY.MAX - 2 });
+  assert.ok(r.jumps.length > 0, 'the fixture must actually land a hit');
+  assert.ok(r.runway <= RUNWAY.MAX, `runway overflowed to ${r.runway}`);
+});
+
+// A grab is the other site that awards METER.HIT_DEAL, so it is the other site
+// that refills. Adam does not own a grab special, so this borrows one.
+test('a grab refills too — the rule is "wherever HIT_DEAL is awarded"', () => {
+  const grabber = { ...getFighter('max'), special: 'takeover' };
+  const game = toFighting(new Game({
+    p1: { def: grabber, controller: presser(['special']) },
+    p2: { def: getFighter('zara'), controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20260815,
+  }));
+  const [a, b] = game.fighters;
+  a.x = 480; b.x = 540; a.y = b.y = 480;
+  a.runway = 40; a.energy = 100;
+  let jumped = false;
+  for (let i = 0; i < 120; i++) {
+    const before = a.runway;
+    game.update(1 / 60);
+    if (a.runway > before) jumped = true;
+  }
+  assert.equal(jumped, true, 'a landed HOSTILE TAKEOVER did not refill the tank');
+});
+
+// A blocked hit is not a landed one. Note WHICH blocked outcome this actually
+// exercises, because it is not the obvious one: holding block re-enters
+// `setState('block')` every frame, `stateT` therefore never leaves 0, and
+// `def.stateT <= PARRY.WINDOW` is consequently always true — so a held block
+// currently resolves every non-grab hit as a PARRY and the chip branch below it
+// is unreachable (verified against the live engine, 2026-08-15; see this plan's
+// Notes — it is a pre-existing finding, not something this work introduced).
+// Both branches return before the refill either way, and the PARRY.ENERGY
+// assertion pins which one ran so this cannot silently start passing for a
+// third reason.
+test('a hit turned away by a block does not refill', () => {
+  const blocker = { isHuman: false, update(f) { f.pad = { ...EMPTY, block: true }; } };
+  const r = refillsWhilePressing(['punch'], { dummy: blocker });
+  assert.deepEqual(r.jumps, [], 'a blocked punch topped the tank up');
+  assert.equal(r.dmg, 0, 'the fixture must not have landed a clean hit');
+  assert.equal(r.defEnergy, PARRY.ENERGY, 'the fixture must have resolved as a parry');
+});
+
+test('a fighter without usesRunway is not refilled either', () => {
+  const r = refillsWhilePressing(['punch'], { p1: 'zara' });
+  assert.deepEqual(r.jumps, []);
+  // `runway` was forced to 50 by the fixture and zara never opts in, so
+  // nothing drains or refills it — it must sit exactly where it was left,
+  // not snap back to a full tank it was never draining from in the first
+  // place. (Plan bug: the original assertion here was RUNWAY.MAX, which
+  // nothing in the implementation — correctly — makes true.)
+  assert.equal(r.runway, 50);
+});

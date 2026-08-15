@@ -178,6 +178,17 @@ export class Game {
     }
   }
 
+  // The counterweight to the drain: connecting is the only way to buy time.
+  // Called from exactly the two places that award METER.HIT_DEAL — the normal
+  // hit in strike() and the throw in doGrab(). Nothing that fails to land is on
+  // that list: a shield absorb, a parry and a chipped block all return from
+  // strike() before those lines, and a counter's payback damages the ATTACKER,
+  // who did not land anything.
+  refillRunway(f) {
+    if (!f.usesRunway) return;
+    f.runway = Math.min(RUNWAY.MAX, f.runway + RUNWAY.REFILL_ON_HIT);
+  }
+
   pushApart() {
     const [a, b] = this.fighters;
     if (a.state === 'ko' || b.state === 'ko') return;
@@ -316,6 +327,7 @@ export class Game {
     def.applyHit({ dmg, kb, kbUp: a.kbUp || 0, stun: a.stun, dir });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
+    this.refillRunway(att);
 
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
@@ -402,6 +414,7 @@ export class Game {
     def.applyHit({ dmg, kb: -dir * sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: -dir });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
+    this.refillRunway(att);
     this.audio.sfx('throwSlam');
     this.fx.shake(14);
     this.fx.spark(att.x, att.y - 110, '#ff3d6e', 16, 460);
