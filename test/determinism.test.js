@@ -164,3 +164,30 @@ test('simulation modules never read animation data', () => {
       `${file}:${hit + 1} reads render-only data (pose or parts) — lockstep depends on it staying out of the sim`);
   }
 });
+
+// SCRIPT_A presses `x` (special), so a seeded meter turns the first press into
+// a BURN IT ALL: the tank empties, Adam goes winded, and every subsequent hit
+// resolves differently for the rest of the run. Runway is hashed (q8, via the
+// registry), so if the drain were computed from anything but the fixed
+// timestep — wall clock, frame count, Math.random — the two runs would part.
+function runBurnMatch() {
+  const game = new Game({
+    p1: { def: FIGHTERS.find(f => f.id === 'max'), controller: scripted(SCRIPT_A) },
+    p2: { def: FIGHTERS.find(f => f.id === 'zara'), controller: scripted(SCRIPT_B) },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20260815,
+  });
+  game.fighters[0].energy = METER.MAX;
+  const hashes = [];
+  for (let i = 0; i < 900; i++) {
+    game.update(1 / 60);
+    if (i % 15 === 0) hashes.push(hashGameState(game));
+  }
+  return hashes;
+}
+
+test('a match with a draining runway and a BURN IT ALL is deterministic', () => {
+  const a = runBurnMatch();
+  assert.deepEqual(runBurnMatch(), a, 'two identical runway matches disagreed');
+  assert.ok(new Set(a).size > 10, `expected a moving match, saw ${new Set(a).size} distinct states`);
+});

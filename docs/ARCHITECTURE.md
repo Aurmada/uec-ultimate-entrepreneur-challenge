@@ -220,8 +220,13 @@ fields and eight more had drifted out of it unnoticed. One of those eight was `e
 which meant meter carries between rounds — a real balance rule whose only record was the
 absence of a line.
 
-A structural test backs it up: a `this.<name>T` timer set on `Fighter` and not declared
-in the registry fails the suite.
+A structural test backs it up: `test/fighterState.test.js` constructs a real `Fighter` and
+fails on any own enumerable property that is neither declared in the registry nor on an
+explicit allowlist of things that are legitimately not simulation state. (It began life as
+a grep for `this.<name>T` timers; the very next task moved every registry field into
+`initState()`, which left that grep with nothing to find and no way to fail.) The
+corollary is worth knowing before you add anything: derived state belongs in a **getter**,
+not a constructor field — `usesRunway` and `winded` are getters for exactly this reason.
 
 Stance switch (ALIGNMENT SHIFT, scam's special) is the first verb built against the
 registry, and the reason `SIM_VERSION` moved to 5: a fighter in `capabilities` resolves
@@ -234,6 +239,40 @@ archetype for a character's special only: it is explicitly rejected as a command
 archetype, because neither the command-normal budget (`BUDGET.CMD.ARCHETYPE`) nor
 `fighter.js`'s command-normal routing have any behaviour for it — only the special/
 signature path intercepts `type === 'stance'` before an attack object is even built.
+
+### Runway, the second resource
+
+`RUNWAY` (config) is the second verb built on the registry, and the reason `SIM_VERSION`
+moved to 6. It is one entry — `{ key: 'runway', init: RUNWAY.MAX, round: 'reset',
+hash: 'q8' }` — and everything else follows: initialised in the constructor, cleared at
+the round boundary, in the fingerprint, and caught by the structural backstop, none of
+which anyone had to remember.
+
+It is deliberately the inverse of meter. Meter builds and rewards patience; runway drains
+at 4/second from the moment the round goes live and is topped up only by landing a hit.
+At zero the fighter is **winded** — 15% slower, 20% weaker, 20% easier to hit — and
+`winded` is derived (`runway <= 0`), never stored, so one connecting hit clears it in the
+same frame and there is no timer to reset, hash or leak.
+
+Three placement decisions are load-bearing:
+
+* **The drain lives in `Game.updateFighting`**, not in `Fighter.update`. That is the only
+  place `state === 'fighting'` is already true — `updateIntro`, `updateRoundEnd` and
+  `updateMatchEnd` all call `Fighter.update` too, and `Game.update` returns early on
+  `paused` and on hitstop before the switch. Scoping by call site leaves no condition to
+  get wrong later.
+* **The refill hooks the two sites that award `METER.HIT_DEAL`** — the normal hit in
+  `strike()` and the throw in `doGrab()`. Not chip, not steal, not a counter's payback.
+* **Only a character with `usesRunway` drains.** The field is declared and pinned at MAX
+  for everyone else, so a non-user hashes identically to a user and the quantiser needs no
+  nullable case. Runway is roster-only: `SPECIALS.burnitall` carries `rosterOnly: true` and
+  `PLAYER_SPECIALS` is what the profile screen offers, because the power budget still has
+  no axis to price a resource.
+
+`burn` joined `ARCHETYPES` (§6) as an eleventh entry — appended, same append-only contract
+as `stance`. BURN IT ALL reads its damage from the tank on every active frame and zeroes
+it on contact, and it is the one documented exception to the refill rule: refunding 15 on
+its own hit would hand back the entire cost of the move.
 
 ---
 
