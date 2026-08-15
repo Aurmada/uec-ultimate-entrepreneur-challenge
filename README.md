@@ -69,6 +69,17 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.5 — Scam Alt picks a side, and the game remembers
+
+Every move in this game has been a thing that happens *now*, at a place: a punch, a throw, a projectile. Nothing persisted, nothing changed the rules. This adds the first move that does.
+
+- ⚖️ **SCAM ALT gets ALIGNMENT SHIFT.** A toggle, not a strike. Flip to **SAFETY** and you hit 15% softer but take 15% less, move slower and recover faster. Flip to **CAPABILITIES** and you hit 20% harder, start up quicker — and take 15% more. Neither is the better one. That's the point, and it's the joke.
+- 🎭 **He also stops borrowing.** Scam had been throwing Lizbeth's Pivot Punch; it's hers alone now. Two pairs still share a signature, and they're next.
+
+Under it, the part you can't see: the game now has one declared list of everything the simulation remembers about a fighter, instead of three places that each had to be updated by hand and had already fallen out of step. That sounds like housekeeping and mostly is — but one of the things that had quietly fallen out of step turned out to be a real rule nobody had written down anywhere: **your meter carries between rounds.** It always has. Now it says so.
+
+The AI plays the new move too — it goes defensive below a third health and aggressive above it. That took two attempts. The first one left Scam standing perfectly still for the entire match, which is the sort of thing you find by making the computer actually fight rather than by reading the code and nodding.
+
 ## What's new in v3.4 — you can tell them apart with the lights off
 
 The cast had a sameness that survived three rounds of art work, and this time we measured it instead of arguing about it. Strip the colour out and flatten all nine to flat white shapes, and they collapse into **two**: five near-identical narrow columns (Lizbeth, Kim, Cathie, Elo, Scam) and three wide blocky ones (Adam, Carl, Jeff). Only Steve was instantly nameable, and not because of his body — because one arm sticks out.
