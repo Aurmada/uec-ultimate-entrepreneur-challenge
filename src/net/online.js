@@ -98,16 +98,17 @@ export const CHARACTER_WIRE_VERSION = 1;
 // landed with it. Stances change frame data and damage taken, so two peers on
 // either side of this line resolve the same inputs differently.
 //
-// v6: quantise('enum')'s vocabulary is now derived from Object.keys(STANCE.SETS)
-// .sort() instead of hand-listed as [null, 'safety', 'capabilities'] — fixing a
-// bug where any unrecognised value folded into null's own slot instead of
-// throwing. That also reordered the enum's integer mapping (capabilities sorts
-// before safety), so stanceId now hashes to a different int for the SAME
-// gameplay state. Two peers who agree on every input and every stance would
-// still compute different fingerprints across this line — not a fight-outcome
-// change, but exactly the false-desync failure mode this version exists to
-// refuse up front instead of accusing the network of.
-export const SIM_VERSION = 6;
+// v5 also covers the enum hashing change: quantise('enum')'s vocabulary is now
+// derived from Object.keys(STANCE.SETS).sort() rather than hand-listed, fixing a
+// bug where an unrecognised value folded into null's own slot instead of
+// throwing. That reordered the integer mapping, so stanceId hashes differently
+// for the SAME gameplay state — a false-desync source, and exactly what this
+// version refuses up front rather than blaming the network for.
+//
+// It stays 5 rather than becoming 6 because 5 has never shipped: main is on 4,
+// this branch is unmerged, and no peer anywhere runs 5. Versions number what
+// was released, not what was edited.
+export const SIM_VERSION = 5;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {
