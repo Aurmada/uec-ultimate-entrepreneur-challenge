@@ -183,7 +183,7 @@ export class Fighter {
     const reach = a.reach || 82;
     const x0 = this.x + (this.facing > 0 ? 14 : -14 - reach);
     const yC = this.y + (a.hitY || -95);
-    const tall = a.kind === 'aoe' ? 150 : 74;
+    const tall = (a.kind === 'aoe' || a.kind === 'burn') ? 150 : 74;
     return { x: x0, y: yC - tall / 2, w: reach, h: tall, a };
   }
 

@@ -247,3 +247,98 @@ test('a fighter without usesRunway is not refilled either', () => {
   // nothing in the implementation — correctly — makes true.)
   assert.equal(r.runway, 50);
 });
+
+import { SPECIALS, PLAYER_SPECIALS } from '../src/data/fighters.js';
+
+// Throws p1's special at point-blank and reports what it did.
+function throwSpecial({ p1 = 'max', runway = RUNWAY.MAX, gap = 70, frames = 120 } = {}) {
+  const game = toFighting(match({
+    p1, c1: presser(['special'], 6), c2: idler(),
+  }));
+  const [a, b] = game.fighters;
+  a.x = 480; b.x = 480 + gap; a.y = b.y = 480;
+  a.runway = runway; a.energy = 100;
+  const hp0 = b.hp;
+  let runwayAtContact = null, runwayAfterContact = null;
+  for (let i = 0; i < frames; i++) {
+    const hpBefore = b.hp;
+    const rwBefore = a.runway;
+    game.update(1 / 60);
+    if (b.hp < hpBefore && runwayAtContact === null) {
+      runwayAtContact = rwBefore;
+      runwayAfterContact = a.runway;
+    }
+    b.x = a.x + gap; b.vx = 0;
+  }
+  return { dmg: hp0 - b.hp, runwayAtContact, runwayAfterContact, runway: a.runway, f: a };
+}
+
+test('BURN IT ALL is Adam\'s special, and it is a burn', () => {
+  assert.equal(getFighter('max').special, 'burnitall');
+  assert.equal(SPECIALS.burnitall.type, 'burn');
+});
+
+test('BURN IT ALL damage scales with the runway it spends', () => {
+  const full = throwSpecial({ runway: RUNWAY.MAX });
+  const low = throwSpecial({ runway: 10 });
+  assert.ok(full.dmg > 0 && low.dmg > 0, 'both throws must connect');
+  assert.ok(full.dmg > low.dmg + 10,
+    `a full tank (${full.dmg}) should hit far harder than a near-empty one (${low.dmg})`);
+  // 8 + 100 * 0.18 = 26 at a full tank, less a fraction for the startup's drain.
+  assert.ok(full.dmg >= 24 && full.dmg <= 26, `full-tank damage was ${full.dmg}`);
+  assert.ok(low.dmg >= 9 && low.dmg <= 10, `near-empty damage was ${low.dmg}`);
+});
+
+test('BURN IT ALL empties the tank by connecting, and leaves Adam winded', () => {
+  const r = throwSpecial({ runway: RUNWAY.MAX });
+  assert.ok(r.runwayAtContact > RUNWAY.MAX - 2, 'the fixture must connect on a full tank');
+  assert.equal(r.runwayAfterContact, 0, 'the move must torch every remaining dollar');
+  assert.equal(r.f.winded, true, 'and it must leave him winded by construction');
+});
+
+// A DELIBERATE EXCEPTION to the refill rule, and the one most likely to be
+// "fixed" by someone reading refillRunway in isolation. Refunding 15 on its
+// own hit would hand back the entire cost of the move.
+test('BURN IT ALL does not refill on its own hit', () => {
+  const r = throwSpecial({ runway: 60 });
+  assert.equal(r.runwayAfterContact, 0,
+    'a refill on the burn\'s own hit would leave 15 here, not 0');
+});
+
+// The move is on the roster because RUNWAY is on the roster. Anyone holding it
+// without the resource gets the floor and nothing else, so there is no version
+// of "pick BURN IT ALL, keep your tank full forever" that pays.
+test('without usesRunway, BURN IT ALL gets no scaling at all', () => {
+  const game = toFighting(new Game({
+    p1: { def: { ...getFighter('kai'), special: 'burnitall' }, controller: presser(['special'], 6) },
+    p2: { def: getFighter('zara'), controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20260815,
+  }));
+  const [a, b] = game.fighters;
+  a.x = 480; b.x = 550; a.y = b.y = 480;
+  a.energy = 100;
+  const hp0 = b.hp;
+  for (let i = 0; i < 120; i++) { game.update(1 / 60); b.x = a.x + 70; b.vx = 0; }
+  assert.equal(a.usesRunway, false);
+  assert.equal(a.runway, RUNWAY.MAX, 'a non-user is still pinned full');
+  assert.equal(hp0 - b.hp, SPECIALS.burnitall.dmgBase,
+    'a non-user must get dmgBase and nothing more');
+});
+
+test('Elo owns BURN RATE BLAST alone on the roster', () => {
+  assert.deepEqual(FIGHTERS.filter(f => f.special === 'burnrate').map(f => f.id), ['elo']);
+});
+
+// spec §9: runway is roster-only. screens.js builds the player's special
+// dropdown from this list, so the marker is the gate.
+//
+// PLAYER_SPECIALS is an OBJECT keyed by id (Object.fromEntries over SPECIALS
+// filtered on !rosterOnly) in this codebase, not the array the plan assumed —
+// that shape shipped in v3.6, on this branch's base, before this plan was
+// written. Adapted to Object.values() rather than treated as an array.
+test('BURN IT ALL is not offered to a player-built founder', () => {
+  assert.equal(SPECIALS.burnitall.rosterOnly, true);
+  assert.equal(Object.values(PLAYER_SPECIALS).some(sp => sp.id === 'burnitall'), false);
+  assert.ok(Object.values(PLAYER_SPECIALS).length >= 6, 'the menu must still hold the ordinary specials');
+});

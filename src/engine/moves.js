@@ -130,6 +130,20 @@ export const ARCHETYPE_TICKS = {
     a.hasFired = true;
     game.spawnTrap(f, sp);
   },
+  // Recomputed EVERY active frame, deliberately. Between startup and contact
+  // there is 0.18s in which the tank keeps draining and an incoming hit could
+  // refill it, and the spec's promise is that the damage is what the tank held
+  // at CONTACT. Reading it once at startup would be a different, weaker move.
+  //
+  // A fighter without `usesRunway` gets dmgBase and nothing else: their runway
+  // is pinned at MAX and never spends, so scaling off it would be free damage
+  // with none of the cost the number is supposed to represent.
+  burn: (f, a, sp, dt, game) => {
+    a.dmg = (sp.dmgBase ?? 8) + (f.usesRunway ? f.runway : 0) * (sp.dmgPerRunway ?? 0);
+    if (a.fxDone) return;
+    a.fxDone = true;
+    game.onBurnBlast(f);
+  },
   // `counter` has no tick on purpose: nothing happens until someone swings at
   // it, so the window is read by the hit resolver rather than polled here.
 };

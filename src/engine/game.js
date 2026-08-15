@@ -327,7 +327,17 @@ export class Game {
     def.applyHit({ dmg, kb, kbUp: a.kbUp || 0, stun: a.stun, dir });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
-    this.refillRunway(att);
+    // BURN IT ALL is the ONE deliberate exception to the refill rule, and it is
+    // marked so nobody "fixes" it. The move's whole cost is that it empties the
+    // tank; handing 15 straight back on its own hit would refund that cost and
+    // turn the signature trade into a free damage spike.
+    //
+    // Gated on usesRunway, same as refillRunway: a non-user's runway is pinned
+    // at MAX and must stay untouched by this move too, not just by drain and
+    // refill. (Plan bug: the original line here was `att.runway = 0` with no
+    // guard, which would zero a non-user's pinned tank on contact.)
+    if (a.kind === 'burn') { if (att.usesRunway) att.runway = 0; }
+    else this.refillRunway(att);
 
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
