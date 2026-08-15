@@ -342,3 +342,32 @@ test('BURN IT ALL is not offered to a player-built founder', () => {
   assert.equal(Object.values(PLAYER_SPECIALS).some(sp => sp.id === 'burnitall'), false);
   assert.ok(Object.values(PLAYER_SPECIALS).length >= 6, 'the menu must still hold the ordinary specials');
 });
+
+// ---------------------------------------------------------------------------
+// Task 8: the HUD bar. Structural only — node:test cannot see a DOM, so these
+// pin that the wiring EXISTS. Whether the bar reads correctly on screen is a
+// browser check the plan hands to a human; no assertion here substitutes.
+import { readFileSync } from 'node:fs';
+
+const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+
+test('the HUD carries a runway track for both sides', () => {
+  const html = read('index.html');
+  for (const id of ['rwTrack1', 'rwFill1', 'rwTrack2', 'rwFill2']) {
+    assert.ok(html.includes(id), `index.html has no #${id}`);
+  }
+  const css = read('styles.css');
+  assert.ok(css.includes('.rw-track'), 'styles.css has no .rw-track');
+  assert.ok(css.includes('.rw-fill'), 'styles.css has no .rw-fill');
+});
+
+// Shown only for a fighter who has one. A permanently-full gold bar under
+// every other fighter is a resource the player will try to play around and
+// cannot.
+test('the HUD shows the runway bar only for a fighter who uses it', () => {
+  const src = read('src/ui/hud.js');
+  assert.ok(src.includes('usesRunway'),
+    'hud.js never checks usesRunway — the bar would show for all nine fighters');
+  assert.ok(src.includes('RUNWAY'), 'hud.js does not read the RUNWAY config');
+  assert.ok(/winded/.test(src), 'hud.js never reflects the winded state');
+});
