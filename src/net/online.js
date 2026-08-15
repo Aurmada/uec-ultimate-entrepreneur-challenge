@@ -15,6 +15,7 @@
 // Dedicated "uec-game" Supabase project (isolated from aurmada-main-site).
 // Publishable key — safe to ship in client code; row-level security guards data.
 import { validateCharacter, SCHEMA_VERSION } from '../data/schema.js';
+import { hashValues } from '../engine/fighterState.js';
 
 const SUPABASE_URL = 'https://oqzxkzkyiiahxmppgrkn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_hA-O1-vWIa40YOlyy3d0mA_Mf0zCrkO';
@@ -92,7 +93,22 @@ export const CHARACTER_WIRE_VERSION = 1;
 // unpackCommand rebuilds them from OUR table, deliberately, so the numbers can
 // never be forged. The flip side is that each peer supplies its own — so a v3 and
 // a v4 client would each run their own LAWYERED and diverge on the first read.
-export const SIM_VERSION = 4;
+//
+// v5: persistent fighter state moved behind a registry, and stance switch
+// landed with it. Stances change frame data and damage taken, so two peers on
+// either side of this line resolve the same inputs differently.
+//
+// v5 also covers the enum hashing change: quantise('enum')'s vocabulary is now
+// derived from Object.keys(STANCE.SETS).sort() rather than hand-listed, fixing a
+// bug where an unrecognised value folded into null's own slot instead of
+// throwing. That reordered the integer mapping, so stanceId hashes differently
+// for the SAME gameplay state — a false-desync source, and exactly what this
+// version refuses up front rather than blaming the network for.
+//
+// It stays 5 rather than becoming 6 because 5 has never shipped: main is on 4,
+// this branch is unmerged, and no peer anywhere runs 5. Versions number what
+// was released, not what was edited.
+export const SIM_VERSION = 5;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {
@@ -126,6 +142,8 @@ export function hashGameState(game) {
     q(f[1].x), q(f[1].y), q(f[1].hp), q(f[1].energy),
     q(game.timer), game.roundWins[0], game.roundWins[1],
     game.projectiles.length, game.drops.length,
+    // Everything the registry declares hashable, both fighters, registry order.
+    ...hashValues(f[0]), ...hashValues(f[1]),
   ]) mix(x);
   return h;
 }

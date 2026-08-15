@@ -119,6 +119,12 @@ export class AIController {
     f.pad = pad;
   }
 
+  // Below a third HP, survive; above it, close the round out. Exposed as its
+  // own method so the threshold is testable without driving a whole match.
+  preferredStance(f) {
+    return f.hp / f.maxHp < 0.34 ? 'safety' : 'capabilities';
+  }
+
   decide(f, opp, game) {
     const L = this.level, P = this.persona;
     const dist = Math.abs(opp.x - f.x);
@@ -148,6 +154,25 @@ export class AIController {
         this.dir = toward;
         return;
       }
+    }
+
+    // --- stance ---
+    // A toggle, but NOT a free one — STANCE.COST is unused (nothing reads it);
+    // the real price is METER.SPECIAL_COST, charged unconditionally by
+    // startSpecial() same as any other special. Fighter.pressed('special')
+    // refuses the press outright below that cost, routing to
+    // game.onSpecialDenied() instead, so an ungated branch here just fires
+    // dead presses (and, before energy exists, locks the controller on this
+    // branch forever since `dir` is zeroed every time). Checked here (after
+    // threat response, so a fighter still blocks/jumps out of real danger
+    // first) rather than folded into the `sp === archetype` fits-list below
+    // it, because that list already assumes a stance switch is a separate
+    // concern from the archetypes it fits distance for.
+    if (f.special.type === 'stance' && f.stanceCD <= 0 && f.energy >= METER.SPECIAL_COST
+      && this.preferredStance(f) !== f.stanceId) {
+      this.pulse.special = true;
+      this.dir = 0;
+      return;
     }
 
     // --- race to a mystery drop if one is up for grabs ---

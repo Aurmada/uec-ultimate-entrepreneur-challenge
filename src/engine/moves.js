@@ -49,6 +49,17 @@ export const ARCHETYPE_SHAPES = {
     a.noHitbox = true;
     a.hitY = -95;
   },
+
+  // A stance never actually reaches shapeAttack in normal play —
+  // Fighter.startSpecial (NOT startAttack) intercepts `sp.type === 'stance'`
+  // and calls switchStance() before it builds an attack object at all, so this
+  // branch is unreachable from any shipped input. It is declared anyway, because
+  // `shapeAttack` falls back to ARCHETYPE_SHAPES.strike for an unlisted type
+  // — and falling back to `strike` for a stray stance call would hand it a
+  // real swinging hitbox, the one thing a toggle must never have. `noHitbox`
+  // here is a second line of defence, matching counter/trap, not the
+  // primary mechanism.
+  stance: (a) => { a.words = ['SHIFT!']; a.noHitbox = true; },
 };
 
 // Applies archetype shaping to a freshly built attack object. Returns it.

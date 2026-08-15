@@ -129,11 +129,31 @@ test('identity text over its length cap is rejected', () => {
 
 // ---------------------------------------------------------------- v2: command normals
 
-test('schema v2 carries the full nine-archetype vocabulary', () => {
+test('schema v2 carries the full ten-archetype vocabulary', () => {
   assert.equal(SCHEMA_VERSION, 2);
-  for (const a of ['strike', 'aoe', 'projectile', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap']) {
+  // 'stance' joined in fighter-state-foundation (2026-08-14): a toggle
+  // (ALIGNMENT SHIFT) that changes `stanceId` instead of swinging, hitting,
+  // or placing anything. It grew the vocabulary rather than reusing 'strike'
+  // because pricing and engine routing both branch on archetype identity.
+  for (const a of ['strike', 'aoe', 'projectile', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap', 'stance']) {
     assert.ok(ARCHETYPES.includes(a), `${a} must be an archetype`);
   }
+});
+
+test('stance is a known archetype for a special, but rejected as a command normal', () => {
+  // No entry in BUDGET.CMD.ARCHETYPE and no engine routing exist for a
+  // command-normal-level stance (fighter.js only intercepts `type: 'stance'`
+  // on the character's special) — so unlike every other archetype, this one
+  // must be refused here rather than silently priced at 0 and shipped dead.
+  const c = validChar();
+  c.commandNormals = [{
+    slot: 'fwd+punch', archetype: 'stance', displayName: 'TOGGLE',
+    frameData: { startup: ATTACKS.punch.startup, active: ATTACKS.punch.active,
+                 recovery: ATTACKS.punch.recovery, dmg: ATTACKS.punch.dmg, reach: ATTACKS.punch.reach },
+  }];
+  const r = validateCharacter(c);
+  assert.equal(r.ok, false);
+  assert.ok(r.errors.some(e => e.includes("'stance' is not usable as a command normal")));
 });
 
 test('every command slot names a real basic attack', () => {

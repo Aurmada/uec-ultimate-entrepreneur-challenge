@@ -254,7 +254,7 @@ export class Game {
       this.fx.hitstop(0.13);
       this.fx.shake(6);
       att.applyHit({
-        dmg: Math.max(1, Math.round(ctr.dmg * def.dmgMult)),
+        dmg: Math.max(1, Math.round(ctr.dmg * def.dmgMult * att.takenMult)),
         kb: ctr.kb, kbUp: 0, stun: 0.42, dir: -dir,
       });
       return;
@@ -281,7 +281,7 @@ export class Game {
     }
 
     if (blocked) {
-      let chip = Math.max(1, Math.round(a.dmg * att.dmgMult * BLOCK.CHIP));
+      let chip = Math.max(1, Math.round(a.dmg * att.dmgMult * BLOCK.CHIP * def.takenMult));
       if (def.unicornT > 0) chip = 0;
       def.hp = Math.max(1, def.hp - chip);             // chip can't KO
       def.vx = dir * BLOCK.PUSH;
@@ -295,7 +295,7 @@ export class Game {
 
     // combo damage scaling: deeper into a chain → lighter hits
     const depth = Math.min(def.comboTaken, COMBO.SCALING.length - 1);
-    const dmg = Math.max(1, Math.round(a.dmg * att.dmgMult * COMBO.SCALING[depth]));
+    const dmg = Math.max(1, Math.round(a.dmg * att.dmgMult * COMBO.SCALING[depth] * def.takenMult));
     // chained jabs shove less so strings stay in range; finishers launch normally
     let kb = a.kb;
     if (a.kind === 'punch' && def.comboTaken >= 1) kb *= COMBO.JAB_CHAIN_KB;
@@ -379,7 +379,7 @@ export class Game {
       return;
     }
     const sp = a.special;
-    const dmg = Math.max(1, Math.round(sp.dmg * att.dmgMult));
+    const dmg = Math.max(1, Math.round(sp.dmg * att.dmgMult * def.takenMult));
     this.audio.sfx('grab');
     this.fx.hitstop(0.3);
     this.fx.popup(def.x, def.y - 150, 'ACQUIRED!', '#ff3d6e');
@@ -418,6 +418,7 @@ export class Game {
     let msg = null;
     if (kind === 'steal') msg = `💸 RECHARGING ${f.stealCD.toFixed(1)}s`;
     else if (kind === 'dash') msg = `💨 RECHARGING ${f.dashCD.toFixed(1)}s`;
+    else if (kind === 'stance') msg = `🔄 RECHARGING ${f.stanceCD.toFixed(1)}s`;
     else if (need[kind] !== undefined) {
       msg = `NEED ${Math.ceil(need[kind] - f.energy)} MORE ⚡`;
     }

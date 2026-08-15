@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.4';
+export const VERSION = 'v3.5';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -373,6 +373,35 @@ export const BODY = {
   stride:    [0.88, 1.18],   // leg length
   shoulders: [0.85, 1.25],
   head:      [0.90, 1.12],
+};
+
+// ---- STANCE SWITCH ---------------------------------------------------------
+// A toggle, not a timer: you stay in a stance until you switch back, the round
+// ends, or you are KO'd. Neither set is strictly better than neutral, which is
+// what keeps a stance from being a free upgrade — `taken` is the price.
+//
+// These STACK multiplicatively with Unicorn Mode, deliberately. A stance is a
+// trade and Unicorn is a pure buff, so capabilities+Unicorn is dangerous but
+// also takes 15% extra damage for exactly the six seconds the opponent most
+// wants to punish. This is the call in the design most likely to be wrong on
+// contact with play; if it proves oppressive, make Unicorn force `safety`.
+export const STANCE = {
+  CD: 0.8,          // seconds between switches
+  // NOT the price. A switch costs a full METER.SPECIAL_COST (50) because it
+  // goes through startSpecial like every other special; this is an ADDITIONAL
+  // surcharge on top, and it is 0. Reading this as the cost is what paralysed
+  // the AI once already — it skipped the energy check on the strength of it.
+  COST: 0,
+  // MEASURED CAVEAT: `taken` buys nothing against CHIP damage. Chip is
+  // Math.max(1, Math.round(dmg * BLOCK.CHIP * taken)) and lands at the floor
+  // either way — a 12-damage move chips 1.80 -> 2 neutral and 1.53 -> 2 under
+  // safety. The mitigation is real on normal hits, specials and grabs, and
+  // exactly zero on chip. Fixing it would mean changing how damage rounds
+  // game-wide, which is a far larger blast radius than one stance is worth.
+  SETS: {
+    safety:       { startup: 1.15, dmg: 0.85, recovery: 0.90, speed: 0.95, taken: 0.85 },
+    capabilities: { startup: 0.90, dmg: 1.20, recovery: 1.15, speed: 1.05, taken: 1.15 },
+  },
 };
 
 // ---------------------------------------------------------------------------

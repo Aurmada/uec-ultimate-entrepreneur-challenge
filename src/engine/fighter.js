@@ -1,11 +1,12 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS, STANCE } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 import { clampBody } from './proportions.js';
 import { shapeAttack, ARCHETYPE_TICKS } from './moves.js';
 import { slotButton, NO_SWING } from '../data/schema.js';
+import { initState, resetState } from './fighterState.js';
 
 function blankPad() {
   return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false };
@@ -30,27 +31,15 @@ export class Fighter {
     };
     this.maxHp = this.stats.hp;
     this.hp = this.maxHp;
-    this.energy = 0;
     this.x = side === 0 ? 300 : 660;
     this.y = STAGE.FLOOR;
     this.vx = 0;                            // knockback velocity (decays)
     this.vy = 0;
-    this.moveVx = 0;                        // walk intent this frame
     this.facing = side === 0 ? 1 : -1;
     this.state = 'idle';
-    this.stateT = 0;
-    this.stunT = 0;
     this.attack = null;
     this.pad = blankPad();
     this.prevPad = blankPad();
-    this.walkPhase = 0;
-    this.airborne = false;
-    this.airAttackUsed = false;
-    this.flashT = 0;
-    this.unicornT = 0;
-    this.movingBack = false;
-    this.comboTaken = 0;                    // hits in the current stun chain (victim-side)
-    this.comboDropT = 0;
     this.special = SPECIALS[def.special] || SPECIALS.pitchdeck;
     // The character's own vocabulary, indexed by input. Everyone shares the
     // same grammar — movement, block, the four basics, the universal moves —
@@ -60,13 +49,8 @@ export class Fighter {
     for (const cn of def.commandNormals || []) {
       if (cn && cn.slot) this.cmdBySlot.set(cn.slot, cn);
     }
-    this.dashCD = 0;
-    this.dashDir = 1;
-    this.stealCD = 0;
-    // mystery-drop buffs
-    this.speedBuffT = 0;
-    this.dmgBuffT = 0;
-    this.shieldT = 0;
+    // Everything the simulation remembers, from one declaration.
+    initState(this);
   }
 
   resetForRound(side) {
@@ -76,19 +60,10 @@ export class Fighter {
     this.vx = this.vy = 0;
     this.facing = side === 0 ? 1 : -1;
     this.state = 'idle';
-    this.stateT = 0;
     this.attack = null;
-    this.airborne = false;
-    this.unicornT = 0;
-    this.flashT = 0;
-    this.comboTaken = 0;
     this.pad = blankPad();
     this.prevPad = blankPad();
-    this.dashCD = 0;
-    this.stealCD = 0;
-    this.speedBuffT = 0;
-    this.dmgBuffT = 0;
-    this.shieldT = 0;
+    resetState(this);
   }
 
   get grounded() { return !this.airborne; }
@@ -96,13 +71,35 @@ export class Fighter {
   get speedMult() {
     return this.stats.speed
       * (this.unicornT > 0 ? UNICORN.SPEED_MULT : 1)
-      * (this.speedBuffT > 0 ? DROPS.BUFF_SPEED : 1);
+      * (this.speedBuffT > 0 ? DROPS.BUFF_SPEED : 1)
+      * (this.stanceSet ? this.stanceSet.speed : 1);
   }
   get dmgMult() {
     return this.stats.power
       * (this.unicornT > 0 ? UNICORN.DMG_MULT : 1)
-      * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1);
+      * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1)
+      * (this.stanceSet ? this.stanceSet.dmg : 1);
   }
+
+  // A toggle, gated by its own cooldown. With no argument, order is fixed
+  // (null -> safety -> capabilities -> safety) so two peers stepping the same
+  // inputs land in the same stance — an order derived from Object.keys would
+  // depend on source layout, which is not something lockstep should ever
+  // depend on. A caller that already knows which stance it wants (the AI,
+  // reading its own preferredStance()) may pass it as `target` to land there
+  // in one press instead of cycling — still deterministic, since `target`
+  // is itself derived identically by both lockstep peers.
+  switchStance(target) {
+    if (this.stanceCD > 0) return false;
+    this.stanceId = target !== undefined ? target
+      : this.stanceId === 'safety' ? 'capabilities' : 'safety';
+    this.stanceCD = STANCE.CD;
+    return true;
+  }
+
+  get stanceSet() { return this.stanceId ? STANCE.SETS[this.stanceId] : null; }
+
+  get takenMult() { return this.stanceSet ? this.stanceSet.taken : 1; }
   get actionable() {
     return this.state === 'idle' || this.state === 'walk' || this.state === 'jump'
       || this.state === 'block' || this.state === 'crouch';
@@ -194,6 +191,7 @@ export class Fighter {
     this.flashT = Math.max(0, this.flashT - dt);
     this.dashCD = Math.max(0, this.dashCD - dt);
     this.stealCD = Math.max(0, this.stealCD - dt);
+    this.stanceCD = Math.max(0, this.stanceCD - dt);
     this.speedBuffT = Math.max(0, this.speedBuffT - dt);
     this.dmgBuffT = Math.max(0, this.dmgBuffT - dt);
     this.shieldT = Math.max(0, this.shieldT - dt);
@@ -392,6 +390,11 @@ export class Fighter {
     const base = ATTACKS[button] || ATTACKS.punch;
     const fd = cn ? { ...base, ...cn.frameData } : base;
     const s = this.style;
+    // A stance scales startup/recovery alongside style — the same axes style
+    // already scales — so the two compound the same way speedMult and dmgMult
+    // already let a stance compound with everything else. dmg and taken are
+    // read via dmgMult/takenMult, not here.
+    const st = this.stanceSet;
     this.attack = {
       ...fd,
       // A non-strike archetype routes through the engine branch that already
@@ -402,8 +405,8 @@ export class Fighter {
       button,
       cmd: cn,
       hasHit: false,
-      startup: fd.startup * s.startup,
-      recovery: fd.recovery * s.recovery,
+      startup: fd.startup * s.startup * (st ? st.startup : 1),
+      recovery: fd.recovery * s.recovery * (st ? st.recovery : 1),
       dmg: fd.dmg * s.dmg,
       reach: (fd.reach || 84) * s.reach,
     };
@@ -464,6 +467,29 @@ export class Fighter {
   startSpecial(game) {
     if (this.airborne) return;                       // specials are grounded
     const sp = this.special;
+    // A stance switch is a toggle, not a strike — it never becomes an attack.
+    // Intercepted here, before the attack object is built, so it does not
+    // fall through to `kind: 'stance'` with no engine branch to run it.
+    if (sp.type === 'stance') {
+      // A controller that already knows which stance it wants (the AI, via
+      // its own preferredStance()) reaches it in a single press. A human's
+      // controller exposes no such thing, so `target` stays undefined and
+      // switchStance() falls back to its plain toggle — unchanged from before.
+      // Without this, an AI wanting 'capabilities' from a null stance had to
+      // cycle through 'safety' first: two presses, 100 meter, two cooldowns,
+      // with the AI re-locked at 0 meter in between.
+      const target = this.controller.preferredStance ? this.controller.preferredStance(this) : undefined;
+      // Charge only if the switch ACTUALLY happens. switchStance() refuses
+      // while its own cooldown runs, and taking 50 meter for a no-op is a trap
+      // rather than a cost — the player gets no feedback that the press was
+      // eaten, only that the meter is gone.
+      if (!this.switchStance(target)) { game.onSpecialDenied(this, 'stance'); return; }
+      this.energy -= METER.SPECIAL_COST;
+      this.attack = null;
+      this.setState('idle');
+      game.onSpecialStart(this, sp);
+      return;
+    }
     this.energy -= METER.SPECIAL_COST;
     const a = {
       kind: sp.type, special: sp, hasHit: false,

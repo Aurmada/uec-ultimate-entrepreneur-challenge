@@ -24,6 +24,31 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/engine/game.js';
 import { FIGHTERS } from '../src/data/fighters.js';
 import { METER } from '../src/config.js';
+import { FIGHTER_STATE } from '../src/engine/fighterState.js';
+
+// ALIGNMENT SHIFT (scam's special, fighter-state-foundation 2026-08-14) deals
+// no damage, spawns no projectile and places no trap by design — it is a
+// toggle. The old "did something" check (dmg > 0 || projectile || trap) can
+// never see that, and cannot be patched with `archetype === 'stance'` either:
+// that would re-open exactly the hole this file exists to close (see the file
+// header) by letting a FUTURE stance move that does nothing sail through on
+// its name alone rather than its behaviour.
+//
+// So the check is broadened structurally instead: snapshot every registry key
+// that represents a real simulation effect, and compare before/after. `stateT`
+// is deliberately excluded even though it is simulation state — it (and the
+// other EFFECT_NOISE keys below) tick from merely BEING in an attack, which is
+// precisely what the three moves in the file header did: play the animation,
+// print the popup, change nothing that matters. Including it would make this
+// check pass for a dead move exactly like the old one did.
+const EFFECT_NOISE = new Set([
+  'stateT', 'energy',                          // animation lifecycle; cost (checked separately)
+  'walkPhase', 'movingBack', 'moveVx',          // movement intent/animation, not an effect
+  'airborne', 'airAttackUsed',                  // recomputed from physics, not set by a move
+  'comboDropT', 'comboTaken',                   // chain bookkeeping, implied by damage already
+  'flashT',                                     // hit-flash render timer
+]);
+const EFFECT_KEYS = FIGHTER_STATE.map((e) => e.key).filter((k) => !EFFECT_NOISE.has(k));
 
 const STUB_HUD = new Proxy({}, { get: () => () => {} });
 const STUB_ARENA = { id: 'test', name: 'TEST', draw() {}, mood: 'none' };
@@ -74,6 +99,7 @@ function fire(def, keys, { energy = 0, gap = 90, dummyEnergy = 0, dummy = idler(
   a.x = 480; b.x = 480 + gap; a.y = b.y = 480;
   a.energy = energy; b.energy = dummyEnergy;
   const hp0 = b.hp, ahp0 = a.hp, x0 = a.x;
+  const effectBefore = EFFECT_KEYS.map((k) => a[k]);
   const states = new Set();
   let spent = 0, unicorn = 0, projectile = false, trap = false, drained = 0;
   for (let i = 0; i < frames; i++) {
@@ -87,9 +113,10 @@ function fire(def, keys, { energy = 0, gap = 90, dummyEnergy = 0, dummy = idler(
     if ((game.traps || []).length) trap = true;
     b.x = a.x + gap; b.vx = 0;           // hold range; knockback is not a dud move
   }
+  const stateChanged = EFFECT_KEYS.some((k, i) => a[k] !== effectBefore[i]);
   return {
     dmg: hp0 - b.hp, selfDmg: ahp0 - a.hp, spent, unicorn, projectile, trap,
-    drained, states, moved: Math.abs(a.x - x0),
+    drained, states, moved: Math.abs(a.x - x0), stateChanged,
   };
 }
 
@@ -104,7 +131,11 @@ for (const def of FIGHTERS) {
   test(`${def.id}: meter moves spend and do something`, () => {
     const sp = fire(def, ['special'], { energy: METER.MAX });
     assert.equal(sp.spent, METER.SPECIAL_COST, `${def.id} special did not charge meter`);
-    assert.ok(sp.dmg > 0 || sp.projectile || sp.trap,
+    // A special passes by dealing damage, spawning a projectile, placing a
+    // trap, OR leaving some other real mark on simulation state (stateChanged
+    // — see EFFECT_KEYS above). scam's ALIGNMENT SHIFT is a toggle: it clears
+    // this bar via stanceId changing, not via any of the first three.
+    assert.ok(sp.dmg > 0 || sp.projectile || sp.trap || sp.stateChanged,
       `${def.id} special spent ${METER.SPECIAL_COST} and produced nothing`);
 
     const bomb = fire(def, ['bomb'], { energy: METER.MAX });
