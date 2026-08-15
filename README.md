@@ -69,6 +69,12 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.6 — a move that was never meant to be yours
+
+A quick correction to v3.5. ALIGNMENT SHIFT is Scam Alt's move, and it was accidentally showing up in the founder creator's special list for everyone. It shouldn't have — every move a player can pick is balanced against a budget that has to come out to zero, and his doesn't, because it was written for him.
+
+It's now roster-only, and so is anything else marked that way in future. Two places had to be closed, not one: the menu you pick from, and the challenge-link decoder, which will happily read whatever a hand-edited link asks for. Menus are a suggestion; the decoder is the door.
+
 ## What's new in v3.5 — Scam Alt picks a side, and the game remembers
 
 Every move in this game has been a thing that happens *now*, at a place: a punch, a throw, a projectile. Nothing persisted, nothing changed the rules. This adds the first move that does.

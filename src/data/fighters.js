@@ -64,8 +64,26 @@ export const SPECIALS = {
     type: 'stance',
     desc: 'Toggles between SAFETY and CAPABILITIES. One survives; the other wins faster.',
     startup: 0.10, recovery: 0.18,
+    rosterOnly: true,
   },
 };
+
+// What a PLAYER may pick. Roster-only specials are authored for one character
+// and priced by nobody, so handing one to a player build reopens the hole the
+// zero-sum player budget exists to close — the same shape as the v1.7 wardrobe
+// click that turned out to be worth a 33% power swing on the ranked ladder.
+//
+// This shipped open in v3.5: the founder creator's dropdown iterated SPECIALS
+// directly, and buildGhostFighter accepted any key in it straight out of a
+// decoded challenge link. The second one is the one that mattered — a link is
+// attacker-controlled, and the decoder's whole contract is that it validates
+// rather than trusts.
+//
+// Anything gated here must be gated in BOTH places. A menu that hides a move
+// is a suggestion; the codec is the boundary.
+export const PLAYER_SPECIALS = Object.fromEntries(
+  Object.entries(SPECIALS).filter(([, sp]) => !sp.rosterOnly),
+);
 
 export const UNICORN_META = {
   name: 'UNICORN MODE',
@@ -777,7 +795,10 @@ export function buildGhostFighter(ch) {
     name: (ch.n || 'RIVAL').toUpperCase(),
     company: (ch.co || 'RIVAL VENTURES').toUpperCase(),
     title: 'CHALLENGER',
-    special: ch.sp && SPECIALS[ch.sp] ? ch.sp : base.special,
+    // PLAYER_SPECIALS, not SPECIALS: `ch` came out of a challenge link, so this
+    // is attacker-controlled. A hand-edited link asking for a roster-only
+    // special falls back to the base's own rather than being granted it.
+    special: ch.sp && PLAYER_SPECIALS[ch.sp] ? ch.sp : base.special,
     photo: ch.photo || null,
     stats: { ...PLAYER_STATS },   // a ghost is another human — same footing
     // Their fighting identity, already validated by the link decoder — a ghost

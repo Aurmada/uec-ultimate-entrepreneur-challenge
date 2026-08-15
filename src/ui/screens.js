@@ -1,7 +1,7 @@
 // All menu screens + modals: fighter select, profile (photo upload → avatar),
 // challenges & invite links, leaderboard, help, settings/pause, share card.
 
-import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, LOOKS, LOOK_FIELDS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
+import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, PLAYER_SPECIALS, UNICORN_META, LOOKS, LOOK_FIELDS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
 import { STYLES, rankFor, AI_LEVELS, BODY } from '../config.js';
@@ -329,7 +329,9 @@ export function renderProfile() {
 
   const spSel = $('inp-special');
   spSel.innerHTML = '';
-  for (const sp of Object.values(SPECIALS)) {
+  // PLAYER_SPECIALS, not SPECIALS — a roster-only move must not be offered.
+  // The codec enforces the same rule; this menu is only the polite half.
+  for (const sp of Object.values(PLAYER_SPECIALS)) {
     const o = document.createElement('option');
     o.value = sp.id;
     o.textContent = `${sp.icon} ${sp.name}`;

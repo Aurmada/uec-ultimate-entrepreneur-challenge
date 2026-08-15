@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import {
   buildCustomFighter, playerBuildCost, playerCommandNormals, clampPlayerBody,
   BASE_CHARACTERS, toCharacter,
+  SPECIALS, PLAYER_SPECIALS,
 } from '../src/data/fighters.js';
 import { PLAYER_MOVES, PLAYER_BUDGET, getPlayerMove, toCommandNormal } from '../src/data/playerMoves.js';
 import { validateCharacter, commandCost, COMMAND_SLOTS, DEFAULT_BODY } from '../src/data/schema.js';
@@ -233,4 +234,37 @@ test('a hand-edited move id in a link cannot invent a move', () => {
   // falls back to the carried frame data, which is clamped and validated;
   // what it must never do is fabricate params out of an unknown id
   if (got) for (const cn of got.commandNormals) assert.equal(cn.params, undefined);
+});
+
+// ROSTER-ONLY SPECIALS MUST NOT REACH A PLAYER BUILD.
+//
+// A player's founder is pinned to zero net power budget — that rule exists
+// because a cosmetic wardrobe click once turned out to be worth a 33% power
+// swing on the ranked ladder. A roster special is authored for one character
+// and priced by nobody, so handing one to a player build reopens exactly that
+// hole.
+//
+// There are TWO ways in, and the second is the dangerous one:
+//   1. the founder creator's dropdown, built from SPECIALS
+//   2. buildGhostFighter, which reads `sp` out of a DECODED CHALLENGE LINK —
+//      attacker-controlled, and the decoder's own contract is that it
+//      validates rather than trusts.
+
+test('a roster-only special is not offered to player builds', () => {
+  assert.ok(SPECIALS.alignmentshift, 'fixture assumes alignmentshift exists');
+  assert.equal(SPECIALS.alignmentshift.rosterOnly, true);
+  assert.equal(PLAYER_SPECIALS.alignmentshift, undefined,
+    'a rosterOnly special must not appear in the player menu');
+  assert.ok(PLAYER_SPECIALS.pitchdeck, 'ordinary specials are still offered');
+});
+
+test('a challenge link cannot smuggle a roster-only special onto a ghost', () => {
+  const ghost = buildGhostFighter({ n: 'ATTACKER', sp: 'alignmentshift' });
+  assert.notEqual(ghost.special, 'alignmentshift',
+    'buildGhostFighter accepted a roster-only special from a hand-edited link');
+});
+
+test('a challenge link can still carry an ordinary special', () => {
+  const ghost = buildGhostFighter({ n: 'RIVAL', sp: 'takeover' });
+  assert.equal(ghost.special, 'takeover');
 });
