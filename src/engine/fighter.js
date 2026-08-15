@@ -71,7 +71,8 @@ export class Fighter {
   get speedMult() {
     return this.stats.speed
       * (this.unicornT > 0 ? UNICORN.SPEED_MULT : 1)
-      * (this.speedBuffT > 0 ? DROPS.BUFF_SPEED : 1);
+      * (this.speedBuffT > 0 ? DROPS.BUFF_SPEED : 1)
+      * (this.stanceSet ? this.stanceSet.speed : 1);
   }
   get dmgMult() {
     return this.stats.power
@@ -389,6 +390,11 @@ export class Fighter {
     const base = ATTACKS[button] || ATTACKS.punch;
     const fd = cn ? { ...base, ...cn.frameData } : base;
     const s = this.style;
+    // A stance scales startup/recovery alongside style — the same axes style
+    // already scales — so the two compound the same way speedMult and dmgMult
+    // already let a stance compound with everything else. dmg and taken are
+    // read via dmgMult/takenMult, not here.
+    const st = this.stanceSet;
     this.attack = {
       ...fd,
       // A non-strike archetype routes through the engine branch that already
@@ -399,8 +405,8 @@ export class Fighter {
       button,
       cmd: cn,
       hasHit: false,
-      startup: fd.startup * s.startup,
-      recovery: fd.recovery * s.recovery,
+      startup: fd.startup * s.startup * (st ? st.startup : 1),
+      recovery: fd.recovery * s.recovery * (st ? st.recovery : 1),
       dmg: fd.dmg * s.dmg,
       reach: (fd.reach || 84) * s.reach,
     };

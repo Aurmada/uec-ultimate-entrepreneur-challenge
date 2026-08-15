@@ -204,6 +204,40 @@ test('a stance does not survive the round', () => {
   assert.equal(f.stanceId, null);
 });
 
+// STANCE.SETS declares startup/recovery/speed alongside dmg/taken, but only
+// dmg and taken were ever read (dmgMult, takenMult). A stance was supposed to
+// change how a fighter moves and swings, not just its damage numbers — a pure
+// damage trade is a much weaker mechanic than the one promised, and it makes
+// the SIM_VERSION 5 / ARCHITECTURE.md claim that "stances change frame data"
+// false as shipped.
+test('a stance changes movement speed too, not just damage', () => {
+  const f = mk();
+  const neutral = f.speedMult;
+  f.stanceId = 'capabilities';
+  assert.ok(f.speedMult > neutral, 'capabilities should move faster than neutral');
+  f.stanceId = 'safety';
+  assert.ok(f.speedMult < neutral, 'safety should move slower than neutral');
+});
+
+test('a stance changes attack startup and recovery, not just damage', () => {
+  const f = mk();
+  const game = { audio: { sfx() {} } };
+
+  f.stanceId = null;
+  f.startAttack('punch', game);
+  const neutralStartup = f.attack.startup, neutralRecovery = f.attack.recovery;
+
+  f.stanceId = 'capabilities';
+  f.startAttack('punch', game);
+  assert.ok(f.attack.startup < neutralStartup, 'capabilities should start up faster than neutral');
+  assert.ok(f.attack.recovery > neutralRecovery, 'capabilities should recover slower than neutral');
+
+  f.stanceId = 'safety';
+  f.startAttack('punch', game);
+  assert.ok(f.attack.startup > neutralStartup, 'safety should start up slower than neutral');
+  assert.ok(f.attack.recovery < neutralRecovery, 'safety should recover faster than neutral');
+});
+
 import { AIController } from '../src/engine/ai.js';
 
 function aiFighter(hpFrac) {
