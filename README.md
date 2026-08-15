@@ -69,6 +69,18 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.7 — Adam Weumann is running out of money
+
+Every fighter's meter goes up. Adam's runway goes down.
+
+- 💸 **RUNWAY.** A second bar, gold, his alone. It drains from the moment the round starts and the only thing that refills it is landing a hit. Hit zero and he's **winded** — slower, weaker, easier to put down — until he connects with something. Waiting is what kills him, which is the opposite of how everyone else fights.
+- 🔥 **BURN IT ALL.** Torches every remaining dollar for damage scaled to whatever was left. Full tank, and it's the hardest single hit in the game. It also empties him, so he's winded the instant it lands. Throw it early and you're gambling; throw it late and it barely stings.
+- 🎭 **Elo keeps Burn Rate Blast.** He and Adam had been sharing it. One pair still shares a signature; that's the last of three.
+
+The joke is the mechanic: he is the founder who torched $47 billion, and he is the only person on the roster with a number going down.
+
+His AI plays it properly, too — it scrambles for any hit at all when the tank is dry, and cashes out with BURN IT ALL when it's full. That got tested by making the computer actually fight and counting the punches, because the last time a new move went in, the AI stood perfectly still for a whole match and every test still passed.
+
 ## What's new in v3.6 — a move that was never meant to be yours
 
 A quick correction to v3.5. ALIGNMENT SHIFT is Scam Alt's move, and it was accidentally showing up in the founder creator's special list for everyone. It shouldn't have — every move a player can pick is balanced against a budget that has to come out to zero, and his doesn't, because it was written for him.
