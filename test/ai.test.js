@@ -36,15 +36,21 @@ test('an AI whose special is a stance toggle still attacks and moves', () => {
   const [ai] = game.fighters;
   const x0 = ai.x;
   let attacks = 0;
+  let maxWalked = 0;
   let prevState = ai.state;
   for (let i = 0; i < 900; i++) {
     game.update(1 / 60);
     if (ai.state === 'attack' && prevState !== 'attack') attacks++;
     prevState = ai.state;
+    // Peak displacement, not final displacement: a KO ends the round and
+    // resetForRound() snaps x back to the exact same spawn value, so if a
+    // later round happens to be freshly reset at frame 900, "final - start"
+    // would misreport a fighter that walked and fought all match as having
+    // never moved at all.
+    maxWalked = Math.max(maxWalked, Math.abs(ai.x - x0));
   }
-  const walked = Math.abs(ai.x - x0);
   assert.ok(attacks > 0,
-    `AI-controlled SCAM ALT never attacked over 900 frames (walked ${walked}px) — `
+    `AI-controlled SCAM ALT never attacked over 900 frames (peak walk ${maxWalked}px) — `
     + 'the stance branch in decide() is locking the controller');
-  assert.ok(walked > 0, 'AI-controlled SCAM ALT never moved over 900 frames');
+  assert.ok(maxWalked > 0, 'AI-controlled SCAM ALT never moved over 900 frames');
 });
