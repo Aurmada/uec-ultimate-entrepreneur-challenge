@@ -25,7 +25,7 @@ export const FIGHTER_STATE = [
   { key: 'stunT',         init: 0,     round: 'reset', hash: 'q8' },
   { key: 'flashT',        init: 0,     round: 'reset', hash: false,
     why: 'hit-flash timer; drives a render filter only and is never read by the sim' },
-  { key: 'unicornT',      init: 0,     round: 'reset', hash: 'q8', ai: 'unicorn' },
+  { key: 'unicornT',      init: 0,     round: 'reset', hash: 'q8' },
   { key: 'speedBuffT',    init: 0,     round: 'reset', hash: 'q8' },
   { key: 'dmgBuffT',      init: 0,     round: 'reset', hash: 'q8' },
   { key: 'shieldT',       init: 0,     round: 'reset', hash: 'q8' },
@@ -37,7 +37,7 @@ export const FIGHTER_STATE = [
   { key: 'comboDropT',    init: 0,     round: 'reset', hash: 'q8' },
 
   // ---- stance (see config STANCE) -----------------------------------------
-  { key: 'stanceId',      init: null,  round: 'reset', hash: 'enum', ai: 'stance' },
+  { key: 'stanceId',      init: null,  round: 'reset', hash: 'enum' },
   { key: 'stanceCD',      init: 0,     round: 'reset', hash: 'q8' },
 
   // ---- movement ------------------------------------------------------------

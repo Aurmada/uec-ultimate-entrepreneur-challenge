@@ -73,8 +73,9 @@ function runMatch(animOverrides) {
     arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
     hud: STUB_HUD, onEnd: () => {}, seed: 20260731,
   });
-  // A stance switch costs METER.SPECIAL_COST same as any other special
-  // (startSpecial charges it unconditionally, before branching on type).
+  // A stance switch costs METER.SPECIAL_COST same as any other special, but
+  // only once switchStance() actually succeeds — a refused switch (its own
+  // cooldown still running) costs nothing, since the meter-overcharge fix.
   // Seeded here rather than earned through scripted hits so the switch is
   // guaranteed to land deterministically instead of depending on exactly
   // which frames connect — that would make this test measure combat luck,
