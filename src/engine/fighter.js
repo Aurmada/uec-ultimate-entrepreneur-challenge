@@ -80,13 +80,18 @@ export class Fighter {
       * (this.stanceSet ? this.stanceSet.dmg : 1);
   }
 
-  // A toggle, gated by its own cooldown. Order is fixed (null -> safety ->
-  // capabilities -> safety) so two peers stepping the same inputs land in the
-  // same stance — an order derived from Object.keys would depend on source
-  // layout, which is not something lockstep should ever depend on.
-  switchStance() {
+  // A toggle, gated by its own cooldown. With no argument, order is fixed
+  // (null -> safety -> capabilities -> safety) so two peers stepping the same
+  // inputs land in the same stance — an order derived from Object.keys would
+  // depend on source layout, which is not something lockstep should ever
+  // depend on. A caller that already knows which stance it wants (the AI,
+  // reading its own preferredStance()) may pass it as `target` to land there
+  // in one press instead of cycling — still deterministic, since `target`
+  // is itself derived identically by both lockstep peers.
+  switchStance(target) {
     if (this.stanceCD > 0) return false;
-    this.stanceId = this.stanceId === 'safety' ? 'capabilities' : 'safety';
+    this.stanceId = target !== undefined ? target
+      : this.stanceId === 'safety' ? 'capabilities' : 'safety';
     this.stanceCD = STANCE.CD;
     return true;
   }
@@ -460,11 +465,19 @@ export class Fighter {
     // Intercepted here, before the attack object is built, so it does not
     // fall through to `kind: 'stance'` with no engine branch to run it.
     if (sp.type === 'stance') {
+      // A controller that already knows which stance it wants (the AI, via
+      // its own preferredStance()) reaches it in a single press. A human's
+      // controller exposes no such thing, so `target` stays undefined and
+      // switchStance() falls back to its plain toggle — unchanged from before.
+      // Without this, an AI wanting 'capabilities' from a null stance had to
+      // cycle through 'safety' first: two presses, 100 meter, two cooldowns,
+      // with the AI re-locked at 0 meter in between.
+      const target = this.controller.preferredStance ? this.controller.preferredStance(this) : undefined;
       // Charge only if the switch ACTUALLY happens. switchStance() refuses
       // while its own cooldown runs, and taking 50 meter for a no-op is a trap
       // rather than a cost — the player gets no feedback that the press was
       // eaten, only that the meter is gone.
-      if (!this.switchStance()) return;
+      if (!this.switchStance(target)) return;
       this.energy -= METER.SPECIAL_COST;
       this.attack = null;
       this.setState('idle');
