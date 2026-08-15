@@ -60,6 +60,17 @@ export const ARCHETYPE_SHAPES = {
   // here is a second line of defence, matching counter/trap, not the
   // primary mechanism.
   stance: (a) => { a.words = ['SHIFT!']; a.noHitbox = true; },
+
+  // BURN IT ALL. A real swing — unlike stance/counter/trap it has a hitbox and
+  // it is meant to connect. `dmg` is deliberately NOT final here: the tick
+  // rewrites it every active frame from the runway the move is about to spend,
+  // so what lands is what the tank held at CONTACT, not at startup. The floor
+  // set here is what a fighter with no runway at all gets.
+  burn: (a, sp) => {
+    a.words = ['TORCHED!', 'BURN IT ALL!', 'ALL OF IT!'];
+    a.hitY = -85;
+    a.dmg = sp.dmgBase ?? 8;
+  },
 };
 
 // Applies archetype shaping to a freshly built attack object. Returns it.

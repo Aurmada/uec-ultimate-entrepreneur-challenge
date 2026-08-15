@@ -129,15 +129,56 @@ test('identity text over its length cap is rejected', () => {
 
 // ---------------------------------------------------------------- v2: command normals
 
-test('schema v2 carries the full ten-archetype vocabulary', () => {
+test('schema v2 carries the full eleven-archetype vocabulary', () => {
   assert.equal(SCHEMA_VERSION, 2);
   // 'stance' joined in fighter-state-foundation (2026-08-14): a toggle
   // (ALIGNMENT SHIFT) that changes `stanceId` instead of swinging, hitting,
-  // or placing anything. It grew the vocabulary rather than reusing 'strike'
-  // because pricing and engine routing both branch on archetype identity.
-  for (const a of ['strike', 'aoe', 'projectile', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap', 'stance']) {
+  // or placing anything. 'burn' joined in runway-resource (2026-08-15): a
+  // strike whose damage is read from the thrower's runway at the moment of
+  // contact, and which empties that runway by connecting. Both grew the
+  // vocabulary rather than reusing 'strike' or 'aoe', because pricing and
+  // engine routing both branch on archetype identity.
+  for (const a of ['strike', 'aoe', 'projectile', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap',
+                   'stance', 'burn']) {
     assert.ok(ARCHETYPES.includes(a), `${a} must be an archetype`);
   }
+});
+
+// A challenge link carries a command normal's archetype as an INDEX into this
+// array (state.js packCommand/unpackCommand), so the order is a wire format
+// even though nothing calls it one. Inserting 'burn' anywhere but the end
+// would silently re-point every link already in the wild: a 'trap' would
+// decode as 'stance', priced and resolved as something its author never
+// authored. Appending costs nothing and cannot do that.
+test('the archetype list is append-only — challenge links index into it', () => {
+  assert.deepEqual(ARCHETYPES.slice(0, 10), [
+    'strike', 'projectile', 'aoe', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap', 'stance',
+  ], 'the first ten indices are a shipped wire format and may not be reordered');
+  assert.equal(ARCHETYPES[10], 'burn');
+  assert.equal(ARCHETYPES.length, 11);
+});
+
+// Same reasoning as 'stance', and the same failure mode if it is skipped:
+// BUDGET.CMD.ARCHETYPE has no `burn` entry, so a burn command normal would
+// price as free (identical to `strike`); and its damage is read from the
+// thrower's RUNWAY, which is a resource only a roster character opts into —
+// so an authored one would either deal 8 flat forever or hand a player a
+// resource the budget has no axis to charge for. Refuse it here rather than
+// let rosterMoves.test.js find it.
+test('burn is a known archetype for a special, but rejected as a command normal', () => {
+  const c = validChar();
+  c.fighting.moves.special = { archetype: 'burn', dmg: 10 };
+  assert.equal(validateCharacter(c).ok, true, 'burn must be legal as a signature special');
+
+  const d = validChar();
+  d.commandNormals = [{
+    slot: 'fwd+punch', archetype: 'burn', displayName: 'TORCH IT',
+    frameData: { startup: ATTACKS.punch.startup, active: ATTACKS.punch.active,
+                 recovery: ATTACKS.punch.recovery, dmg: ATTACKS.punch.dmg, reach: ATTACKS.punch.reach },
+  }];
+  const r = validateCharacter(d);
+  assert.equal(r.ok, false);
+  assert.ok(r.errors.some(e => e.includes("'burn' is not usable as a command normal")));
 });
 
 test('stance is a known archetype for a special, but rejected as a command normal', () => {

@@ -149,11 +149,20 @@ export const DEFAULT_BODY = { height: 1, build: 1, reach: 1, stride: 1, shoulder
 // they exist so the roster can hold characters that differ in kind, not
 // merely in degree. `stance` is the tenth, added for ALIGNMENT SHIFT
 // (fighter-state-foundation, 2026-08-14): a toggle that changes `stanceId`
-// rather than swinging, hitting or placing anything. It is a known archetype
-// for `fighting.moves.special`/`signature` only — see the commandNormals
-// guard below for why it is rejected as a command-normal archetype.
+// rather than swinging, hitting or placing anything. `burn` is the eleventh,
+// added for BURN IT ALL (runway-resource, 2026-08-15): a strike that reads
+// its damage from the thrower's RUNWAY at the moment of contact and empties
+// that runway by connecting. Both are known archetypes for
+// `fighting.moves.special`/`signature` only — see the commandNormals guard
+// below for why each is rejected as a command-normal archetype.
+//
+// APPEND ONLY. state.js packs a command normal's archetype as an index into
+// this array and unpacks it the same way, so the order is a shipped wire
+// format: inserting anywhere but the end re-points every challenge link that
+// already exists.
 export const ARCHETYPES = [
   'strike', 'projectile', 'aoe', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap', 'stance',
+  'burn',
 ];
 export const STANCES = ['ready', 'coiled', 'heavy', 'poised', 'loose', 'flair'];
 export const PREF_RANGES = ['close', 'mid', 'far'];
@@ -362,7 +371,7 @@ export function validateCharacter(ch) {
         if (!ARCHETYPES.includes(cn.archetype)) {
           errors.push(`${at}.archetype ${JSON.stringify(cn.archetype)} is not a known archetype`);
           cmdsOk = false;
-        } else if (cn.archetype === 'stance') {
+        } else if (cn.archetype === 'stance' || cn.archetype === 'burn') {
           // A stance is a toggle, not a swing, and neither half of the command
           // normal machinery knows what to do with one: BUDGET.CMD.ARCHETYPE
           // has no entry for it (it would silently price as free, same as
@@ -373,7 +382,13 @@ export function validateCharacter(ch) {
           // exists to catch, so it is rejected here rather than left to be
           // found by rosterMoves.test.js. Roster-only for now; see
           // docs/superpowers/specs/2026-08-14-fighter-state-foundation-design.md §7.
-          errors.push(`${at}.archetype 'stance' is not usable as a command normal yet`);
+          //
+          // `burn` fails for the same two reasons as `stance`, plus a third:
+          // its damage comes from the thrower's RUNWAY, and runway is a
+          // roster-only opt-in (`usesRunway`) that the power budget has no
+          // axis to price. An authored burn normal would be free, and either
+          // permanently weak or a resource handed out for nothing.
+          errors.push(`${at}.archetype '${cn.archetype}' is not usable as a command normal yet`);
           cmdsOk = false;
         }
         if (typeof cn.displayName !== 'string' || !cn.displayName.length) {
