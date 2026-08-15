@@ -17,6 +17,8 @@
 // governed by the boundary in test/determinism.test.js; this registry is for
 // state the SIMULATION reads.
 
+import { STANCE } from '../config.js';
+
 export const FIGHTER_STATE = [
   // ---- combat timers -------------------------------------------------------
   { key: 'stateT',        init: 0,     round: 'reset', hash: 'q8' },
@@ -63,17 +65,27 @@ export const HASH_KEYS = FIGHTER_STATE.filter((e) => e.hash).map((e) => e.key);
 
 
 
-// Stable string -> integer for hashing. Sorted so the mapping does not depend
-// on registry order, which would make the fingerprint depend on source layout.
-const ENUM_VALUES = [null, 'safety', 'capabilities'];
+// Stable string -> integer for hashing. Derived from STANCE.SETS rather than
+// hand-listed, so a new stance can't fall out of sync with what this array
+// knows about — a hand-maintained duplicate is exactly how this collided in
+// the first place. Sorted (this is hash-index derivation, not gameplay
+// ordering) so the mapping does not depend on Object.keys's source-layout
+// order, which would make the fingerprint depend on source layout.
+const ENUM_VALUES = [null, ...Object.keys(STANCE.SETS).sort()];
 
 // Mirrors the quantisation hashGameState already used: q8 is the existing q().
 export function quantise(kind, v) {
   if (kind === 'q8') return Math.round((v || 0) * 8);
   if (kind === 'int') return (v | 0);
   if (kind === 'enum') {
-    const i = ENUM_VALUES.indexOf(v ?? null);
-    return i < 0 ? 0 : i;
+    const norm = v ?? null;
+    const i = ENUM_VALUES.indexOf(norm);
+    if (i < 0) {
+      throw new Error(`quantise('enum'): unrecognised value ${JSON.stringify(v)} — `
+        + `known values are ${JSON.stringify(ENUM_VALUES)}. A hash that folded this into `
+        + `null's slot would be a desync the detector could never see.`);
+    }
+    return i;
   }
   return 0;
 }

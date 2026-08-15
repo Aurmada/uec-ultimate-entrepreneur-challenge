@@ -60,6 +60,26 @@ test('quantisers match what hashGameState already does', () => {
   assert.notEqual(quantise('enum', 'safety'), quantise('enum', 'capabilities'));
 });
 
+// quantise('enum') used to fold ANY unlisted value into the same slot as
+// null (indexOf returns -1 for an unknown value, and -1 was mapped to 0,
+// which is null's own index) — so 'aggression', '', and 'SAFETY' all
+// quantised identically to "no stance". That's unreachable today because
+// ENUM_VALUES happens to list every value stanceId can hold, but the list
+// was a hand-maintained duplicate of STANCE.SETS's keys with nothing binding
+// them: add a third stance and it fingerprints as "no stance" — a desync the
+// detector would be structurally blind to. A hash function that quietly
+// conflates two different states is worse than one that crashes in a test.
+test('quantise("enum") throws on a value outside the known vocabulary', () => {
+  assert.throws(() => quantise('enum', 'aggression'));
+  assert.throws(() => quantise('enum', ''));
+  assert.throws(() => quantise('enum', 'SAFETY'));
+});
+
+test('quantise("enum") never collides two different stances, or a stance with null', () => {
+  const values = [null, 'safety', 'capabilities'].map((v) => quantise('enum', v));
+  assert.equal(new Set(values).size, values.length, `collided: ${values.join(',')}`);
+});
+
 import { Fighter } from '../src/engine/fighter.js';
 import { FIGHTERS } from '../src/data/fighters.js';
 
@@ -141,7 +161,7 @@ test('an unhashed key never moves the fingerprint', () => {
 });
 
 test('the simulation version was bumped for the behaviour change', () => {
-  assert.equal(SIM_VERSION, 5);
+  assert.equal(SIM_VERSION, 6);
 });
 
 import { readFileSync } from 'node:fs';
