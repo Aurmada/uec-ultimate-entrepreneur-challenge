@@ -164,17 +164,32 @@ test('the simulation version was bumped for the behaviour change', () => {
   assert.equal(SIM_VERSION, 6);
 });
 
-import { readFileSync } from 'node:fs';
+// initState() now assigns every registry field in the constructor, so the
+// constructor's OWN source contains zero `this.(\w+T) =` matches — the old
+// grep-based version of this guard found nothing to grep for and could never
+// fail again, no matter what got added later. (The refactor that made that
+// true landed in the very next task after this guard was written.)
+//
+// Guard the actual contract instead: construct a real Fighter and check every
+// one of its own enumerable properties is either declared in the registry or
+// on an explicit allowlist of the fields that are legitimately NOT simulation
+// state governed by this registry (per-character config, positional state set
+// directly from the constructor's arguments, or objects with their own
+// lifecycle). Anything else is undeclared state — invisible to the hash,
+// untouched by resetForRound — exactly what this registry exists to prevent.
+const NOT_REGISTRY_STATE = new Set([
+  'def', 'body', 'side', 'controller', 'stats', 'maxHp', 'hp',
+  'x', 'y', 'vx', 'vy', 'facing', 'state', 'attack', 'pad', 'prevPad',
+  'special', 'cmdBySlot',
+]);
 
-test('a timer added to Fighter outside the registry fails the suite', () => {
-  const src = readFileSync(new URL('../src/engine/fighter.js', import.meta.url), 'utf8');
-  const ctor = src.slice(src.indexOf('constructor('), src.indexOf('resetForRound'));
+test('a fighter has no simulation state outside the registry', () => {
+  const f = mk();
   const declared = new Set(FIGHTER_STATE.map((e) => e.key));
-  const stray = [...ctor.matchAll(/this\.(\w+T) =/g)]
-    .map((m) => m[1])
-    .filter((k) => !declared.has(k));
+  const stray = Object.keys(f).filter((k) => !declared.has(k) && !NOT_REGISTRY_STATE.has(k));
   assert.deepEqual(stray, [],
-    `these timers are set on Fighter but not declared in fighterState.js: ${stray.join(', ')}. `
+    `these fields are set on Fighter but neither declared in fighterState.js nor on the `
+    + `allowlist: ${stray.join(', ')}. `
     + 'Undeclared state is state the hash cannot see and resetForRound will not clear.');
 });
 
