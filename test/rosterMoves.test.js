@@ -47,6 +47,12 @@ const EFFECT_NOISE = new Set([
   'airborne', 'airAttackUsed',                  // recomputed from physics, not set by a move
   'comboDropT', 'comboTaken',                   // chain bookkeeping, implied by damage already
   'flashT',                                     // hit-flash render timer
+  // A runway user's tank ticks down every live frame from the round merely
+  // being live, so including it would make `stateChanged` unconditionally true
+  // for Adam and pass this file's whole "did the move actually do anything"
+  // guard for free — the exact vacuous pass the header describes. BURN IT ALL
+  // is covered on its own terms in test/runway.test.js.
+  'runway',
 ]);
 const EFFECT_KEYS = FIGHTER_STATE.map((e) => e.key).filter((k) => !EFFECT_NOISE.has(k));
 

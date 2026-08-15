@@ -60,6 +60,17 @@ export const ARCHETYPE_SHAPES = {
   // here is a second line of defence, matching counter/trap, not the
   // primary mechanism.
   stance: (a) => { a.words = ['SHIFT!']; a.noHitbox = true; },
+
+  // BURN IT ALL. A real swing — unlike stance/counter/trap it has a hitbox and
+  // it is meant to connect. `dmg` is deliberately NOT final here: the tick
+  // rewrites it every active frame from the runway the move is about to spend,
+  // so what lands is what the tank held at CONTACT, not at startup. The floor
+  // set here is what a fighter with no runway at all gets.
+  burn: (a, sp) => {
+    a.words = ['TORCHED!', 'BURN IT ALL!', 'ALL OF IT!'];
+    a.hitY = -85;
+    a.dmg = sp.dmgBase ?? 8;
+  },
 };
 
 // Applies archetype shaping to a freshly built attack object. Returns it.
@@ -118,6 +129,20 @@ export const ARCHETYPE_TICKS = {
     if (a.hasFired) return;
     a.hasFired = true;
     game.spawnTrap(f, sp);
+  },
+  // Recomputed EVERY active frame, deliberately. Between startup and contact
+  // there is 0.18s in which the tank keeps draining and an incoming hit could
+  // refill it, and the spec's promise is that the damage is what the tank held
+  // at CONTACT. Reading it once at startup would be a different, weaker move.
+  //
+  // A fighter without `usesRunway` gets dmgBase and nothing else: their runway
+  // is pinned at MAX and never spends, so scaling off it would be free damage
+  // with none of the cost the number is supposed to represent.
+  burn: (f, a, sp, dt, game) => {
+    a.dmg = (sp.dmgBase ?? 8) + (f.usesRunway ? f.runway : 0) * (sp.dmgPerRunway ?? 0);
+    if (a.fxDone) return;
+    a.fxDone = true;
+    game.onBurnBlast(f);
   },
   // `counter` has no tick on purpose: nothing happens until someone swings at
   // it, so the window is read by the hit resolver rather than polled here.

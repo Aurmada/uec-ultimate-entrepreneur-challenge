@@ -1,7 +1,7 @@
 // AI opponent: periodic decision ticks (rate = difficulty reaction speed),
 // personality-flavored per fighter (aggression / jumpiness / preferred range).
 
-import { AI_LEVELS, METER, STAGE } from '../config.js';
+import { AI_LEVELS, METER, STAGE, RUNWAY } from '../config.js';
 import { slotButton } from '../data/schema.js';
 
 // When a command normal is worth throwing, by its combo verb. An AI that never
@@ -156,6 +156,30 @@ export class AIController {
       }
     }
 
+    // --- winded ---
+    // At zero runway the only way out is to connect, so a basic that lands
+    // beats a special that whiffs: no dash, no jump-in, no meter spend, just
+    // close the gap and swing. Placed AFTER threat response so a winded
+    // fighter still blocks a real swing and still jumps a grab — being
+    // desperate is not the same as being suicidal.
+    //
+    // EVERY path out of this branch either sets a pulse or sets `dir`. A
+    // branch that returns having done neither freezes the controller for the
+    // rest of the match, which is precisely how the stance branch shipped
+    // broken with a green suite.
+    if (f.winded) {
+      if (dist < 128) {
+        const r = Math.random();
+        if (r < 0.45) this.pulse.punch = true;
+        else if (r < 0.80) this.pulse.slap = true;
+        else this.pulse.kick = true;
+        this.dir = 0;
+      } else {
+        this.dir = toward;
+      }
+      return;
+    }
+
     // --- stance ---
     // A toggle, but NOT a free one — STANCE.COST is unused (nothing reads it);
     // the real price is METER.SPECIAL_COST, charged unconditionally by
@@ -202,7 +226,12 @@ export class AIController {
         (sp === 'aoe' && dist < 170) ||
         (sp === 'grab' && dist < 130 && opp.grounded) ||
         (sp === 'rush' && dist > 150 && dist < 460) ||
-        (sp === 'teleport' && dist > 200);
+        (sp === 'teleport' && dist > 200) ||
+        // Same range band as the `aoe` it replaces, plus the resource gate:
+        // BURN IT ALL spends the whole tank whatever is in it, so throwing it
+        // near-empty pays 50 meter for the floor damage AND winds you. Half a
+        // tank is the point below which it is strictly a bad idea.
+        (sp === 'burn' && dist < 170 && f.runway >= RUNWAY.MAX * 0.5);
       if (fits) {
         this.pulse.special = true;
         this.dir = 0;

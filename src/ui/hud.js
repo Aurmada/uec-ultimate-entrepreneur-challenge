@@ -1,7 +1,7 @@
 // DOM HUD: health/energy bars, timer, round pips, portraits, announcements,
 // combo counters and one-time hint toasts. Pure view — reads from Game.
 
-import { METER, ROUND } from '../config.js';
+import { METER, ROUND, RUNWAY } from '../config.js';
 import { drawPortrait } from '../engine/drawFighter.js';
 
 const $ = (id) => document.getElementById(id);
@@ -17,6 +17,8 @@ class HUD {
       en: [$('enFill1'), $('enFill2')],
       enTrack: [document.querySelector('.hud-p1 .en-track'), document.querySelector('.hud-p2 .en-track')],
       enSpark: [$('enSpark1'), $('enSpark2')],
+      rwTrack: [$('rwTrack1'), $('rwTrack2')],
+      rw: [$('rwFill1'), $('rwFill2')],
       pips: [$('pips1'), $('pips2')],
       timer: $('hudTimer'),
       announce: $('announce'),
@@ -31,6 +33,9 @@ class HUD {
     this.touch = document.getElementById('touchControls')?.classList.contains('hidden') === false;
     this.announceTimer = null;
     this.hintTimer = null;
+    // Last frame's runway, per side. The tank only ever goes UP on a landed
+    // hit, so a rise is the refill and nothing else — no event plumbing needed.
+    this.lastRunway = [null, null];
   }
 
   // Called once per match.
@@ -47,6 +52,12 @@ class HUD {
         this.el.pips[i].appendChild(pip);
       }
       this.el.combo[i].classList.remove('show');
+      // Only a fighter who actually burns one gets a bar. A permanently-full
+      // gold bar under the other eight is a resource the player would try to
+      // play around and could not.
+      this.el.rwTrack[i].classList.toggle('hidden', !game.fighters[i].usesRunway);
+      this.el.rwTrack[i].classList.remove('winded');
+      this.lastRunway[i] = null;
     }
     this.clearAnnounce(true);
     this.hideHint();
@@ -60,6 +71,7 @@ class HUD {
         [this.el.hp[i], f.hp / f.maxHp],
         [this.el.ghost[i], f.hp / f.maxHp],
         [this.el.en[i], f.energy / METER.MAX],
+        [this.el.rw[i], f.runway / RUNWAY.MAX],
       ];
       for (const [bar, v] of bars) {
         bar.style.transition = 'none';
@@ -99,6 +111,17 @@ class HUD {
       const pips = this.el.pips[i].children;
       for (let p = 0; p < pips.length; p++) {
         pips[p].classList.toggle('won', p < game.roundWins[i]);
+      }
+
+      if (f.usesRunway) {
+        this.el.rw[i].style.transform = `scaleX(${Math.max(0, f.runway / RUNWAY.MAX)})`;
+        this.el.rwTrack[i].classList.toggle('winded', f.winded);
+        if (this.lastRunway[i] !== null && f.runway > this.lastRunway[i] + 0.01) {
+          this.el.rw[i].classList.remove('refill');
+          void this.el.rw[i].offsetWidth;             // restart the flash
+          this.el.rw[i].classList.add('refill');
+        }
+        this.lastRunway[i] = f.runway;
       }
     }
     const sec = Math.ceil(game.timer);

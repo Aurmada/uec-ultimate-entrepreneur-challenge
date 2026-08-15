@@ -105,10 +105,13 @@ export const CHARACTER_WIRE_VERSION = 1;
 // for the SAME gameplay state — a false-desync source, and exactly what this
 // version refuses up front rather than blaming the network for.
 //
-// It stays 5 rather than becoming 6 because 5 has never shipped: main is on 4,
-// this branch is unmerged, and no peer anywhere runs 5. Versions number what
-// was released, not what was edited.
-export const SIM_VERSION = 5;
+// v6: RUNWAY. Adam Weumann's runway drains 4/second while the round is live and
+// refills 15 on a landed hit, and at zero he is WINDED — 15% slower, 20% weaker,
+// 20% easier to hit. A v5 peer runs none of that, so the two would shake hands,
+// agree perfectly on what the character IS, and then resolve the same inputs to
+// different damage within seconds. Unlike 5, this one is a real bump: 5 shipped
+// (origin/main carries the fighter-state merge), so a v5 client exists.
+export const SIM_VERSION = 6;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

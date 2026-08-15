@@ -54,3 +54,61 @@ test('an AI whose special is a stance toggle still attacks and moves', () => {
     + 'the stance branch in decide() is locking the controller');
   assert.ok(maxWalked > 0, 'AI-controlled SCAM ALT never moved over 900 frames');
 });
+
+import { METER, RUNWAY } from '../src/config.js';
+
+function adamMatch(seed) {
+  const max = FIGHTERS.find(f => f.id === 'max');
+  const dummy = FIGHTERS.find(f => f.id === 'zara');
+  return new Game({
+    p1: { def: max, controller: new AIController('founder', max) },
+    p2: { def: dummy, controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
+    hud: STUB_HUD, onEnd: () => {}, seed,
+  });
+}
+
+// The step-1 failure, re-run against the new branch: an AI that reaches a
+// `return` with no pulse and no direction stands still forever, and every unit
+// test on the decision helper still passes while it does.
+test('an AI-controlled Adam still attacks and moves while winded', () => {
+  const game = adamMatch(20260815);
+  const [ai] = game.fighters;
+  assert.equal(ai.usesRunway, true, 'the fixture must be a runway user');
+  const x0 = ai.x;
+  let attacks = 0, maxWalked = 0, prev = ai.state;
+  for (let i = 0; i < 900; i++) {
+    ai.runway = 0;                          // hold him winded for the whole run
+    game.update(1 / 60);
+    if (ai.state === 'attack' && prev !== 'attack') attacks++;
+    prev = ai.state;
+    maxWalked = Math.max(maxWalked, Math.abs(ai.x - x0));
+  }
+  assert.ok(attacks > 0,
+    `AI-controlled ADAM WEUMANN never attacked over 900 winded frames (peak walk ${maxWalked}px) — `
+    + 'the winded branch in decide() is locking the controller');
+  assert.ok(maxWalked > 0, 'AI-controlled ADAM WEUMANN never moved over 900 winded frames');
+});
+
+// The other half: a mechanic the AI never uses is a mechanic that exists only
+// for the player. `fits` in decide() has no entry for an archetype it has not
+// been taught, so BURN IT ALL would simply never come out.
+test('an AI-controlled Adam actually throws BURN IT ALL on a full tank', () => {
+  const game = adamMatch(20260816);
+  const [ai] = game.fighters;
+  let burns = 0, attacks = 0, prev = ai.state;
+  for (let i = 0; i < 1200; i++) {
+    // Enough for a special, never enough for a super or a bomb — so the branch
+    // under test is the one that gets the decision, not the unicorn.
+    ai.energy = METER.SPECIAL_COST + 10;
+    ai.runway = RUNWAY.MAX;                 // a full tank: the throw he should want
+    game.update(1 / 60);
+    if (ai.attack && ai.attack.kind === 'burn') burns++;
+    if (ai.state === 'attack' && prev !== 'attack') attacks++;
+    prev = ai.state;
+  }
+  assert.ok(attacks > 0, 'the fixture AI did not attack at all');
+  assert.ok(burns > 0,
+    `AI-controlled ADAM WEUMANN threw ${attacks} attacks over 1200 frames on a full tank `
+    + 'and never once threw BURN IT ALL — decide()\'s `fits` list has no burn entry');
+});

@@ -66,6 +66,22 @@ export const SPECIALS = {
     startup: 0.10, recovery: 0.18,
     rosterOnly: true,
   },
+  burnitall: {
+    id: 'burnitall',
+    name: 'BURN IT ALL',
+    icon: '🔥',
+    type: 'burn',
+    desc: 'Torches every remaining dollar of runway. The more left, the harder it lands — '
+        + 'and you are winded the moment it connects.',
+    startup: 0.18, active: 0.12, recovery: 0.40, reach: 130,
+    kb: 420, kbUp: -180,
+    dmgBase: 8, dmgPerRunway: 0.18,   // 8, plus up to 18 at a full tank
+    // Roster-only, and structurally so rather than by convention: the move's
+    // entire point is the resource it spends, and RUNWAY has no budget axis
+    // (see the decomposition note's open question), so it cannot be priced for
+    // a player build. PLAYER_SPECIALS below is what screens.js actually reads.
+    rosterOnly: true,
+  },
 };
 
 // What a PLAYER may pick. Roster-only specials are authored for one character
@@ -174,7 +190,12 @@ export const FIGHTERS = [
     // MOTION (render-only): All wind-up and no control — the deepest coil in the cast and a follow
     // through that keeps going after the hit has landed.
     motion: { windup: 1.35, follow: 1.30, drop: 7, squash: 0.10, brace: 12, thrust: 5 },
-    special: 'burnrate', style: 'brawler',
+    special: 'burnitall', style: 'brawler',
+    // THE BURNER is the only character on the roster with a number going down.
+    // Opting in is the whole gate: `runway` is declared and hashed for everyone
+    // (see engine/fighterState.js), but only a fighter carrying this flag ever
+    // drains, and only a fighter who drains can ever be winded.
+    usesRunway: true,
     // Wide as a doorway and built low. Reads as the biggest thing on stage.
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
     stats: { speed: 0.95, power: 1.2, hp: 95 },

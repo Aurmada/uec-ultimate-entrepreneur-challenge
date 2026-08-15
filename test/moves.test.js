@@ -66,7 +66,7 @@ test('archetypes that place or absorb never swing a hitbox', () => {
 
 test('every archetype with per-frame behaviour is dispatchable, and the rest are not', () => {
   // strike/grab/counter are resolved on contact, so they deliberately have no tick
-  for (const type of ['projectile', 'rain', 'teleport', 'rush', 'aoe', 'trap']) {
+  for (const type of ['projectile', 'rain', 'teleport', 'rush', 'aoe', 'trap', 'burn']) {
     assert.equal(typeof ARCHETYPE_TICKS[type], 'function', `${type} needs a tick`);
   }
   for (const type of ['strike', 'grab', 'counter']) {

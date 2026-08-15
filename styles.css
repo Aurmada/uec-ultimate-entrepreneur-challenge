@@ -418,6 +418,30 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 }
 .en-track.ready .en-spark { display: flex; }
 
+/* RUNWAY — Adam's private clock, and the one bar in the HUD that goes DOWN on
+   its own. Deliberately unlike the two above it in three ways at once, because
+   one difference is not enough at 10px: it is half the meter's height, it is a
+   flat colour rather than a gradient, and it is narrower than both. The colour
+   is Adam's own accent (#ffd23f) so it reads as HIS number — see the note in
+   the plan about the one place gold is already used (.en-fill.full). */
+.rw-track {
+  position: relative; height: clamp(4px, .9vw, 6px);
+  background: rgba(5,7,15,.82); border: 2px solid var(--shadow);
+  border-radius: 4px; overflow: hidden; width: 58%;
+}
+.hud-p2 .rw-track { align-self: flex-end; }
+.rw-fill {
+  position: absolute; inset: 0; transform-origin: left center;
+  background: var(--gold); transition: transform .12s linear;
+}
+.hud-p2 .rw-fill { transform-origin: right center; }
+/* Empty has to read as a STATE, not just as a short bar — winded costs 15%
+   speed and 20% damage, and the player needs to know why. */
+.rw-track.winded { border-color: var(--red); animation: rwWinded .5s infinite; }
+@keyframes rwWinded { 50% { border-color: rgba(255,71,87,.35); } }
+.rw-fill.refill { animation: rwFlash .22s ease-out; }
+@keyframes rwFlash { 0% { filter: brightness(2.6); } 100% { filter: none; } }
+
 .hud-center { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 64px; }
 #hudTimer {
   font-size: clamp(20px, 4.4vw, 38px); font-weight: 900; font-style: italic;

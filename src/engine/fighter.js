@@ -1,7 +1,7 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS, STANCE } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS, STANCE, RUNWAY } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 import { clampBody } from './proportions.js';
 import { shapeAttack, ARCHETYPE_TICKS } from './moves.js';
@@ -68,17 +68,35 @@ export class Fighter {
 
   get grounded() { return !this.airborne; }
   get alive() { return this.hp > 0; }
+
+  // GETTERS, not constructor fields, on purpose. test/fighterState.test.js's
+  // structural backstop fails on any own enumerable property of a Fighter that
+  // is not in the registry — and neither of these is simulation state. One is
+  // read straight off the character def; the other is a pure function of
+  // `runway`, which the registry already owns.
+  //
+  // Opt-in rather than opt-out: `runway` is declared for everyone and pinned at
+  // MAX for everyone who does not carry this flag, so a non-user is hashed the
+  // same way as a user and can never be winded.
+  get usesRunway() { return !!this.def.usesRunway; }
+
+  // Derived, never stored. Nothing to reset, nothing to hash, and one landed
+  // hit clears it in the same frame the refill arrives.
+  get winded() { return this.usesRunway && this.runway <= 0; }
+
   get speedMult() {
     return this.stats.speed
       * (this.unicornT > 0 ? UNICORN.SPEED_MULT : 1)
       * (this.speedBuffT > 0 ? DROPS.BUFF_SPEED : 1)
-      * (this.stanceSet ? this.stanceSet.speed : 1);
+      * (this.stanceSet ? this.stanceSet.speed : 1)
+      * (this.winded ? RUNWAY.WINDED.speed : 1);
   }
   get dmgMult() {
     return this.stats.power
       * (this.unicornT > 0 ? UNICORN.DMG_MULT : 1)
       * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1)
-      * (this.stanceSet ? this.stanceSet.dmg : 1);
+      * (this.stanceSet ? this.stanceSet.dmg : 1)
+      * (this.winded ? RUNWAY.WINDED.dmg : 1);
   }
 
   // A toggle, gated by its own cooldown. With no argument, order is fixed
@@ -99,7 +117,10 @@ export class Fighter {
 
   get stanceSet() { return this.stanceId ? STANCE.SETS[this.stanceId] : null; }
 
-  get takenMult() { return this.stanceSet ? this.stanceSet.taken : 1; }
+  get takenMult() {
+    return (this.stanceSet ? this.stanceSet.taken : 1)
+      * (this.winded ? RUNWAY.WINDED.taken : 1);
+  }
   get actionable() {
     return this.state === 'idle' || this.state === 'walk' || this.state === 'jump'
       || this.state === 'block' || this.state === 'crouch';
@@ -162,7 +183,7 @@ export class Fighter {
     const reach = a.reach || 82;
     const x0 = this.x + (this.facing > 0 ? 14 : -14 - reach);
     const yC = this.y + (a.hitY || -95);
-    const tall = a.kind === 'aoe' ? 150 : 74;
+    const tall = (a.kind === 'aoe' || a.kind === 'burn') ? 150 : 74;
     return { x: x0, y: yC - tall / 2, w: reach, h: tall, a };
   }
 

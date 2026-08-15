@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -136,6 +136,7 @@ export class Game {
       this.audio.sfx('timeTick');
     }
 
+    this.drainRunway(dt);
     for (const f of this.fighters) f.update(dt, this, false);
     this.pushApart();
     this.updateProjectiles(dt);
@@ -162,6 +163,30 @@ export class Game {
       this.audio.sfx('round');
       this.endRound(winner, false);
     }
+  }
+
+  // The clock only runs while the round does. This lives in updateFighting
+  // rather than in Fighter.update because THIS is the only place
+  // `state === 'fighting'` is already true: updateIntro, updateRoundEnd and
+  // updateMatchEnd all call Fighter.update too (locked), and Game.update
+  // returns early on `paused` and on hitstop before the switch is even reached.
+  // Scoping by call site means there is no condition here to get wrong later.
+  drainRunway(dt) {
+    for (const f of this.fighters) {
+      if (!f.usesRunway) continue;
+      f.runway = Math.max(0, f.runway - RUNWAY.DRAIN * dt);
+    }
+  }
+
+  // The counterweight to the drain: connecting is the only way to buy time.
+  // Called from exactly the two places that award METER.HIT_DEAL — the normal
+  // hit in strike() and the throw in doGrab(). Nothing that fails to land is on
+  // that list: a shield absorb, a parry and a chipped block all return from
+  // strike() before those lines, and a counter's payback damages the ATTACKER,
+  // who did not land anything.
+  refillRunway(f) {
+    if (!f.usesRunway) return;
+    f.runway = Math.min(RUNWAY.MAX, f.runway + RUNWAY.REFILL_ON_HIT);
   }
 
   pushApart() {
@@ -302,6 +327,17 @@ export class Game {
     def.applyHit({ dmg, kb, kbUp: a.kbUp || 0, stun: a.stun, dir });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
+    // BURN IT ALL is the ONE deliberate exception to the refill rule, and it is
+    // marked so nobody "fixes" it. The move's whole cost is that it empties the
+    // tank; handing 15 straight back on its own hit would refund that cost and
+    // turn the signature trade into a free damage spike.
+    //
+    // Gated on usesRunway, same as refillRunway: a non-user's runway is pinned
+    // at MAX and must stay untouched by this move too, not just by drain and
+    // refill. (Plan bug: the original line here was `att.runway = 0` with no
+    // guard, which would zero a non-user's pinned tank on contact.)
+    if (a.kind === 'burn') { if (att.usesRunway) att.runway = 0; }
+    else this.refillRunway(att);
 
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
@@ -388,6 +424,7 @@ export class Game {
     def.applyHit({ dmg, kb: -dir * sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: -dir });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
+    this.refillRunway(att);
     this.audio.sfx('throwSlam');
     this.fx.shake(14);
     this.fx.spark(att.x, att.y - 110, '#ff3d6e', 16, 460);
