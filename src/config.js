@@ -404,6 +404,28 @@ export const STANCE = {
   },
 };
 
+// ---- RUNWAY ----------------------------------------------------------------
+// The game's second resource, and deliberately the OPPOSITE of the first.
+// METER builds — 12 per hit dealt, 8 per hit taken, 3 per chip — so it rewards
+// staying alive and cashing in. RUNWAY drains from the moment the round goes
+// live and the only way to top it up is to land something. Meter says wait and
+// you gain; runway says wait and you lose. A fighter carrying both is pulled in
+// two directions at once, which is the entire reason it is worth adding rather
+// than reskinning the bar that already exists.
+//
+// At MAX 100 and DRAIN 4, an untouched tank empties in 25 seconds of a 60
+// second round — long enough that it is a clock and not a countdown, short
+// enough that a passive round ends winded.
+//
+// WINDED is DERIVED (`runway <= 0`), never stored. There is no timer to reset,
+// hash or leak, and one landed hit clears it in the same frame.
+export const RUNWAY = {
+  MAX: 100,
+  DRAIN: 4,            // per second, while game.state === 'fighting'
+  REFILL_ON_HIT: 15,   // a landed hit buys runway back
+  WINDED: { speed: 0.85, dmg: 0.80, taken: 1.20 },
+};
+
 // ---------------------------------------------------------------------------
 // POWER BUDGET
 //

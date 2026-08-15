@@ -17,7 +17,7 @@
 // governed by the boundary in test/determinism.test.js; this registry is for
 // state the SIMULATION reads.
 
-import { STANCE } from '../config.js';
+import { STANCE, RUNWAY } from '../config.js';
 
 export const FIGHTER_STATE = [
   // ---- combat timers -------------------------------------------------------
@@ -39,6 +39,14 @@ export const FIGHTER_STATE = [
   // ---- stance (see config STANCE) -----------------------------------------
   { key: 'stanceId',      init: null,  round: 'reset', hash: 'enum' },
   { key: 'stanceCD',      init: 0,     round: 'reset', hash: 'q8' },
+
+  // ---- runway (see config RUNWAY) -----------------------------------------
+  // Declared for EVERY fighter and initialised to MAX, even though only a
+  // character with `usesRunway` ever drains. A nullable field would need a
+  // special case in the quantiser, and a special case in a hash function is
+  // where a desync hides. Hashing a constant costs one integer and cannot go
+  // wrong.
+  { key: 'runway',        init: RUNWAY.MAX, round: 'reset', hash: 'q8' },
 
   // ---- movement ------------------------------------------------------------
   { key: 'airborne',      init: false, round: 'reset', hash: 'int' },

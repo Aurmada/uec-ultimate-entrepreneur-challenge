@@ -334,3 +334,26 @@ test('a stance switch refused by its cooldown costs no meter and is not silently
   assert.equal(f.energy, banked, 'and must not be charged for');
   assert.deepEqual(denials, ['stance'], 'the refused press must be routed through onSpecialDenied');
 });
+
+import { RUNWAY } from '../src/config.js';
+
+// The payoff for building the registry first: adding a whole resource is one
+// declaration, and hashing, round reset and the structural backstop all come
+// for free. Assert them anyway — "free" is a claim, and the claim is the
+// thing that would quietly stop being true.
+test('runway is declared: full at the start, reset each round, hashed', () => {
+  const e = FIGHTER_STATE.find((x) => x.key === 'runway');
+  assert.ok(e, 'runway is not declared in fighterState.js');
+  assert.equal(e.init, RUNWAY.MAX, 'every fighter starts with a full tank');
+  assert.equal(e.round, 'reset', 'a new round is a fresh runway');
+  assert.equal(e.hash, 'q8', 'an unhashed resource is a desync the detector cannot see');
+  assert.equal(e.why, undefined, 'runway opts out of nothing, so it owes no justification');
+});
+
+test('runway moves the state fingerprint', () => {
+  const g = fakeGame();
+  const before = hashGameState(g);
+  g.fighters[0].runway = RUNWAY.MAX - 1;
+  assert.notEqual(hashGameState(g), before,
+    'two peers could disagree about a whole resource without the hash noticing');
+});
