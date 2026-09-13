@@ -9,6 +9,7 @@ import { input, HumanController, isTouchDevice } from './engine/input.js';
 import { AIController } from './engine/ai.js';
 import { Game } from './engine/game.js';
 import { renderGame, RENDER } from './engine/render.js';
+import { STAGES } from './engine/stage.js';
 import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.js';
 import { enable3D, stats3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
@@ -1167,6 +1168,9 @@ function boot() {
   // Fighters drawn at screen resolution (see RENDER in render.js). On with the
   // 3D prototype so it is judged at its real sharpness; ?sharp tries it on 2D.
   if (glParam.has('gl') || glParam.has('sharp')) RENDER.sharpFighters = glParam.get('sharp') !== '0';
+  // Arenas rendered in Blender (see engine/stage.js): on with the 3D prototype,
+  // &stages=0 turns them off, ?stages tries them with 2D fighters.
+  if (glParam.has('gl') || glParam.has('stages')) STAGES.enabled = glParam.get('stages') !== '0';
 
   if (DEBUG) {
     window.UEC = {

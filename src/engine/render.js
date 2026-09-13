@@ -3,6 +3,7 @@
 
 import { STAGE } from '../config.js';
 import { drawFighter } from './drawFighter.js';
+import { stageFor, drawStage } from './stage.js';
 
 const { W, H, FLOOR } = STAGE;
 
@@ -72,7 +73,7 @@ function drawFloorSheen(ctx, f) {
   ctx.restore();
 }
 
-function drawStageGrade(ctx, t, arena) {
+function drawStageGrade(ctx, t, arena, stage) {
   // atmospheric haze rising off the floor + a top spotlight cone
   ctx.save();
   const key = ctx.createRadialGradient(W / 2, -60, 60, W / 2, 120, 640);
@@ -89,7 +90,9 @@ function drawStageGrade(ctx, t, arena) {
   // Backdrop scrim across the whole play field. The arena is scenery; the
   // fighters are the subject. One fillRect, so it costs nothing. An arena that
   // is unusually bright behind the fighters can ask for more of it.
-  const scrim = arena?.scrim ?? STAGE.SCRIM;
+  // A rendered stage is a different picture from the procedural one, lit
+  // differently, and carries its own figure.
+  const scrim = (stage && arena.stage.scrim) ?? arena?.scrim ?? STAGE.SCRIM;
   if (scrim > 0) {
     ctx.fillStyle = `rgba(6,9,22,${scrim})`;
     ctx.fillRect(0, 0, W, H);
@@ -418,7 +421,7 @@ function renderSharp(ctx, game, t, c) {
   const wc = worldCanvas(), wx = wc.getContext('2d');
   wx.setTransform(1, 0, 0, 1, 0, 0);
   wx.clearRect(0, 0, W, H);
-  renderBehind(wx, game, t);
+  renderBehind(wx, game, t, true);
   const order = fighterOrder(game);
   const fc = frontCanvas(), fx = fc.getContext('2d');
   fx.setTransform(1, 0, 0, 1, 0, 0);
@@ -428,10 +431,21 @@ function renderSharp(ctx, game, t, c) {
   ctx.save();
   ctx.translate(game.fx.shakeX, game.fx.shakeY);
   const halfW = W / (2 * c.z), halfH = H / (2 * c.z);
+  // the crop below maps world (c.x - halfW, c.y - halfH) to the screen origin at scale c.z
+  const toScreen = () => ctx.transform(c.z, 0, 0, c.z, -(c.x - halfW) * c.z, -(c.y - halfH) * c.z);
+  // A rendered stage is an image at twice the world, so it goes straight to
+  // the screen under the camera like the fighters; the world layer, now
+  // transparent where the arena was, carries the grade over it.
+  const stage = stageFor(game.arena);
+  if (stage) {
+    ctx.save();
+    toScreen();
+    drawStage(ctx, stage, t);
+    ctx.restore();
+  }
   ctx.drawImage(wc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
   ctx.save();
-  // the crop above maps world (c.x - halfW, c.y - halfH) to the screen origin at scale c.z
-  ctx.transform(c.z, 0, 0, c.z, -(c.x - halfW) * c.z, -(c.y - halfH) * c.z);
+  toScreen();
   for (const f of order) drawFighter(ctx, f, t);
   ctx.restore();
   ctx.drawImage(fc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
@@ -450,10 +464,14 @@ function renderWorld(ctx, game, t) {
   renderInFront(ctx, game, t);
 }
 
-function renderBehind(ctx, game, t) {
-  game.arena.draw(ctx, t);
-  drawStageGrade(ctx, t, game.arena);   // push the backdrop back + haze
-  drawPerspectiveFloor(ctx, t);     // receding grid — the main depth cue
+// `stageOnScreen`: the caller has already drawn a rendered stage straight to
+// the screen, so this layer leaves the arena out.
+function renderBehind(ctx, game, t, stageOnScreen = false) {
+  const stage = stageFor(game.arena);
+  if (!stage) game.arena.draw(ctx, t);
+  else if (!stageOnScreen) drawStage(ctx, stage, t);
+  drawStageGrade(ctx, t, game.arena, stage);   // push the backdrop back + haze
+  if (!stage) drawPerspectiveFloor(ctx, t);   // receding grid; a rendered stage has a floor of its own
 
   // Traps sit on the floor, under everything, so they read as ground you must
   // avoid rather than an object in the fight.

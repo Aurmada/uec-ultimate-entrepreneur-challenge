@@ -93,6 +93,20 @@ function drawBoardroom(ctx, t) {
   floor(ctx, '#232a4d', '#12162c', '#39406e');
 }
 
+// The Boardroom's wall TV, for the rendered stage: the same live chart, drawn
+// into a screen of any size.
+function tvChart(ctx, w, h, t) {
+  ctx.fillStyle = '#0d2417';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#2ee66b'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let i = 0; i <= 20; i++) {
+    const px = w * (0.02 + i * 0.048);
+    const py = h * 0.8 - Math.max(0, Math.sin(i * 0.6 + Math.floor(t)) * 14 + i * 1.6) * (h / 68);
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.stroke();
+}
+
 // -------------------- Demo Day --------------------
 const crowdR = rng(23);
 const CROWD = Array.from({ length: 60 }, () => ({ x: crowdR() * W, s: 8 + crowdR() * 10, p: crowdR() * 6.28, c: crowdR() }));
@@ -340,13 +354,26 @@ export const ARENAS = [
   // difference was that the skyline sits about 5 luminance brighter behind the
   // body, 26.5 against 20.9. 0.45 closes that gap and costs the night city
   // nothing that matters.
-  { id: 'boardroom', name: 'THE BOARDROOM', tag: 'Quarterly results are in.', draw: drawBoardroom, tempo: 96, root: 0, mood: 'dark', scrim: 0.57 },
+  { id: 'boardroom', name: 'THE BOARDROOM', tag: 'Quarterly results are in.', draw: drawBoardroom, tempo: 96, root: 0, mood: 'dark', scrim: 0.57,
+    // Rendered in Blender for the 3D prototype (lab/blender/stages/boardroom.py).
+    stage: {
+      dir: 'assets/stages/boardroom',
+      screens: {
+        chart: tvChart,
+        sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 220),
+      },
+    } },
   { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype' },
   // scrim: 32.1% -> 29.2% of the body near-invisible. Stops at 0.45 rather than
   // the 0.52 the metric prefers — this stage is already the dimmest on the
   // roster, and past here the whiteboard, the shelving and the string lights
   // stop reading, which is the entire character of the room.
-  { id: 'garage', name: 'THE STARTUP GARAGE', tag: 'Where it all begins.', draw: drawGarage, tempo: 104, root: 5, mood: 'lofi', scrim: 0.57 },
+  { id: 'garage', name: 'THE STARTUP GARAGE', tag: 'Where it all begins.', draw: drawGarage, tempo: 104, root: 5, mood: 'lofi', scrim: 0.57,
+    // Rendered in Blender for the 3D prototype (lab/blender/stages/garage.py).
+    stage: {
+      dir: 'assets/stages/garage',
+      screens: { sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 40) },
+    } },
   { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense' },
   { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party' },
   // scrim: the mountains sit directly behind the fighters at close to their own

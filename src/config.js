@@ -21,6 +21,15 @@ export const STAGE = {
   SCRIM: 0.42,
 };
 
+// Rendered stages (src/engine/stage.js, the live 3D prototype). Render-only.
+// The glow layer is blurred by GLOW_BLUR world px once when it loads, then
+// breathes between LOW and HIGH opacity RATE radians a second. An arena's
+// `stage.glow` can override any of the three.
+export const STAGE_ART = {
+  GLOW_BLUR: 7,
+  GLOW: { LOW: 0.35, HIGH: 0.75, RATE: 1.6 },
+};
+
 export const PHYS = {
   WALK: 250,           // px/s, scaled by fighter speed stat
   AIR_DRIFT: 0.78,     // fraction of walk speed while airborne
