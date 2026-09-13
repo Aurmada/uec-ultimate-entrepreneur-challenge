@@ -369,9 +369,30 @@ function worldCanvas() {
   return world;
 }
 
+// Sharp fighters (on with ?gl or ?sharp). The world above is drawn at native
+// size and cropped, so anything in it, fighters included, reaches the screen
+// scaled up by the camera and the device pixel ratio together, about 2.2x on a
+// phone: the fighter's own 2x buffer is thrown away on the way. This path draws
+// the world in two layers (everything behind the fighters, everything in front)
+// and puts the fighters straight onto the screen between them, under the camera
+// transform, so their buffers land at close to their own resolution. Still one
+// cropped drawImage per layer; only the fighters are drawn under a scale, and a
+// fighter is a couple of image blits, not gradients. Off by default until the
+// cost is measured on phones.
+export const RENDER = { sharpFighters: false };
+let front = null;
+function frontCanvas() {
+  if (!front) {
+    front = document.createElement('canvas');
+    front.width = W; front.height = H;
+  }
+  return front;
+}
+
 export function renderGame(ctx, game) {
   const t = game.t;
   const c = updateCamera(game);
+  if (RENDER.sharpFighters) { renderSharp(ctx, game, t, c); return; }
   const wc = worldCanvas();
   const wx = wc.getContext('2d');
   wx.setTransform(1, 0, 0, 1, 0, 0);
@@ -393,7 +414,43 @@ export function renderGame(ctx, game) {
   game.fx.drawOverlay(ctx, W, H);
 }
 
+function renderSharp(ctx, game, t, c) {
+  const wc = worldCanvas(), wx = wc.getContext('2d');
+  wx.setTransform(1, 0, 0, 1, 0, 0);
+  wx.clearRect(0, 0, W, H);
+  renderBehind(wx, game, t);
+  const order = fighterOrder(game);
+  const fc = frontCanvas(), fx = fc.getContext('2d');
+  fx.setTransform(1, 0, 0, 1, 0, 0);
+  fx.clearRect(0, 0, W, H);
+  renderInFront(fx, game, t);
+
+  ctx.save();
+  ctx.translate(game.fx.shakeX, game.fx.shakeY);
+  const halfW = W / (2 * c.z), halfH = H / (2 * c.z);
+  ctx.drawImage(wc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
+  ctx.save();
+  // the crop above maps world (c.x - halfW, c.y - halfH) to the screen origin at scale c.z
+  ctx.transform(c.z, 0, 0, c.z, -(c.x - halfW) * c.z, -(c.y - halfH) * c.z);
+  for (const f of order) drawFighter(ctx, f, t);
+  ctx.restore();
+  ctx.drawImage(fc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
+  drawStageLight(ctx);
+  ctx.restore();
+
+  game.fx.drawOverlay(ctx, W, H);
+}
+
+// renderWorld reads game.fighters in a fixed order (camera, then shadows, then
+// bodies, then icons) that lab/contrast.js and lab/roster.js count on, so the
+// split into these helpers keeps that order exactly.
 function renderWorld(ctx, game, t) {
+  renderBehind(ctx, game, t);
+  for (const f of fighterOrder(game)) drawFighter(ctx, f, t);
+  renderInFront(ctx, game, t);
+}
+
+function renderBehind(ctx, game, t) {
   game.arena.draw(ctx, t);
   drawStageGrade(ctx, t, game.arena);   // push the backdrop back + haze
   drawPerspectiveFloor(ctx, t);     // receding grid — the main depth cue
@@ -404,13 +461,17 @@ function renderWorld(ctx, game, t) {
   for (const d of game.drops) drawDrop(ctx, d, t);
   for (const f of game.fighters) { drawShadow(ctx, f); drawFloorSheen(ctx, f); }
   for (const g of game.afterimages) drawAfterimage(ctx, g);
+}
 
-  // draw the fighter in hitstun/ko behind the attacker for cleaner overlaps
-  const order = [...game.fighters].sort((a, b) => {
+// draw the fighter in hitstun/ko behind the attacker for cleaner overlaps
+function fighterOrder(game) {
+  return [...game.fighters].sort((a, b) => {
     const w = (f) => (f.state === 'attack' ? 2 : f.state === 'hitstun' || f.state === 'ko' ? 0 : 1);
     return w(a) - w(b);
   });
-  for (const f of order) drawFighter(ctx, f, t);
+}
+
+function renderInFront(ctx, game, t) {
   for (const f of game.fighters) drawBuffIcons(ctx, f);
 
   for (const p of game.projectiles) drawProjectile(ctx, p, t);

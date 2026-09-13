@@ -573,13 +573,21 @@ Hazards found while building it:
 Not done yet: nine of the eleven roster props have no 3D mesh (they are listed in
 the test), a player's photo face has no 3D equivalent, the per-character face
 data (brows, lids, mouth) is not used, and body knobs scale bones rather than
-using shape keys. Both renderers also share one resolution limit: the world is
-drawn at 960x540 and scaled up by the camera, so neither is as sharp on screen as
-its own buffer.
+using shape keys.
+
+**Sharp fighters.** Both renderers shared one resolution limit: the whole world,
+fighters included, is drawn at 960x540 and the camera crop scales it up (about
+2.2x with the device pixel ratio), which throws away the fighter's own 2x
+buffer. `RENDER.sharpFighters` in `render.js` (on with `?gl`, or `?sharp` for the
+2D rig) draws the world as two native-size layers, everything behind the
+fighters and everything in front, and draws the fighters straight onto the
+screen between them under the camera transform. With it off, the default path is
+pixel-identical to before the split (checked by hashing a rendered frame from
+both versions).
 
 Measured in September 2026 on an M2 Max, in a live AI-vs-AI match at 60 fps,
 whole-frame render time: 1.73 ms with both fighters in 2D, 1.93 ms with both in
-3D. The model holds 38 meshes and 39.6k triangles in 1.2 MB, and a fighter draws
+3D; with sharp fighters, 1.98 ms and 2.07 ms. The model holds 38 meshes and 39.6k triangles in 1.2 MB, and a fighter draws
 about 10k of them. Phone numbers come from `lab/gl3d-bench.html`, a match that
 needs no sign-in: serve with `python3 dev-server.py 4173` and open
 `http://<this machine's LAN address>:4173/lab/gl3d-bench.html` on a phone on the

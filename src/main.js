@@ -8,7 +8,7 @@ import { audio, installAudioUnlock } from './engine/audio.js';
 import { input, HumanController, isTouchDevice } from './engine/input.js';
 import { AIController } from './engine/ai.js';
 import { Game } from './engine/game.js';
-import { renderGame } from './engine/render.js';
+import { renderGame, RENDER } from './engine/render.js';
 import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.js';
 import { enable3D, stats3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
@@ -1164,6 +1164,9 @@ function boot() {
     const ids = (glParam.get('gl') || '').split(',').map((s) => s.trim()).filter(Boolean);
     enable3D({ ids, timing: glParam.has('perf') });
   }
+  // Fighters drawn at screen resolution (see RENDER in render.js). On with the
+  // 3D prototype so it is judged at its real sharpness; ?sharp tries it on 2D.
+  if (glParam.has('gl') || glParam.has('sharp')) RENDER.sharpFighters = glParam.get('sharp') !== '0';
 
   if (DEBUG) {
     window.UEC = {
