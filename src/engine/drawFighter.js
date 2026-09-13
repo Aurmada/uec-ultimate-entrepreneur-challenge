@@ -11,6 +11,7 @@ import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
 import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D } from './gl3d/index.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
+import { FX_STYLE } from './fx.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
@@ -1177,11 +1178,17 @@ function shadeBuffer(b, B) {
 }
 
 // Main world-space fighter draw. f: Fighter instance.
+// The last pose each fighter was drawn in, for effects that follow a limb
+// (engine/vfx.js). Kept only while those effects are on.
+const lastPoses = new WeakMap();
+export const poseOf = (f) => lastPoses.get(f);
+
 export function drawFighter(ctx, f, t) {
   const tDraw = timing3D() ? performance.now() : 0;
   const def = f.def;
   const body = f.body || clampBody(def.body);
   const P = applyProportions(computePose(f, t), body);
+  if (FX_STYLE.impact) lastPoses.set(f, { P, t });
   const c = def.c;
   ctx.save();
   ctx.translate(f.x, f.y);
@@ -1506,28 +1513,34 @@ function drawBust3D(canvas, ctx, def, opts) {
   });
 }
 
+// `opts.bare` draws the bust alone on a transparent canvas, with no backdrop,
+// grade or frame: for a cut-in that brings its own (engine/vfx.js).
 export function drawPortrait(canvas, def, opts = {}) {
   const ctx = canvas.getContext('2d');
   const S = canvas.width;
   const k = S / 100;
   ctx.clearRect(0, 0, S, S);
-  // backdrop — lifted so dark suits still read against dark UI
-  const g = ctx.createLinearGradient(0, 0, S, S);
-  g.addColorStop(0, shade(def.c.suit, 34));
-  g.addColorStop(1, '#1a2138');
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.roundRect(0, 0, S, S, 12 * k); ctx.fill();
+  if (!opts.bare) {
+    // backdrop — lifted so dark suits still read against dark UI
+    const g = ctx.createLinearGradient(0, 0, S, S);
+    g.addColorStop(0, shade(def.c.suit, 34));
+    g.addColorStop(1, '#1a2138');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.roundRect(0, 0, S, S, 12 * k); ctx.fill();
+  }
   // burst rays
   ctx.save();
   ctx.beginPath(); ctx.roundRect(0, 0, S, S, 12 * k); ctx.clip();
-  ctx.globalAlpha = 0.14;
-  ctx.fillStyle = '#ffffff';
-  for (let i = 0; i < 9; i++) {
-    ctx.save();
-    ctx.translate(S / 2, S * 0.62);
-    ctx.rotate((i / 9) * Math.PI * 2 + 0.3);
-    ctx.fillRect(-4 * k, 0, 8 * k, S);
-    ctx.restore();
+  if (!opts.bare) {
+    ctx.globalAlpha = 0.14;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 9; i++) {
+      ctx.save();
+      ctx.translate(S / 2, S * 0.62);
+      ctx.rotate((i / 9) * Math.PI * 2 + 0.3);
+      ctx.fillRect(-4 * k, 0, 8 * k, S);
+      ctx.restore();
+    }
   }
   ctx.globalAlpha = 1;
   if (!drawBust3D(canvas, ctx, def, opts)) {
@@ -1548,6 +1561,10 @@ export function drawPortrait(canvas, def, opts = {}) {
     ctx.translate(0, 0);
     drawHead(ctx, def, 0, 0, 22, opts.face || 'idle', opts.t || 1, !!opts.unicorn);
     ctx.restore();
+  }
+  if (opts.bare) {
+    ctx.restore();                // release the clip; no grade, no frame
+    return;
   }
 
   // ---- cinematic light, matching the in-fight fighter shading (v2.0) ----

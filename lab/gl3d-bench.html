@@ -21,7 +21,8 @@
   the same network. `detail` adds gl.finish() per 3D fighter, which shows GPU
   time but also costs it, so read fps from the plain modes. The match is in the
   garage, which has a rendered stage: on in the 3D modes as with ?gl, and
-  `stages=0` or `stages=1` forces it either way.
+  `stages=0` or `stages=1` forces it either way. The hit effects and cut-ins
+  follow the same rule, with `fx=0` or `fx=1`.
 -->
 <div class="modes">
   <a href="?mode=2d">All 2D</a>
@@ -29,6 +30,7 @@
   <a href="?mode=all">Both 3D</a>
   <a href="?mode=all&amp;detail=1">Both 3D, detail</a>
   <a href="?mode=all&amp;stages=0">Both 3D, no stage</a>
+  <a href="?mode=all&amp;fx=0">Both 3D, no effects</a>
 </div>
 <canvas id="c"></canvas>
 <div id="hud">loading…</div>
@@ -41,6 +43,7 @@ import { getArena } from '../src/data/arenas.js';
 import { AIController } from '../src/engine/ai.js';
 import { enable3D, stats3D } from '../src/engine/gl3d/index.js';
 import { STAGES } from '../src/engine/stage.js';
+import { FX_STYLE } from '../src/engine/fx.js';
 
 const q = new URLSearchParams(location.search);
 const mode = q.get('mode') || 'adam';
@@ -53,6 +56,7 @@ if (mode !== '2d') enable3D({ ids: mode === 'adam' ? ['max'] : null, timing: det
 // &sharp=0 measures the original native-size path instead.
 RENDER.sharpFighters = q.get('sharp') !== '0';
 STAGES.enabled = q.has('stages') ? q.get('stages') !== '0' : mode !== '2d';
+FX_STYLE.impact = q.has('fx') ? q.get('fx') !== '0' : mode !== '2d';
 
 const canvas = document.getElementById('c');
 const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -107,7 +111,7 @@ setInterval(() => {
   const r = stat('render'), sim = stat('sim'), gap = stat('gap');
   const st = stats3D();
   const lines = [
-    `mode ${mode}${detail ? ' (detail: gl.finish per 3D fighter)' : ''}   sharp ${RENDER.sharpFighters}   stage ${STAGES.enabled}   models ${JSON.stringify(st.models)}`,
+    `mode ${mode}${detail ? ' (detail: gl.finish per 3D fighter)' : ''}   sharp ${RENDER.sharpFighters}   stage ${STAGES.enabled}   fx ${FX_STYLE.impact}   models ${JSON.stringify(st.models)}`,
     `device ${navigator.userAgent.replace(/^Mozilla\/5.0 /, '').slice(0, 90)}`,
     `gpu    ${gpuName}   dpr ${dpr}`,
     '',

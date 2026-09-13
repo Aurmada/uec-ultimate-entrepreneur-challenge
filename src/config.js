@@ -33,6 +33,33 @@ export const STAGE_ART = {
   KEEP: 2,
 };
 
+// Fighting-game effects for the live 3D prototype (engine/vfx.js, ?gl).
+// Render-only: none of this can change a hit, a frame or a hitstop.
+export const FX_ART = {
+  IMPACT: {
+    R: [22, 46],          // burst radius, light hit .. heavy hit (world px)
+    DUR: [0.16, 0.26],    // burst lifetime (s, real time, so it plays through hitstop)
+    SPIKES: [7, 13],
+    STREAKS: [2, 6],      // lines thrown along the blow
+    GROW: 0.28,           // share of the lifetime spent swelling to full size
+  },
+  GUARD: { R: 38, PARRY_R: 60, DUR: 0.22, PARRY_DUR: 0.34 },
+  // A special's cut-in: a band across the upper screen with the fighter and
+  // the move's name, the stage dimmed behind the fighters while it plays.
+  CUTIN: {
+    DUR: 0.8, SUPER_DUR: 1.1,
+    IN: 0.1, OUT: 0.16,   // slide in, slide out (s)
+    Y: 172, H: 132,       // band centre and height (screen px)
+    SKEW: 0.2,            // horizontal shear across the band
+    DIM: 0.5,             // how dark the stage goes behind the fighters
+    BUST: 1.8,            // bust size, as a share of the band's height
+  },
+  // The swipe behind a strike: the striking limb's path over SPAN seconds of
+  // game time, WIDTH px at its head and nothing at its tail.
+  TRAIL: { SPAN: 0.14, WIDTH: 26, ALPHA: 0.8, MIN_TRAVEL: 14 },
+  PROJECTILE: { GLOW: 36, ECHOES: 7, SPACING: 0.018 },
+};
+
 export const PHYS = {
   WALK: 250,           // px/s, scaled by fighter speed stat
   AIR_DRIFT: 0.78,     // fraction of walk speed while airborne

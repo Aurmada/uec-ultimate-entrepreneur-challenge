@@ -4,6 +4,7 @@
 import { STAGE } from '../config.js';
 import { drawFighter } from './drawFighter.js';
 import { stageFor, drawStage } from './stage.js';
+import { drawBursts, drawTrail, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
 
 const { W, H, FLOOR } = STAGE;
 
@@ -414,6 +415,7 @@ export function renderGame(ctx, game) {
   drawStageLight(ctx);
   ctx.restore();
 
+  drawCutIn(ctx, game.fx, W, H);
   game.fx.drawOverlay(ctx, W, H);
 }
 
@@ -446,12 +448,16 @@ function renderSharp(ctx, game, t, c) {
   ctx.drawImage(wc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
   ctx.save();
   toScreen();
-  for (const f of order) drawFighter(ctx, f, t);
+  for (const f of order) {
+    drawFighter(ctx, f, t);
+    drawTrail(ctx, f, t);
+  }
   ctx.restore();
   ctx.drawImage(fc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
   drawStageLight(ctx);
   ctx.restore();
 
+  drawCutIn(ctx, game.fx, W, H);
   game.fx.drawOverlay(ctx, W, H);
 }
 
@@ -460,7 +466,10 @@ function renderSharp(ctx, game, t, c) {
 // split into these helpers keeps that order exactly.
 function renderWorld(ctx, game, t) {
   renderBehind(ctx, game, t);
-  for (const f of fighterOrder(game)) drawFighter(ctx, f, t);
+  for (const f of fighterOrder(game)) {
+    drawFighter(ctx, f, t);
+    drawTrail(ctx, f, t);
+  }
   renderInFront(ctx, game, t);
 }
 
@@ -479,6 +488,7 @@ function renderBehind(ctx, game, t, stageOnScreen = false) {
   for (const d of game.drops) drawDrop(ctx, d, t);
   for (const f of game.fighters) { drawShadow(ctx, f); drawFloorSheen(ctx, f); }
   for (const g of game.afterimages) drawAfterimage(ctx, g);
+  drawStageDim(ctx, game.fx, W, H);     // a special's cut-in darkens everything behind the fighters
 }
 
 // draw the fighter in hitstun/ko behind the attacker for cleaner overlaps
@@ -492,8 +502,12 @@ function fighterOrder(game) {
 function renderInFront(ctx, game, t) {
   for (const f of game.fighters) drawBuffIcons(ctx, f);
 
-  for (const p of game.projectiles) drawProjectile(ctx, p, t);
+  for (const p of game.projectiles) {
+    drawProjectileGlow(ctx, p, t);
+    drawProjectile(ctx, p, t);
+  }
 
   drawForeground(ctx, game.arena, t);   // depth layer in front of the fighters
+  drawBursts(ctx, game.fx);         // impact bursts under the classic sparks and words
   game.fx.draw(ctx);                // sparks and words belong to the world
 }

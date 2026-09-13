@@ -10,6 +10,7 @@ import { AIController } from './engine/ai.js';
 import { Game } from './engine/game.js';
 import { renderGame, RENDER } from './engine/render.js';
 import { STAGES } from './engine/stage.js';
+import { FX_STYLE } from './engine/fx.js';
 import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.js';
 import { enable3D, stats3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
@@ -1171,6 +1172,9 @@ function boot() {
   // Arenas rendered in Blender (see engine/stage.js): on with the 3D prototype,
   // &stages=0 turns them off, ?stages tries them with 2D fighters.
   if (glParam.has('gl') || glParam.has('stages')) STAGES.enabled = glParam.get('stages') !== '0';
+  // Fighting-game hit effects, trails and cut-ins (engine/vfx.js): on with the
+  // 3D prototype, &fx=0 turns them off, ?fx tries them with 2D fighters.
+  if (glParam.has('gl') || glParam.has('fx')) FX_STYLE.impact = glParam.get('fx') !== '0';
 
   if (DEBUG) {
     window.UEC = {

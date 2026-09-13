@@ -156,12 +156,12 @@ test('simulation modules never read animation data', () => {
     'src/engine/ai.js',
     'src/net/online.js',
   ];
-  const FORBIDDEN = /\banimOverrides\b|\bkeyframes?\b|\bsampleTrack\b|\bresolveParts\b|\bdrawParts\b|\bdef\.parts\b|from '\.\/anim\.js'|from '\.\.\/engine\/anim\.js'|from '\.\/parts\.js'|from '\.\.\/engine\/parts\.js'|gl3d\/|models3d/;
+  const FORBIDDEN = /\banimOverrides\b|\bkeyframes?\b|\bsampleTrack\b|\bresolveParts\b|\bdrawParts\b|\bdef\.parts\b|from '\.\/anim\.js'|from '\.\.\/engine\/anim\.js'|from '\.\/parts\.js'|from '\.\.\/engine\/parts\.js'|gl3d\/|models3d|vfx\.js|stage\.js|\bFX_STYLE\b|\.bursts\b|\.playing\b|\.dimT\b/;
   for (const file of SIM) {
     const src = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
     const hit = src.split('\n').findIndex(l => FORBIDDEN.test(l) && !l.trim().startsWith('//'));
     assert.equal(hit, -1,
-      `${file}:${hit + 1} reads render-only data (pose or parts) — lockstep depends on it staying out of the sim`);
+      `${file}:${hit + 1} reads render-only data (pose, parts, 3D, stages or effects state) — lockstep depends on it staying out of the sim`);
   }
 });
 

@@ -133,6 +133,7 @@ docs/                 this file and friends
 | `gl3d/` | The live 3D fighter prototype behind `?gl`: glTF reader, pose-to-bones rig, WebGL2 toon renderer. See section 7. |
 | `render.js` | Frame compositor and camera. |
 | `stage.js` | Rendered stages for the 3D prototype: loads an arena's Blender render and draws it with its glow, live screens and overlay. See section 7. |
+| `vfx.js` | Fighting-game effects for the 3D prototype: impact bursts, guard flashes, strike trails, projectile wakes, special cut-ins. Draws the state `fx.js` keeps. See section 7. |
 | `ai.js` | AI opponent. Decision ticks plus a per frame reflex layer. |
 | `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesized audio, particles and juice, and a dormant sprite-atlas path behind `?sprites`. |
 
@@ -473,6 +474,7 @@ the context is lost.
 | `?gl` | Every fighter renders in 3D, wearing their own look: roster, base characters and player founders. |
 | `?gl=max,dex` | Only the fighters with those ids do, for comparisons and benchmarks. |
 | `&perf` | On-screen timing, with `gl.finish()` per 3D fighter, so GPU time is included (worst case). |
+| `&stages=0`, `&fx=0` | Turn off the rendered stages or the fighting-game effects, which `?gl` includes. `?stages` or `?fx` alone tries either with 2D fighters. |
 
 The pipeline, end to end:
 
@@ -721,6 +723,48 @@ retuned. In the benchmark match the garage stage costs no more frame time than
 the procedural garage it replaces. `lab/stages.js` renders each arena both ways
 in a real match for comparison.
 
+**Fighting-game effects.** The last part of "like Street Fighter" is how a move
+lands. With `?gl` (`&fx=0` turns it off) the game adds, on top of the classic
+sparks, rings and comic words:
+
+* **Impact bursts.** A landed hit draws a white-hot core, spikes thrown hardest
+  along the blow and streaks racing away from it, bigger and longer-lived the
+  heavier the move (a slap, a punch, a kick or launcher). Blocks draw a
+  hexagonal guard flash; a parry draws a larger double one with a white core.
+  Grabs, the C&D explosion, counters and a KO burst too.
+* **Strike trails.** The swipe behind a strike follows whichever limb target
+  travelled furthest in the last 0.14 s of game time, tapered from nothing to
+  its full width at the fist or foot, in the fighter's own colour. It reads the
+  pose drawFighter just drew (`poseOf`), so it works for both renderers and
+  holds still through hitstop.
+* **Projectile wakes.** A halo and a trail of fading echoes behind every slide,
+  envelope and coin.
+* **Cut-ins.** A special or Unicorn Mode slides a band across the upper screen
+  with the fighter's bust (`drawPortrait` with `bare`, so the 3D bust when there
+  is one) and the move's name, and dims the stage behind the fighters while it
+  plays.
+
+An effect wears the fighter's accent, or their suit when the accent is too
+pale to read as a colour (`signatureColour`). The numbers are `FX_ART` in
+`config.js`.
+
+The split matters more than the drawing. `fx.js` keeps the state and the
+simulation reports to it exactly as it did (`fx.impact`, `fx.guard`,
+`fx.cutIn`, next to the existing `fx.spark` calls), and those methods return
+at once with the flag off. `vfx.js` does the drawing, and nothing in the
+simulation may import it; the structural test in `determinism.test.js` now
+forbids it along with the stage and effects state. None of it adds hitstop:
+hitstop lives in `fx.js` but it is simulation time (`game.update` returns early
+while it runs), and the flag is per client, so two peers in a live match can
+disagree about it. `test/vfx.test.js` runs a busy scripted match with the
+effects on and off and requires identical state fingerprints every ten frames,
+and requires that effects actually fired. With the flag off, game frames on all
+six arenas and every 2D portrait hash exactly as before; with it on, the
+benchmark match measured within noise of the same match without effects.
+`lab/vfx.js` stages each effect in a real match (a whiffed kick for the trail
+alone, a punch, a kick, a block, a parry, a special and a super) and captures
+it the frame it happens.
+
 ---
 
 ## 8. Where numbers live
@@ -870,6 +914,11 @@ exists for the same reason: hooks for a driver that isn't committed yet.
 * **Not every move sets `attack`.** A dash changes state, a super sets a buff
   timer, and a stance switch (ALIGNMENT SHIFT) changes `stanceId` without ever
   building an attack. Watching `fighter.attack` alone misses them.
+* **Hitstop is simulation time.** It lives in `fx.js` beside the particles, but
+  `game.update` returns early while it runs, so anything that adds or stretches
+  hitstop changes the match. A render-only effect (and anything behind a URL
+  flag, which one peer can have and the other not) must never call
+  `fx.hitstop`.
 * **`setState` resets `stateT`.** Calling it every frame for a state the fighter
   is already in freezes that state's clock. That is how a held block parried
   every hit from v1.4 to v3.8: the parry check reads `stateT <= PARRY.WINDOW`,

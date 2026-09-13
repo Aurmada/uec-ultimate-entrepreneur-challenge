@@ -261,6 +261,7 @@ export class Game {
       def.vx = dir * 180;
       this.audio.sfx('block');
       this.fx.ring(cx, cy, '#8fd8ff', 620, 6, 0.35);
+      this.fx.guard(cx, cy, dir);
       this.fx.popup(cx, cy - 40, 'OBJECTION!', '#8fd8ff');
       this.fx.shake(4);
       return;
@@ -275,6 +276,7 @@ export class Game {
       this.giveEnergy(def, PARRY.ENERGY);
       this.audio.sfx('parry');
       this.fx.ring(cx, cy, '#ff9df3', 720, 7, 0.34);
+      this.fx.impact(cx, cy, -dir, '#ff9df3', 0.8);     // the blow goes back the way it came
       this.fx.popup(cx, cy - 44, 'COUNTERED!', '#ff9df3');
       this.fx.hitstop(0.13);
       this.fx.shake(6);
@@ -292,6 +294,7 @@ export class Game {
       this.giveEnergy(def, PARRY.ENERGY);
       this.audio.sfx('parry');
       this.fx.ring(cx, cy, '#8fd8ff', 700, 7, 0.32);
+      this.fx.guard(cx, cy, dir, '#8fd8ff', true);
       this.fx.popup(cx, cy - 44, 'PARRIED!', '#8fd8ff');
       this.fx.hitstop(0.12);
       this.fx.shake(5);
@@ -314,6 +317,7 @@ export class Game {
       this.audio.sfx('block');
       this.fx.spark(cx, cy, '#8fd8ff', 6, 240);
       this.fx.ring(cx, cy, '#8fd8ff', 350, 3, 0.22);
+      this.fx.guard(cx, cy, dir);
       this.fx.shake(2);
       return;
     }
@@ -355,6 +359,7 @@ export class Game {
     const words = a.words || ['POW!'];
     this.fx.popup(cx, cy - 30, words[Math.floor(Math.random() * words.length)], slap ? '#ff9df3' : heavy ? '#ff3d6e' : '#ffd23f');
     this.fx.spark(cx, cy, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 7 : heavy ? 14 : 9, slap ? 280 : heavy ? 430 : 330);
+    this.fx.impact(cx, cy, dir, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 0.15 : heavy ? 0.85 : 0.45);
     this.fx.shake(a.shake || 6);
     this.fx.hitstop(slap ? 0.045 : heavy ? 0.1 : 0.06);
   }
@@ -385,6 +390,7 @@ export class Game {
     if (blocked) {
       this.audio.sfx('block');
       this.fx.spark(def.x - dir * 20, def.y - 100, '#8fd8ff', 6, 240);
+      this.fx.guard(def.x - dir * 20, def.y - 100, dir);
       return;
     }
     const amt = Math.min(STEAL.AMOUNT, Math.floor(def.energy));
@@ -397,6 +403,7 @@ export class Game {
     this.audio.sfx('steal');
     this.fx.coins(def.x, def.y - 90, 7);
     this.fx.spark(att.x, att.y - 100, '#ffd23f', 6, 260);
+    this.fx.impact(def.x - dir * 20, def.y - 90, dir, '#ffd23f', 0.3);
     this.fx.popup(def.x, def.y - 150, amt > 0 ? '💸 ACQUI-HIRED!' : 'ALREADY BROKE!', '#ffd23f');
     if (amt > 0) this.fx.popup(att.x, att.y - 175, `+${amt}⚡`, '#57ff8a');
     this.fx.hitstop(0.07);
@@ -428,6 +435,7 @@ export class Game {
     this.audio.sfx('throwSlam');
     this.fx.shake(14);
     this.fx.spark(att.x, att.y - 110, '#ff3d6e', 16, 460);
+    this.fx.impact(att.x, att.y - 110, -dir, '#ff3d6e', 1);
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
   }
@@ -441,6 +449,7 @@ export class Game {
   // ---------------- specials plumbing ----------------
   onSpecialStart(f, sp) {
     this.fx.flash(f.def.c.accent, 0.12);
+    this.fx.cutIn(f, sp.name || 'SPECIAL', null, f.x <= this.other(f).x ? -1 : 1);
     if (sp.type === 'grab') this.audio.sfx('grab');
     if (sp.type === 'rush') this.audio.sfx('rush');
   }
@@ -511,6 +520,7 @@ export class Game {
     this.audio.sfx('paperHit');
     this.audio.sfx('grab');
     this.fx.ring(p.x, p.y, '#ff4757', 760, 8, 0.32);
+    this.fx.impact(p.x, p.y, Math.sign(p.vx) || 1, '#ff4757', 0.9);
     this.fx.papers(p.x, p.y, 16);
     this.fx.shake(8);
     this.fx.flash('#ff4757', 0.1);
@@ -681,6 +691,7 @@ export class Game {
     this.fx.ring(f.x, f.y - 80, '#ffd23f', 900, 8, 0.5);
     this.fx.sparkles(f.x, f.y, 26);
     this.fx.popup(f.x, f.y - 190, 'UNICORN MODE!', '#ff9df3');
+    this.fx.cutIn(f, 'UNICORN MODE', '#ff9df3', f.x <= this.other(f).x ? -1 : 1, true);
     this.fx.shake(10);
     const opp = this.other(f);
     if (Math.abs(opp.x - f.x) < 160 && opp.state !== 'ko') {
@@ -775,6 +786,7 @@ export class Game {
     this.hud.announce('K.O.!', 'ko');
     this.audio.sfx('ko');
     this.fx.flash('#ffffff', 0.65);
+    this.fx.impact(loser.x - dir * 10, loser.y - 100, dir, '#ffffff', 1);
     this.fx.shake(22);
     this.fx.hitstop(0.32);
     this.timescale = 0.3;
