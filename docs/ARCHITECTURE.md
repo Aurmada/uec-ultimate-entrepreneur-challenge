@@ -130,6 +130,7 @@ docs/                 this file and friends
 | `drawFighter.js` | Procedural vector fighter. Pose composition, faces, hair, cel shading, key line. The largest and most delicate file. |
 | `proportions.js` | Body clamping and the pose post pass that applies proportions. |
 | `parts.js` | Render only character parts: pure placement (`resolveParts`) and drawing (`drawParts`). See section 7. |
+| `gl3d/` | The live 3D fighter prototype behind `?gl`: glTF reader, pose-to-bones rig, WebGL2 toon renderer. See section 7. |
 | `render.js` | Frame compositor and camera. |
 | `ai.js` | AI opponent. Decision ticks plus a per frame reflex layer. |
 | `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesized audio, particles and juice, and a dormant sprite-atlas path behind `?sprites`. |
@@ -456,6 +457,94 @@ first nine and all worth checking before adjusting offsets:
   part must describe an OUTLINE.
 * **Occlusion.** A `behind` part narrower than the body is covered by it. A coat only
   reads when the hem flares past the silhouette.
+
+### Live 3D fighters (prototype, `?gl`)
+
+A second body renderer, behind a URL flag and off by default. It exists to test
+whether artist-made 3D models can replace the procedural rig without losing
+what the rig gets for free: every authored track, stance, command normal, body
+knob and colour. It is render-only and falls back to the procedural rig
+wherever WebGL2 is missing, the model has not loaded, or the context is lost.
+
+| Flag | Effect |
+| --- | --- |
+| `?gl` | Fighters listed in `FIGHTER_MODELS` (`src/data/models3d.js`) render in 3D. Today that is Adam Weumann. |
+| `?gl=all` | Every fighter wears the first model in their own palette, to show what colour roles do. |
+| `&perf` | On-screen timing, with `gl.finish()` per 3D fighter, so GPU time is included (worst case). |
+
+The pipeline, end to end:
+
+```
+lab/blender/build_adam.py      Blender script: metaball body, armature, weights, glTF export
+assets/models/adam.glb         the only file the game loads
+engine/gl3d/glb.js             minimal .glb reader: one skin, indexed triangles, base colours
+engine/gl3d/rig.js             2D pose -> 3D joints -> two-bone IK -> skinning matrices
+engine/gl3d/toon.js            WebGL2: an ink pass (inflated back faces), then banded lighting
+engine/gl3d/index.js           flags, loading, and render3D() for drawFighter
+```
+
+`drawFighter` asks `has3D(def)` and hands `render3D()` the same proportioned
+pose it would have drawn, plus its own offscreen buffer. The model is drawn
+into that buffer, so the key line, hit flash, facing flip, KO rotation and the
+blit into the world are shared with the procedural path, and so is the camera.
+
+**The model contract.** Anything that follows it can replace `adam.glb`, which
+is the point: an artist can build a better Adam by hand in Blender.
+
+* Units are rig units: 1.0 is 100 rig px, the scale the pose already uses.
+* Blender Z is up and the character faces +X. Its right side (`.R`) is -Y, which
+  glTF export turns into +Z, toward the renderer's camera.
+* Joints are named `hips`, `spine`, `chest`, `neck`, `head`, `upper_arm.R/L`,
+  `forearm.R/L`, `thigh.R/L`, `shin.R/L` and `foot.R/L`. The runtime reads only
+  where each joint sits at bind time (from the inverse bind matrices), never bone
+  rolls. glTF stores joints but not bone ends, so `models3d.js` records where the
+  leaf bones end and where the skull centre sits.
+* Each material is named for the palette role it takes its colour from (`suit`,
+  `suit2`, `skin`, `pants`, `shoe`, `hair`, `accent`); any other name keeps its
+  exported colour.
+
+**How a 2D pose drives the bones.** The procedural rig stores hand and foot
+TARGETS, not elbows and knees, and stretches a limb to reach a target, which is
+how a zoner's jab visibly out-ranges a grappler's off the same keyframes. `rig.js`
+does the same in 3D: two-bone IK toward each target, stretching past full reach
+rather than falling short, so the fist still lands where the hitbox is
+(`test/gl3d.test.js` pins this). Three choices shape the look:
+
+* The chest turns `GL3D.YAW` toward the camera, fighting-game style, which puts
+  the lead arm and leg (the pose's `armF` and `legF`) on the FAR side.
+* Elbows point down and back. The 2D rig bends toward the perpendicular of
+  shoulder-to-hand, which flips sign when a hand passes behind the body; at 2D's
+  gentle bend that reads fine, but a real upper arm folds hard and the flip
+  became a chicken wing.
+* Girth and head size are pushed at draw time (`GL3D.ARM_GIRTH` and friends). A
+  model built to heroic proportions reads thin and pin-headed at 200 px.
+
+Hazards found while building it:
+
+* **A NaN in the pose blanks the fighter.** `ctx.scale(NaN, NaN)` is silently
+  ignored, so the procedural rig never shows it; in a projection matrix it draws
+  nothing. A staged fighter with no `vy` produces exactly that in the jump pose,
+  which is why `render3D` guards the squash values.
+* **Model URLs resolve against the module, not the page.** A page-relative path
+  worked from `index.html` and 404'd from `lab/`.
+* **One WebGL context serves every fighter**, with `preserveDrawingBuffer` on,
+  because each fighter is read back with `drawImage` straight after it is drawn.
+
+Not done yet: parts (props) are not drawn on the 3D path, a player's photo face
+has no 3D equivalent, look options (hair, headwear, outfits) are not swappable
+meshes, and body knobs scale bones rather than using shape keys. Both renderers
+also share one resolution limit: the world is drawn at 960x540 and scaled up by
+the camera, so neither is as sharp on screen as its own buffer.
+
+Measured in September 2026 on an M2 Max, in a live AI-vs-AI match at 60 fps,
+whole-frame render time: 1.73 ms with both fighters in 2D, 1.95 ms with Adam in
+3D, 2.28 ms with both in 3D. The model is 21.7k triangles and 730 KB. Phone
+numbers come from `lab/gl3d-bench.html`, a match that needs no sign-in: serve
+with `python3 dev-server.py 4173` and open
+`http://<this machine's LAN address>:4173/lab/gl3d-bench.html` on a phone on the
+same network. `lab/gl3d-gallery.js` renders one fighter through every state in
+both renderers, and `lab/blender/build_adam.py` rebuilds the model in about three
+seconds.
 
 ---
 
