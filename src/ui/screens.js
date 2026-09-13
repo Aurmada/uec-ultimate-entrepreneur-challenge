@@ -176,10 +176,6 @@ function renderSelect() {
   $('btn-fight').textContent = ready ? 'FIGHT ➤' : 'PICK A RIVAL…';
 }
 
-export function refreshSelect() {
-  if (document.getElementById('scr-select').classList.contains('active')) renderSelect();
-}
-
 // Fills one side of the VS banner (the big portrait + name + dossier).
 function renderSide(prefix, def, fallbackLabel) {
   const pv = $(`${prefix}-portrait`);
@@ -535,7 +531,7 @@ function renderBuildMeter() {
   // ±15 spans the bar, so an unbalanced build is visibly off-centre
   const pct = Math.max(2, Math.min(98, 50 + (cost / 15) * 50));
   $('bmNeedle').style.left = `calc(${pct}% - 1.5px)`;
-  const read = $('bmRead') || $('bmCost').parentElement;
+  const read = $('bmCost').parentElement;
   $('bmCost').textContent = ok
     ? 'BALANCED'
     : cost > 0 ? `OVER BY ${cost.toFixed(1)}` : `UNDER BY ${Math.abs(cost).toFixed(1)}`;

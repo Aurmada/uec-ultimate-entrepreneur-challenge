@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   REST, AUTHORED_REST, EASE, restPose, poseFrom, blendInto, samplePose, attackPhaseT, trackFor,
-  validateTrack, MIN_ANTICIPATION_KEYS,
+  validateTrack,
 } from '../src/engine/anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../src/data/tracks.js';
 

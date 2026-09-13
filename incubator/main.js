@@ -16,7 +16,7 @@
 import {
   FIGHTERS, SPECIALS, LOOKS, LOOK_FIELDS, toCharacter, shade,
 } from '../src/data/fighters.js';
-import { STYLES, BODY, BUDGET, ATTACKS, AI_LEVELS } from '../src/config.js';
+import { STYLES, BODY, BUDGET, ATTACKS } from '../src/config.js';
 import {
   validateCharacter, budgetCost, commandCost, ARCHETYPES, COMMAND_SLOTS,
   slotButton, SLOT_GLYPH, MOVE_TAGS, DEFAULT_BODY,

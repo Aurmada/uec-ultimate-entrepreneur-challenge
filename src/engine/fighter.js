@@ -398,7 +398,7 @@ export class Fighter {
   }
 
   // The character's fighting style scales the shared move set, so the same
-  // three buttons feel different in each pair of hands. Multipliers compensate
+  // four basics feel different in each pair of hands. Multipliers compensate
   // (faster ⇒ weaker) so a style is a flavour, not a power tier.
   get style() { return STYLES[this.def.style] || STYLES.balanced; }
 

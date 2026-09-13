@@ -187,8 +187,7 @@ export class AIController {
     }
 
     // --- stance ---
-    // A toggle, but NOT a free one — STANCE.COST is unused (nothing reads it);
-    // the real price is METER.SPECIAL_COST, charged unconditionally by
+    // A toggle, but NOT a free one: the price is METER.SPECIAL_COST, charged unconditionally by
     // startSpecial() same as any other special. Fighter.pressed('special')
     // refuses the press outright below that cost, routing to
     // game.onSpecialDenied() instead, so an ungated branch here just fires

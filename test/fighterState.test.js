@@ -210,7 +210,6 @@ test('a fighter has no simulation state outside the registry', () => {
     + 'Undeclared state is state the hash cannot see and resetForRound will not clear.');
 });
 
-import { STANCE } from '../src/config.js';
 
 test('switching stance toggles between the two sets', () => {
   const f = mk();
