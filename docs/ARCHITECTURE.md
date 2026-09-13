@@ -738,6 +738,20 @@ retuned. In the benchmark match the garage stage costs no more frame time than
 the procedural garage it replaces. `lab/stages.js` renders each arena both ways
 in a real match for comparison.
 
+**A stage lights its fighters.** On a rendered stage the 3D fighters take the
+stage's light (`stage.light` on the arena, read by the toon shader through
+`setLight3D`): a hint of the key light's colour on lit surfaces, a shadow
+tint, a rim on the key side, and a back light that rims whatever faces away
+from the camera, which is what stands a fighter against the stage behind:
+moonlight in the boardroom, the market board's green in the exchange, the
+sunset at the summit. With no stage, or none loaded, `lighting(null)` is
+exactly the light the fighters had before. The first version tinted the
+fighters strongly toward each stage's palette, and `lab/contrast.js` showed it
+costing readability (the share of a fighter lost against its stage went from
+32.0% to 32.6%, and the boardroom from 32.6% to 34.1%). Tints at a third of
+that strength, with the rims kept, measure 31.6%: the rims buy back what the
+tint costs. `lab/stages.js` `lighting()` renders each stage with and without.
+
 **Fighting-game effects.** The last part of "like Street Fighter" is how a move
 lands. With `?gl` (`&fx=0` turns it off) the game adds, on top of the classic
 sparks, rings and comic words:
@@ -758,6 +772,10 @@ sparks, rings and comic words:
   with the fighter's bust (`drawPortrait` with `bare`, so the 3D bust when there
   is one) and the move's name, and dims the stage behind the fighters while it
   plays.
+* **The KO shot.** When a round ends in a KO the camera pushes in on the fighter
+  going down, past the zoom play is allowed (the rendered stages are drawn at
+  twice the world, which is what affords it), and holds through the slow
+  motion (`KO_CAM` in `render.js`).
 * **A signature for each kind of special.** A projectile leaves the hand in a
   flare (`fx.launch`); BURN RATE BLAST and BURN IT ALL throw fire up and forward
   over a shock along the floor (`fx.blast`); a teleport leaves a pillar of light

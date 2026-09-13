@@ -11,6 +11,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { ARENAS } from '../src/data/arenas.js';
 import { STAGE } from '../src/config.js';
 import { STAGES, stageFor } from '../src/engine/stage.js';
+import { lighting } from '../src/engine/gl3d/toon.js';
+import { GL3D } from '../src/config.js';
 
 const STAGED = ARENAS.filter((a) => a.stage);
 const file = (arena, name) => new URL(`../${arena.stage.dir}/${name}`, import.meta.url);
@@ -102,4 +104,29 @@ test('every screen painter and overlay draws without throwing', () => {
 test('with the flag off, no arena uses its rendered stage', () => {
   assert.equal(STAGES.enabled, false);
   for (const arena of STAGED) assert.equal(stageFor(arena), null);
+});
+
+// A stage lights the 3D fighters standing on it. With no stage (or a stage
+// that says nothing) the light must be exactly the old look, and every stage's
+// light must be something the shader can use: colours as three numbers in a
+// sensible range, directions that are directions.
+test('no stage light is the old light, and every stage light is usable', () => {
+  const plain = lighting(null);
+  assert.deepEqual(plain.lit, [1, 1, 1]);
+  assert.deepEqual(plain.shadow, GL3D.SHADOW_TINT);
+  assert.deepEqual(plain.backColor, [0, 0, 0], 'no back light without a stage');
+  assert.deepEqual(plain.rim, GL3D.RIM_COLOR.map((v) => v * GL3D.RIM));
+  const unit = (v) => Math.abs(Math.hypot(...v) - 1) < 1e-9;
+  for (const arena of STAGED) {
+    const light = arena.stage.light;
+    assert.ok(light, `${arena.id} has no light`);
+    for (const key of ['lit', 'shadow', 'rim', 'backColor']) {
+      const v = light[key];
+      assert.ok(Array.isArray(v) && v.length === 3 && v.every((x) => Number.isFinite(x) && x >= 0 && x <= 1.5),
+        `${arena.id} light.${key} is not a usable colour`);
+    }
+    const L = lighting(light);
+    assert.ok(unit(L.back) && unit(L.key), `${arena.id}: directions must normalise`);
+    assert.ok(L.back[2] < 0, `${arena.id}: a back light shines from behind the fighters`);
+  }
 });

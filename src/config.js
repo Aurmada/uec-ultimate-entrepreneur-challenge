@@ -443,6 +443,13 @@ export const GL3D = {
   BAND_K: [1.0, 0.80, 0.60],
   SHADOW_TINT: [0.86, 0.88, 1.06],
   RIM: 0.40,
+  RIM_COLOR: [0.5, 0.47, 0.42],   // the rim on the key side, scaled by RIM
+  // How a fighter is lit. A rendered stage brings its own (the arena's
+  // `stage.light`): the key light's colour on lit surfaces, the shadow tint,
+  // the rim, and a back light that rims whatever faces away from the camera.
+  // Anything a stage leaves out keeps these, which are exactly the look with
+  // no stage behind the fighters: white light, the rim above, no back light.
+  LIGHT: { LIT: [1, 1, 1], BACK: [0, 0.35, -1], BACK_COLOR: [0, 0, 0] },
   // Faces. Each fighter's 2D face is painted once per expression into a
   // texture (cells FACE_CELL texels square, each spanning FACE_SPAN 2D px
   // either side of the face centre) and projected onto the head. Up to

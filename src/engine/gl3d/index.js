@@ -26,6 +26,11 @@ let perf = null;
 let renderer = null;
 const models = new Map();                // model id -> { ready, rig, gpu, failed }
 const waiting = [];                      // callbacks for the next model to finish loading
+let stageLight = null;                   // the light of the stage being fought on, if any
+
+// The renderer sets this before drawing fighters on a rendered stage, and
+// clears it (null) otherwise; portraits always take the default light.
+export function setLight3D(light) { stageLight = light || null; }
 
 export function enable3D({ ids = null, timing = false } = {}) {
   enabled = true;
@@ -109,7 +114,7 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, paintFace = null
   // no `vy` produces exactly that in the jump pose.
   const sq = (v) => (Number.isFinite(v) ? v : 1);
   const { vw, vh } = drawModel(entry, f.def, f.state, { unicorn: f.unicornT > 0 }, P.face, paintFace, {
-    box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter,
+    box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight,
   });
   if (perf) renderer.finish();
   const t2 = performance.now();

@@ -5,6 +5,8 @@ import { STAGE } from '../config.js';
 import { drawFighter } from './drawFighter.js';
 import { stageFor, drawStage } from './stage.js';
 import { drawBursts, drawTrail, drawAura, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
+import { setLight3D } from './gl3d/index.js';
+import { FX_STYLE } from './fx.js';
 
 const { W, H, FLOOR } = STAGE;
 
@@ -335,6 +337,16 @@ const CAM = {
   LIFT: 0.30,        // how much of a fighter's height above the floor to follow
   AIM: 86,           // sit the lens at chest height, not at the feet, for headroom
 };
+// The KO shot, one of the fighting-game effects (FX_STYLE.impact, ?gl): the
+// moment a round ends in a KO the camera pushes in on the fighter going down,
+// quicker than it ever follows play, and holds there through the slow motion.
+// Rendered stages are drawn at twice the world, which is what affords the zoom.
+const KO_CAM = {
+  Z: 1.6,
+  EASE: 0.16,
+  HOLD: 1.5,         // s into the round's end
+  AIM: 80,           // above the fighter's feet
+};
 let cam = null;
 let camFor = null;   // which Game the state belongs to, so a new match resets
 
@@ -349,8 +361,18 @@ function updateCamera(game) {
     // whole stage lurching every time somebody hops
     y: STAGE.FLOOR - CAM.AIM - ((STAGE.FLOOR - Math.min(a.y, b.y)) * CAM.LIFT),
   };
+  let ease = CAM.EASE;
+  if (FX_STYLE.impact && game.state === 'roundEnd' && game.roundWasKO && game.stateT < KO_CAM.HOLD) {
+    const down = game.fighters[1 - game.roundWinner];
+    if (down) {
+      want.z = KO_CAM.Z;
+      want.x = down.x;
+      want.y = Math.min(STAGE.FLOOR, down.y) - KO_CAM.AIM;
+      ease = KO_CAM.EASE;
+    }
+  }
   if (!cam) cam = { ...want };
-  else for (const k of ['z', 'x', 'y']) cam[k] += (want[k] - cam[k]) * CAM.EASE;
+  else for (const k of ['z', 'x', 'y']) cam[k] += (want[k] - cam[k]) * ease;
 
   // Never show past the stage edges — the arena art simply stops there.
   const halfW = W / (2 * cam.z), halfH = H / (2 * cam.z);
@@ -448,6 +470,7 @@ function renderSharp(ctx, game, t, c) {
   ctx.drawImage(wc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
   ctx.save();
   toScreen();
+  setLight3D(stage?.arena.stage.light);    // 3D fighters take the stage's light
   for (const f of order) {
     drawAura(ctx, f, t);
     drawFighter(ctx, f, t);
@@ -467,6 +490,7 @@ function renderSharp(ctx, game, t, c) {
 // split into these helpers keeps that order exactly.
 function renderWorld(ctx, game, t) {
   renderBehind(ctx, game, t);
+  setLight3D(stageFor(game.arena)?.arena.stage.light);
   for (const f of fighterOrder(game)) {
     drawAura(ctx, f, t);
     drawFighter(ctx, f, t);

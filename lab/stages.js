@@ -14,7 +14,20 @@ import { STAGES, stageFor } from '/src/engine/stage.js';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function compare(ids = null, fighters = ['max', 'dex'], path = (id) => `/lab/previews/stages-${id}.png`) {
+// The same, but both halves on the rendered stage: the fighters in the default
+// light on top, in the stage's own light (`stage.light`) below.
+export async function lighting(ids = null, fighters = ['max', 'dex']) {
+  const { ARENAS } = await import('/src/data/arenas.js');
+  const arenas = ARENAS.filter((a) => a.stage && (!ids || ids.includes(a.id)));
+  const lights = new Map(arenas.map((a) => [a, a.stage.light]));
+  return compare(ids, fighters, (id) => `/lab/previews/lighting-${id}.png`, (arena, second) => {
+    STAGES.enabled = true;
+    arena.stage.light = second ? lights.get(arena) : undefined;
+  });
+}
+
+export async function compare(ids = null, fighters = ['max', 'dex'], path = (id) => `/lab/previews/stages-${id}.png`,
+  setup = (arena, second) => { STAGES.enabled = second; }) {
   const { ARENAS } = await import('/src/data/arenas.js');
   const { getFighter } = await import('/src/data/fighters.js');
   const arenas = ARENAS.filter((a) => a.stage && (!ids || ids.includes(a.id)));
@@ -23,12 +36,12 @@ export async function compare(ids = null, fighters = ['max', 'dex'], path = (id)
   for (const arena of arenas) {
     const frames = [];
     for (const rendered of [false, true]) {
-      STAGES.enabled = rendered;
+      setup(arena, rendered);
       UEC.startMatch({ mode: 'solo', p1Def: getFighter(fighters[0]), p2Def: getFighter(fighters[1]), arena, difficulty: 'intern', isChallenge: false });
       await wait(300);
       UEC.skipSplash?.();
       stageFor(arena);                                   // start the load before stepping
-      for (let i = 0; i < 60 && rendered && !stageFor(arena); i++) await wait(50);
+      for (let i = 0; i < 60 && STAGES.enabled && !stageFor(arena); i++) await wait(50);
       // Pin the fight: same place, same pose, the camera settled.
       const g = UEC.game;
       g.fighters[0].x = 330; g.fighters[1].x = 630;

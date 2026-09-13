@@ -93,6 +93,14 @@ const SCENES = [
     shots: [['stance aura', (g) => g.fighters[0].stanceId && !g.fx.playing]],
   },
   {
+    label: 'KO', p1: 'max', p2: 'zara', arena: 'unicorn', hp: { 1: 1 },
+    press: { 0: { 3: 'kick' } },
+    shots: [
+      ['the shot pushes in', (g) => g.state === 'roundEnd' && g.roundWasKO && g.stateT > 0.25],
+      ['and holds', (g) => g.state === 'roundEnd' && g.roundWasKO && g.stateT > 0.9],
+    ],
+  },
+  {
     label: 'the demo (counter)', p1: 'ava', p2: 'max', arena: 'summit', apart: 200,
     hold: { 0: { from: 0, to: 12, key: 'right' } },
     press: { 0: { 4: 'slap' } },
@@ -117,6 +125,7 @@ async function stage(scene) {
   g.fighters.forEach((f, i) => {
     f.vx = 0;
     f.energy = i === 0 ? (scene.energy ?? f.energy) : f.energy;
+    if (scene.hp?.[i] !== undefined) f.hp = scene.hp[i];
     f.controller = {
       isHuman: true,
       update(fighter) {

@@ -401,6 +401,8 @@ export const ARENAS = [
     // Rendered in Blender for the 3D prototype (lab/blender/stages/boardroom.py).
     stage: {
       dir: 'assets/stages/boardroom',
+      // cool, with the moon rimming the fighters from the window behind them
+      light: { lit: [0.94, 0.97, 1.05], shadow: [0.8, 0.86, 1.06], rim: [0.16, 0.21, 0.34], back: [0.2, 0.4, -1], backColor: [0.37, 0.51, 0.85] },
       screens: {
         chart: tvChart,
         sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 220),
@@ -409,6 +411,8 @@ export const ARENAS = [
   { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype',
     stage: {
       dir: 'assets/stages/demoday',
+      // a magenta wash from the truss behind, a cyan rim in front
+      light: { lit: [1.01, 0.97, 1.02], shadow: [0.86, 0.8, 1.02], rim: [0.13, 0.31, 0.39], back: [-0.3, 0.3, -1], backColor: [0.61, 0.17, 0.54] },
       screens: {
         main: inScreen(200, 55, 560, 240, demoScreen),
         left: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 290),
@@ -424,11 +428,15 @@ export const ARENAS = [
     // Rendered in Blender for the 3D prototype (lab/blender/stages/garage.py).
     stage: {
       dir: 'assets/stages/garage',
+      // the work lamp's warmth in front, moonlight through the door behind
+      light: { lit: [1.04, 0.98, 0.9], shadow: [0.84, 0.81, 0.92], rim: [0.34, 0.25, 0.13], back: [0, 0.5, -1], backColor: [0.17, 0.27, 0.51] },
       screens: { sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 40) },
     } },
   { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense',
     stage: {
       dir: 'assets/stages/exchange',
+      // hall light, with the market board glowing green behind
+      light: { lit: [0.96, 1, 1], shadow: [0.8, 0.9, 0.97], rim: [0.16, 0.29, 0.31], back: [0, 0.3, -1], backColor: [0.14, 0.51, 0.31] },
       screens: {
         board: inScreen(190, 80, 580, 240, marketBoard),
         ticker: (ctx, w, h, t) => tickerBand(ctx, 0, 0, w, h, t),
@@ -438,6 +446,8 @@ export const ARENAS = [
   { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party',
     stage: {
       dir: 'assets/stages/unicorn',
+      // neon: pink from the rainbow behind, violet at the edges
+      light: { lit: [1.02, 0.95, 1.04], shadow: [0.87, 0.78, 1.05], rim: [0.34, 0.16, 0.44], back: [0, 0.2, -1], backColor: [0.71, 0.2, 0.61] },
       screens: {
         left: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 320),
         right: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + 3, 260),
@@ -455,6 +465,8 @@ export const ARENAS = [
   { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic', scrim: 0.62,
     stage: {
       dir: 'assets/stages/summit',
+      // a low sun behind the fighters, warm on everything it can reach
+      light: { lit: [1.05, 0.96, 0.9], shadow: [0.84, 0.8, 1], rim: [0.39, 0.26, 0.16], back: [0, 0.15, -1], backColor: [1.02, 0.51, 0.17] },
       screens: {
         banner: inScreen(120, 105, 720, 45, bannerCloth),
         sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 20),

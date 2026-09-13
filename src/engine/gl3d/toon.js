@@ -54,9 +54,13 @@ precision mediump float;
 in vec3 vNrm;
 uniform vec3 uColor;
 uniform vec3 uKey;
-uniform vec3 uTint;
-uniform vec3 uBands;      // lit threshold, mid threshold, rim strength
+uniform vec3 uTint;       // what shadow does to a colour
+uniform vec2 uBands;      // lit threshold, mid threshold
 uniform vec3 uBandK;      // lit, mid and dark brightness
+uniform vec3 uLit;        // the key light's colour on lit surfaces
+uniform vec3 uRimColor;   // the rim on the key side, colour and strength together
+uniform vec3 uBack;       // toward the back light
+uniform vec3 uBackColor;  // its rim; black for none
 uniform float uInk;
 uniform vec3 uInkColor;
 uniform sampler2D uFace;
@@ -77,12 +81,15 @@ void main() {
   vec3 n = normalize(vNrm);
   float d = dot(n, uKey);
   vec3 shade = base * uTint;
-  vec3 c = d > uBands.x ? base * uBandK.x
-         : d > uBands.y ? mix(base, shade, 0.5) * uBandK.y
+  vec3 lit = base * uLit;
+  vec3 c = d > uBands.x ? lit * uBandK.x
+         : d > uBands.y ? mix(lit, shade, 0.5) * uBandK.y
          : shade * uBandK.z;
   float edge = 1.0 - clamp(n.z * 1.6, 0.0, 1.0);
   float rim = step(0.78, edge) * step(0.0, d + 0.25);
-  c += rim * uBands.z * vec3(0.5, 0.47, 0.42);
+  c += rim * uRimColor;
+  float back = step(0.62, edge) * step(0.15, dot(n, uBack));
+  c += back * uBackColor;
   outColor = vec4(c * uAlpha, uAlpha);      // premultiplied, as the canvas is
 }`;
 
@@ -117,7 +124,8 @@ export function createToon() {
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
   const loc = {};
   for (const n of ['uBones', 'uView', 'uInflate', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
-    'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha']) {
+    'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
+    'uLit', 'uRimColor', 'uBack', 'uBackColor']) {
     loc[n] = gl.getUniformLocation(prog, n);
   }
   gl.useProgram(prog);
@@ -195,10 +203,11 @@ export function createToon() {
     // given, is { texture, cell, map, front, axis, fade, mesh, role }: the
     // expression's cell of the face texture and where on which primitive it
     // projects. `inkless` is a Set of roles drawn without an outline, `glass`
-    // a Map of see-through roles to their opacity.
+    // a Map of see-through roles to their opacity. `light` is a stage's
+    // lighting (see GL3D.LIGHT); null lights the fighter as with no stage.
     render(gpu, matrices, {
       colours, box, squash = { x: 1, y: 1 }, jitter = 0, ss = GL3D.SS, visible = () => true, face = null,
-      inkless = NONE, glass = NO_GLASS,
+      inkless = NONE, glass = NO_GLASS, light = null,
     }) {
       const U = GL3D.UNIT;
       const vw = Math.round(box.w * ss), vh = Math.round(box.h * ss);
@@ -222,10 +231,15 @@ export function createToon() {
         (2 * (jitter / U) - (r + l)) / (r - l), -(t + b) / (t - b), 0, 1,
       ]);
       gl.uniformMatrix4fv(loc.uBones, false, matrices);
-      gl.uniform3fv(loc.uKey, normalizeKey(GL3D.KEY));
-      gl.uniform3fv(loc.uTint, GL3D.SHADOW_TINT);
-      gl.uniform3f(loc.uBands, GL3D.BANDS[0], GL3D.BANDS[1], GL3D.RIM);
+      const L = lighting(light);
+      gl.uniform3fv(loc.uKey, L.key);
+      gl.uniform3fv(loc.uTint, L.shadow);
+      gl.uniform2f(loc.uBands, GL3D.BANDS[0], GL3D.BANDS[1]);
       gl.uniform3fv(loc.uBandK, GL3D.BAND_K);
+      gl.uniform3fv(loc.uLit, L.lit);
+      gl.uniform3fv(loc.uRimColor, L.rim);
+      gl.uniform3fv(loc.uBack, L.back);
+      gl.uniform3fv(loc.uBackColor, L.backColor);
       gl.uniform3fv(loc.uInkColor, hexToRGB(GL3D.INK_COLOR));
       gl.uniform4fv(loc.uFaceCell, NO_FACE);
       if (face) {
@@ -281,4 +295,18 @@ export function createToon() {
 function normalizeKey(k) {
   const l = Math.hypot(k[0], k[1], k[2]) || 1;
   return [k[0] / l, k[1] / l, k[2] / l];
+}
+
+// A stage's light over the defaults, ready for the shader. The defaults are
+// the look with no stage, so lighting(null) changes nothing.
+export function lighting(light) {
+  const D = GL3D.LIGHT;
+  return {
+    key: normalizeKey(light?.key || GL3D.KEY),
+    lit: light?.lit || D.LIT,
+    shadow: light?.shadow || GL3D.SHADOW_TINT,
+    rim: light?.rim || GL3D.RIM_COLOR.map((v) => v * GL3D.RIM),
+    back: normalizeKey(light?.back || D.BACK),
+    backColor: light?.backColor || D.BACK_COLOR,
+  };
 }
