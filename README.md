@@ -44,7 +44,7 @@ No environment variables and no server of your own. Sign-in, live matches and th
 
 Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when the bell rings. Landing and taking hits charges your **energy meter** — spend 50 on your Special, or bank a full 100 for **UNICORN MODE** (6 s: +35 % damage, +25 % speed, no chip damage, extremely fabulous).
 
-**Block** has its own button (Q or `/`; down is crouch). **Grabs such as Hostile Takeover can't be blocked, so jump them.**
+**Block** has its own button (Q or `/`; down is crouch). Holding it cuts a hit to 15 % chip, and chip can never KO; press it just as a hit arrives and you **parry** instead: no damage, and the attacker staggers. **Grabs such as Hostile Takeover can't be blocked, so jump them.**
 
 | Action | Keyboard | Touch |
 |---|---|---|
@@ -71,10 +71,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
-## What's new in v3.8: the profile screen opens again
+## What's new in v3.8: a block is a block again
 
-A maintenance release. No new moves; several things that were quietly wrong now aren't.
+No new moves. One old bug that changed how every fight played is gone, along with several that were quietly wrong.
 
+- 🛡️ **Blocking takes timing again.** Since v1.4, simply holding block parried every hit: no damage, the attacker staggered, and you banked energy, so defence cost nothing and chip damage never happened. Now a held block takes 15 % chip (it still can't KO you), and a parry means pressing block just as the hit arrives. The AI plays by the same rule.
 - 👤 **Your profile opens again.** If you picked ALIGNMENT SHIFT before v3.6 made it Scam Alt's alone, the profile screen stopped opening, so you couldn't change it. It opens now and swaps you to Pitch Deck Strike until you choose another.
 - 🔒 **Roster moves stay on the roster.** A stale save, a hand-edited challenge link, or a tampered live pick could still hand a player build Scam Alt's or Adam Weumann's signature, and even Adam's runway. All three doors are shut, and a live match now refuses a rival on an older version rather than letting the two of you drift apart mid-fight.
 - 🤖 **Scam Alt's AI stops paying for nothing.** It sometimes spent 50 meter switching to the stance it was already in. That was more than a third of its switches.

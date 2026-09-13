@@ -116,12 +116,9 @@ Chip skips combo scaling and **can never KO**: it always leaves at least 1 HP.
 Grabs skip steps 2 to 4 (they can't be countered, parried or blocked) and whiff
 against an airborne target.
 
-> **Known issue (not yet fixed).** Holding block calls `setState('block')` on
-> every frame in `src/engine/fighter.js`, which resets `stateT` to 0 (and nothing
-> in that branch advances it). So `def.stateT <= PARRY.WINDOW` in
-> `src/engine/game.js` is always true: in practice a held block turns every
-> non-grab hit into a PARRY, and chip damage never happens. The rules above are
-> the intended ones; the fix is waiting on a design decision.
+Until v3.8 a held block parried every hit, because the block clock never
+advanced; chip damage could not happen. The rules above are what the engine
+does now.
 
 ### Basic attacks
 
@@ -256,8 +253,9 @@ purpose), so losing a round still arms your comeback.
 **Parry:** start blocking no more than **0.12 s** before a hit lands and you take
 **zero** damage and bank 10 energy. If the hit was a strike rather than a
 projectile, coin, Cease & Desist or trap, the attacker also staggers for
-**0.5 s**. Grabs beat parries; parries beat every other attack. (See the known
-issue in §2: today a held block parries too.)
+**0.5 s**. Grabs beat parries; parries beat every other attack. Hold block for
+longer than the window and the next hit is chip instead, so parrying is a read,
+not a stance.
 
 ### Runway (Adam Weumann only)
 

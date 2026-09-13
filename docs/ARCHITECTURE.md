@@ -606,10 +606,10 @@ exists for the same reason: hooks for a driver that isn't committed yet.
 * **Not every move sets `attack`.** A dash changes state, a super sets a buff
   timer, and a stance switch (ALIGNMENT SHIFT) changes `stanceId` without ever
   building an attack. Watching `fighter.attack` alone misses them.
-* **A held block is a parry, today.** `setState('block')` runs on every frame
-  block is held and resets `stateT`, so `stateT <= PARRY.WINDOW` in `game.js` is
-  always true and chip damage never lands. It is a known bug, left for a design
-  call: fixing it changes how blocking plays and needs a `SIM_VERSION` bump.
+* **`setState` resets `stateT`.** Calling it every frame for a state the fighter
+  is already in freezes that state's clock. That is how a held block parried
+  every hit from v1.4 to v3.8: the parry check reads `stateT <= PARRY.WINDOW`,
+  and the block clock never left 0. Enter a state once, then advance `stateT`.
 * **The meter property is `energy`, not `meter`.**
 * **`pressed(k)` is a rising edge.** Holding a button fires once. Pulse it to
   fire repeatedly.

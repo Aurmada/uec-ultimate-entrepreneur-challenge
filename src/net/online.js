@@ -117,6 +117,9 @@ export const CHARACTER_WIRE_VERSION = 1;
 // saved with ALIGNMENT SHIFT before v3.6 still sends it) and no longer spreads a
 // roster base's runway. A v6 peer builds that same spec WITH the move, so the
 // pair would agree on the payload and then disagree on the first special.
+// v7 also covers the block fix: a held block now advances stateT, so it takes
+// chip once PARRY.WINDOW has passed, where a v6 peer parries the same hit.
+// Both changes ship in v3.8; 7 was never released without either.
 export const SIM_VERSION = 7;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.

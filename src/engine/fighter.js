@@ -309,7 +309,12 @@ export class Fighter {
         // Block is its own button now. Crouch (DOWN) is a stance you can still
         // attack from, so holding down no longer disables the whole moveset.
         if (pad.block && this.grounded) {
-          this.setState('block');
+          // Enter once, then let the clock run. This used to call setState
+          // every frame the button was held, which reset stateT to 0, so the
+          // parry window (stateT <= PARRY.WINDOW) never closed and every held
+          // block parried; chip damage could not happen (v1.4 to v3.8).
+          if (this.state !== 'block') this.setState('block');
+          else this.stateT += dt;
         } else if (this.state === 'block' && !pad.block) {
           this.setState('idle');
         } else if (this.state !== 'block') {

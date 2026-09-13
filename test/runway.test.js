@@ -219,22 +219,45 @@ test('a grab refills too — the rule is "wherever HIT_DEAL is awarded"', () => 
   assert.equal(jumped, true, 'a landed HOSTILE TAKEOVER did not refill the tank');
 });
 
-// A blocked hit is not a landed one. Note WHICH blocked outcome this actually
-// exercises, because it is not the obvious one: holding block re-enters
-// `setState('block')` every frame, `stateT` therefore never leaves 0, and
-// `def.stateT <= PARRY.WINDOW` is consequently always true — so a held block
-// currently resolves every non-grab hit as a PARRY and the chip branch below it
-// is unreachable (verified against the live engine, 2026-08-15; see this plan's
-// Notes — it is a pre-existing finding, not something this work introduced).
-// Both branches return before the refill either way, and the PARRY.ENERGY
-// assertion pins which one ran so this cannot silently start passing for a
-// third reason.
-test('a hit turned away by a block does not refill', () => {
+// A blocked hit is not a landed one, and there are two ways to block it. A
+// block pressed as the hit arrives PARRIES; a block already held for longer
+// than PARRY.WINDOW takes CHIP. Both return before the refill. Each test pins
+// which branch ran, so neither can quietly start passing for a third reason.
+// (Until v3.8 a held block always parried: setState('block') ran every frame
+// and reset stateT, so the chip branch was unreachable. See test/parry.test.js.)
+test('a hit turned away by a parry does not refill', () => {
+  // The blocker presses on the first live frame, the same frame the punch
+  // starts, so the hit lands inside the parry window.
   const blocker = { isHuman: false, update(f) { f.pad = { ...EMPTY, block: true }; } };
   const r = refillsWhilePressing(['punch'], { dummy: blocker });
-  assert.deepEqual(r.jumps, [], 'a blocked punch topped the tank up');
+  assert.deepEqual(r.jumps, [], 'a parried punch topped the tank up');
   assert.equal(r.dmg, 0, 'the fixture must not have landed a clean hit');
   assert.equal(r.defEnergy, PARRY.ENERGY, 'the fixture must have resolved as a parry');
+});
+
+test('a hit taken on a held block, as chip, does not refill', () => {
+  // Same exchange, but the punch waits half a second, so the block is long
+  // past its parry window when the hit arrives.
+  const blocker = { isHuman: false, update(f) { f.pad = { ...EMPTY, block: true }; } };
+  const late = (() => { let i = 0; return { isHuman: false, update(f) {
+    const on = i >= 30 && i < 34; i++;
+    f.pad = { ...EMPTY, punch: on };
+  } }; })();
+  const game = toFighting(match({ c1: late, c2: blocker }));
+  const [a, b] = game.fighters;
+  a.x = 480; b.x = 540; a.y = b.y = 480;
+  a.runway = 50; b.energy = 0;
+  const hp0 = b.hp;
+  let jumped = false;
+  for (let i = 0; i < 120; i++) {
+    const before = a.runway;
+    game.update(1 / 60);
+    if (a.runway > before) jumped = true;
+    b.x = a.x + 60; b.vx = 0;
+  }
+  assert.equal(jumped, false, 'chip topped the tank up');
+  assert.ok(hp0 - b.hp >= 1, 'the fixture must have resolved as chip');
+  assert.equal(b.energy, 0, 'the fixture must not have resolved as a parry');
 });
 
 test('a fighter without usesRunway is not refilled either', () => {

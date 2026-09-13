@@ -177,7 +177,8 @@ test('an unhashed key never moves the fingerprint', () => {
 });
 
 test('the simulation version was bumped for the behaviour change', () => {
-  // 7, not 6: v3.8 holds a peer's custom build to player rules (see online.js).
+  // 7, not 6: v3.8 holds a peer's custom build to player rules, and a held
+  // block takes chip instead of parrying (see online.js).
   assert.equal(SIM_VERSION, 7);
 });
 
