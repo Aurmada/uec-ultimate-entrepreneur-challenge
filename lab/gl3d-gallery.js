@@ -4,7 +4,7 @@
 //
 //   const m = await import('/lab/gl3d-gallery.js');
 //   await m.gallery('max', '/lab/previews/gl3d-gallery.png');
-//   await m.gallery('kai', '/lab/previews/gl3d-kai.png', { all: true });  // Adam's mesh, Steve's palette
+//   await m.gallery('kai', '/lab/previews/gl3d-kai.png');
 //
 // States are staged the same way test/golden/index.html stages them, so a
 // cell here is the frame the golden check hashes.
@@ -30,11 +30,11 @@ const CASES = [
   { label: 'victory', state: 'victory', t: 0.9, stateT: 0.6 },
 ];
 
-export async function gallery(id = 'max', path = '/lab/previews/gl3d-gallery.png', { all = false } = {}) {
-  enable3D({ all });
+export async function gallery(id = 'max', path = '/lab/previews/gl3d-gallery.png') {
+  enable3D();
   const def = getFighter(id);
   for (let i = 0; i < 100 && !has3D(def); i++) await new Promise((r) => setTimeout(r, 50));
-  if (!has3D(def)) return `${id} has no 3D model (try { all: true })`;
+  if (!has3D(def)) return `${id} did not load a 3D model`;
 
   const CW = 300, CH = 340, LAB = 22;
   const out = document.createElement('canvas');
@@ -51,7 +51,7 @@ export async function gallery(id = 'max', path = '/lab/previews/gl3d-gallery.png
   Math.random = () => 0.5;             // hitstun jitter and the like, pinned
   try {
     for (const [row, mode] of [[0, '2d'], [1, '3d']]) {
-      if (mode === '2d') disable3D(); else enable3D({ all });
+      if (mode === '2d') disable3D(); else enable3D();
       CASES.forEach((c, i) => {
         cc.setTransform(1, 0, 0, 1, 0, 0);
         cc.clearRect(0, 0, CW, CH);
@@ -70,7 +70,75 @@ export async function gallery(id = 'max', path = '/lab/previews/gl3d-gallery.png
     }
   } finally {
     Math.random = realRandom;
-    enable3D({ all });
+    enable3D();
+  }
+  const blob = await new Promise((r) => out.toBlob(r, 'image/png'));
+  const res = await fetch(path, { method: 'PUT', body: blob });
+  return `${path} → ${res.status}`;
+}
+
+// Every roster fighter in idle: the 2D rig on top, the modular 3D model below.
+// This is the sheet that answers "can one model be nine different people?".
+//
+//   await m.roster('/lab/previews/gl3d-roster.png');
+export async function roster(path = '/lab/previews/gl3d-roster.png', state = 'idle') {
+  const { FIGHTERS } = await import('/src/data/fighters.js');
+  return sheet(path, FIGHTERS.map((def) => ({ def, label: def.name.split(' ')[0], state })), true);
+}
+
+// One plain founder wearing each look option in turn, 3D only, a row per slot.
+//
+//   await m.looks('/lab/previews/gl3d-looks.png');
+export async function looks(path = '/lab/previews/gl3d-looks.png') {
+  const { LOOKS, getFighter } = await import('/src/data/fighters.js');
+  const base = { ...getFighter('b-neo'), accessory: null, parts: undefined };
+  const cells = [];
+  for (const [field, options] of Object.entries(LOOKS)) {
+    for (const { id } of options) {
+      cells.push({ def: { ...base, [field]: id }, label: `${field} ${id}`, state: 'idle', row: field });
+    }
+  }
+  return sheet(path, cells, false);
+}
+
+async function sheet(path, cells, withTwoD) {
+  enable3D();
+  for (let i = 0; i < 100 && !has3D(cells[0].def); i++) await new Promise((r) => setTimeout(r, 50));
+  const CW = 230, CH = 300, LAB = 20;
+  const rows = withTwoD ? [['2d', cells], ['3d', cells]]
+    : [...new Set(cells.map((c) => c.row))].map((r) => ['3d', cells.filter((c) => c.row === r)]);
+  const cols = Math.max(...rows.map(([, cs]) => cs.length));
+  const out = document.createElement('canvas');
+  out.width = CW * cols;
+  out.height = (CH + LAB) * rows.length;
+  const oc = out.getContext('2d');
+  oc.fillStyle = '#141a2e';
+  oc.fillRect(0, 0, out.width, out.height);
+  const cell = document.createElement('canvas');
+  cell.width = CW; cell.height = CH;
+  const cc = cell.getContext('2d');
+  const realRandom = Math.random;
+  Math.random = () => 0.5;
+  try {
+    rows.forEach(([mode, cs], row) => {
+      if (mode === '2d') disable3D(); else enable3D();
+      cs.forEach((c, i) => {
+        cc.setTransform(1, 0, 0, 1, 0, 0);
+        cc.clearRect(0, 0, CW, CH);
+        drawFighter(cc, {
+          def: c.def, body: clampBody(c.def.body), side: 0, x: CW / 2, y: CH - 18, facing: 1,
+          state: c.state, stateT: 0, walkPhase: 0, vy: 0, airborne: false, crouching: false,
+          movingBack: false, unicornT: 0, flashT: 0, attack: null,
+        }, 0);
+        oc.drawImage(cell, i * CW, row * (CH + LAB) + LAB);
+        oc.fillStyle = mode === '3d' ? '#ffd23f' : '#9fb0d9';
+        oc.font = '600 13px system-ui';
+        oc.fillText(`${mode.toUpperCase()}  ${c.label}`, i * CW + 8, row * (CH + LAB) + 15);
+      });
+    });
+  } finally {
+    Math.random = realRandom;
+    enable3D();
   }
   const blob = await new Promise((r) => out.toBlob(r, 'image/png'));
   const res = await fetch(path, { method: 'PUT', body: blob });

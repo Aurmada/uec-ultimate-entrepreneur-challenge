@@ -1157,10 +1157,13 @@ function boot() {
   // player's own founder from their photo and look choices.
   if (new URLSearchParams(location.search).has('sprites')) enableSprites(true);
 
-  // Live 3D fighters, the prototype: ?gl (fighters with a model), ?gl=all
-  // (everyone in the first model, own palette), &perf for a timing readout.
+  // Live 3D fighters, the prototype: ?gl renders everyone in their own look,
+  // ?gl=max,dex only those fighters, &perf adds a timing readout.
   const glParam = new URLSearchParams(location.search);
-  if (glParam.has('gl')) enable3D({ all: glParam.get('gl') === 'all', timing: glParam.has('perf') });
+  if (glParam.has('gl')) {
+    const ids = (glParam.get('gl') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    enable3D({ ids, timing: glParam.has('perf') });
+  }
 
   if (DEBUG) {
     window.UEC = {

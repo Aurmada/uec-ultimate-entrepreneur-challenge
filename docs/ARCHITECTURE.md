@@ -461,26 +461,28 @@ first nine and all worth checking before adjusting offsets:
 ### Live 3D fighters (prototype, `?gl`)
 
 A second body renderer, behind a URL flag and off by default. It exists to test
-whether artist-made 3D models can replace the procedural rig without losing
-what the rig gets for free: every authored track, stance, command normal, body
-knob and colour. It is render-only and falls back to the procedural rig
-wherever WebGL2 is missing, the model has not loaded, or the context is lost.
+whether a 3D model can replace the procedural rig without losing what the rig
+gets for free: every authored track, stance, command normal, body knob, colour
+and look option, including a player founder's. It is render-only and falls back
+to the procedural rig wherever WebGL2 is missing, the model has not loaded, or
+the context is lost.
 
 | Flag | Effect |
 | --- | --- |
-| `?gl` | Fighters listed in `FIGHTER_MODELS` (`src/data/models3d.js`) render in 3D. Today that is Adam Weumann. |
-| `?gl=all` | Every fighter wears the first model in their own palette, to show what colour roles do. |
+| `?gl` | Every fighter renders in 3D, wearing their own look: roster, base characters and player founders. |
+| `?gl=max,dex` | Only the fighters with those ids do, for comparisons and benchmarks. |
 | `&perf` | On-screen timing, with `gl.finish()` per 3D fighter, so GPU time is included (worst case). |
 
 The pipeline, end to end:
 
 ```
-lab/blender/build_adam.py      Blender script: metaball body, armature, weights, glTF export
-assets/models/adam.glb         the only file the game loads
+lab/blender/build_founder.py   Blender script: metaball body and look options, armature, weights, glTF
+assets/models/founder.glb      the only file the game loads, worn by every fighter
+data/models3d.js               model registry, and how a fighter's look picks its meshes
 engine/gl3d/glb.js             minimal .glb reader: one skin, indexed triangles, base colours
 engine/gl3d/rig.js             2D pose -> 3D joints -> two-bone IK -> skinning matrices
 engine/gl3d/toon.js            WebGL2: an ink pass (inflated back faces), then banded lighting
-engine/gl3d/index.js           flags, loading, and render3D() for drawFighter
+engine/gl3d/index.js           flags, loading, what a fighter wears, and render3D() for drawFighter
 ```
 
 `drawFighter` asks `has3D(def)` and hands `render3D()` the same proportioned
@@ -488,27 +490,52 @@ pose it would have drawn, plus its own offscreen buffer. The model is drawn
 into that buffer, so the key line, hit flash, facing flip, KO rotation and the
 blit into the world are shared with the procedural path, and so is the camera.
 
-**The model contract.** Anything that follows it can replace `adam.glb`, which
-is the point: an artist can build a better Adam by hand in Blender.
+**One model, every fighter.** A fighter in this game is data, and a player
+founder is the same data from the profile screen, so there is no model per
+character. `founder.glb` is a base body plus one named mesh per look option, and
+`wearing(def, state)` picks which to draw:
+
+* `body` always draws: skin, face, legs and shoes.
+* `<slot>:<option>` draws when the fighter's look picks it. The slots are `hair`
+  (13 styles, including the roster's backwards `cap`), `headwear`, `eyewear`,
+  `facialHair`, `outfit` (all nine) and `accessory`. `resolveLook3D` reads a look
+  exactly the way `drawFighter` does, older roster conventions included:
+  `hairStyle: 'cap'` is a cap worn instead of hair, and `accessory` doubles as
+  eyewear and as stubble.
+* `prop:<id>` draws when the fighter carries a part with that id, in that part's
+  states, so the block briefcase appears only while blocking.
+
+Colours come from the fighter's palette by material role, as below, so the same
+bomber is green with pink trim on one player and pink with green trim on Kim.
+
+**The model contract.** Anything that follows it can replace `founder.glb`,
+which is the point: an artist can rebuild it by hand in Blender.
 
 * Units are rig units: 1.0 is 100 rig px, the scale the pose already uses.
 * Blender Z is up and the character faces +X. Its right side (`.R`) is -Y, which
   glTF export turns into +Z, toward the renderer's camera.
 * Joints are named `hips`, `spine`, `chest`, `neck`, `head`, `upper_arm.R/L`,
-  `forearm.R/L`, `thigh.R/L`, `shin.R/L` and `foot.R/L`. The runtime reads only
-  where each joint sits at bind time (from the inverse bind matrices), never bone
-  rolls. glTF stores joints but not bone ends, so `models3d.js` records where the
-  leaf bones end and where the skull centre sits.
+  `forearm.R/L`, `thigh.R/L`, `shin.R/L` and `foot.R/L`, plus an optional
+  `grip.L` for held props. The runtime reads only where each joint sits at bind
+  time (from the inverse bind matrices), never bone rolls. glTF stores joints but
+  not bone ends, so `models3d.js` records where the leaf bones end and where the
+  skull centre sits.
+* Meshes are named `body`, `<slot>:<option>` or `prop:<id>`, as above.
 * Each material is named for the palette role it takes its colour from (`suit`,
-  `suit2`, `skin`, `pants`, `shoe`, `hair`, `accent`); any other name keeps its
-  exported colour.
+  `suit2`, `skin`, `pants`, `shoe`, `hair`, `accent`), or a derived role the
+  runtime computes (`skinShade`, the skin darkened, for stubble); any other name
+  keeps its exported colour.
+
+`test/gl3d.test.js` holds the model to this: every option a player can pick has a
+mesh, every roster fighter resolves to meshes that exist, the parts with no 3D
+prop are listed by name, and every vertex is weighted to a bone near it.
 
 **How a 2D pose drives the bones.** The procedural rig stores hand and foot
 TARGETS, not elbows and knees, and stretches a limb to reach a target, which is
 how a zoner's jab visibly out-ranges a grappler's off the same keyframes. `rig.js`
 does the same in 3D: two-bone IK toward each target, stretching past full reach
-rather than falling short, so the fist still lands where the hitbox is
-(`test/gl3d.test.js` pins this). Three choices shape the look:
+rather than falling short, so the fist still lands where the hitbox is. Four
+choices shape the result:
 
 * The chest turns `GL3D.YAW` toward the camera, fighting-game style, which puts
   the lead arm and leg (the pose's `armF` and `legF`) on the FAR side.
@@ -516,11 +543,24 @@ rather than falling short, so the fist still lands where the hitbox is
   shoulder-to-hand, which flips sign when a hand passes behind the body; at 2D's
   gentle bend that reads fine, but a real upper arm folds hard and the flip
   became a chicken wing.
+* Both bones of a limb twist about one hinge axis (`cross(u, bend)` from the IK),
+  which never degenerates. Twisting each bone from the bend vector itself did,
+  whenever a forearm swung into line with it.
 * Girth and head size are pushed at draw time (`GL3D.ARM_GIRTH` and friends). A
   model built to heroic proportions reads thin and pin-headed at 200 px.
 
 Hazards found while building it:
 
+* **Bones belong to parts, not to object names.** The base body is six parts
+  joined under one name. The build script first stored each name's bone list,
+  so the last part's list (the soles) won and the whole body was weighted to the
+  feet; every structural check passed and every fighter rendered with its head
+  and arms flung across the screen. Parts are weighted before they are joined
+  now, and the distance-to-bone test exists because of it.
+* **A held prop must not ride the forearm.** Strapped to the forearm, the block
+  briefcase turned with the arm, and a tight guard swung it behind the arm into
+  the body. It rides `grip.L`, which follows the lead fist but keeps the body's
+  orientation, the way a 2D part is an unrotated offset from the hand.
 * **A NaN in the pose blanks the fighter.** `ctx.scale(NaN, NaN)` is silently
   ignored, so the procedural rig never shows it; in a projection matrix it draws
   nothing. A staged fighter with no `vy` produces exactly that in the jump pose,
@@ -530,21 +570,22 @@ Hazards found while building it:
 * **One WebGL context serves every fighter**, with `preserveDrawingBuffer` on,
   because each fighter is read back with `drawImage` straight after it is drawn.
 
-Not done yet: parts (props) are not drawn on the 3D path, a player's photo face
-has no 3D equivalent, look options (hair, headwear, outfits) are not swappable
-meshes, and body knobs scale bones rather than using shape keys. Both renderers
-also share one resolution limit: the world is drawn at 960x540 and scaled up by
-the camera, so neither is as sharp on screen as its own buffer.
+Not done yet: nine of the eleven roster props have no 3D mesh (they are listed in
+the test), a player's photo face has no 3D equivalent, the per-character face
+data (brows, lids, mouth) is not used, and body knobs scale bones rather than
+using shape keys. Both renderers also share one resolution limit: the world is
+drawn at 960x540 and scaled up by the camera, so neither is as sharp on screen as
+its own buffer.
 
 Measured in September 2026 on an M2 Max, in a live AI-vs-AI match at 60 fps,
-whole-frame render time: 1.73 ms with both fighters in 2D, 1.95 ms with Adam in
-3D, 2.28 ms with both in 3D. The model is 21.7k triangles and 730 KB. Phone
-numbers come from `lab/gl3d-bench.html`, a match that needs no sign-in: serve
-with `python3 dev-server.py 4173` and open
+whole-frame render time: 1.73 ms with both fighters in 2D, 1.93 ms with both in
+3D. The model holds 38 meshes and 39.6k triangles in 1.2 MB, and a fighter draws
+about 10k of them. Phone numbers come from `lab/gl3d-bench.html`, a match that
+needs no sign-in: serve with `python3 dev-server.py 4173` and open
 `http://<this machine's LAN address>:4173/lab/gl3d-bench.html` on a phone on the
-same network. `lab/gl3d-gallery.js` renders one fighter through every state in
-both renderers, and `lab/blender/build_adam.py` rebuilds the model in about three
-seconds.
+same network. `lab/gl3d-gallery.js` renders one fighter through every state, the
+whole roster, or every look option, and `lab/blender/build_founder.py` rebuilds
+the model in about five seconds.
 
 ---
 

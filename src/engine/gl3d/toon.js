@@ -116,14 +116,15 @@ export function createToon() {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, p.indices, gl.STATIC_DRAW);
         gl.bindVertexArray(null);
         const indexType = p.indices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-        return { vao, count: p.indices.length, indexType, role: p.role, color: p.color };
+        return { vao, count: p.indices.length, indexType, name: p.name, role: p.role, color: p.color };
       });
     },
 
     // Draws into the top-left w*SS x h*SS pixels of the canvas, framed exactly
     // like the procedural buffer: rig px box (ox, oy, w, h) around the feet.
-    // `squash` is the pose's sx/sy about the feet; `jitter` is a hitstun shake.
-    render(gpu, matrices, colours, box, squash, jitter = 0) {
+    // `squash` is the pose's sx/sy about the feet; `jitter` is a hitstun shake;
+    // `visible(p)` picks which primitives this fighter wears.
+    render(gpu, matrices, colours, box, squash, jitter = 0, visible = () => true) {
       const ss = GL3D.SS, U = GL3D.UNIT;
       const vw = Math.round(box.w * ss), vh = Math.round(box.h * ss);
       if (canvas.width < vw || canvas.height < vh) {
@@ -157,6 +158,7 @@ export function createToon() {
         gl.uniform1f(loc.uInk, pass);
         gl.uniform1f(loc.uInflate, pass ? GL3D.INK : 0);
         for (const p of gpu) {
+          if (!visible(p)) continue;
           if (!pass) gl.uniform3fv(loc.uColor, colours(p));
           gl.bindVertexArray(p.vao);
           gl.drawElements(gl.TRIANGLES, p.count, p.indexType, 0);

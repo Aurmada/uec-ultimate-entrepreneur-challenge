@@ -25,7 +25,7 @@
   <a href="?mode=2d">All 2D</a>
   <a href="?mode=adam">Adam 3D</a>
   <a href="?mode=all">Both 3D</a>
-  <a href="?mode=adam&amp;detail=1">Adam 3D, detail</a>
+  <a href="?mode=all&amp;detail=1">Both 3D, detail</a>
 </div>
 <canvas id="c"></canvas>
 <div id="hud">loading…</div>
@@ -44,7 +44,7 @@ const detail = q.has('detail');
 document.querySelectorAll('.modes a').forEach((a) => {
   a.classList.toggle('on', a.getAttribute('href') === location.search || (!location.search && a.textContent === 'Adam 3D'));
 });
-if (mode !== '2d') enable3D({ all: mode === 'all', timing: detail });
+if (mode !== '2d') enable3D({ ids: mode === 'adam' ? ['max'] : null, timing: detail });
 
 const canvas = document.getElementById('c');
 const dpr = Math.min(2, window.devicePixelRatio || 1);

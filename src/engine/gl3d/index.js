@@ -1,7 +1,7 @@
 // Live 3D fighters, the prototype behind ?gl. RENDER-ONLY.
 //
-//   ?gl          fighters with a model (FIGHTER_MODELS) render in 3D
-//   ?gl=all      every fighter wears the first model, in their own palette
+//   ?gl          every fighter renders in 3D, wearing their own look
+//   ?gl=max,dex  only the fighters with those ids do (benchmarks, comparisons)
 //   &perf        an on-screen timing readout, with gl.finish() so GPU time
 //                is included (worst case, not typical)
 //
@@ -14,23 +14,23 @@
 import { parseGLB, extractModel } from './glb.js';
 import { buildRig, solvePose } from './rig.js';
 import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
-import { MODELS3D, FIGHTER_MODELS } from '../../data/models3d.js';
+import { MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D, DERIVED_ROLES } from '../../data/models3d.js';
 
 let enabled = false;
-let allFighters = false;
+let only = null;                          // fighter ids to render in 3D, or null for all
 let perf = null;
 let renderer = null;
 const models = new Map();                // model id -> { ready, rig, gpu, failed }
 
-export function enable3D({ all = false, timing = false } = {}) {
+export function enable3D({ ids = null, timing = false } = {}) {
   enabled = true;
-  allFighters = all;
+  only = ids && ids.length ? new Set(ids) : null;
   if (timing && !perf) perf = startPerf();
   if (!renderer) {
     try { renderer = createToon(); } catch (e) { console.warn('[gl3d] no renderer:', e); }
   }
   if (!renderer) { enabled = false; return false; }
-  for (const id of new Set(Object.values(FIGHTER_MODELS))) load(id);
+  for (const id of new Set([DEFAULT_MODEL, ...Object.values(FIGHTER_MODELS)])) load(id);
   return true;
 }
 
@@ -58,8 +58,8 @@ function load(id) {
 
 function modelFor(def) {
   if (!enabled || !renderer || renderer.lost || !def) return null;
-  const id = FIGHTER_MODELS[def.id] || (allFighters ? Object.values(FIGHTER_MODELS)[0] : null);
-  const entry = id && models.get(id);
+  if (only && !only.has(def.id)) return null;
+  const entry = models.get(FIGHTER_MODELS[def.id] || DEFAULT_MODEL);
   return entry && entry.ready ? entry : null;
 }
 
@@ -81,15 +81,21 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0 }) {
   const palette = f.def.c || {};
   const colourCache = new Map();
   const colours = (p) => {
-    if (!colourCache.has(p.role)) colourCache.set(p.role, palette[p.role] ? hexToRGB(palette[p.role]) : p.color);
+    if (!colourCache.has(p.role)) {
+      const derived = DERIVED_ROLES[p.role];
+      colourCache.set(p.role, palette[p.role] ? hexToRGB(palette[p.role])
+        : derived && palette[derived.from] ? hexToRGB(palette[derived.from]).map((v) => v * derived.k)
+        : p.color);
+    }
     return colourCache.get(p.role);
   };
+  const wears = wearing(f.def, f.state);
   // A non-finite squash is ignored by ctx.scale, so the 2D rig never shows
   // one; in a projection matrix it blanks the fighter. A staged fighter with
   // no `vy` produces exactly that in the jump pose.
   const sq = (v) => (Number.isFinite(v) ? v : 1);
   const { vw, vh } = renderer.render(entry.gpu, entry.rig.matrices, colours,
-    { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, { x: sq(P.sx), y: sq(P.sy) }, jitter);
+    { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, { x: sq(P.sx), y: sq(P.sy) }, jitter, (p) => wears(p.name));
   if (perf) renderer.finish();
   const t2 = performance.now();
   const g = B.buf.getContext('2d');
@@ -106,9 +112,34 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0 }) {
 export function mark2D(ms) { if (perf) perf.add('2d', { draw: ms }); }
 export const timing3D = () => !!perf;
 
+// Which of a model's meshes a fighter wears right now. The base body always;
+// "<slot>:<option>" when their look picks that option; "prop:<id>" when they
+// carry a part with that id, in that part's states, exactly as the 2D parts
+// system gates it (the block briefcase only shows while blocking).
+export function wearing(def, state) {
+  const look = resolveLook3D(def);
+  const cache = new Map();
+  return (name) => {
+    if (cache.has(name)) return cache.get(name);
+    const colon = name.indexOf(':');
+    let on = true;
+    if (colon >= 0) {
+      const slot = name.slice(0, colon), option = name.slice(colon + 1);
+      if (slot === 'prop') {
+        const part = (def.parts || []).find((p) => p.id === option);
+        on = !!part && (!part.states || part.states.includes(state));
+      } else {
+        on = look[slot] === option;
+      }
+    }
+    cache.set(name, on);
+    return on;
+  };
+}
+
 export function stats3D() {
   return {
-    enabled, allFighters, renderer: !!renderer, lost: !!renderer?.lost,
+    enabled, only: only ? [...only] : null, renderer: !!renderer, lost: !!renderer?.lost,
     models: Object.fromEntries([...models].map(([id, e]) => [id, e.ready ? 'ready' : e.failed ? 'failed' : 'loading'])),
     timing: perf ? perf.summary() : null,
   };

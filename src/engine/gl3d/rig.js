@@ -21,7 +21,7 @@
 // (the pose's armF and legF) on the FAR side, the model's .L limbs.
 
 import { GL3D, STYLIZE } from '../../config.js';
-import { add, sub, scale, dist, normalize, rotZ, boneFrame, multiply, invertAffine } from './math.js';
+import { add, sub, scale, cross, dist, normalize, rotZ, boneFrame, multiply, invertAffine } from './math.js';
 
 export const BONES = [
   'hips', 'spine', 'chest', 'neck', 'head',
@@ -57,6 +57,8 @@ export function buildRig(model, spec) {
     put(`shin.${s}`, kn, an, REST_REF.leg);
     put(`foot.${s}`, an, add(an, spec.leaf.foot), REST_REF.foot);
   }
+  // Optional prop anchor on the lead fist, facing forward with the body.
+  if (model.jointNames.includes('grip.L')) put('grip.L', at('grip.L'), add(at('grip.L'), [0.1, 0, 0]), [0, 1, 0]);
 
   const hip = at('hips');
   const shoulderY = (at('upper_arm.R')[1] + at('upper_arm.L')[1]) / 2;
@@ -93,8 +95,16 @@ export function ik(a, t, l1, l2, pole) {
   const along = pole[0] * u[0] + pole[1] * u[1] + pole[2] * u[2];
   const bend = normalize(sub(pole, scale(u, along)), Math.abs(u[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]);
   const mid = add(a, add(scale(u, L1 * ca), scale(bend, L1 * sa)));
-  return { mid, end: add(a, scale(u, reach)), bend, stretch: s };
+  // The hinge the joint turns about. Both bones of the limb twist from this one
+  // axis: u and bend are perpendicular, so it never degenerates, where using
+  // `bend` itself as each bone's reference did whenever a forearm swung into
+  // line with it (a tight guard), flipping everything strapped to the forearm.
+  return { mid, end: add(a, scale(u, reach)), bend, hinge: cross(u, bend), stretch: s };
 }
+
+// A limb bone's twist reference: perpendicular to the bone, in the plane of
+// the bend. At rest (hinge = restDir x REST_REF) this is exactly REST_REF.
+const onHinge = (hinge, from, to) => cross(hinge, normalize(sub(to, from)));
 
 // Writes one skinning matrix per joint into rig.matrices and returns it.
 // `P` is the proportioned 2D pose; `elbow` carries the per-state bend signs
@@ -154,6 +164,7 @@ export function solvePose(rig, P, elbow = {}) {
 
   // ---- arms: the lead hand (armF) on the far shoulder, the rear hand near
   const half = GL3D.SHOULDER_HALF * wide;
+  let leadFist = null;
   const arm = (side, shoulder, hand, bendSign, flare) => {
     const target = pt(hand.x, hand.y, shoulder[2] * GL3D.HAND_DEPTH);
     // Elbows point down and back, and out a little. drawFighter bends toward
@@ -166,11 +177,15 @@ export function solvePose(rig, P, elbow = {}) {
     const up = rig.rest[`upper_arm.${side}`], lo = rig.rest[`forearm.${side}`];
     const s = ik(shoulder, target, up.len, lo.len, pole);
     const girth = build * GL3D.ARM_GIRTH;
-    set(`upper_arm.${side}`, shoulder, s.mid, s.bend, dist(shoulder, s.mid) / up.len, girth, girth);
-    set(`forearm.${side}`, s.mid, s.end, s.bend, dist(s.mid, s.end) / lo.len, girth, girth);
+    set(`upper_arm.${side}`, shoulder, s.mid, onHinge(s.hinge, shoulder, s.mid), dist(shoulder, s.mid) / up.len, girth, girth);
+    set(`forearm.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / lo.len, girth, girth);
+    if (side === 'L') leadFist = s.end;
   };
   arm('L', sub(shoulderC, scale(chestLat, half)), P.armF, elbow.F ?? STYLIZE.ELBOW, -1);
   arm('R', add(shoulderC, scale(chestLat, half)), P.armB, elbow.B ?? STYLIZE.ELBOW, 1);
+  // A held prop rides the lead fist but faces the way the body faces, as a 2D
+  // part does, instead of turning with the arm.
+  if (rig.rest['grip.L']) set('grip.L', leadFist, add(leadFist, scale(chestFwd, 0.1)), chestUp, 1, 1, 1);
 
   // ---- legs: knees forward and a little out, feet set like the rest pose
   const hipBase = sub(hip, scale(pelUp, GL3D.HIP_DROP));
@@ -180,8 +195,8 @@ export function solvePose(rig, P, elbow = {}) {
     const th = rig.rest[`thigh.${side}`], sn = rig.rest[`shin.${side}`], ft = rig.rest[`foot.${side}`];
     const s = ik(hipJ, target, th.len, sn.len, pole);
     const girth = build * GL3D.LEG_GIRTH;
-    set(`thigh.${side}`, hipJ, s.mid, s.bend, dist(hipJ, s.mid) / th.len, girth, girth);
-    set(`shin.${side}`, s.mid, s.end, s.bend, dist(s.mid, s.end) / sn.len, girth, girth);
+    set(`thigh.${side}`, hipJ, s.mid, onHinge(s.hinge, hipJ, s.mid), dist(hipJ, s.mid) / th.len, girth, girth);
+    set(`shin.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / sn.len, girth, girth);
     const shinDir = normalize(sub(s.end, s.mid));
     const toe = normalize(rotZ(shinDir, rig.footAngle));
     const fs = build * GL3D.FOOT_SCALE;
