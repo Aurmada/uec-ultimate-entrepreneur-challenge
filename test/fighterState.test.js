@@ -56,7 +56,9 @@ test('quantisers match what hashGameState already does', () => {
   assert.equal(quantise('q8', 1.26), Math.round(1.26 * 8));
   assert.equal(quantise('int', 3.9), 3);
   assert.equal(quantise('enum', null), 0);
-  assert.equal(quantise('enum', 'safety'), quantise('enum', 'safety'));
+  // A real stance must never share null's slot; comparing a value with itself,
+  // as this line used to, could not fail.
+  assert.notEqual(quantise('enum', 'safety'), quantise('enum', null));
   assert.notEqual(quantise('enum', 'safety'), quantise('enum', 'capabilities'));
 });
 
@@ -175,7 +177,8 @@ test('an unhashed key never moves the fingerprint', () => {
 });
 
 test('the simulation version was bumped for the behaviour change', () => {
-  assert.equal(SIM_VERSION, 6);
+  // 7, not 6: v3.8 holds a peer's custom build to player rules (see online.js).
+  assert.equal(SIM_VERSION, 7);
 });
 
 // initState() now assigns every registry field in the constructor, so the

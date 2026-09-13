@@ -10,11 +10,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildCustomFighter, playerBuildCost, playerCommandNormals, clampPlayerBody,
-  BASE_CHARACTERS, toCharacter,
-  SPECIALS, PLAYER_SPECIALS,
+  BASE_CHARACTERS, FIGHTERS, DEFAULT_BASE_ID, toCharacter,
+  SPECIALS, PLAYER_SPECIALS, playerSpecialId,
 } from '../src/data/fighters.js';
 import { PLAYER_MOVES, PLAYER_BUDGET, getPlayerMove, toCommandNormal } from '../src/data/playerMoves.js';
-import { validateCharacter, commandCost, COMMAND_SLOTS, DEFAULT_BODY } from '../src/data/schema.js';
+import { validateCharacter, commandCost, COMMAND_SLOTS } from '../src/data/schema.js';
 import { Fighter } from '../src/engine/fighter.js';
 import { PLAYER_STATS, BODY } from '../src/config.js';
 
@@ -267,4 +267,45 @@ test('a challenge link cannot smuggle a roster-only special onto a ghost', () =>
 test('a challenge link can still carry an ordinary special', () => {
   const ghost = buildGhostFighter({ n: 'RIVAL', sp: 'takeover' });
   assert.equal(ghost.special, 'takeover');
+});
+
+// v3.6 closed the dropdown and the link's `sp` field, and left three ways in.
+//
+//   1. A founder SAVED while ALIGNMENT SHIFT was still on the menu kept it. The
+//      profile screen then threw on open (the filtered <select> reads back ''
+//      and SPECIALS[''].desc is undefined), so the one screen that could change
+//      it was unreachable, and the build handed the move over regardless.
+//   2. `baseId` is only ever a BASE_CHARACTERS id from an honest client. A
+//      roster id there came from a stale save or a forged live spec, and
+//      `...base` spread that fighter's own mechanics (`usesRunway`) and its
+//      roster-only special onto a player build.
+//   3. A challenge link naming a roster fighter in `f` did the same to a ghost.
+test('a roster-only special saved before v3.6 resolves to a player special', () => {
+  assert.equal(playerSpecialId('alignmentshift'), 'pitchdeck');
+  assert.equal(playerSpecialId('alignmentshift', 'takeover'), 'takeover');
+  assert.equal(playerSpecialId('burnitall', 'burnitall'), 'pitchdeck',
+    'a roster-only fallback is not a fallback');
+  assert.equal(playerSpecialId('takeover', 'pitchdeck'), 'takeover');
+  assert.equal(playerSpecialId(undefined), 'pitchdeck');
+});
+
+test('a founder saved with a now roster-only special fights with a player special', () => {
+  const def = buildCustomFighter({ name: 'OLD SAVE', baseId: DEFAULT_BASE_ID, special: 'alignmentshift' });
+  assert.ok(PLAYER_SPECIALS[def.special], `built with ${def.special}`);
+});
+
+test('a roster base id cannot carry a roster mechanic onto a player build', () => {
+  for (const f of FIGHTERS) {
+    const def = buildCustomFighter({ name: 'FORGED', baseId: f.id });
+    assert.ok(PLAYER_SPECIALS[def.special], `a ${f.id} base handed over ${def.special}`);
+    assert.equal(new Fighter(def, 0, CTL).usesRunway, false, `a ${f.id} base leaked usesRunway`);
+  }
+});
+
+test('a challenge link naming a roster fighter as its base gets player rules', () => {
+  for (const f of FIGHTERS) {
+    const ghost = buildGhostFighter({ n: 'RIVAL', f: f.id });
+    assert.ok(PLAYER_SPECIALS[ghost.special], `a ${f.id} link handed over ${ghost.special}`);
+    assert.equal(new Fighter(ghost, 0, CTL).usesRunway, false, `a ${f.id} link leaked usesRunway`);
+  }
 });
