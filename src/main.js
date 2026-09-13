@@ -10,6 +10,7 @@ import { AIController } from './engine/ai.js';
 import { Game } from './engine/game.js';
 import { renderGame } from './engine/render.js';
 import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.js';
+import { enable3D, stats3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
@@ -1156,11 +1157,18 @@ function boot() {
   // player's own founder from their photo and look choices.
   if (new URLSearchParams(location.search).has('sprites')) enableSprites(true);
 
+  // Live 3D fighters, the prototype: ?gl (fighters with a model), ?gl=all
+  // (everyone in the first model, own palette), &perf for a timing readout.
+  const glParam = new URLSearchParams(location.search);
+  if (glParam.has('gl')) enable3D({ all: glParam.get('gl') === 'all', timing: glParam.has('perf') });
+
   if (DEBUG) {
     window.UEC = {
       get game() { return currentGame; },
       enableSprites,
       spritesReady,
+      enable3D,
+      stats3D,
       Save,
       input,
       startMatch,

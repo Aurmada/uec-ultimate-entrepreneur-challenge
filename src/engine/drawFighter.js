@@ -9,6 +9,7 @@ import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
+import { has3D, render3D, mark2D, timing3D } from './gl3d/index.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
@@ -1167,6 +1168,7 @@ function shadeBuffer(b, B) {
 
 // Main world-space fighter draw. f: Fighter instance.
 export function drawFighter(ctx, f, t) {
+  const tDraw = timing3D() ? performance.now() : 0;
   const def = f.def;
   const body = f.body || clampBody(def.body);
   const P = applyProportions(computePose(f, t), body);
@@ -1186,6 +1188,26 @@ export function drawFighter(ctx, f, t) {
 
   ctx.scale(f.facing, 1);
   if (P.rot) ctx.rotate(P.rot);
+
+  // Live 3D path (?gl, prototype). The model is posed from this same P and
+  // rendered into the same offscreen buffer, so the key line, hit flash and
+  // blit are shared with the procedural rig below. Parts are not drawn yet.
+  if (has3D(def)) {
+    const B = fighterBuffer(bufferMetrics(body));
+    const stanceEl = f.state === 'idle' ? (def.stance || null) : null;
+    if (B && render3D(B, f, P, {
+      elbowF: stanceEl?.elbowF ?? STYLIZE.ELBOW,
+      elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,
+      jitter: f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0,
+    })) {
+      if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);
+      if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
+      ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
+      ctx.filter = 'none';
+      ctx.restore();
+      return;
+    }
+  }
 
   // Baked sprite path. Body proportions scale the sheet rather than re-posing
   // a rig, so the P1 knobs still give a lanky zoner and a squat grappler.
@@ -1353,6 +1375,7 @@ export function drawFighter(ctx, f, t) {
 
   ctx.filter = 'none';
   ctx.restore();
+  if (tDraw) mark2D(performance.now() - tDraw);
 }
 
 // ---------------------------------------------------------------- portraits

@@ -360,6 +360,43 @@ export const PARTS = {
   FOLLOW: [0, 1],      // cloth lag; 0 is rigid to the anchor
 };
 
+// ---- LIVE 3D FIGHTERS (prototype, ?gl) -------------------------------------
+// RENDER-ONLY, like STYLIZE. A skinned model from lab/blender is posed from the
+// same 2D pose the procedural rig draws, so every move, stance and body knob
+// already animates; nothing here is read by the simulation.
+export const GL3D = {
+  UNIT: 100,            // rig px per model unit; build_adam.py models in these units
+  SS: 2,                // supersampling, matching the procedural buffer
+  // How far the body opens toward the camera. 0 is a pure profile; fighting
+  // games turn the chest so it reads, and the lead arm and leg go to the FAR
+  // side, which is why the pose's armF and legF drive the model's .L limbs.
+  YAW: 0.62, HIP_YAW: 0.40, HEAD_YAW: 0.30,
+  LEAN: 0.6,            // the torso turns by bodyLean * LEAN, as drawFighter does
+  PELVIS_LEAN: 0.5,     // share of that lean the pelvis takes
+  HEAD_LEAN_PX: 26,     // head offset per unit of bodyLean, as drawFighter does
+  SOCKET_DROP: 8,       // shoulder sockets sit this far below shoulderY, as drawFighter does
+  SHOULDER_HALF: 0.27,  // model units, before body.shoulders
+  HIP_HALF: 0.10,
+  HIP_DROP: 0.02,
+  HAND_DEPTH: 0.85,     // how much of its shoulder's depth a hand keeps
+  FOOT_DEPTH: 1.10,
+  ANKLE_PX: 6,          // the 2D rig aims the shin 6 px above the foot
+  ELBOW_BACK: 0.45,     // how far back an elbow points, against 1 down
+  ELBOW_FLARE: 0.35,    // outward pull on the elbow pole
+  KNEE_FLARE: 0.25,
+  // Game-size readability. A model built to heroic proportions reads thin and
+  // pin-headed at 200 px, so girth and head size are pushed at draw time.
+  HEAD_SCALE: 1.25,
+  ARM_GIRTH: 1.40, LEG_GIRTH: 1.40, TORSO_GIRTH: 1.12, FOOT_SCALE: 1.15,
+  INK: 0.011,           // outline thickness, model units
+  INK_COLOR: '#140c08',
+  KEY: [0.42, 0.58, 0.70],  // toward the key light: forward, up, toward camera
+  BANDS: [0.40, -0.12],     // lit above the first, mid above the second
+  BAND_K: [1.0, 0.80, 0.60],
+  SHADOW_TINT: [0.86, 0.88, 1.06],
+  RIM: 0.40,
+};
+
 // ---------------------------------------------------------------------------
 // BODY PROPORTIONS
 //
