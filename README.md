@@ -4,7 +4,7 @@
 
 **Founders fight. Valuations fall.** A launch-ready browser arcade fighter where entrepreneurs battle 1-v-1 with Pitch Deck Strikes, Hostile Takeovers and full-meter **UNICORN MODE** — inspired by the pacing of 1990s arcade fighters, built with a fully original cast, art, and sound.
 
-Playable in seconds: no account, no install, no build step. **100% vanilla JavaScript + Canvas + Web Audio — zero dependencies, zero asset files.** Every sprite is drawn and every sound is synthesized in code, so there is nothing to license and nothing to download.
+No install and no build step. You do need an account: sign in with Google, Microsoft or an email link, build your founder, and fight. **Vanilla JavaScript + Canvas + Web Audio, with no npm packages.** Fighters and arenas are drawn in code and every sound is synthesized live. Beyond the page itself, the game loads the Supabase client from a CDN (sign-in, live matches and the global leaderboard) and fetches the face-detection cascade `assets/facefinder.bin` when you upload a photo.
 
 ---
 
@@ -23,7 +23,7 @@ python3 dev-server.py 4173
 npx serve -l 4173 .
 ```
 
-Open **http://localhost:4173** → hit **⚡ QUICK FIGHT**. You're in a match in ~5 seconds.
+Open **http://localhost:4173**, sign in, and build your founder: the game asks for both before it lets you fight. Then hit **⚡ QUICK FIGHT**.
 
 > ES modules require http(s) — opening `index.html` via `file://` won't work.
 
@@ -36,7 +36,7 @@ The whole game is static files. Drop the folder on any of:
 - **GitHub Pages** — push and enable Pages
 - **Cloudflare Pages** — direct upload
 
-No environment variables, no server, no database.
+No environment variables and no server of your own. Sign-in, live matches and the global leaderboard run on the game's hosted Supabase project (its URL and publishable key are in `src/net/online.js`), so a new domain has to be added to its redirect URLs before sign-in works there (see *Enabling sign-in* below).
 
 ---
 
@@ -44,22 +44,24 @@ No environment variables, no server, no database.
 
 Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when the bell rings. Landing and taking hits charges your **energy meter** — spend 50 on your Special, or bank a full 100 for **UNICORN MODE** (6 s: +35 % damage, +25 % speed, no chip damage, extremely fabulous).
 
-**Block** cuts damage to 15 % chip (chip can never KO). **Hostile Takeover can't be blocked — jump it.**
+**Block** has its own button (Q or `/`; down is crouch). **Grabs such as Hostile Takeover can't be blocked, so jump them.**
 
-| Action | Solo | 2P — left player | 2P — right player | Touch |
-|---|---|---|---|---|
-| Move | ← → or A D | A D | ← → | ◀ ▶ |
-| Jump | ↑ or W | W | ↑ | ▲ |
-| Block / parry | ↓ or S | S | ↓ | 🛡 |
-| Slap | H or X | X | H | 🖐 |
-| Punch | J or C | C | J | 👊 |
-| Kick | K or V | V | K | 👟 |
-| Special | L or B | B | L | ⚡ |
-| Cease & Desist | I or F | F | I | ⚖️ |
-| Acqui-Hire (steal) | M or T | T | M | 💸 |
-| Dash | O or R | R | O | 💨 |
-| Unicorn Mode | U or G | G | U | 🦄 |
-| Pause | Esc / P | | | ⏸ |
+| Action | Keyboard | Touch |
+|---|---|---|
+| Move | ← → or A D | ◀ ▶ |
+| Jump | ↑ or W | ▲ |
+| Crouch | ↓ or S | ▼ |
+| Block / parry | Q or `/` | 📄 NDA |
+| Slap | H or X | 🖐 |
+| Punch | J or C | 👊 |
+| Kick | K or V | 👟 |
+| Launch (anti-air) | N or Z | 🚀 |
+| Special | L or B | ⚡ |
+| Cease & Desist | I or F | ⚖️ |
+| Acqui-Hire (steal) | M or T | 💸 RAID |
+| Dash | O or R | 💨 DASH |
+| Unicorn Mode | U or G | 🦄 |
+| Pause | Esc or P | ⏸ |
 
 Touch pads appear automatically on phones/tablets (or force them with `?touch=1`).
 
@@ -274,7 +276,7 @@ The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkz
 2. **Authentication → Providers → Email** — enable (magic links work with no extra setup).
 3. **Authentication → Providers → Google** — paste a Client ID/Secret from Google Cloud Console (authorized redirect URI: `https://oqzxkzkyiiahxmppgrkn.supabase.co/auth/v1/callback`).
 4. **Authentication → Providers → Azure** — same with a Microsoft Entra app registration (same callback URI).
-5. Flip `AUTH.REQUIRED` to `true` in `src/auth.js` and push — the game is now sign-in-gated.
+5. Nothing to flip: `AUTH.REQUIRED` is already `true` in `src/auth.js`, so nobody reaches the arena without signing in and then building a founder profile. Set it to `false` only to re-open guest play.
 
 > Billing: `uec-game` is a paid project (~$10/mo compute) so it stays always-on for live sign-in — no idle auto-pause.
 
@@ -293,29 +295,32 @@ The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkz
 
 | Fighter | Company | Signature special |
 |---|---|---|
-| **Lizbeth Holmez** · The Visionary | Theramos | 🔄 **Pivot Punch** — vanishes mid-claim, reappears fist-first |
-| **Adam Weumann** · The Burner | WeWerk | 🔥 **Burn Rate Blast** — point-blank $47B inferno |
-| **Steve Nojobs** · The Keynote | Pear | 📊 **Pitch Deck Strike** — one more thing: 3 razor slides |
-| **Kim Koindashian** · The Influencer | SkimzCoin | 📈 **Growth Hack** — viral rush that locks in a 4-hit flurry |
-| **Cathie Woodz** · The Believer | ARKK Capital | 💰 **Funding Round** — buys every dip, rains gold |
-| **Carl Icahnt** · The Raider | Icahnt Holdings | 🦈 **Hostile Takeover** — unblockable command grab |
+| **Lizbeth Holmez** · The Fraudster | Theramos | 🔄 **Pivot Punch**: vanishes mid-claim, reappears fist-first |
+| **Adam Weumann** · The Burner | WeWerk | 🔥 **Burn It All**: torches whatever runway is left; the fuller the tank, the harder it lands |
+| **Steve Nojobs** · The Vaporware Prophet | Pear | 📊 **Pitch Deck Strike**: three razor-sharp slides across the arena |
+| **Kim Koindashian** · The Rug-Puller | SkimzCoin | 📈 **Growth Hack**: viral rush that locks in a 4-hit flurry |
+| **Cathie Woodz** · The True Believer | ARKK Capital | 💰 **Funding Round**: rains gold and pockets energy on every hit |
+| **Carl Icahnt** · The Asset Stripper | Icahnt Holdings | 🦈 **Hostile Takeover**: unblockable command grab |
+| **Elo Ma** · The Technoking | Spacey-X | 🔥 **Burn Rate Blast**: slow, point-blank inferno |
+| **Jeff Bozo** · The Everything Guy | Primezon | 🦈 **Hostile Takeover**: unblockable command grab |
+| **Scam Alt** · The Alignment Guy | ClosedAI | ⚖️ **Alignment Shift**: toggles between the SAFETY and CAPABILITIES stances |
 
 | Unicorn Mode in The Unicorn Club | Pitch Deck Strike on The Stock Exchange |
 |---|---|
 | ![Unicorn Mode brawl](shots/unicorn-brawl.jpg) | ![Pitch Deck Strike volley](shots/pitch-deck.jpg) |
 
-Everyone shares 🦄 **Unicorn Mode** at full meter. These roster fighters are **AI rivals only** — you always fight as your own founder. They have distinct speed/power/HP stats and AI personalities (aggression, jumpiness, preferred range) across three difficulties: **Rookie / Contender / Champion**. Human players all share one identical stat line; see **[docs/GAME-MATH.md](docs/GAME-MATH.md)**.
+Everyone shares 🦄 **Unicorn Mode** at full meter. On the select screen you can fight as your own founder or as any roster fighter, and a roster pick plays with that fighter's style, special and command normals (Adam brings his runway). As rivals they also have AI personalities (aggression, jumpiness, preferred range) across three difficulties: **Rookie / Contender / Champion**. Your own founder always fights with the BALANCED style; every style's numbers are in **[docs/GAME-MATH.md](docs/GAME-MATH.md)**.
 
 **Arenas (6, all animated):** The Boardroom · Demo Day · The Startup Garage · The Stock Exchange · The Unicorn Club · The VC Summit — with live tickers, sweeping spotlights, bouncing crowds, disco floors, and data-driven billboard slots (see *Sponsorships* below).
 
 ## Feature checklist
 
-- ⚡ **Guest play** — no signup; first fight includes a 3-card tutorial + in-match hints
-- 👤 **Founder profiles** — name, company, **photo upload with automatic face capture** (on-device face detection in every browser via a vendored MIT detector — picojs — with drag/pinch fine-tuning; photos never leave the device) → becomes your fighter's face, base style, custom suit/accent colors, choice of any signature special
+- 🔐 **Sign-in first** (Google, Microsoft or an email link); your first fight against the AI opens with a 5-card tutorial, plus in-match hints
+- 👤 **Founder profiles** (required): name, company, **photo upload with automatic face capture** (face detection runs on-device in every browser via a vendored MIT detector, picojs, with drag/pinch fine-tuning; the cropped photo syncs to your account and is shown to rivals), base character, custom suit/accent colours, a signature special from the player menu (roster-only moves such as ALIGNMENT SHIFT and BURN IT ALL are not on it), and a build of silhouette plus up to three signature moves that must balance against a zero power budget
 - 🔴 **LIVE multiplayer** — create a room, send the link, and fight a friend in real time. The inviter is notified the second their rival joins; both pick fighters, the host picks the arena, and the match runs deterministic 60 Hz lockstep over Supabase Realtime with input-delay netcode, packet-loss healing, desync detection, both-consent rematches, and graceful disconnect handling. Backgrounded tabs keep simulating via a Web Worker so you never freeze your opponent.
-- 🤖 **Vs AI** (3 difficulties) · 👥 **local 2-player** (one keyboard) · 🔗 **async call-out links** (serverless: the link carries your fighter; friends battle your AI ghost anytime)
-- ⚔️ **Challenges screen** — live rooms, call-out links, and 10 seeded rival founders at their skill tier
-- 🏆 **Leaderboard** — seeded season + you, with W-L, KOs, streaks and rank titles (Garage Dreamer → Decacorn)
+- 🤖 **Vs AI** (3 difficulties) · 🌐 **FIGHT A REAL PLAYER** (auto-pairs you from a live lobby) · 🔗 **async call-out links** (the link carries your fighter; friends battle your AI ghost any time)
+- ⚔️ **Challenges screen**: live rooms, call-out links, and 13 seeded rival founders (the nine roster fighters plus four NPCs) at their skill tier
+- 🏆 **Leaderboard**: a 🌍 GLOBAL tab (the default, stored in Supabase) that counts only confirmed live matches between signed-in players, and a 🏠 LOCAL tab with the seeded season plus you; W-L, KOs, streaks and rank titles (Garage Dreamer → Decacorn)
 - 📈 **Ranked points** — win = 20 × difficulty (×1/×1.5/×2.5, challenges ×2) + 5/KO round + streak bonus; a loss still pays +3
 - 📸 **Shareable result cards** — 1200×630 PNG (download or native share)
 - 🔊 **Sound controls** — master volume, music & SFX toggles, one-tap mute; all audio synthesized live
@@ -328,35 +333,54 @@ Everyone shares 🦄 **Unicorn Mode** at full meter. These roster fighters are *
 index.html            all screens & modals (DOM shell)
 styles.css            visual system (arcade gold/pink/cyan on deep navy)
 dev-server.py         no-cache static server for development
+assets/               facefinder.bin (face-detection cascade) + dormant sprite atlases (only with ?sprites)
 src/
-  config.js           every gameplay number: physics, frame data, meter, points, ranks
+  config.js           every gameplay number: physics, frame data, styles, meter, stance, runway, points, ranks, budget
   state.js            localStorage save: profile, stats, settings + challenge-link codec
-  main.js             boot, screen router, match lifecycle, render loop, debug hooks
+  auth.js             Supabase Auth sign-in (Google, Microsoft, email link) and the AUTH.REQUIRED gate
+  main.js             boot, screen router, sign-in and profile gates, match lifecycle, live-match driver, render loop, debug hooks
   data/fighters.js    roster definitions + specials metadata + custom/ghost builders
+  data/schema.js      character format, validator, archetypes and power budget
+  data/playerMoves.js curated signature moves a player can give their founder
+  data/seed.js        seeded local leaderboard (nine roster founders, four NPCs)
+  data/authored.js    Incubator export file; validated by the tests, not loaded by the game
+  data/tracks.js      stock keyframe animation tracks (render-only)
   data/arenas.js      six procedural animated arenas + sponsor billboard slots
-  data/seed.js        seeded leaderboard entries
   engine/game.js      match controller: rounds, timer, hit resolution, KO cinematics
   engine/fighter.js   fighter entity: state machine, physics, attacks, specials
+  engine/fighterState.js  registry of per-fighter simulation state (defaults, round reset, hashing)
+  engine/moves.js     move archetypes: per-move shaping and per-frame ticks
   engine/ai.js        AI controller (difficulty × per-fighter personality)
   engine/input.js     keyboard + multi-touch → virtual gamepads; Controller contract
+  engine/anim.js      keyframe sampling and the rest pose (render-only)
+  engine/proportions.js  body clamping and the proportions pose pass
+  engine/parts.js     render-only props and garments
   engine/drawFighter.js  procedural character rig, outfits, faces, photo heads, portraits
+  engine/sprites.js   sprite-atlas renderer, dormant behind ?sprites
   engine/render.js    frame compositor (arena → shadows → fighters → projectiles → FX)
   engine/fx.js        particles, comic word popups, shake, hitstop, rings, flashes
   engine/audio.js     Web Audio SFX recipes + generative per-arena music loop
-  ui/hud.js           health/energy bars, timer, pips, announcements, combos, hints
+  ui/hud.js           health/energy/runway bars, timer, pips, announcements, combos, hints
   ui/screens.js       select / profile / challenges / leaderboard / help / modals
   ui/resultCard.js    social result-card renderer
-  ui/tutorial.js      first-fight onboarding
-  net/online.js       future-multiplayer interface (see below)
+  ui/tutorial.js      first-fight onboarding cards
+  ui/faceDetect.js    on-device face detection for photo uploads
+  net/online.js       live multiplayer: Supabase client loader, lobby, rooms, lockstep netcode (see below)
+  net/cloud.js        profile sync, global leaderboard, report_match result reporting
+  vendor/pico.js      vendored picojs face detector (MIT)
+incubator/            character authoring tool (unlisted admin page)
+lab/                  measurement and art harnesses (contrast, silhouettes, marketing shots)
+test/                 node --test suites (npm test) + browser golden-image checks in test/golden/
+docs/                 architecture, onboarding, auth setup, game math, design specs and plans
 ```
 
-**Seed data** lives in [src/data/seed.js](src/data/seed.js) (leaderboard) and [src/data/fighters.js](src/data/fighters.js) (roster). Adding a fighter = one object (identity, palette, stats, `special` id, AI personality). Adding an arena = one draw function + one entry in [src/data/arenas.js](src/data/arenas.js).
+**Seed data** lives in [src/data/seed.js](src/data/seed.js) (leaderboard) and [src/data/fighters.js](src/data/fighters.js) (roster). Adding a fighter = one object in `FIGHTERS` (identity, palette `c`, `style`, `body`, `special` id and AI personality `ai`, plus optional `commandNormals` and render-only face, stance, motion and parts). The simulation reads `style`, not the legacy `stats` block, and `npm test` fails any roster entry that does not validate or is over the power budget. Adding an arena = one draw function + one entry in [src/data/arenas.js](src/data/arenas.js).
 
-**Debug/test harness:** open with `?debug=1` to expose `window.UEC` (deterministic `step(seconds)`, `setHP`, `setEnergy`, `setTimer`, pad access) — the whole E2E suite runs through it. `?touch=1` forces touch pads on desktop.
+**Debug harness:** open with `?debug=1` to expose `window.UEC` (deterministic `step(seconds, dt)`, `setHP`, `setEnergy`, `setTimer`, `skipSplash`, `signInAs` to fake a signed-in user, `netPump` for live matches, and `input` for pad access), for driving the game from the console or a scripted browser. The committed tests run headless instead (see *Testing*). `?touch=1` forces touch pads on desktop.
 
 ## Online architecture (v1.1 — live and shipped)
 
-Live matches run on **Supabase Realtime broadcast channels** — one ephemeral channel per room, nothing stored, no accounts. Presence powers the "your rival just joined" notification; both clients then run the same deterministic 60 Hz simulation and exchange only input bitmasks (delay-based lockstep, ~10 frames). Packets are wall-clock paced under the realtime rate limits, carry a sliding window with peer-acknowledged re-anchoring so packet loss self-heals, and a periodic state hash aborts cleanly on any desync. The engine's `Controller` contract is what makes this small: human, AI, and network players are interchangeable (see [src/net/online.js](src/net/online.js)).
+Live matches run on **Supabase Realtime broadcast channels**: one ephemeral channel per room, plus a shared presence lobby for auto-pairing, and the room itself stores nothing. Presence powers the "your rival just joined" notification. Before the fight each client validates the other's character and refuses a peer on a different `SIM_VERSION`. Both clients then run the same deterministic 60 Hz simulation and exchange only input bitmasks (delay-based lockstep, `INPUT_DELAY` = 6 frames, about 100 ms). Packets go out about every 33 ms, under the realtime rate limits, carry a sliding window with peer-acknowledged re-anchoring so packet loss self-heals, and a state hash every 120 frames aborts cleanly on any desync. When both players are signed in, each client reports the result through the `report_match` RPC ([src/net/cloud.js](src/net/cloud.js)), and the global board only moves once both reports agree. The engine's `Controller` contract is what makes this small: human, AI, and network players are interchangeable (see [src/net/online.js](src/net/online.js)).
 
 ## Roadmap
 
@@ -365,15 +389,14 @@ Live matches run on **Supabase Realtime broadcast channels** — one ephemeral c
 
 ## Built for scaling — prepared but not enabled yet
 
-- **Global leaderboard.** Rendering/sorting/rank logic is done; it reads one local array today. Swapping in a `fetch` keeps the UI untouched. Labeled "local season" in the UI.
 - **Tournaments & seasons.** Match results flow through one `recordMatch()` chokepoint — brackets and season resets hook there.
 - **Sponsorships.** Arena billboards rotate through a data array (`SPONSORS` in arenas.js) — real partners are a one-line swap.
 - **Cosmetics.** Fighters are palette-driven (`c` object) with parameterized outfits/hair/accessories — skins are data, not art files.
-- **More fighters/abilities.** Specials are typed behaviors (`projectile / aoe / teleport / rush / rain / grab`) — new abilities reuse or extend the type system in one place.
+- **More fighters/abilities.** Moves are typed archetypes, 11 of them (`ARCHETYPES` in `src/data/schema.js`: strike, projectile, aoe, rush, grab, teleport, rain, counter, trap, stance, burn), each shaped in `src/engine/moves.js`, so new abilities reuse or extend that list.
 
 ## Testing
 
-Tested end-to-end in-browser (desktop + portrait/landscape mobile viewports): guest match, tutorial, profile + photo upload, every control on keyboard (both 2P schemes) and touch, all 6 signature specials + Unicorn Mode, KO/timeout/draw rounds, win & loss stat recording with exact point math, leaderboard placement, challenge-link round trip (generate → open → accept → fight ghost), rematch/restart/quit, pause, sound toggles, reset-all, and a zero-console-error sweep. Bugs found in testing (rush pass-through, base64url padding, card layout collisions, touch capture fragility, and more) were fixed before delivery.
+`npm test` runs the headless suite on Node's built-in test runner, with no framework and no DOM. It needs Node 21 or newer, because the script passes a quoted glob to `node --test`. The simulation runs without a browser, so the tests drive real matches: every move of every roster fighter is fired in a live `Game`, hostile animation data is checked for leaking into the simulation, and the challenge-link codec, power budget, player builds, AI, fighter-state registry and runway each have their own file. Pixel-level golden checks live in `test/golden/index.html`, served by `python3 dev-server.py 4173`; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) covers both.
 
 ## Legal / originality
 
