@@ -93,6 +93,16 @@ function drawBoardroom(ctx, t) {
   floor(ctx, '#232a4d', '#12162c', '#39406e');
 }
 
+// For rendered stages: a painter that runs a drawing made in world px inside a
+// screen, by mapping the world rect (x, y, w, h) onto the screen's own box.
+function inScreen(x, y, w, h, draw) {
+  return (ctx, sw, sh, t) => {
+    ctx.scale(sw / w, sh / h);
+    ctx.translate(-x, -y);
+    draw(ctx, t);
+  };
+}
+
 // The Boardroom's wall TV, for the rendered stage: the same live chart, drawn
 // into a screen of any size.
 function tvChart(ctx, w, h, t) {
@@ -110,9 +120,8 @@ function tvChart(ctx, w, h, t) {
 // -------------------- Demo Day --------------------
 const crowdR = rng(23);
 const CROWD = Array.from({ length: 60 }, () => ({ x: crowdR() * W, s: 8 + crowdR() * 10, p: crowdR() * 6.28, c: crowdR() }));
-function drawDemoDay(ctx, t) {
-  sky(ctx, '#140a2e', '#2a1152');
-  // big screen
+// The big screen, in world px: the 200x240 frame at (200, 55) and what is on it.
+function demoScreen(ctx, t) {
   ctx.fillStyle = '#05070f'; ctx.fillRect(200, 55, 560, 240);
   const g = ctx.createLinearGradient(210, 65, 750, 285);
   g.addColorStop(0, '#2a1a66'); g.addColorStop(1, '#571d8f');
@@ -124,7 +133,9 @@ function drawDemoDay(ctx, t) {
   ctx.fillText('LIVE  ·  PITCH BATTLE', 480, 205);
   ctx.fillStyle = '#ff3d6e';
   ctx.beginPath(); ctx.arc(365, 205, 6 + 2 * Math.sin(t * 6), 0, 7); ctx.fill();
-  // sweeping spotlights
+}
+
+function spotlights(ctx, t) {
   for (let i = 0; i < 2; i++) {
     const ang = Math.sin(t * 0.8 + i * 2.4) * 0.5 + (i ? 0.35 : -0.35);
     ctx.save();
@@ -134,16 +145,17 @@ function drawDemoDay(ctx, t) {
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(90, 620); ctx.lineTo(-90, 620); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
-  billboard(ctx, 30, 320, 130, 44, t, 290);
-  billboard(ctx, 800, 320, 130, 44, t + 2, 180);
-  floor(ctx, '#33195e', '#160b2e', '#5b2d9e');
-  // crowd silhouettes in front of the stage lip
+}
+
+function demoCrowd(ctx, t) {
   for (const c of CROWD) {
     const bounce = Math.abs(Math.sin(t * 2.2 + c.p)) * 6;
     ctx.fillStyle = c.c > 0.5 ? '#0d0618' : '#120a20';
     ctx.beginPath(); ctx.arc(c.x, H - 8 - bounce, c.s, Math.PI, 0); ctx.fill();
   }
-  // confetti
+}
+
+function confetti(ctx, t) {
   const cr = rng(4);
   for (let i = 0; i < 26; i++) {
     const cx = cr() * W, sp = 24 + cr() * 60, ph = cr() * 500;
@@ -151,6 +163,17 @@ function drawDemoDay(ctx, t) {
     ctx.fillStyle = ['#ffd23f', '#ff3d6e', '#29d9ff', '#57ff8a'][i % 4];
     ctx.fillRect(cx + Math.sin(t * 3 + i) * 8, cy, 5, 8);
   }
+}
+
+function drawDemoDay(ctx, t) {
+  sky(ctx, '#140a2e', '#2a1152');
+  demoScreen(ctx, t);
+  spotlights(ctx, t);
+  billboard(ctx, 30, 320, 130, 44, t, 290);
+  billboard(ctx, 800, 320, 130, 44, t + 2, 180);
+  floor(ctx, '#33195e', '#160b2e', '#5b2d9e');
+  demoCrowd(ctx, t);          // in front of the stage lip
+  confetti(ctx, t);
 }
 
 // -------------------- The Startup Garage --------------------
@@ -210,17 +233,8 @@ function drawGarage(ctx, t) {
 const candleR = rng(99);
 const CANDLES = Array.from({ length: 30 }, () => ({ o: candleR(), c: candleR(), w: candleR() }));
 const TICKER = 'NMBS +42.0%   ROCK −13.2%   LOOP +7.7%   HYPR +88.8%   APEX +3.1%   OMNI −2.4%   UEC +900%   ';
-function drawExchange(ctx, t) {
-  sky(ctx, '#061018', '#0a1f2e');
-  // columns
-  for (let i = 0; i < 5; i++) {
-    ctx.fillStyle = '#0e2a40';
-    ctx.fillRect(60 + i * 200, 90, 46, 300);
-    ctx.fillStyle = '#123852';
-    ctx.fillRect(52 + i * 200, 78, 62, 14);
-    ctx.fillRect(52 + i * 200, 388, 62, 14);
-  }
-  // candlestick board
+// The candlestick board and the index above it, in world px.
+function marketBoard(ctx, t) {
   ctx.fillStyle = '#04121c'; ctx.fillRect(190, 110, 580, 210);
   ctx.strokeStyle = '#0f3852'; ctx.strokeRect(190, 110, 580, 210);
   const phase = Math.floor(t * 2);
@@ -239,13 +253,31 @@ function drawExchange(ctx, t) {
   ctx.fillStyle = Math.sin(t * 2) > 0 ? '#2ee66b' : '#29d9ff';
   ctx.font = '900 italic 30px system-ui'; ctx.textAlign = 'left';
   ctx.fillText('UEC 500  ▲ ' + (9000 + Math.floor(Math.sin(t) * 500)), 205, 100);
-  // scrolling ticker band
-  ctx.fillStyle = '#05070f'; ctx.fillRect(0, 344, W, 34);
-  ctx.font = '800 20px ui-monospace, monospace'; ctx.textBaseline = 'middle';
+}
+
+// The scrolling ticker band over (x, y, w, h), sized to the 34 px band it was drawn for.
+function tickerBand(ctx, x, y, w, h, t) {
+  const k = h / 34;
+  ctx.fillStyle = '#05070f'; ctx.fillRect(x, y, w, h);
+  ctx.font = `800 ${20 * k}px ui-monospace, monospace`; ctx.textBaseline = 'middle';
   const tw = ctx.measureText(TICKER).width;
-  const off = (t * 90) % tw;
+  const off = (t * 90 * k) % tw;
   ctx.fillStyle = '#ffd23f';
-  ctx.fillText(TICKER + TICKER, -off, 361);
+  ctx.fillText(TICKER + TICKER, x - off, y + h / 2);
+}
+
+function drawExchange(ctx, t) {
+  sky(ctx, '#061018', '#0a1f2e');
+  // columns
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = '#0e2a40';
+    ctx.fillRect(60 + i * 200, 90, 46, 300);
+    ctx.fillStyle = '#123852';
+    ctx.fillRect(52 + i * 200, 78, 62, 14);
+    ctx.fillRect(52 + i * 200, 388, 62, 14);
+  }
+  marketBoard(ctx, t);
+  tickerBand(ctx, 0, 344, W, 34, t);
   billboard(ctx, 812, 400, 120, 42, t, 150);
   floor(ctx, '#12303f', '#081820', '#1d4b5e');
 }
@@ -253,6 +285,14 @@ function drawExchange(ctx, t) {
 // -------------------- The Unicorn Club --------------------
 const sparkleR = rng(55);
 const SPARKLES = Array.from({ length: 40 }, () => ({ x: sparkleR() * W, y: sparkleR() * 420, p: sparkleR() * 6.28, s: 1 + sparkleR() * 2.5 }));
+function sparkles(ctx, t) {
+  for (const s of SPARKLES) {
+    const a = 0.35 + 0.65 * Math.abs(Math.sin(t * 2.5 + s.p));
+    ctx.fillStyle = `rgba(255,255,255,${a * 0.8})`;
+    ctx.fillRect(s.x - s.s / 2, s.y - s.s / 2, s.s, s.s);
+  }
+}
+
 function drawUnicornClub(ctx, t) {
   sky(ctx, '#12041f', '#2a0a3d');
   // neon rainbow arcs
@@ -278,12 +318,7 @@ function drawUnicornClub(ctx, t) {
   ctx.font = '900 italic 17px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('THE UNICORN CLUB', 0, 58);
   ctx.restore();
-  // sparkles
-  for (const s of SPARKLES) {
-    const a = 0.35 + 0.65 * Math.abs(Math.sin(t * 2.5 + s.p));
-    ctx.fillStyle = `rgba(255,255,255,${a * 0.8})`;
-    ctx.fillRect(s.x - s.s / 2, s.y - s.s / 2, s.s, s.s);
-  }
+  sparkles(ctx, t);
   billboard(ctx, 30, 330, 128, 42, t, 320);
   billboard(ctx, 802, 330, 128, 42, t + 3, 260);
   // disco floor
@@ -295,16 +330,7 @@ function drawUnicornClub(ctx, t) {
 }
 
 // -------------------- The VC Summit --------------------
-function drawSummit(ctx, t) {
-  const g = ctx.createLinearGradient(0, 0, 0, FLOOR);
-  g.addColorStop(0, '#2c1250'); g.addColorStop(0.55, '#a1345c'); g.addColorStop(1, '#ff8f4d');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, FLOOR);
-  // sun
-  ctx.fillStyle = '#ffd23f';
-  ctx.beginPath(); ctx.arc(480, 300, 70, 0, 7); ctx.fill();
-  ctx.fillStyle = 'rgba(255,210,63,0.25)';
-  ctx.beginPath(); ctx.arc(480, 300, 95 + Math.sin(t * 2) * 6, 0, 7); ctx.fill();
-  // drifting clouds
+function clouds(ctx, t) {
   for (let i = 0; i < 4; i++) {
     const cx = ((t * (9 + i * 4) + i * 300) % (W + 260)) - 130;
     const cy = 70 + i * 52;
@@ -314,6 +340,29 @@ function drawSummit(ctx, t) {
     ctx.ellipse(cx + 45, cy - 9, 48, 14, 0, 0, 7);
     ctx.fill();
   }
+}
+
+// The waving banner between the poles at x 120 and 840, in world px.
+function bannerCloth(ctx, t) {
+  ctx.fillStyle = '#1c2a5e';
+  ctx.beginPath();
+  ctx.moveTo(120, 105); ctx.quadraticCurveTo(480, 140 + Math.sin(t * 1.4) * 8, 840, 105);
+  ctx.lineTo(840, 150); ctx.quadraticCurveTo(480, 185 + Math.sin(t * 1.4) * 8, 120, 150);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.font = '900 italic 26px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('VENTURE CAPITAL SUMMIT', 480, 132 + Math.sin(t * 1.4) * 8);
+}
+
+function drawSummit(ctx, t) {
+  const g = ctx.createLinearGradient(0, 0, 0, FLOOR);
+  g.addColorStop(0, '#2c1250'); g.addColorStop(0.55, '#a1345c'); g.addColorStop(1, '#ff8f4d');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, FLOOR);
+  // sun
+  ctx.fillStyle = '#ffd23f';
+  ctx.beginPath(); ctx.arc(480, 300, 70, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,210,63,0.25)';
+  ctx.beginPath(); ctx.arc(480, 300, 95 + Math.sin(t * 2) * 6, 0, 7); ctx.fill();
+  clouds(ctx, t);
   // mountain layers
   ctx.fillStyle = '#3d1a52';
   ctx.beginPath(); ctx.moveTo(0, 420);
@@ -329,13 +378,7 @@ function drawSummit(ctx, t) {
   // summit banner
   ctx.strokeStyle = '#241708'; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(120, 100); ctx.lineTo(120, 230); ctx.moveTo(840, 100); ctx.lineTo(840, 230); ctx.stroke();
-  ctx.fillStyle = '#1c2a5e';
-  ctx.beginPath();
-  ctx.moveTo(120, 105); ctx.quadraticCurveTo(480, 140 + Math.sin(t * 1.4) * 8, 840, 105);
-  ctx.lineTo(840, 150); ctx.quadraticCurveTo(480, 185 + Math.sin(t * 1.4) * 8, 120, 150);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ffd23f'; ctx.font = '900 italic 26px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('VENTURE CAPITAL SUMMIT', 480, 132 + Math.sin(t * 1.4) * 8);
+  bannerCloth(ctx, t);
   // pennant flags
   for (let i = 0; i < 12; i++) {
     const fx = 150 + i * 60;
@@ -363,7 +406,16 @@ export const ARENAS = [
         sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 220),
       },
     } },
-  { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype' },
+  { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype',
+    stage: {
+      dir: 'assets/stages/demoday',
+      screens: {
+        main: inScreen(200, 55, 560, 240, demoScreen),
+        left: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 290),
+        right: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + 2, 180),
+      },
+      overlay(ctx, t) { spotlights(ctx, t); demoCrowd(ctx, t); confetti(ctx, t); },
+    } },
   // scrim: 32.1% -> 29.2% of the body near-invisible. Stops at 0.45 rather than
   // the 0.52 the metric prefers — this stage is already the dimmest on the
   // roster, and past here the whiteboard, the shelving and the string lights
@@ -374,8 +426,24 @@ export const ARENAS = [
       dir: 'assets/stages/garage',
       screens: { sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 40) },
     } },
-  { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense' },
-  { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party' },
+  { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense',
+    stage: {
+      dir: 'assets/stages/exchange',
+      screens: {
+        board: inScreen(190, 80, 580, 240, marketBoard),
+        ticker: (ctx, w, h, t) => tickerBand(ctx, 0, 0, w, h, t),
+        sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 150),
+      },
+    } },
+  { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party',
+    stage: {
+      dir: 'assets/stages/unicorn',
+      screens: {
+        left: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 320),
+        right: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + 3, 260),
+      },
+      overlay: sparkles,
+    } },
   // scrim: the mountains sit directly behind the fighters at close to their own
   // mid-tones, which makes this the hardest stage to read a character against.
   // 34.1% -> 32.5% of the body near-invisible. Past ~0.55 the gold sun and the
@@ -384,7 +452,15 @@ export const ARENAS = [
   // (An earlier revision claimed 41.8% -> 34.9% here. That came from a mask
   // that scored the contact shadow and floor pool as character, and from an
   // unpinned cast. See the note on KEEP in lab/contrast.js.)
-  { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic', scrim: 0.62 },
+  { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic', scrim: 0.62,
+    stage: {
+      dir: 'assets/stages/summit',
+      screens: {
+        banner: inScreen(120, 105, 720, 45, bannerCloth),
+        sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 20),
+      },
+      overlay: clouds,
+    } },
 ];
 
 export function getArena(id) {

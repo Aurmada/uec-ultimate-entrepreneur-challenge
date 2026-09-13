@@ -108,9 +108,10 @@ class Kit:
         self.materials[key] = m
         return m
 
-    def gradient(self, bottom, top, z0, z1, strength):
-        """An emissive backdrop shading from `bottom` at world z0 to `top` at z1:
-        a night sky, a stage cyclorama. It gives off light but never glows."""
+    def gradient(self, bottom, top, z0, z1, strength, stops=()):
+        """An emissive backdrop shading from `bottom` at world z0 to `top` at z1,
+        through any (position, colour) `stops` between: a night sky, a sunset, a
+        stage cyclorama. It gives off light but never glows."""
         m = bpy.data.materials.new(f'gradient{len(self.materials)}')
         self.materials[m.name] = m
         m.use_nodes = True
@@ -121,13 +122,16 @@ class Kit:
         xyz = nt.nodes.new('ShaderNodeSeparateXYZ')
         span = nt.nodes.new('ShaderNodeMapRange')
         span.inputs['From Min'].default_value, span.inputs['From Max'].default_value = z0, z1
-        mix = nt.nodes.new('ShaderNodeMix')
-        mix.data_type = 'RGBA'
-        mix.inputs[6].default_value, mix.inputs[7].default_value = lin(bottom), lin(top)
+        ramp = nt.nodes.new('ShaderNodeValToRGB')
+        els = ramp.color_ramp.elements
+        els[0].position, els[0].color = 0.0, lin(bottom)
+        els[1].position, els[1].color = 1.0, lin(top)
+        for at, col in stops:
+            els.new(at).color = lin(col)
         nt.links.new(coords.outputs['Object'], xyz.inputs[0])
         nt.links.new(xyz.outputs['Z'], span.inputs['Value'])
-        nt.links.new(span.outputs['Result'], mix.inputs[0])
-        nt.links.new(mix.outputs[2], p.inputs['Emission Color'])
+        nt.links.new(span.outputs['Result'], ramp.inputs['Fac'])
+        nt.links.new(ramp.outputs['Color'], p.inputs['Emission Color'])
         p.inputs['Emission Strength'].default_value = strength
         self.emissive.add(m.name)
         return m
@@ -196,6 +200,14 @@ class Kit:
         o.rotation_euler = rot
         return self._finish(o, m, smooth=True)
 
+    def cone(self, center, radius, height, m, verts=6, rot=(0, 0, 0), scale=(1, 1, 1)):
+        """A faceted cone standing on its base: low-poly mountains, pennants."""
+        bpy.ops.mesh.primitive_cone_add(vertices=verts, radius1=radius, radius2=0, depth=height,
+                                        location=(center[0], center[1], center[2] + height / 2))
+        o = bpy.context.active_object
+        o.rotation_euler, o.scale = rot, scale
+        return self._finish(o, m)
+
     def sphere(self, center, radius, m):
         bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=center, segments=24, ring_count=12)
         return self._finish(bpy.context.active_object, m, smooth=True)
@@ -238,9 +250,12 @@ class Kit:
         o.location, o.rotation_euler = loc, rot
         return o
 
-    def screen(self, id, center, size, hexcol='#05070f'):
-        """A dark panel facing the camera that the runtime paints live."""
+    def screen(self, id, center, size, hexcol='#05070f', visible=True):
+        """A dark panel facing the camera that the runtime paints live. An
+        invisible one only marks the place: a banner the game draws whole,
+        sag and all, has nothing behind it."""
         o = self.box(center, (size[0], 0.02, size[1]), self.mat(hexcol, 0.4))
+        o.hide_render = not visible
         self.screens[id] = o
         return o
 
@@ -283,6 +298,7 @@ def render(path, rgba):
 
 
 def main():
+    sys.dont_write_bytecode = True          # no __pycache__ beside the stage scripts
     spec = importlib.util.spec_from_file_location('stage', os.path.join(HERE, 'stages', f'{STAGE_ID}.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

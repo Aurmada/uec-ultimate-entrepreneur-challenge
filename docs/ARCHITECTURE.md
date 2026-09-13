@@ -132,6 +132,7 @@ docs/                 this file and friends
 | `parts.js` | Render only character parts: pure placement (`resolveParts`) and drawing (`drawParts`). See section 7. |
 | `gl3d/` | The live 3D fighter prototype behind `?gl`: glTF reader, pose-to-bones rig, WebGL2 toon renderer. See section 7. |
 | `render.js` | Frame compositor and camera. |
+| `stage.js` | Rendered stages for the 3D prototype: loads an arena's Blender render and draws it with its glow, live screens and overlay. See section 7. |
 | `ai.js` | AI opponent. Decision ticks plus a per frame reflex layer. |
 | `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesized audio, particles and juice, and a dormant sprite-atlas path behind `?sprites`. |
 
@@ -653,6 +654,72 @@ same network. `lab/gl3d-gallery.js` renders one fighter through every state, the
 whole roster, every look option (as bodies or as busts), every face close up in
 each expression, or every portrait, and `lab/blender/build_founder.py` rebuilds
 the model in about five seconds.
+
+**Rendered stages.** The fighters were 3D and the arenas were still flat
+drawings. Every arena now also has a stage built in Blender, and with `?gl` the
+game draws that instead (`&stages=0` turns it off, `?stages` tries it with 2D
+fighters). With the flag off the procedural arenas draw exactly as before:
+game frames on all six arenas hash identically before and after.
+
+```
+lab/blender/build_stage.py       the shared part: camera, helpers, renders, stage.json
+lab/blender/stages/<arena id>.py one scene each, as build(kit)
+assets/stages/<arena id>/        back.webp, glow.webp, stage.json (about 750 KB for all six)
+src/engine/stage.js              loads a stage and draws it
+src/data/arenas.js               each arena's `stage`: where it lives, its live screens, its overlay
+```
+
+`Blender -b --factory-startup -P lab/blender/build_stage.py -- garage` rebuilds
+one stage in about five seconds. What it writes:
+
+* `back.webp`: the stage at twice the 960x540 world, so it stays sharp under the
+  camera's zoom. With sharp fighters it is drawn straight to the screen under the
+  camera, like the fighters; the world layer (grade, scrim, haze, shadows,
+  traps) draws over it as before.
+* `glow.webp`: only what gives off light, on transparent. It is blurred once at
+  load into a halo and breathes over the stage (`STAGE_ART.GLOW`), which is the
+  life a still picture otherwise lacks: string lights, the city's windows, the
+  rainbow neon. A dim emitter (a night window, a laptop) can stay out of it.
+* `stage.json`: the size, where the rendered floor landed, and each **screen**:
+  a flat panel whose four corners the build projects into world px. The arena
+  paints it every frame (`stage.screens`), so the sponsor boards keep cycling
+  sponsors (the sponsorship hook), the boardroom TV keeps its chart and the
+  exchange board its candles. What cannot be a panel (confetti, drifting
+  clouds, sweeping spotlights, sparkles) is the arena's `stage.overlay`, drawn
+  over the stage in world px. Both reuse the procedural arena's own drawing,
+  split out of it without changing a pixel.
+
+**The camera is the contract.** A stage is only usable if the fighters stand on
+its floor, so the build camera is fixed by the game, not the scene: it never
+tilts (walls stay upright), it sits `DISTANCE` in front of the fight lane with a
+lens that makes one unit 100 stage px there, and its lens shift puts the lane's
+floor on `STAGE.FLOOR`. After building a scene the script projects the lane's
+floor and a unit along it, and refuses to write the stage if either is off by
+half a pixel. `test/stages.test.js` checks the written files against the game:
+image sizes, the floor, a painter for every screen and a screen for every
+painter, and that painters and overlays run.
+
+What it took:
+
+* **Emitters cast no shadows.** A bulb inside its own lamp's light threw a dark
+  blot across the garage wall; the kit turns shadows off for anything emissive.
+* **Keep emission low enough to keep its colour.** At high strength the view
+  transform washes a coloured bulb to white; the string lights read as colours
+  at about 1.
+* **A screen that is drawn whole needs no panel.** The summit banner sags and
+  waves below its own quad, so its panel is invisible and marks only the place.
+* **Stages are not free to hold.** A decoded stage is about 10 MB, so only the
+  last two used stay loaded (`STAGE_ART.KEEP`), and the glow halo is kept at
+  world size. Anything that measures a stage (`lab/contrast.js`) has to wait for
+  it to load, or it measures the procedural fallback.
+
+Measured in September 2026 with the 3D fighters and the pinned contrast cast
+(`lab/contrast.js`): the share of the fighter that nearly vanishes into the
+stage went from 33.2% to 32.0% on average, best on the Unicorn Club (33.3% to
+30.5%) and worst on the Stock Exchange (33.6% to 34.3%), so no scrim was
+retuned. In the benchmark match the garage stage costs no more frame time than
+the procedural garage it replaces. `lab/stages.js` renders each arena both ways
+in a real match for comparison.
 
 ---
 

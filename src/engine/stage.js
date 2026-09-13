@@ -13,7 +13,7 @@ import { STAGE, STAGE_ART } from '../config.js';
 const { W, H } = STAGE;
 
 export const STAGES = { enabled: false };
-const stages = new Map();                 // arena id -> { ready, failed, spec, back, glow }
+const stages = new Map();                 // arena id -> { ready, failed, spec, back, glow }, least recent first
 
 // The arena's stage once it has loaded, else null (and it starts loading).
 export function stageFor(arena) {
@@ -21,6 +21,13 @@ export function stageFor(arena) {
   let s = stages.get(arena.id);
   if (!s) {
     s = load(arena);
+    stages.set(arena.id, s);
+    for (const id of stages.keys()) {
+      if (stages.size <= STAGE_ART.KEEP) break;
+      stages.delete(id);                  // its images go with it
+    }
+  } else if (stages.size > 1) {
+    stages.delete(arena.id);              // most recently used goes last
     stages.set(arena.id, s);
   }
   return s.ready ? s : null;
@@ -54,16 +61,17 @@ function load(arena) {
   return s;
 }
 
-// The glow is blurred once, here, into a halo; per frame it is only blended.
+// The glow is blurred once, here, into a world-size halo; per frame it is
+// only blended. Without canvas filters it stays the sharp layer it was.
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
 function soften(img) {
   if (!FILTER_OK) return img;
   const c = document.createElement('canvas');
-  c.width = img.naturalWidth;
-  c.height = img.naturalHeight;
+  c.width = W;
+  c.height = H;
   const g = c.getContext('2d');
-  g.filter = `blur(${STAGE_ART.GLOW_BLUR * (img.naturalWidth / W)}px)`;
-  g.drawImage(img, 0, 0);
+  g.filter = `blur(${STAGE_ART.GLOW_BLUR}px)`;
+  g.drawImage(img, 0, 0, W, H);
   return c;
 }
 
@@ -98,6 +106,13 @@ export function drawStage(ctx, stage, t) {
     ctx.save();
     ctx.transform((tr[0] - tl[0]) / w, (tr[1] - tl[1]) / w, (bl[0] - tl[0]) / h, (bl[1] - tl[1]) / h, tl[0], tl[1]);
     paint(ctx, w, h, t);
+    ctx.restore();
+  }
+  // What a still picture cannot hold (confetti, drifting clouds), in world px.
+  const overlay = stage.arena.stage.overlay;
+  if (overlay) {
+    ctx.save();
+    overlay(ctx, t);
     ctx.restore();
   }
 }

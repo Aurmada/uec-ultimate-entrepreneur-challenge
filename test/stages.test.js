@@ -78,19 +78,23 @@ test('every live screen has a place in the picture and a painter in the arena', 
   }
 });
 
-// A painter runs every frame inside the render loop, so one that throws takes
-// the match down with it. Run each against a canvas that accepts anything.
-test('every screen painter draws without throwing', () => {
-  const calls = [];
-  const ctx = new Proxy({}, {
-    get: (_, key) => (key === 'measureText' ? () => ({ width: 10 }) : (...args) => calls.push([key, args])),
+// Painters and overlays run every frame inside the render loop, so one that
+// throws takes the match down with it. Run each against a canvas that accepts
+// any call, and hands back something that does too (a gradient, a measurement).
+test('every screen painter and overlay draws without throwing', () => {
+  let calls = 0;
+  const anything = new Proxy(function () {}, {
+    get: (_, key) => (key === 'width' ? 10 : anything),
+    apply: () => { calls++; return anything; },
     set: () => true,
   });
   for (const arena of STAGED) {
-    for (const [id, paint] of Object.entries(arena.stage.screens || {})) {
-      const before = calls.length;
-      for (const t of [0, 1.3, 7.9]) paint(ctx, 120, 40, t);
-      assert.ok(calls.length > before, `${arena.id}/${id} drew nothing`);
+    const draws = Object.entries(arena.stage.screens || {}).map(([id, paint]) => [id, (t) => paint(anything, 120, 40, t)]);
+    if (arena.stage.overlay) draws.push(['overlay', (t) => arena.stage.overlay(anything, t)]);
+    for (const [id, draw] of draws) {
+      const before = calls;
+      for (const t of [0, 1.3, 7.9]) draw(t);
+      assert.ok(calls > before, `${arena.id}/${id} drew nothing`);
     }
   }
 });

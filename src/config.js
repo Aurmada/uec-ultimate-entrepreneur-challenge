@@ -22,12 +22,15 @@ export const STAGE = {
 };
 
 // Rendered stages (src/engine/stage.js, the live 3D prototype). Render-only.
-// The glow layer is blurred by GLOW_BLUR world px once when it loads, then
-// breathes between LOW and HIGH opacity RATE radians a second. An arena's
-// `stage.glow` can override any of the three.
+// The glow layer is blurred by GLOW_BLUR world px once when it loads, into a
+// world-size halo (it needs no more resolution than that), then breathes
+// between LOW and HIGH opacity RATE radians a second; an arena's `stage.glow`
+// can override any of the three. A decoded stage holds about 10 MB, so only
+// the KEEP most recently used stay loaded.
 export const STAGE_ART = {
   GLOW_BLUR: 7,
   GLOW: { LOW: 0.35, HIGH: 0.75, RATE: 1.6 },
+  KEEP: 2,
 };
 
 export const PHYS = {

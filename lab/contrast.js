@@ -60,6 +60,7 @@ function dilate(src, w, h, r) {
 
 export async function measure({ arenas = null, converge = 60, halo = 9, diff = 4 } = {}) {
   const R = await import('/src/engine/render.js');
+  const { STAGES, stageFor } = await import('/src/engine/stage.js');
   const { ARENAS } = await import('/src/data/arenas.js');
   const { STAGE } = await import('/src/config.js');
   const { FLOOR, H: SH } = STAGE;
@@ -70,11 +71,14 @@ export async function measure({ arenas = null, converge = 60, halo = 9, diff = 4
 
   // A still, neutral scene: any particle or shake would land in the diff mask
   // and be counted as fighter.
-  g.state = 'fight'; g.paused = false;
-  a.state = b.state = 'idle'; a.attack = b.attack = null;
-  a.x = 400; b.x = 560; a.y = b.y = 480; a.vy = b.vy = 0;
-  g.fx.particles.length = 0; g.fx.popups.length = 0; g.fx.shakeMag = 0;
-  g.drops.length = 0; g.projectiles.length = 0;
+  const still = () => {
+    g.state = 'fight'; g.paused = false;
+    a.state = b.state = 'idle'; a.attack = b.attack = null;
+    a.x = 400; b.x = 560; a.y = b.y = 480; a.vy = b.vy = 0;
+    g.fx.particles.length = 0; g.fx.popups.length = 0; g.fx.shakeMag = 0;
+    g.drops.length = 0; g.projectiles.length = 0;
+  };
+  still();
 
   // renderGame reads game.fighters in a fixed order:
   //   0 camera, 1 shadow+floor pool, 2 the bodies, 3 buff icons.
@@ -102,6 +106,12 @@ export async function measure({ arenas = null, converge = 60, halo = 9, diff = 4
   try {
     for (const arena of list) {
       g.arena = arena;
+      // With rendered stages on (?gl), wait for this arena's to load: until it
+      // does the procedural stage draws, and that is what would get measured.
+      for (let i = 0; STAGES.enabled && arena.stage && !stageFor(arena) && i < 200; i++) {
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      still();                    // the game kept running while it loaded
       for (let i = 0; i < converge; i++) { hide = false; R.renderGame(ctx, g); }
       hide = false; R.renderGame(ctx, g); const A = snap();
       hide = true; n = 0; R.renderGame(ctx, g); const B = snap();
