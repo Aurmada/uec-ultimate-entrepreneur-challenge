@@ -539,7 +539,10 @@ ${body},
 }
 
 $('btnExport').onclick = () => {
-  const r = validateCharacter(toCharacter(draft));
+  // toCharacter drops `parts` (they are not on the wire), so validate the
+  // draft's own parts alongside it. toModule() writes them, and a part this
+  // check never saw used to export cleanly and then throw inside drawFighter.
+  const r = validateCharacter({ ...toCharacter(draft), parts: draft.parts });
   const msg = $('exportMsg');
   msg.textContent = '';
   const line = (cls, text) => {

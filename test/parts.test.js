@@ -12,7 +12,7 @@ import {
 } from '../src/data/schema.js';
 import { resolveParts, anchorPoint, partLagState, applyFollow, drawParts } from '../src/engine/parts.js';
 import { STYLIZE } from '../src/config.js';
-import { toCharacter } from '../src/data/fighters.js';
+import { toCharacter, FIGHTERS, BASE_CHARACTERS } from '../src/data/fighters.js';
 import { CHARACTER_WIRE_VERSION } from '../src/net/online.js';
 
 const good = () => ({
@@ -404,4 +404,15 @@ test('save and restore stay balanced across several parts', () => {
   assert.equal(saves, parts.length);
   assert.equal(restores, parts.length);
   assert.equal(saves, restores, 'every save must be matched by a restore');
+});
+
+// Validation never ran on the parts that actually ship. toCharacter drops
+// `parts` (they stay local, see above), so validateCharacter(toCharacter(def))
+// cannot see them, and neither could the Incubator's export check, which is
+// built on exactly that call. A part with an unknown anchor then passes every
+// gate and throws inside drawFighter, mid-match.
+test('every shipped part validates', () => {
+  for (const def of [...FIGHTERS, ...BASE_CHARACTERS]) {
+    assert.deepEqual(validateParts(def.parts), [], `${def.id} ships an invalid part`);
+  }
 });

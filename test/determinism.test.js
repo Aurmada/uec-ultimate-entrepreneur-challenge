@@ -165,29 +165,56 @@ test('simulation modules never read animation data', () => {
   }
 });
 
-// SCRIPT_A presses `x` (special), so a seeded meter turns the first press into
-// a BURN IT ALL: the tank empties, Adam goes winded, and every subsequent hit
-// resolves differently for the rest of the run. Runway is hashed (q8, via the
-// registry), so if the drain were computed from anything but the fixed
-// timestep — wall clock, frame count, Math.random — the two runs would part.
+// A draining runway, a BURN IT ALL that lands, and a tank bought back.
+//
+// This used to replay SCRIPT_A and trust that its `x` presses became burns.
+// They never did: SCRIPT_A mashes kick and launch, so almost every special
+// press arrived while the one-slot chain buffer already held a basic and was
+// thrown away. The run had 0 burns, a lowest runway of 51, and Adam was never
+// winded, so it proved nothing about the move it is named after. Its only
+// other check, `> 10 distinct hashes`, could not fail either: game.timer is
+// hashed, so two fighters pressing nothing pass it.
+//
+// So Adam gets a script of his own. He walks into range, presses special from
+// neutral, then jabs a few times, which lands the burn, empties the tank,
+// leaves him winded, and refills it with ordinary hits. Every one of those is
+// asserted, so the run cannot quietly stop exercising the runway again.
+const rep = (n, frame) => Array.from({ length: n }, () => frame);
+const SCRIPT_BURN = [
+  ...rep(55, { r: 1 }), ...rep(6, {}), ...rep(3, { x: 1 }),
+  ...rep(40, {}), ...rep(3, { p: 1 }), ...rep(47, {}),
+];
+
 function runBurnMatch() {
   const game = new Game({
-    p1: { def: FIGHTERS.find(f => f.id === 'max'), controller: scripted(SCRIPT_A) },
+    p1: { def: FIGHTERS.find(f => f.id === 'max'), controller: scripted(SCRIPT_BURN) },
     p2: { def: FIGHTERS.find(f => f.id === 'zara'), controller: scripted(SCRIPT_B) },
     arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
     hud: STUB_HUD, onEnd: () => {}, seed: 20260815,
   });
   game.fighters[0].energy = METER.MAX;
+  // onBurnBlast fires once per BURN IT ALL, when its active window opens.
+  let burns = 0;
+  const blast = game.onBurnBlast.bind(game);
+  game.onBurnBlast = (f) => { burns++; blast(f); };
+  const adam = game.fighters[0];
   const hashes = [];
+  let windedFrames = 0, emptied = false, refilled = false;
   for (let i = 0; i < 900; i++) {
     game.update(1 / 60);
+    if (adam.winded) windedFrames++;
+    if (adam.runway === 0) emptied = true;
+    else if (emptied && adam.runway > 0) refilled = true;
     if (i % 15 === 0) hashes.push(hashGameState(game));
   }
-  return hashes;
+  return { hashes, burns, windedFrames, emptied, refilled };
 }
 
 test('a match with a draining runway and a BURN IT ALL is deterministic', () => {
   const a = runBurnMatch();
-  assert.deepEqual(runBurnMatch(), a, 'two identical runway matches disagreed');
-  assert.ok(new Set(a).size > 10, `expected a moving match, saw ${new Set(a).size} distinct states`);
+  assert.ok(a.burns > 0, 'the script never threw BURN IT ALL');
+  assert.ok(a.emptied, 'BURN IT ALL never connected: the tank was never emptied');
+  assert.ok(a.windedFrames > 0, 'Adam was never winded');
+  assert.ok(a.refilled, 'no landed hit ever bought the tank back');
+  assert.deepEqual(runBurnMatch().hashes, a.hashes, 'two identical runway matches disagreed');
 });
