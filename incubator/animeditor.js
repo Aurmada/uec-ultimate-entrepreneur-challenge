@@ -14,7 +14,7 @@
 import { drawFighter } from '../src/engine/drawFighter.js';
 import { Fighter } from '../src/engine/fighter.js';
 import { ATTACKS } from '../src/config.js';
-import { EASE, REST, samplePose, attackPhaseT } from '../src/engine/anim.js';
+import { EASE, REST, samplePose } from '../src/engine/anim.js';
 import { BASE_TRACKS, ATTACK_TRACK } from '../src/data/tracks.js';
 
 const $ = (id) => document.getElementById(id);

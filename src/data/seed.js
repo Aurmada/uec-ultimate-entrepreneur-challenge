@@ -1,4 +1,4 @@
-// Seed leaderboard: the six roster founders plus four NPC personas.
+// Seed leaderboard: the nine roster founders plus four NPC personas.
 // Points sit in a spread so a new player can pass the bottom rungs fast.
 
 export const SEED_PLAYERS = [

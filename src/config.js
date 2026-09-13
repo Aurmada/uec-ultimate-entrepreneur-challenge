@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.7';
+export const VERSION = 'v3.8';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -27,15 +27,13 @@ export const PHYS = {
   JUMP_V: -760,
   GRAVITY: 2100,
   KB_DECAY: 7,         // knockback velocity decay per second (exponential)
-  PUSH_APART: 340,     // separation speed when bodies overlap
   BODY_W: 56,          // hurtbox width
   BODY_H: 148,         // hurtbox height standing
 };
 
 export const ROUND = {
   TIME: 60,
-  BEST_OF: 3,          // first to 2
-  WINS_NEEDED: 2,
+  WINS_NEEDED: 2,      // best of three
   INTRO_ROUND_T: 1.0,  // "ROUND N" duration
   INTRO_FIGHT_T: 0.55, // "FIGHT!" duration
   KO_SLOWMO_T: 1.15,
@@ -93,8 +91,9 @@ export const BLOCK = {
   PUSH: 120,           // pushback on blocked hit
 };
 
-// Chain combos: attacks cancel into the next tier ON HIT (whiffs stay punishable).
-// slap → punch → kick → special / C&D / Unicorn. Later hits deal scaled damage.
+// Chain combos: a basic that connects (hit or block) cancels into another basic,
+// up to MAX_CHAIN, then a finisher (special, C&D, Unicorn). Whiffs stay
+// punishable. Later hits deal scaled damage.
 export const COMBO = {
   SCALING: [1, 0.85, 0.7, 0.6, 0.5, 0.45, 0.4],  // damage mult by victim's chain depth
   JAB_CHAIN_KB: 0.55,                  // chained light hits shove less, so strings stay in range
@@ -121,7 +120,7 @@ export const ATTACKS = {
 // FIGHTING STYLES
 //
 // Every character plays differently, not just looks different. A style scales
-// the shared move set — speed, damage and reach — so the same three buttons
+// the shared move set — speed, damage and reach — so the same four basics
 // feel like a different fighter in each pair of hands. Multipliers are kept
 // mild and compensating (faster ⇒ weaker, stronger ⇒ slower) so distinctiveness
 // never becomes a straight power advantage.
@@ -221,13 +220,6 @@ export const SAVE_KEY = 'uec-save-v1';
 export const DEBUG = typeof location !== 'undefined'
   && new URLSearchParams(location.search).has('debug');
 
-// ---------------------------------------------------------------------------
-// BODY PROPORTIONS
-//
-// Bounded knobs, all defaulting to 1.0. Clamped rather than free so hurtbox
-// and camera maths stay predictable and balance stays reasonable. Widening a
-// range later is safe; the clamp is the only thing enforcing it.
-// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // ARCADE PROPORTIONS
 //
@@ -341,9 +333,11 @@ export const STYLIZE = {
   // of all loss genuinely is in the legs. Treat 0.30 as measured, not
   // explained, and leave it alone until someone measures a reason to move it.
   SHADE_KEY: 0.46,      // warm key at the head
-  // How the key is applied. 'source-atop' is a flat lerp and CONVERGES — it
-  // pulled every dark hair in the roster to the same grey. 'screen' lifts
-  // without collapsing the differences between them. See drawFighter.
+  // How the key is applied. 'source-atop' is a flat lerp and CONVERGES: it
+  // pulled every dark hair in the roster to the same grey. 'overlay' lifts
+  // without collapsing the differences ('screen' was tried and measured barely
+  // better than atop). Overlay fills the whole rect, so shadeBuffer re-clips it
+  // with destination-in.
   SHADE_KEY_MODE: 'overlay',
   SHADE_MID: 0.10,      // neutral through the torso
   SHADE_FLOOR: 0.30,    // crush at the feet — do not soften, see above
@@ -366,6 +360,13 @@ export const PARTS = {
   FOLLOW: [0, 1],      // cloth lag; 0 is rigid to the anchor
 };
 
+// ---------------------------------------------------------------------------
+// BODY PROPORTIONS
+//
+// Bounded knobs, all defaulting to 1.0. Clamped rather than free so hurtbox
+// and camera maths stay predictable and balance stays reasonable. Widening a
+// range later is safe; the clamp is the only thing enforcing it.
+// ---------------------------------------------------------------------------
 export const BODY = {
   height:    [0.82, 1.22],   // overall scale
   build:     [0.85, 1.25],   // torso + limb thickness
@@ -387,11 +388,10 @@ export const BODY = {
 // contact with play; if it proves oppressive, make Unicorn force `safety`.
 export const STANCE = {
   CD: 0.8,          // seconds between switches
-  // NOT the price. A switch costs a full METER.SPECIAL_COST (50) because it
-  // goes through startSpecial like every other special; this is an ADDITIONAL
-  // surcharge on top, and it is 0. Reading this as the cost is what paralysed
-  // the AI once already — it skipped the energy check on the strength of it.
-  COST: 0,
+  // There is no stance price here. A switch costs a full METER.SPECIAL_COST
+  // (50) because it goes through startSpecial like every other special. An
+  // unused `COST: 0` used to sit here, was once read as the price, and
+  // paralysed the AI when it skipped the energy check on the strength of it.
   // MEASURED CAVEAT: `taken` buys nothing against CHIP damage. Chip is
   // Math.max(1, Math.round(dmg * BLOCK.CHIP * taken)) and lands at the floor
   // either way — a 12-damage move chips 1.80 -> 2 neutral and 1.53 -> 2 under

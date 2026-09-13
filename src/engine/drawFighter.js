@@ -240,7 +240,6 @@ function computePose(f, t) {
     ...restPose(),
     face: 'idle',
   };
-  const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;   // walk head bounce
   const st = f.state;
 
   // Each fighting style has its own silhouette at rest and in a crouch — you
@@ -1013,8 +1012,11 @@ export const STYLE = { shaded: true, sprites: false };
 // Baked sprite atlases. Opt-in: the procedural renderer stays the default and
 // the fallback, because a player's own founder is drawn from their photo and
 // look choices, which no pre-baked sheet can represent.
-// Frame height in px. Tuned so an idle sprite measures the same 160px tall as
-// the procedural fighter it replaces, keeping stage scale and reach readable.
+// Frame height in px, before body.height. Tuned in July 2026 so the founder
+// atlas's idle measured the 160px of the procedural fighter at the time. The
+// rig has grown since (v2.7): measured in September, that idle draws 158px
+// against a procedural fighter of about 200px, so re-tune against the atlas
+// in use before comparing the two paths.
 export const SPRITE_HEIGHT = 202;
 let _spriteSet = null;
 export function enableSprites(on = true, base = 'assets/sprites/founder') {

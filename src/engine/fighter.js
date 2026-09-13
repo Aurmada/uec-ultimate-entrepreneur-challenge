@@ -309,7 +309,12 @@ export class Fighter {
         // Block is its own button now. Crouch (DOWN) is a stance you can still
         // attack from, so holding down no longer disables the whole moveset.
         if (pad.block && this.grounded) {
-          this.setState('block');
+          // Enter once, then let the clock run. This used to call setState
+          // every frame the button was held, which reset stateT to 0, so the
+          // parry window (stateT <= PARRY.WINDOW) never closed and every held
+          // block parried; chip damage could not happen (v1.4 to v3.8).
+          if (this.state !== 'block') this.setState('block');
+          else this.stateT += dt;
         } else if (this.state === 'block' && !pad.block) {
           this.setState('idle');
         } else if (this.state !== 'block') {
@@ -398,7 +403,7 @@ export class Fighter {
   }
 
   // The character's fighting style scales the shared move set, so the same
-  // three buttons feel different in each pair of hands. Multipliers compensate
+  // four basics feel different in each pair of hands. Multipliers compensate
   // (faster ⇒ weaker) so a style is a flavour, not a power tier.
   get style() { return STYLES[this.def.style] || STYLES.balanced; }
 

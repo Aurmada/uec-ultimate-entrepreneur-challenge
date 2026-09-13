@@ -2,9 +2,11 @@
 // them. Extracted verbatim from the sp.type chains that used to live in
 // fighter.js — behaviour is unchanged, only the dispatch moved.
 //
-// Seven for now: `strike` covers the basics, and the other six mirror the
-// shipped special types one-for-one. `counter` and `trap` arrive in P2,
-// alongside the authoring UI that can actually create them.
+// The legal set is ARCHETYPES in data/schema.js. `strike` covers the basics;
+// projectile, aoe, teleport, rush, rain and grab are the original special
+// types; counter and trap are defensive reads with no hitbox; stance toggles a
+// stance set and never swings; burn spends a runway. Each has a shape below,
+// a per-frame tick, or both.
 
 // Per-archetype shaping applied when a special starts.
 export const ARCHETYPE_SHAPES = {

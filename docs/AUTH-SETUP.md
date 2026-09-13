@@ -52,7 +52,7 @@ Also recommended while you're in there:
 
 ## 4 · Flip the gate
 
-In [src/auth.js](../src/auth.js) set `AUTH.REQUIRED = true`, commit, push. The game now requires sign-in before play, and live-match wins start counting toward the global leaderboard automatically.
+Already done: [src/auth.js](../src/auth.js) ships with `AUTH.REQUIRED = true`, so the game requires sign-in (then a profile) before play, and live-match wins count toward the global leaderboard automatically. To reopen guest play, set it to `false`, commit and push.
 
 ### Quick test after setup
 1. Open the game → 🔐 SIGN IN → Google → complete the redirect → your handle shows on the title screen.

@@ -2,6 +2,8 @@
 
 **Date:** 2026-07-30 · **Purpose:** second opinion on whether the current character-art approach is the right one before committing more work to it.
 
+> **Historical snapshot (noted September 2026).** This brief describes the project at v2.3.1 and is kept as the record of why the baked-sprite experiment was paused. Several details are no longer true: the `p1-character-forge` branch was merged and no longer exists, the Incubator and the `counter` and `trap` archetypes are built, the rank-based combo ladder was replaced by a single any-basic-into-any-basic rule, the schema is at version 2, and the procedural rig has since gained faces, stances, motion and parts. The sprite path it describes still exists, dormant, behind `?sprites`. For the current system read `ARCHITECTURE.md`.
+
 ---
 
 ## 0. What I actually want reviewed

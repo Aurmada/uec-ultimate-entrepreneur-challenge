@@ -4,7 +4,7 @@ Technical reference for engineers working on the codebase. For "how do I run
 this and where is everything", read `ONBOARDING.md` first; this document assumes
 you have the game running and want to change it safely.
 
-Current version: `v3.3`. Simulation protocol version: `SIM_VERSION = 4`.
+Current version: `v3.8`. Simulation protocol version: `SIM_VERSION = 7`.
 
 ---
 
@@ -19,7 +19,7 @@ negotiable without a conversation:
 
 | Constraint | Consequence |
 | --- | --- |
-| Zero runtime dependencies | No npm packages ship. No framework, no bundler, no 3D library. Everything is hand written except one vendored face detector. |
+| No packages, no bundler | No npm packages ship. No framework, no bundler, no 3D library. Everything is hand written except one vendored face detector (`src/vendor/pico.js`) and the Supabase client, which `net/online.js` loads from a CDN at run time for sign-in and live play. |
 | Zero build step | The repo IS the deployed artifact. Browsers load `src/*.js` as native ES modules. There is nothing to compile, so what you edit is what runs. |
 | Determinism | Live matches are 60 Hz lockstep. Anything affecting the simulation must be byte identical on both peers. |
 | Originality | All characters, names, art and audio are original. Real people are parodied by name only and never depicted. |
@@ -40,8 +40,10 @@ If you remember nothing else from this document, remember this.
 Data flows one way only.**
 
 The simulation is the fighter state machine, hit detection and resolution,
-physics, timers, and the power budget. It is deterministic, it runs at a fixed
-60 Hz, and it is the thing the netcode replicates.
+physics, timers, and the power budget. It is deterministic, it steps at a fixed
+1/60 of a second in a live match, and it is the thing the netcode replicates.
+(Solo play steps by the real frame time, capped at 0.05 s, because nothing has
+to agree with it.)
 
 Rendering is poses, colours, faces, stances, motion shaping, lighting, particles
 and the camera. None of it may ever be read back into the simulation.
@@ -61,10 +63,12 @@ Practically, this is what the boundary looks like in the character data:
 ```js
 {
   id: 'dex',
-  stats: { speed, power, hp },     // SIMULATION
+  style: 'grappler',               // SIMULATION (speed, HP, frame data multipliers)
   body:  { height, build, reach }, // SIMULATION (hurtbox, reach pricing)
-  style: 'grappler',               // SIMULATION (frame data multipliers)
+  special: 'takeover',             // SIMULATION (the meter move)
   commandNormals: [ ... ],         // SIMULATION (frame data, archetype)
+  usesRunway: false,               // SIMULATION (only Adam Weumann drains)
+  stats: { speed, power, hp },     // legacy: nothing reads it
 
   c: { hair, suit, skin, ... },    // render only
   face:   { BROW_Y, PUPIL_R, ... },// render only
@@ -74,13 +78,15 @@ Practically, this is what the boundary looks like in the character data:
 }
 ```
 
-Render only fields are read in `drawFighter.js` and nowhere else. They are not
-carried by the codec, not part of the netcode handshake, and not priced by the
-budget. Adding a new one is safe and needs no version bump. Adding a field that
+Render only fields are read in `drawFighter.js` and nowhere else. The colours and
+look fields do travel in a live pick (`toCharacter` puts them under `look`, so a
+rival sees what you look like), but no simulation code reads them and the budget
+does not price them. `face`, `stance` and `motion` never leave the machine.
+Adding a new render only field is safe and needs no version bump. Adding a field that
 the fighter state machine reads is a simulation change and needs the protocol
 work described in section 5.
 
-There is one subtlety worth internalising, because it caused a real bug. Render
+There is one subtlety worth internalizing, because it caused a real bug. Render
 only does not mean "consequence free". Attack tracks are re-scaled so that a
 zoner visibly out-ranges a grappler off the same keyframes, which means the
 visual fist position is expected to agree with the hitbox. If a render effect
@@ -105,26 +111,28 @@ src/
   data/               characters, arenas, moves, the schema and budget
   ui/                 HUD, screens, result card, tutorial, face detection
   net/                live multiplayer and cloud persistence
-  vendor/pico.js      the only third party code (face detection)
+  vendor/pico.js      vendored face detection (the Supabase client loads from a CDN)
 incubator/            character authoring tool (admin surface, unlisted)
 lab/                  measurement harnesses. Not shipped logic, but load bearing.
 test/                 node --test, no framework
 docs/                 this file and friends
 ```
 
-### `src/engine` (about 4700 lines, the core)
+### `src/engine` (about 5100 lines, the core)
 
 | Module | Responsibility |
 | --- | --- |
 | `game.js` | Match controller. Rounds, timers, **hit detection and resolution**, projectiles, traps, drops, KO and victory. |
-| `fighter.js` | Fighter entity. Physics, state machine, attack initiation, command normal resolution, meter. Owns its own state; does not resolve hits. |
+| `fighter.js` | Fighter entity. Physics, state machine, attack initiation, command normal resolution, meter, stance and runway multipliers. Owns its own state; does not resolve hits. |
+| `fighterState.js` | The registry of persistent per-fighter state: default, round reset, hashing. See section 5. |
 | `moves.js` | Move archetypes. `ARCHETYPE_SHAPES` (applied once at start) and `ARCHETYPE_TICKS` (applied per frame while active). |
-| `anim.js` | Keyframe sampling, `REST` pose, pose maths. |
+| `anim.js` | Keyframe sampling, `REST` pose, pose math. |
 | `drawFighter.js` | Procedural vector fighter. Pose composition, faces, hair, cel shading, key line. The largest and most delicate file. |
 | `proportions.js` | Body clamping and the pose post pass that applies proportions. |
+| `parts.js` | Render only character parts: pure placement (`resolveParts`) and drawing (`drawParts`). See section 7. |
 | `render.js` | Frame compositor and camera. |
 | `ai.js` | AI opponent. Decision ticks plus a per frame reflex layer. |
-| `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesised audio, particles and juice, optional sprite path. |
+| `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesized audio, particles and juice, and a dormant sprite-atlas path behind `?sprites`. |
 
 Hit resolution living in `game.js` while fighters own their state is deliberate.
 A fighter never reaches into another fighter. This keeps the state machine
@@ -144,7 +152,7 @@ implementation of validation and pricing anywhere in the project.
 
 ```
 main.js requestAnimationFrame
-  └─ game.update(dt)              SIMULATION, fixed 60 Hz
+  └─ game.update(dt)              SIMULATION: 1/60 s live (netStep), frame time solo
        ├─ fighter.update(dt)        controller → pad → state machine → physics
        ├─ resolve hits              hitbox vs hurtbox, block, parry, counter
        ├─ projectiles, traps, drops
@@ -186,13 +194,17 @@ real damage:
 | `CHARACTER_WIRE_VERSION` | `net/online.js` | The encoding of a character on the wire. |
 | `SIM_VERSION` | `net/online.js` | **What a move does.** |
 
+A fourth, `CODEC_VERSION` in `state.js`, versions the challenge link format and
+is unrelated to live play.
+
 `SIM_VERSION` is the one people forget. Bump it whenever fight behaviour
 changes: damage, frame data, hit resolution, how an archetype resolves. The
 character payload can be byte identical while the behaviour differs, in which
 case the other two versions still match and two clients shake hands happily and
 then diverge on the first use of the changed move.
 
-Two shipped examples are recorded in the comments at the constant:
+Every bump is recorded in the comments at the constant. Two show why the rule
+exists:
 
 * **v3**: projectile command normals fired nothing at all, because the tick's
   counters were seeded on one code path and not the other. A v2 client threw a
@@ -203,6 +215,11 @@ Two shipped examples are recorded in the comments at the constant:
   cannot be forged by editing a challenge link. The flip side is that each peer
   supplies its own copy, so a table change is a protocol change.
 
+The later bumps: v5 moved persistent state behind the registry and added
+stance switching, v6 added the runway, and v7 holds a peer's custom build to
+player rules (a roster-only special or a roster base's runway is refused by
+`buildCustomFighter`, which `specToDef` rebuilds every peer through).
+
 Render only changes never need a bump. A v3.1 and a v3.2 client see different
 hair colours and simulate identically.
 
@@ -210,14 +227,14 @@ hair colours and simulate identically.
 
 Persistent per-fighter state is declared once in `engine/fighterState.js`, not
 assigned by hand in three places. Each entry carries its default, whether it resets at a
-round boundary, how it enters the state hash, and whether the AI can read it.
+round boundary, and how it enters the state hash.
 `Fighter`'s constructor, `Fighter.resetForRound()` and `hashGameState()` all iterate the
 registry.
 
-Both opt-outs — `round: 'keep'` and `hash: false` — require a written `why`. That is the
+Both opt-outs, `round: 'keep'` and `hash: false`, require a written `why`. That is the
 mechanism, not decoration: before the registry existed, `resetForRound` named twenty
 fields and eight more had drifted out of it unnoticed. One of those eight was `energy`,
-which meant meter carries between rounds — a real balance rule whose only record was the
+which meant meter carries between rounds: a real balance rule whose only record was the
 absence of a line.
 
 A structural test backs it up: `test/fighterState.test.js` constructs a real `Fighter` and
@@ -226,51 +243,52 @@ explicit allowlist of things that are legitimately not simulation state. (It beg
 a grep for `this.<name>T` timers; the very next task moved every registry field into
 `initState()`, which left that grep with nothing to find and no way to fail.) The
 corollary is worth knowing before you add anything: derived state belongs in a **getter**,
-not a constructor field — `usesRunway` and `winded` are getters for exactly this reason.
+not a constructor field. `usesRunway` and `winded` are getters for exactly this reason.
 
 Stance switch (ALIGNMENT SHIFT, scam's special) is the first verb built against the
 registry, and the reason `SIM_VERSION` moved to 5: a fighter in `capabilities` resolves
 the same inputs to different damage dealt and taken than one in `safety` or neutral, so
 two peers on either side of the version bump would shake hands and then diverge the first
-time either stance mattered. `stance` also joined `ARCHETYPES` (§6) as a tenth entry —
-appended, not inserted, so the wire codec's archetype index (`state.js`, append-only by
+time either stance mattered. `stance` also joined `ARCHETYPES` (§6) as a tenth entry,
+appended rather than inserted, so the wire codec's archetype index (`state.js`, append-only by
 contract) stays stable and needed no `CHARACTER_WIRE_VERSION` bump. It is a known
 archetype for a character's special only: it is explicitly rejected as a command-normal
 archetype, because neither the command-normal budget (`BUDGET.CMD.ARCHETYPE`) nor
-`fighter.js`'s command-normal routing have any behaviour for it — only the special/
+`fighter.js`'s command-normal routing have any behaviour for it; only the special or
 signature path intercepts `type === 'stance'` before an attack object is even built.
 
 ### Runway, the second resource
 
 `RUNWAY` (config) is the second verb built on the registry, and the reason `SIM_VERSION`
-moved to 6. It is one entry — `{ key: 'runway', init: RUNWAY.MAX, round: 'reset',
-hash: 'q8' }` — and everything else follows: initialised in the constructor, cleared at
+moved to 6. It is one entry, `{ key: 'runway', init: RUNWAY.MAX, round: 'reset',
+hash: 'q8' }`, and everything else follows: initialized in the constructor, cleared at
 the round boundary, in the fingerprint, and caught by the structural backstop, none of
 which anyone had to remember.
 
 It is deliberately the inverse of meter. Meter builds and rewards patience; runway drains
 at 4/second from the moment the round goes live and is topped up only by landing a hit.
-At zero the fighter is **winded** — 15% slower, 20% weaker, 20% easier to hit — and
+At zero the fighter is **winded** (15% slower, 20% weaker, 20% easier to hit), and
 `winded` is derived (`runway <= 0`), never stored, so one connecting hit clears it in the
 same frame and there is no timer to reset, hash or leak.
 
 Three placement decisions are load-bearing:
 
 * **The drain lives in `Game.updateFighting`**, not in `Fighter.update`. That is the only
-  place `state === 'fighting'` is already true — `updateIntro`, `updateRoundEnd` and
+  place `state === 'fighting'` is already true: `updateIntro`, `updateRoundEnd` and
   `updateMatchEnd` all call `Fighter.update` too, and `Game.update` returns early on
   `paused` and on hitstop before the switch. Scoping by call site leaves no condition to
   get wrong later.
-* **The refill hooks the two sites that award `METER.HIT_DEAL`** — the normal hit in
+* **The refill hooks the two sites that award `METER.HIT_DEAL`**: the normal hit in
   `strike()` and the throw in `doGrab()`. Not chip, not steal, not a counter's payback.
 * **Only a character with `usesRunway` drains.** The field is declared and pinned at MAX
   for everyone else, so a non-user hashes identically to a user and the quantiser needs no
-  nullable case. Runway is roster-only: `SPECIALS.burnitall` carries `rosterOnly: true` and
-  `PLAYER_SPECIALS` is what the profile screen offers, because the power budget still has
-  no axis to price a resource.
+  nullable case. Runway is roster-only: `SPECIALS.burnitall` carries `rosterOnly: true`,
+  because the power budget still has no axis to price a resource. Every player build and
+  challenge-link ghost resolves its special through `playerSpecialId()` and pins
+  `usesRunway` to false, so neither a stale save nor a forged base id can reach it.
 
-`burn` joined `ARCHETYPES` (§6) as an eleventh entry — appended, same append-only contract
-as `stance`. BURN IT ALL reads its damage from the tank on every active frame and zeroes
+`burn` joined `ARCHETYPES` (§6) as an eleventh entry, appended under the same append-only
+contract as `stance`. BURN IT ALL reads its damage from the tank on every active frame and zeroes
 it on contact, and it is the one documented exception to the refill rule: refunding 15 on
 its own hit would hand back the entire cost of the move.
 
@@ -299,8 +317,8 @@ matters.
 
 ### Archetypes
 
-Ten are legal: `strike`, `projectile`, `aoe`, `rush`, `grab`, `teleport`,
-`rain`, `counter`, `trap`, `stance`. Each has an optional shape applied once
+Eleven are legal: `strike`, `projectile`, `aoe`, `rush`, `grab`, `teleport`,
+`rain`, `counter`, `trap`, `stance`, `burn`. Each has an optional shape applied once
 (`ARCHETYPE_SHAPES`) and an optional per frame tick (`ARCHETYPE_TICKS`).
 
 `counter` and `trap` are grouped as `NO_SWING`, meaning the move is not the
@@ -311,11 +329,10 @@ not anyone attacks, and an attacking opponent actually beats it out of its
 startup. Conflating those two readings will send you looking for a bug that is
 not there.
 
-`stance` (§5, "What the simulation remembers") is legal for a character's
-special or signature but rejected by `validateCharacter` as a command-normal
-archetype — neither the pricing table nor the command-normal dispatch in
-`fighter.js` have any behaviour for it, so allowing it there would validate,
-price as free, and fire as a no-op.
+`stance` and `burn` (§5) are legal for a character's special or signature but
+rejected by `validateCharacter` as command-normal archetypes: neither the pricing
+table nor the command-normal dispatch in `fighter.js` has any behaviour for them,
+so allowing them there would validate, price as free, and fire as a no-op.
 
 ### What the budget prices
 
@@ -415,7 +432,7 @@ are free, like shoulders, stride and head. They do **not** travel on the wire: `
 does not emit `parts`, and `specToDef` in `main.js` never reads `spec.ch.parts`. Each
 peer already owns its own copy of every roster fighter, keyed by the same id both sides
 agree on, so a rival's props are drawn from that local copy, never from anything sent
-over the network — a `parts` array from an untrusted peer would be a per-frame render
+over the network. A `parts` array from an untrusted peer would be a per-frame render
 input, and no player-authored character can carry its own parts yet anyway, since
 `buildCustomFighter` takes them from the base roster def. That is also why
 `CHARACTER_WIRE_VERSION` did not need to move: the payload shape it guards is unchanged.
@@ -460,8 +477,9 @@ what lets a measurement harness sweep a value without editing engine code.
 `npm test` runs the Node built in test runner. No framework, no mocks, no DOM.
 The simulation is fully headless, which is why the tests can drive real matches.
 
-Run `npm test` for the current count; it was around 245 across 12 files when this
-was written, and a pinned number in a document is a number that rots. The files
+Run `npm test` for the current count; it was 324 across 15 files at v3.8, and a
+pinned number in a document is a number that rots. It needs Node 21 or newer,
+because the script passes a quoted glob to `node --test`. The files
 worth knowing:
 
 | File | What it protects |
@@ -513,7 +531,7 @@ The tell is almost always **uniformity**. If a measurement says every one of nin
 characters is broken in the same way, suspect the harness first. That heuristic
 has been right every time it has come up.
 
-### `test/golden/` — the pixel-level checks, and how to run them without clicking
+### `test/golden/`: pixel-level checks, and running them without clicking
 
 `npm test` has no canvas, so the two pixel guarantees live in a browser page
 instead: `test/golden/index.html`, served by `python3 dev-server.py 4173`
@@ -524,29 +542,39 @@ Three checks, one write action, all on that one page:
 | Button | What it does |
 | --- | --- |
 | CHECK against baseline | Renders every fighter × `CASES` in `hash.js`, hashes the pixels, diffs against `baseline.json`. 126 cases as of v3.3. |
-| CHECK isolation (big bodies first) | Renders three extreme bodies into a scratch canvas, THEN re-runs the baseline check — catches shading state leaking between fighters (see above). |
+| CHECK isolation (big bodies first) | Renders three extreme bodies into a scratch canvas, then re-runs the baseline check. Catches shading state leaking between fighters (see above). |
 | CHECK every part draws | Renders each declared `parts` entry with and without itself, twice, and reports a pixel-diff count plus a contrast figure per part (see below). |
-| WRITE new baseline | Captures the current renders and PUTs them to `baseline.json` — requires `dev-server.py`, which is the only server here with a PUT handler. |
+| WRITE new baseline | Captures the current renders and PUTs them to `baseline.json`. Requires `dev-server.py`, which is the only server here with a PUT handler. |
 
 **The parts check also reports contrast, but does not fail on it.**
 `countDiffPixels` only asks whether a part changed any byte, which is size and
-occlusion, not visibility — a part painted a shade away from the body under it
+occlusion, not visibility: a part painted a shade away from the body under it
 clears the pixel-count bar and still reads as invisible. Alongside that count,
 `checkParts` now computes the mean RGB distance between the with-part and
 without-part renders, restricted to pixels where the part draws over an
-already-opaque body pixel (extension past the silhouette is excluded — that's
+already-opaque body pixel (extension past the silhouette is excluded; that is
 the pixel count's job). This number is REPORTED, not enforced: it is not
 added to `bad` and cannot fail the check. The reasoning is in the comment
-above `contrastForPart` in `index.html` — short version, `drawFighter` runs
+above `contrastForPart` in `index.html`. Short version: `drawFighter` runs
 every part through `shadeBuffer()` (§7) before a pixel is read, so a part's
 declared fill hex is not what lands on the canvas, and there isn't enough
 real post-shading data on hand to defend a specific cutoff. Pick one from an
-actual run, not a guess. **This also cannot see "dark part on dark stage"**
-— the canvas here is transparent with no arena behind the fighter, so
+actual run, not a guess. **This also cannot see "dark part on dark stage".**
+The canvas here is transparent with no arena behind the fighter, so
 fighter-vs-stage contrast (half of the eleanor/coat bug, historically) is
 entirely outside what this file measures. `lab/silhouette.js` and
 `lab/contrast.js` are the tools for that; they need a live match, not this
 harness.
+
+**The baseline only reproduces where it was written.** The hashes are exact
+pixels, and canvas gradients, blend modes and anti-aliasing differ between
+browsers, versions and rasterizers. In September 2026, the very commit that wrote
+the current `baseline.json` reported 97 of 126 cases mismatched in the Claude
+desktop app's browser, while repeated runs in that browser agreed with each other
+exactly. So treat it as a same-machine, before-and-after check: run CHECK on the
+base commit and on your change in the same browser and compare the reported
+hashes, or WRITE a fresh baseline locally before a render change. A wall of
+mismatches on a new machine is the environment, not a regression.
 
 **Running by hand**: open `http://localhost:4173/test/golden/index.html` and
 click a button; results render into the page.
@@ -555,15 +583,15 @@ click a button; results render into the page.
 the same URL and the matching check runs on load, no click needed. Two places
 to read the result from:
 
-* `window.__goldenResult` — `{ run, pass, total, badCount, bad, detail, ... }`
+* `window.__goldenResult`: `{ run, pass, total, badCount, bad, detail, ... }`
   (`parts`/`min` on the parts run), for anything that can execute JS in the
   page and read a variable.
-* `document.title` — a one-line summary (`PASS parts 12/12 draw`,
+* `document.title`: a one-line summary (`PASS parts N/N draw`,
   `FAIL baseline 3/126 mismatched`), for anything that can only read a page
   title.
 
 **This is not CI.** There is no `.github`, no workflow file, and nothing in
-this repo opens a browser on its own — `?run=` only makes the page itself
+this repo opens a browser on its own. `?run=` only makes the page itself
 drivable once something (a screenshot tool, a scripted browser session, a
 person) has already opened the URL. `window.captureGolden` on the same page
 exists for the same reason: hooks for a driver that isn't committed yet.
@@ -576,7 +604,12 @@ exists for the same reason: hooks for a driver that isn't committed yet.
   that presses on frame 0 reports the entire roster as dead. Idle until
   `game.state === 'fighting'`.
 * **Not every move sets `attack`.** A dash changes state, a super sets a buff
-  timer, a steal moves meter. Watching `fighter.attack` alone misses them.
+  timer, and a stance switch (ALIGNMENT SHIFT) changes `stanceId` without ever
+  building an attack. Watching `fighter.attack` alone misses them.
+* **`setState` resets `stateT`.** Calling it every frame for a state the fighter
+  is already in freezes that state's clock. That is how a held block parried
+  every hit from v1.4 to v3.8: the parry check reads `stateT <= PARRY.WINDOW`,
+  and the block clock never left 0. Enter a state once, then advance `stateT`.
 * **The meter property is `energy`, not `meter`.**
 * **`pressed(k)` is a rising edge.** Holding a button fires once. Pulse it to
   fire repeatedly.

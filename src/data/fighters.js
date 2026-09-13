@@ -101,6 +101,18 @@ export const PLAYER_SPECIALS = Object.fromEntries(
   Object.entries(SPECIALS).filter(([, sp]) => !sp.rosterOnly),
 );
 
+// The special a player build actually gets. Anything off the player menu,
+// including a move saved before it became roster-only, falls back to the
+// base's own special when THAT is legal, and to the default when it is not.
+// Every read of a player's special goes through here: the menu, the builders
+// and the profile screen, which used to throw on a saved roster-only id.
+export const DEFAULT_PLAYER_SPECIAL = 'pitchdeck';
+export function playerSpecialId(id, fallback) {
+  if (id && PLAYER_SPECIALS[id]) return id;
+  if (fallback && PLAYER_SPECIALS[fallback]) return fallback;
+  return DEFAULT_PLAYER_SPECIAL;
+}
+
 export const UNICORN_META = {
   name: 'UNICORN MODE',
   icon: '🦄',
@@ -780,7 +792,11 @@ export function buildCustomFighter(profile) {
     title: 'CHALLENGER',
     company: (profile.company || 'STEALTH STARTUP').toUpperCase(),
     tagline: 'Player-founded. Player-funded.',
-    special: profile.special || base.special,
+    special: playerSpecialId(profile.special, base.special),
+    // A roster fighter's own mechanic is his, not his wardrobe's. An honest
+    // client only ever sends a BASE_CHARACTERS id here; a roster id means a
+    // stale save or a forged live spec, and `...base` would spread the runway.
+    usesRunway: false,
     photo: profile.photo || null,
     stats: { ...PLAYER_STATS },   // look is cosmetic; every player hits the same
     // PINNED, not inherited. Fighter derives speed and HP from `style`, so
@@ -818,8 +834,12 @@ export function buildGhostFighter(ch) {
     title: 'CHALLENGER',
     // PLAYER_SPECIALS, not SPECIALS: `ch` came out of a challenge link, so this
     // is attacker-controlled. A hand-edited link asking for a roster-only
-    // special falls back to the base's own rather than being granted it.
-    special: ch.sp && PLAYER_SPECIALS[ch.sp] ? ch.sp : base.special,
+    // special falls back to the base's own rather than being granted it, and
+    // only when the base's own is itself a player special: `f` is just as
+    // attacker-controlled, and a link naming a roster fighter used to hand
+    // over that fighter's roster-only move and his runway with it.
+    special: playerSpecialId(ch.sp, base.special),
+    usesRunway: false,
     photo: ch.photo || null,
     stats: { ...PLAYER_STATS },   // a ghost is another human — same footing
     // Their fighting identity, already validated by the link decoder — a ghost

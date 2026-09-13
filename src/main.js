@@ -1,6 +1,6 @@
 // Boot, screen router, match lifecycle, render loop, menu background.
 
-import { STAGE, DEBUG, VERSION, rankFor } from './config.js';
+import { STAGE, DEBUG, VERSION } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
 import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter, toCharacter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
@@ -13,8 +13,8 @@ import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.
 import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
-  showShareCard, openInvite, openModal, closeModals, renderProfile, renderLeaderboard,
-  showIncomingLive, setLiveStatus, refreshSelect, confirmDialog, playerDef, showAbout,
+  showShareCard, openInvite, openModal, closeModals, renderProfile,
+  showIncomingLive, setLiveStatus, confirmDialog, playerDef, showAbout,
   renderMoveCard,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';

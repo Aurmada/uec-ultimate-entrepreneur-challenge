@@ -16,7 +16,7 @@
 import {
   FIGHTERS, SPECIALS, LOOKS, LOOK_FIELDS, toCharacter, shade,
 } from '../src/data/fighters.js';
-import { STYLES, BODY, BUDGET, ATTACKS, AI_LEVELS } from '../src/config.js';
+import { STYLES, BODY, BUDGET, ATTACKS } from '../src/config.js';
 import {
   validateCharacter, budgetCost, commandCost, ARCHETYPES, COMMAND_SLOTS,
   slotButton, SLOT_GLYPH, MOVE_TAGS, DEFAULT_BODY,
@@ -539,7 +539,10 @@ ${body},
 }
 
 $('btnExport').onclick = () => {
-  const r = validateCharacter(toCharacter(draft));
+  // toCharacter drops `parts` (they are not on the wire), so validate the
+  // draft's own parts alongside it. toModule() writes them, and a part this
+  // check never saw used to export cleanly and then throw inside drawFighter.
+  const r = validateCharacter({ ...toCharacter(draft), parts: draft.parts });
   const msg = $('exportMsg');
   msg.textContent = '';
   const line = (cls, text) => {

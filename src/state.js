@@ -305,8 +305,9 @@ export function parseChallengeFromURL() {
   }
 }
 
-// Exposed so the netcode handshake validates an incoming character through
-// exactly the same path a challenge link does — one gate, not two.
+// The inverse of decodeChallenge's first step, for tests that round-trip a
+// link. The live handshake does not use it: a peer's character is validated
+// by validatePeerCharacter in net/online.js.
 export function encodeChallengePayload(payload) {
   return b64urlEncode(JSON.stringify(payload));
 }

@@ -78,7 +78,13 @@ export class AIController {
           if (n < 3) this.pulse.punch = true;
           else this.pulse.kick = true;
         } else if (f.energy >= METER.SPECIAL_COST) {
-          this.pulse.special = true;
+          // A stance special is a toggle toward preferredStance(). Pressing it
+          // while already there paid full meter and started the cooldown for
+          // a switch that changed nothing; decide() guards this, and this
+          // reflex did not.
+          if (f.special.type !== 'stance' || this.preferredStance(f) !== f.stanceId) {
+            this.pulse.special = true;
+          }
         } else if (f.energy >= METER.SUPER_COST) {
           this.pulse.super = true;
         }
@@ -181,8 +187,7 @@ export class AIController {
     }
 
     // --- stance ---
-    // A toggle, but NOT a free one — STANCE.COST is unused (nothing reads it);
-    // the real price is METER.SPECIAL_COST, charged unconditionally by
+    // A toggle, but NOT a free one: the price is METER.SPECIAL_COST, charged unconditionally by
     // startSpecial() same as any other special. Fighter.pressed('special')
     // refuses the press outright below that cost, routing to
     // game.onSpecialDenied() instead, so an ungated branch here just fires

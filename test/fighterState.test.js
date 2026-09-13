@@ -56,7 +56,9 @@ test('quantisers match what hashGameState already does', () => {
   assert.equal(quantise('q8', 1.26), Math.round(1.26 * 8));
   assert.equal(quantise('int', 3.9), 3);
   assert.equal(quantise('enum', null), 0);
-  assert.equal(quantise('enum', 'safety'), quantise('enum', 'safety'));
+  // A real stance must never share null's slot; comparing a value with itself,
+  // as this line used to, could not fail.
+  assert.notEqual(quantise('enum', 'safety'), quantise('enum', null));
   assert.notEqual(quantise('enum', 'safety'), quantise('enum', 'capabilities'));
 });
 
@@ -175,7 +177,9 @@ test('an unhashed key never moves the fingerprint', () => {
 });
 
 test('the simulation version was bumped for the behaviour change', () => {
-  assert.equal(SIM_VERSION, 6);
+  // 7, not 6: v3.8 holds a peer's custom build to player rules, and a held
+  // block takes chip instead of parrying (see online.js).
+  assert.equal(SIM_VERSION, 7);
 });
 
 // initState() now assigns every registry field in the constructor, so the
@@ -207,7 +211,6 @@ test('a fighter has no simulation state outside the registry', () => {
     + 'Undeclared state is state the hash cannot see and resetForRound will not clear.');
 });
 
-import { STANCE } from '../src/config.js';
 
 test('switching stance toggles between the two sets', () => {
   const f = mk();
@@ -303,6 +306,37 @@ test('a hurt AI prefers safety, a healthy one prefers capabilities', () => {
   assert.equal(hurt.controller.preferredStance(hurt), 'safety');
   const fine = aiFighter(0.9);
   assert.equal(fine.controller.preferredStance(fine), 'capabilities');
+});
+
+// The chain reflex (a basic connects, then special) never looked at stances.
+// For a stance special that press IS a switch toward preferredStance(), so a
+// fighter already standing in it paid 50 meter and started the cooldown for a
+// switch that changed nothing: 26 of 71 paid switches across 12 AI matches.
+// decide() already checked; the reflex did not. The roll is pinned so the
+// chain always fires, and the pulse is read directly because it is only
+// applied to the pad on the following frame.
+test('the AI never chains into a stance switch that would change nothing', async () => {
+  const { METER } = await import('../src/config.js');
+  const realRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const chainOffKick = (stanceId) => {
+      const f = aiFighter(0.9);
+      f.stanceId = stanceId;
+      f.energy = METER.MAX;
+      f.state = 'attack';
+      f.attack = { kind: 'kick', hasHit: true, chainN: 3 };
+      const opp = mk(0);
+      f.controller.update(f, { dt: 1 / 60, other: () => opp });
+      return !!f.controller.pulse.special;
+    };
+    const preferred = aiFighter(0.9).controller.preferredStance(aiFighter(0.9));
+    assert.equal(chainOffKick(preferred), false, 'chained into a switch to the stance it was already in');
+    assert.equal(chainOffKick(preferred === 'safety' ? 'capabilities' : 'safety'), true,
+      'a switch that lands somewhere new should still chain');
+  } finally {
+    Math.random = realRandom;
+  }
 });
 
 // A refused switch must not bill the player, and must not be silently eaten.

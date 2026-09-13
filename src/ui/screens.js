@@ -1,7 +1,7 @@
 // All menu screens + modals: fighter select, profile (photo upload → avatar),
 // challenges & invite links, leaderboard, help, settings/pause, share card.
 
-import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, PLAYER_SPECIALS, UNICORN_META, LOOKS, LOOK_FIELDS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
+import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, PLAYER_SPECIALS, playerSpecialId, UNICORN_META, LOOKS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
 import { STYLES, rankFor, AI_LEVELS, BODY } from '../config.js';
@@ -176,10 +176,6 @@ function renderSelect() {
   $('btn-fight').textContent = ready ? 'FIGHT ➤' : 'PICK A RIVAL…';
 }
 
-export function refreshSelect() {
-  if (document.getElementById('scr-select').classList.contains('active')) renderSelect();
-}
-
 // Fills one side of the VS banner (the big portrait + name + dossier).
 function renderSide(prefix, def, fallbackLabel) {
   const pv = $(`${prefix}-portrait`);
@@ -337,7 +333,12 @@ export function renderProfile() {
     o.textContent = `${sp.icon} ${sp.name}`;
     spSel.appendChild(o);
   }
-  spSel.value = draft.special || 'pitchdeck';
+  // A founder saved before a move went roster-only still carries its id, and
+  // a <select> with no matching option reads back '' — which made this line
+  // throw and left the profile screen unopenable. Normalise the draft, so the
+  // next save writes a legal special too.
+  draft.special = playerSpecialId(draft.special);
+  spSel.value = draft.special;
   $('special-desc').textContent = SPECIALS[spSel.value].desc;
 
   renderStyleGrid();
@@ -530,7 +531,7 @@ function renderBuildMeter() {
   // ±15 spans the bar, so an unbalanced build is visibly off-centre
   const pct = Math.max(2, Math.min(98, 50 + (cost / 15) * 50));
   $('bmNeedle').style.left = `calc(${pct}% - 1.5px)`;
-  const read = $('bmRead') || $('bmCost').parentElement;
+  const read = $('bmCost').parentElement;
   $('bmCost').textContent = ok
     ? 'BALANCED'
     : cost > 0 ? `OVER BY ${cost.toFixed(1)}` : `UNDER BY ${Math.abs(cost).toFixed(1)}`;
