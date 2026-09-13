@@ -503,7 +503,9 @@ character. `founder.glb` is a base body plus one named mesh per look option, and
   `hairStyle: 'cap'` is a cap worn instead of hair, and `accessory` doubles as
   eyewear and as stubble.
 * `prop:<id>` draws when the fighter carries a part with that id, in that part's
-  states, so the block briefcase appears only while blocking.
+  states, so the block briefcase appears only while blocking. Every part the
+  roster carries has one: the universal briefcase and all nine signature props.
+  Hand-held props ride `grip.L` or `grip.R`; the rest hang off the torso or head.
 
 Colours come from the fighter's palette by material role, as below, so the same
 bomber is green with pink trim on one player and pink with green trim on Kim.
@@ -515,8 +517,8 @@ which is the point: an artist can rebuild it by hand in Blender.
 * Blender Z is up and the character faces +X. Its right side (`.R`) is -Y, which
   glTF export turns into +Z, toward the renderer's camera.
 * Joints are named `hips`, `spine`, `chest`, `neck`, `head`, `upper_arm.R/L`,
-  `forearm.R/L`, `thigh.R/L`, `shin.R/L` and `foot.R/L`, plus an optional
-  `grip.L` for held props. The runtime reads only where each joint sits at bind
+  `forearm.R/L`, `thigh.R/L`, `shin.R/L` and `foot.R/L`, plus optional
+  `grip.L` and `grip.R` for held props. The runtime reads only where each joint sits at bind
   time (from the inverse bind matrices), never bone rolls. glTF stores joints but
   not bone ends, so `models3d.js` records where the leaf bones end and where the
   skull centre sits.
@@ -527,8 +529,8 @@ which is the point: an artist can rebuild it by hand in Blender.
   keeps its exported colour.
 
 `test/gl3d.test.js` holds the model to this: every option a player can pick has a
-mesh, every roster fighter resolves to meshes that exist, the parts with no 3D
-prop are listed by name, and every vertex is weighted to a bone near it.
+mesh, every roster fighter resolves to meshes that exist, every part has a 3D
+prop, and every vertex is weighted to a bone near it.
 
 **How a 2D pose drives the bones.** The procedural rig stores hand and foot
 TARGETS, not elbows and knees, and stretches a limb to reach a target, which is
@@ -561,6 +563,13 @@ Hazards found while building it:
   briefcase turned with the arm, and a tight guard swung it behind the arm into
   the body. It rides `grip.L`, which follows the lead fist but keeps the body's
   orientation, the way a 2D part is an unrotated offset from the hand.
+* **Everything on the head turns with it.** Kim's ring light, built square to the
+  bind pose, turned with the head's posed yaw and read as a sideways bead chain.
+  It is built pre-turned by `GL3D.YAW + GL3D.HEAD_YAW`, and a test fails if those
+  change without the model being rebuilt.
+* **Keep a prop's colour on the camera side.** A dark screen modelled on the
+  front of Steve's device and Cathie's tablet hid the accent colour that makes
+  them read at game size; the 2D parts are solid colour, and so are these.
 * **A NaN in the pose blanks the fighter.** `ctx.scale(NaN, NaN)` is silently
   ignored, so the procedural rig never shows it; in a projection matrix it draws
   nothing. A staged fighter with no `vy` produces exactly that in the jump pose,
@@ -570,8 +579,7 @@ Hazards found while building it:
 * **One WebGL context serves every fighter**, with `preserveDrawingBuffer` on,
   because each fighter is read back with `drawImage` straight after it is drawn.
 
-Not done yet: nine of the eleven roster props have no 3D mesh (they are listed in
-the test), a player's photo face has no 3D equivalent, the per-character face
+Not done yet: a player's photo face has no 3D equivalent, the per-character face
 data (brows, lids, mouth) is not used, and body knobs scale bones rather than
 using shape keys.
 
@@ -587,7 +595,7 @@ both versions).
 
 Measured in September 2026 on an M2 Max, in a live AI-vs-AI match at 60 fps,
 whole-frame render time: 1.73 ms with both fighters in 2D, 1.93 ms with both in
-3D; with sharp fighters, 1.98 ms and 2.07 ms. The model holds 38 meshes and 39.6k triangles in 1.2 MB, and a fighter draws
+3D; with sharp fighters, 1.98 ms and 2.07 ms. The model holds 47 meshes and 43.4k triangles in 1.3 MB, and a fighter draws
 about 10k of them. Phone numbers come from `lab/gl3d-bench.html`, a match that
 needs no sign-in: serve with `python3 dev-server.py 4173` and open
 `http://<this machine's LAN address>:4173/lab/gl3d-bench.html` on a phone on the

@@ -56,9 +56,11 @@ test('every model honours the rig contract', () => {
 // build weighted the whole base body to the FEET (six parts shared one name and
 // the last part's bone list won), every check above passed, and every fighter
 // rendered with its head and arms hurled across the screen. So: every vertex's
-// strongest bone must actually be near it. A prop hangs furthest (the mat on
-// Adam's back is 0.48 from his chest bone); anything else past 0.35 is weighted
-// to the wrong bone, and an arm weighted across the body is at least 0.54 away.
+// strongest bone must actually be near it. Props hang furthest, on purpose:
+// Cathie's coat is rigid to her hips so a kick cannot tear it in two, and its
+// hem sits 0.65 below them; Adam's mat is 0.48 from his chest. Anything else
+// past 0.35 is weighted to the wrong bone, and an arm weighted across the body
+// is at least 0.54 away.
 test('every vertex is weighted to a bone near it', () => {
   const rig = buildRig(founder, MODELS3D.founder);
   const seg = (p, a, b) => {
@@ -67,7 +69,7 @@ test('every vertex is weighted to a bone near it', () => {
     return Math.hypot(ap[0] - ab[0] * t, ap[1] - ab[1] * t, ap[2] - ab[2] * t);
   };
   for (const p of founder.primitives) {
-    const limit = p.name.startsWith('prop:') ? 0.55 : 0.35;
+    const limit = p.name.startsWith('prop:') ? 0.72 : 0.35;
     for (let v = 0; v < p.positions.length / 3; v++) {
       let best = -1, joint = 0;
       for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
@@ -102,10 +104,10 @@ test('every roster and base fighter resolves to meshes that exist', () => {
   }
 });
 
-// Parts are the 2D props. Two have 3D meshes so far; the rest are listed so a
-// new part, or a new prop mesh, is a deliberate change to this list.
-test('which parts have a 3D prop is written down, not discovered', () => {
-  const NOT_MODELLED = ['booster', 'case', 'clip', 'coat', 'device', 'parcel', 'ringlight', 'tablet', 'vial'];
+// Parts are the 2D props, and every one now has a 3D mesh. A part added to the
+// roster without one fails here, so the 3D roster cannot quietly lose a prop.
+test('every part the roster carries has a 3D prop', () => {
+  const NOT_MODELLED = [];
   const ids = new Set(ROSTER.flatMap((d) => (d.parts || []).map((p) => p.id)));
   const missing = [...ids].filter((id) => !meshNames.has(`prop:${id}`)).sort();
   assert.deepEqual(missing, NOT_MODELLED);
@@ -239,4 +241,14 @@ test('the block briefcase hangs in front of the fist in a tight guard', () => {
   const centre = transformPoint(m, joint, [cx / n, cy / n, cz / n]);
   assert.ok(centre[0] > fist[0] + 0.04, `the case sits behind the fist (${centre[0].toFixed(2)} vs ${fist[0].toFixed(2)})`);
   assert.ok(centre[1] < fist[1], 'the case should hang below the hand holding it');
+});
+
+// Kim's ring light is built pre-turned by the head's posed yaw so it faces the
+// camera (lab/blender/build_founder.py, HEAD_TURN). That couples the model to
+// two config numbers; change either and the halo turns side-on again unless
+// the model is rebuilt to match.
+test('the ring light was built for the head yaw the renderer uses', () => {
+  const HEAD_TURN = 0.92;
+  assert.ok(Math.abs(GL3D.YAW + GL3D.HEAD_YAW - HEAD_TURN) < 1e-9,
+    `GL3D.YAW + GL3D.HEAD_YAW is ${GL3D.YAW + GL3D.HEAD_YAW}; rebuild founder.glb with HEAD_TURN to match`);
 });

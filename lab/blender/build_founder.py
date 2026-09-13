@@ -86,8 +86,9 @@ for side, sy in (('R', -1), ('L', 1)):
 # A prop anchor: sits on the lead fist but keeps the body's orientation, the
 # way the 2D rig places a held part (an offset from the hand, never rotated
 # with the arm). Optional in the contract; the runtime poses it if present.
-J['grip.L'] = J['fist.L']
-J['grip_tip.L'] = J['fist.L'] + V((0.10, 0, 0))
+for side in ('L', 'R'):
+    J['grip.' + side] = J['fist.' + side]
+    J['grip_tip.' + side] = J['fist.' + side] + V((0.10, 0, 0))
 
 BONES = [
     ('hips', 'hip', 'spine', None), ('spine', 'spine', 'chest', 'hips'),
@@ -102,7 +103,7 @@ for s in ('R', 'L'):
         ('shin.' + s, 'knee.' + s, 'ankle.' + s, 'thigh.' + s),
         ('foot.' + s, 'ankle.' + s, 'toe.' + s, 'shin.' + s),
     ]
-BONES.append(('grip.L', 'grip.L', 'grip_tip.L', 'forearm.L'))
+BONES += [('grip.L', 'grip.L', 'grip_tip.L', 'forearm.L'), ('grip.R', 'grip.R', 'grip_tip.R', 'forearm.R')]
 TORSO_BONES = ['hips', 'spine', 'chest', 'neck', 'upper_arm.R', 'upper_arm.L', 'forearm.R', 'forearm.L']
 HEAD = ['head']
 
@@ -441,6 +442,71 @@ for t in (0.22, 0.78):
     p = a.lerp(b, t)
     st.capsule(p + V((-0.02, 0, 0)), p + V((0.20, 0, 0)), 0.013)
 
+
+# The roster's signature props, one per fighter, placed where each 2D part
+# sits (src/data/fighters.js `parts`). `armB` parts are held in the rear hand,
+# on grip.R; `shoulder` and `hip` parts hang off the back, on the torso.
+grip_r = J['grip.R']
+BACK = ['chest']
+
+# ava: a vial of the blood test that never worked, on the back of the hip
+f = part('prop:vial', 'accent', ['hips'], 300, res=0.009)
+f.capsule(hip + V((-0.20, 0.10, 0.15)), hip + V((-0.20, 0.10, -0.17)), 0.065)
+part('prop:vial', 'white', ['hips'], 150, res=0.007).ellip(hip + V((-0.20, 0.10, 0.23)), (0.05, 0.05, 0.035))
+
+# kai: the device, up in the rear hand, face to the camera. Solid accent, as
+# the 2D part is: a dark screen on the camera side hid the colour that makes
+# these props read at game size.
+f = part('prop:device', 'accent', ['grip.R'], 250, res=0.007)
+f.cube(grip_r + V((0.06, -0.01, 0.06)), (0.08, 0.018, 0.13), 0.02)
+
+# zara: a ring light, a halo behind her head. The head is posed turned toward
+# the camera (GL3D.YAW + GL3D.HEAD_YAW, 0.92 rad in src/config.js), and a ring
+# built square to the bind pose turns with it and reads as a sideways bead
+# chain, so it is built pre-turned by that angle. Change those two constants
+# and this angle must follow.
+HEAD_TURN = 0.92
+normal = V((-math.sin(HEAD_TURN), math.cos(HEAD_TURN), 0))      # away from the camera once posed
+across = V((math.cos(HEAD_TURN), math.sin(HEAD_TURN), 0))
+ring_c = H(-0.01, 0, 0.03) + normal * 0.17
+f = part('prop:ringlight', 'accent', HEAD, 700, res=0.008)
+for i in range(30):
+    a = i / 30 * math.tau
+    f.ball(ring_c + across * (0.26 * math.cos(a)) + V((0, 0, 0.26 * math.sin(a))), 0.028)
+
+# eleanor: a tablet held up in the rear hand, and a long coat behind the legs
+f = part('prop:tablet', 'accent', ['grip.R'], 300, res=0.007)
+f.cube(grip_r + V((0.10, -0.04, 0.10)), (0.12, 0.016, 0.16), 0.02, Ry(-11).to_quaternion())
+f = part('prop:coat', 'hair', ['hips'], 700, res=0.012)
+f.ellip(hip + V((-0.10, 0, -0.10)), (0.07, 0.20, 0.14))
+f.ellip(hip + V((-0.13, 0, -0.40)), (0.06, 0.28, 0.24))
+
+# dex: the asset he just stripped, hanging from the rear hand
+f = part('prop:case', 'case', ['grip.R'], 400, res=0.009)
+f.cube(grip_r + V((0.10, 0, -0.26)), (0.21, 0.05, 0.16), 0.02)
+part('prop:case', 'frame', ['grip.R'], 150, res=0.006).capsule(
+    grip_r + V((0.04, 0, -0.07)), grip_r + V((0.16, 0, -0.07)), 0.012)
+
+# elo: a rocket booster strapped to the back
+f = part('prop:booster', 'accent', BACK + ['spine'], 500, res=0.010)
+f.capsule(chest + V((-0.25, 0, 0.30)), chest + V((-0.25, 0, -0.34)), 0.095)
+f.ellip(chest + V((-0.25, 0, 0.36)), (0.07, 0.07, 0.09))
+part('prop:booster', 'frame', BACK + ['spine'], 200, res=0.008).ellip(chest + V((-0.25, 0, -0.42)), (0.08, 0.08, 0.05))
+
+# bozo: a parcel tucked under the rear arm
+f = part('prop:parcel', 'hair', ['grip.R'], 300, res=0.009)
+f.cube(grip_r + V((-0.05, 0, -0.04)), (0.19, 0.11, 0.15), 0.02, Ry(9).to_quaternion())
+part('prop:parcel', 'shoe', ['grip.R'], 150, res=0.006).cube(
+    grip_r + V((-0.05, 0, 0.115)), (0.195, 0.115, 0.012), 0.006, Ry(9).to_quaternion())
+
+# scam: one enormous paperclip, on his back
+f = part('prop:clip', 'shoe', BACK + ['spine'], 600, res=0.007)
+top, x = chest + V((-0.28, 0, 0.40)), -0.28
+def wire(a, b): f.capsule(chest + V((x, 0, a[1])) + V((0, a[0], 0)), chest + V((x, 0, b[1])) + V((0, b[0], 0)), 0.014)
+for a, b in (((-0.11, 0.40), (0.11, 0.40)), ((0.11, 0.40), (0.11, -0.26)), ((-0.11, 0.40), (-0.11, -0.26)),
+             ((-0.11, -0.26), (-0.04, -0.26)), ((-0.04, -0.26), (-0.04, 0.31)), ((-0.04, 0.31), (0.03, 0.31)),
+             ((0.03, 0.31), (0.03, -0.26))):
+    wire(a, b)
 
 # ---------------------------------------------------------------- meshes
 MATERIALS = {}

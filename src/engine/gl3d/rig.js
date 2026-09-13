@@ -57,8 +57,10 @@ export function buildRig(model, spec) {
     put(`shin.${s}`, kn, an, REST_REF.leg);
     put(`foot.${s}`, an, add(an, spec.leaf.foot), REST_REF.foot);
   }
-  // Optional prop anchor on the lead fist, facing forward with the body.
-  if (model.jointNames.includes('grip.L')) put('grip.L', at('grip.L'), add(at('grip.L'), [0.1, 0, 0]), [0, 1, 0]);
+  // Optional prop anchors on the fists, facing forward with the body.
+  for (const g of ['grip.L', 'grip.R']) {
+    if (model.jointNames.includes(g)) put(g, at(g), add(at(g), [0.1, 0, 0]), [0, 1, 0]);
+  }
 
   const hip = at('hips');
   const shoulderY = (at('upper_arm.R')[1] + at('upper_arm.L')[1]) / 2;
@@ -164,7 +166,7 @@ export function solvePose(rig, P, elbow = {}) {
 
   // ---- arms: the lead hand (armF) on the far shoulder, the rear hand near
   const half = GL3D.SHOULDER_HALF * wide;
-  let leadFist = null;
+  const fists = {};
   const arm = (side, shoulder, hand, bendSign, flare) => {
     const target = pt(hand.x, hand.y, shoulder[2] * GL3D.HAND_DEPTH);
     // Elbows point down and back, and out a little. drawFighter bends toward
@@ -179,13 +181,16 @@ export function solvePose(rig, P, elbow = {}) {
     const girth = build * GL3D.ARM_GIRTH;
     set(`upper_arm.${side}`, shoulder, s.mid, onHinge(s.hinge, shoulder, s.mid), dist(shoulder, s.mid) / up.len, girth, girth);
     set(`forearm.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / lo.len, girth, girth);
-    if (side === 'L') leadFist = s.end;
+    fists[side] = s.end;
   };
   arm('L', sub(shoulderC, scale(chestLat, half)), P.armF, elbow.F ?? STYLIZE.ELBOW, -1);
   arm('R', add(shoulderC, scale(chestLat, half)), P.armB, elbow.B ?? STYLIZE.ELBOW, 1);
-  // A held prop rides the lead fist but faces the way the body faces, as a 2D
-  // part does, instead of turning with the arm.
-  if (rig.rest['grip.L']) set('grip.L', leadFist, add(leadFist, scale(chestFwd, 0.1)), chestUp, 1, 1, 1);
+  // A held prop rides a fist but faces the way the body faces, as a 2D part is
+  // an unrotated offset from the hand, instead of turning with the arm.
+  for (const side of ['L', 'R']) {
+    const g = `grip.${side}`;
+    if (rig.rest[g]) set(g, fists[side], add(fists[side], scale(chestFwd, 0.1)), chestUp, 1, 1, 1);
+  }
 
   // ---- legs: knees forward and a little out, feet set like the rest pose
   const hipBase = sub(hip, scale(pelUp, GL3D.HIP_DROP));
