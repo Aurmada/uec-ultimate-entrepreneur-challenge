@@ -566,6 +566,16 @@ entirely outside what this file measures. `lab/silhouette.js` and
 `lab/contrast.js` are the tools for that; they need a live match, not this
 harness.
 
+**The baseline only reproduces where it was written.** The hashes are exact
+pixels, and canvas gradients, blend modes and anti-aliasing differ between
+browsers, versions and rasterizers. In September 2026, the very commit that wrote
+the current `baseline.json` reported 97 of 126 cases mismatched in the Claude
+desktop app's browser, while repeated runs in that browser agreed with each other
+exactly. So treat it as a same-machine, before-and-after check: run CHECK on the
+base commit and on your change in the same browser and compare the reported
+hashes, or WRITE a fresh baseline locally before a render change. A wall of
+mismatches on a new machine is the environment, not a regression.
+
 **Running by hand**: open `http://localhost:4173/test/golden/index.html` and
 click a button; results render into the page.
 
