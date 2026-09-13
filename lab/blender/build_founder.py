@@ -26,6 +26,8 @@
 #                     hair, headwear, eyewear, facialHair, outfit, accessory
 #       prop:<id>     drawn when the fighter carries a part with that id, in
 #                     that part's states (the block briefcase, Adam's mat)
+#       fx:<flag>     drawn while the fighter is in that condition (fx:unicorn,
+#                     the golden horn of Unicorn Mode)
 #   * Materials are named for the palette role they take their colour from
 #     (skin, suit, suit2, accent, hair, pants, shoe); any other name keeps the
 #     colour exported with it.
@@ -48,7 +50,7 @@ scene = bpy.context.scene
 ROLE_COLOUR = dict(skin='#e8b48c', suit='#5865f2', suit2='#3d47c9', accent='#29d9ff',
                    hair='#2a2320', pants='#23294f', shoe='#eef1ff')
 FIXED = dict(sole='#9aa0aa', white='#fbf6ee', shirt='#f4f6ff',
-             lens='#15171f', case='#6b4a2b', frame='#1b1a22', visor='#29d9ff')
+             lens='#15171f', case='#6b4a2b', frame='#1b1a22', visor='#29d9ff', gold='#ffd23f', gold2='#c48a12')
 
 # Decimation targets below are counted in the metaball mesh's quads; the
 # decimated result is triangles, about twice as many. DETAIL scales every target.
@@ -428,6 +430,23 @@ f = part('accessory:earrings', 'accent', HEAD, 200, res=0.005)
 for sy in (1, -1): f.ball(H(-0.01, 0.112 * sy, -0.05), 0.013)
 f = part('accessory:brooch', 'accent', ['chest'], 150, res=0.006)
 f.ball(chest + V((0.185, 0.09, 0.16)), 0.02)
+
+# ================================================================ CONDITIONS
+# Unicorn Mode's golden horn, as drawHead draws it: out of the top of the head,
+# tipped a little forward. A slim tapering core wound with a darker spiral.
+f = part('fx:unicorn', 'gold', HEAD, 600, res=0.005)
+g = part('fx:unicorn', 'gold2', HEAD, 400, res=0.004)
+base, tip = H(0.04, 0, 0.12), H(0.09, 0, 0.40)
+axis = (tip - base).normalized()
+side = axis.cross(V((0, 1, 0))).normalized()
+for i in range(13):
+    k = i / 12
+    f.ball(base.lerp(tip, k), 0.03 * (1 - k) + 0.005)
+for i in range(22):
+    k = i / 21
+    a = k * math.tau * 2.5
+    ring = V((0, 1, 0)) * math.cos(a) + side * math.sin(a)
+    g.ball(base.lerp(tip, k) + ring * (0.026 * (1 - k) + 0.004), 0.009 * (1 - k) + 0.003)
 
 # ================================================================ PROPS
 # prop:<id> matches a part id in src/data/fighters.js, and inherits its states.

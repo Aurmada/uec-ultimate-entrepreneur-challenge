@@ -4,7 +4,7 @@
 import { STAGE } from '../config.js';
 import { drawFighter } from './drawFighter.js';
 import { stageFor, drawStage } from './stage.js';
-import { drawBursts, drawTrail, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
+import { drawBursts, drawTrail, drawAura, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
 
 const { W, H, FLOOR } = STAGE;
 
@@ -449,6 +449,7 @@ function renderSharp(ctx, game, t, c) {
   ctx.save();
   toScreen();
   for (const f of order) {
+    drawAura(ctx, f, t);
     drawFighter(ctx, f, t);
     drawTrail(ctx, f, t);
   }
@@ -467,6 +468,7 @@ function renderSharp(ctx, game, t, c) {
 function renderWorld(ctx, game, t) {
   renderBehind(ctx, game, t);
   for (const f of fighterOrder(game)) {
+    drawAura(ctx, f, t);
     drawFighter(ctx, f, t);
     drawTrail(ctx, f, t);
   }

@@ -95,8 +95,8 @@ export const debug3D = () => last;
 
 // Renders fighter f into B.buf, the same offscreen buffer the procedural rig
 // fills, so the caller's key line, hit flash and blit stay exactly as they are.
-// `paintFace(ctx, def, expression, r)` is drawFighter's own face painter;
-// without it the head is bare.
+// `paintFace(ctx, def, expression, r)` is drawFighter's own face painter; it
+// returns false when it cannot paint yet. Without it the head is bare.
 export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, paintFace = null }) {
   const entry = modelFor(f.def);
   if (!entry) return false;
@@ -108,7 +108,7 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, paintFace = null
   // one; in a projection matrix it blanks the fighter. A staged fighter with
   // no `vy` produces exactly that in the jump pose.
   const sq = (v) => (Number.isFinite(v) ? v : 1);
-  const { vw, vh } = drawModel(entry, f.def, f.state, P.face, paintFace, {
+  const { vw, vh } = drawModel(entry, f.def, f.state, { unicorn: f.unicornT > 0 }, P.face, paintFace, {
     box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter,
   });
   if (perf) renderer.finish();
@@ -126,7 +126,7 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, paintFace = null
 // GL3D.BUST.TURN, framed on the head and drawn into ctx over rect
 // ({ x, y, w, h } in canvas px), mirrored if asked. False wherever render3D
 // would be, so the caller draws its 2D bust instead.
-export function renderBust3D(ctx, rect, def, P, { expression = 'idle', paintFace = null, mirror = false } = {}) {
+export function renderBust3D(ctx, rect, def, P, { expression = 'idle', paintFace = null, mirror = false, unicorn = false } = {}) {
   const entry = modelFor(def);
   if (!entry) return false;
   const U = GL3D.UNIT, BUST = GL3D.BUST;
@@ -134,7 +134,7 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', paintFace
   const [hx, hy] = transformPoint(entry.rig.matrices, entry.head, entry.skull);
   const w = BUST.SPAN, h = (BUST.SPAN * rect.h) / rect.w;
   const box = { ox: w * BUST.HEAD_AT[0] - hx * U, oy: h * BUST.HEAD_AT[1] + hy * U, w, h };
-  const { vw, vh } = drawModel(entry, def, 'idle', expression, paintFace, { box, ss: rect.w / w });
+  const { vw, vh } = drawModel(entry, def, 'idle', { unicorn }, expression, paintFace, { box, ss: rect.w / w });
   ctx.save();
   if (mirror) {
     ctx.translate(2 * rect.x + rect.w, 0);
@@ -146,15 +146,15 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', paintFace
 }
 
 // One posed model onto the renderer's canvas: the fighter's palette, what
-// they wear in this state, and their face in this expression.
-function drawModel(entry, def, state, expression, paintFace, view) {
+// they wear in this state and condition, and their face in this expression.
+function drawModel(entry, def, state, conditions, expression, paintFace, view) {
   const palette = def.c || {};
   const colourCache = new Map();
   const colours = (p) => {
     if (!colourCache.has(p.role)) colourCache.set(p.role, palette[p.role] ? hexToRGB(palette[p.role]) : p.color);
     return colourCache.get(p.role);
   };
-  const wears = wearing(def, state);
+  const wears = wearing(def, state, conditions);
   const face = entry.face && paintFace ? faceFor(entry.face, def, expression, paintFace) : null;
   return renderer.render(entry.gpu, entry.rig.matrices, {
     ...view, colours, visible: (p) => wears(p.name), face, inkless: entry.inkless, glass: entry.glass,
@@ -173,11 +173,19 @@ function faceSlot(id, F) {
   };
 }
 
-// The model's face slot, filled in for this fighter and expression. Render
-// is synchronous, so one slot per model serves every fighter wearing it.
+// The model's face slot, filled in for this fighter and expression, or null
+// while the face cannot be painted yet (a photo still decoding): the head goes
+// bare for those frames rather than caching a face that is about to change.
+// Render is synchronous, so one slot per model serves every fighter wearing it.
 function faceFor(slot, def, expression, paint) {
   const key = slot.key + faceKey(def);
-  slot.texture = renderer.texture(key) || renderer.uploadTexture(key, paintFaces(slot, def, paint));
+  let texture = renderer.texture(key);
+  if (!texture) {
+    const art = paintFaces(slot, def, paint);
+    if (!art) return null;
+    texture = renderer.uploadTexture(key, art);
+  }
+  slot.texture = texture;
   slot.cell = faceCell(expression);
   return slot;
 }
@@ -191,16 +199,17 @@ function paintFaces(slot, def, paint) {
   faceCanvas.width = C * cols;              // resizing also clears it
   faceCanvas.height = C * rows;
   const g = faceCanvas.getContext('2d');
+  let painted = true;
   FACE_STATES.forEach((expression, i) => {
     g.setTransform(C / (2 * S), 0, 0, C / (2 * S), (i % cols + 0.5) * C, (Math.floor(i / cols) + 0.5) * C);
     g.save();
     g.beginPath();
     g.rect(-S, -S, 2 * S, 2 * S);
     g.clip();
-    paint(g, def, expression, slot.r);
+    if (paint(g, def, expression, slot.r) === false) painted = false;
     g.restore();
   });
-  return faceCanvas;
+  return painted ? faceCanvas : null;
 }
 
 // The procedural rig reports its own cost here when timing is on, so the
@@ -212,7 +221,11 @@ export const timing3D = () => !!perf;
 // "<slot>:<option>" when their look picks that option; "prop:<id>" when they
 // carry a part with that id, in that part's states, exactly as the 2D parts
 // system gates it (the block briefcase only shows while blocking).
-export function wearing(def, state) {
+// "fx:<flag>" when the fighter is in that condition right now (`conditions`,
+// such as { unicorn: true } in Unicorn Mode). A founder who fights with their
+// photo wears no modelled eyewear or facial hair, as drawHead draws none over
+// a photo: the person's own are in it.
+export function wearing(def, state, conditions = {}) {
   const look = resolveLook3D(def);
   const cache = new Map();
   return (name) => {
@@ -224,6 +237,10 @@ export function wearing(def, state) {
       if (slot === 'prop') {
         const part = (def.parts || []).find((p) => p.id === option);
         on = !!part && (!part.states || part.states.includes(state));
+      } else if (slot === 'fx') {
+        on = !!conditions[option];
+      } else if (def.photo && (slot === 'eyewear' || slot === 'facialHair')) {
+        on = false;
       } else {
         on = look[slot] === option;
       }

@@ -84,6 +84,35 @@ export class FXSystem {
       r: parry ? G.PARRY_R : G.R, t: 0, dur: parry ? G.PARRY_DUR : G.DUR, rot: Math.random() * 0.5 });
   }
 
+  // A projectile leaving the hand: a flare pointing where it flies, in the
+  // colour of `who` (a fighter def) when no colour is given.
+  launch(x, y, dir, color, who = null) {
+    if (!FX_STYLE.impact) return;
+    const L = FX_ART.LAUNCH;
+    this.bursts.push({ kind: 'launch', x, y, dir, color, who, r: L.R, t: 0, dur: L.DUR });
+  }
+
+  // BURN RATE BLAST and BURN IT ALL: fire erupting out of the fighter's front.
+  blast(x, y, dir) {
+    if (!FX_STYLE.impact) return;
+    const B = FX_ART.BLAST;
+    const petals = [];
+    for (let i = 0; i < B.PETALS; i++) {
+      // mostly up and forward, the way the flames are thrown
+      const a = -Math.PI / 2 + (i / (B.PETALS - 1) - 0.5) * Math.PI * 1.25 + dir * 0.35;
+      petals.push({ a, len: 0.6 + Math.random() * 0.5, w: 0.18 + Math.random() * 0.1, hue: Math.random() });
+    }
+    this.bursts.push({ kind: 'blast', x, y, dir, color: '#ff9d1a', r: B.R, t: 0, dur: B.DUR, petals });
+  }
+
+  // A teleport: a pillar of light that pinches out where the fighter left and
+  // opens where they arrive.
+  warp(x, y, color, arriving, who = null) {
+    if (!FX_STYLE.impact) return;
+    const Wp = FX_ART.WARP;
+    this.bursts.push({ kind: arriving ? 'arrive' : 'vanish', x, y, dir: 1, color, who, r: Wp.W, t: 0, dur: Wp.DUR });
+  }
+
   // A special or super announced. `side` is -1 when the fighter is on the
   // left of the fight, +1 on the right; the band slides in from their side.
   // A null `color` wears the fighter's own. One at a time: the newest

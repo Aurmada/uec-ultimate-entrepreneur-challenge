@@ -54,8 +54,11 @@ export const FIGHTER_MODELS = {};
 
 // The look slots a mesh name can select: "<slot>:<option>". A mesh with no
 // colon is the base body and always draws; "prop:<id>" follows the fighter's
-// parts (see index.js).
+// parts and "fx:<condition>" what they are in the middle of (see index.js).
 export const LOOK_SLOTS = ['hair', 'headwear', 'eyewear', 'facialHair', 'outfit', 'accessory'];
+
+// The conditions an "fx:<condition>" mesh can wait for (see wearing() in index.js).
+export const CONDITIONS = ['unicorn'];
 
 // Look options that are painted into the face texture rather than modelled.
 // In 2D, stubble is a translucent shade over the jaw, which a mesh can only fake.
@@ -88,14 +91,36 @@ const CELLS = FACE_STATES.map((_, i) => [
 export const faceCell = (state) => CELLS[Math.max(0, FACE_STATES.indexOf(state))];
 
 // Fighters whose painted faces match share one texture. drawFace reads only
-// the expression and the fighter's face values, and the painted look options
-// read nothing but themselves, so those are the key.
+// the expression and the fighter's face values, the painted look options read
+// nothing but themselves, and a photo founder's face is their photo, so those
+// are the key (the photo by a short fingerprint: it is a data URL).
 const keys = new WeakMap();
 export function faceKey(def) {
   if (!keys.has(def)) {
-    const look = resolveLook3D(def);
-    const painted = Object.entries(PAINTED_LOOKS).map(([slot, options]) => (options.includes(look[slot]) ? look[slot] : null));
-    keys.set(def, JSON.stringify([def.face || null, ...painted]));
+    if (def.photo) {
+      keys.set(def, JSON.stringify(['photo', fingerprint(def.photo)]));     // nothing else is painted over it
+    } else {
+      const look = resolveLook3D(def);
+      const painted = Object.entries(PAINTED_LOOKS).map(([slot, options]) => (options.includes(look[slot]) ? look[slot] : null));
+      keys.set(def, JSON.stringify([def.face || null, ...painted]));
+    }
   }
   return keys.get(def);
+}
+
+// FNV-1a over a string: every character of its ends, and a sample of a long
+// middle. Enough to tell photos apart without walking a 100 KB data URL.
+function fingerprint(text) {
+  let h = 0x811c9dc5;
+  const mix = (i) => { h = Math.imul(h ^ text.charCodeAt(i), 0x01000193) >>> 0; };
+  const END = 512, n = text.length;
+  if (n <= END * 2) {
+    for (let i = 0; i < n; i++) mix(i);
+  } else {
+    for (let i = 0; i < END; i++) mix(i);
+    const step = Math.max(1, Math.floor((n - END * 2) / 4096));
+    for (let i = END; i < n - END; i += step) mix(i);
+    for (let i = n - END; i < n; i++) mix(i);
+  }
+  return `${n}:${h.toString(16)}`;
 }

@@ -59,8 +59,8 @@ export function drawBursts(ctx, fx) {
     const { k, size, alpha } = burstEnvelope(b);
     ctx.save();
     ctx.translate(b.x, b.y);
-    if (b.kind === 'hit') drawHit(ctx, b, k, size, alpha);
-    else drawGuard(ctx, b, k, size, alpha);
+    const draw = DRAW[b.kind] || drawGuard;
+    draw(ctx, b.color ? b : { ...b, color: signatureColour(b.who) }, k, size, alpha);
     ctx.restore();
   }
   ctx.restore();
@@ -134,6 +134,151 @@ function drawGuard(ctx, b, k, size, alpha) {
     ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+// A projectile's flare: light thrown forward from where it left the hand.
+function drawLaunch(ctx, b, k, size, alpha) {
+  const r = b.r * size;
+  const flare = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2);
+  flare.addColorStop(0, `rgba(255,255,255,${alpha})`);
+  flare.addColorStop(0.3, rgba(b.color, 0.8 * alpha));
+  flare.addColorStop(1, rgba(b.color, 0));
+  ctx.fillStyle = flare;
+  ctx.beginPath();
+  ctx.moveTo(-b.dir * r * 0.3, 0);
+  ctx.lineTo(b.dir * r * 2, -r * 0.7);
+  ctx.quadraticCurveTo(b.dir * r * 2.4, 0, b.dir * r * 2, r * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Fire thrown up and forward: flame tongues from white through yellow to red,
+// round a hot core, over a shock spreading along the floor below.
+function drawBlast(ctx, b, k, size, alpha) {
+  const r = b.r * size;
+  ctx.save();
+  ctx.scale(1, 0.22);
+  ctx.strokeStyle = `rgba(255,157,26,${0.7 * alpha})`;
+  ctx.lineWidth = 10 * (1 - k) + 2;
+  ctx.beginPath();
+  ctx.arc(0, 60 / 0.22 * 0.9, r * (0.6 + k * 1.6), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+  for (const p of b.petals) {
+    const len = r * p.len * (0.7 + 0.6 * k), w = r * p.w;
+    const cx = Math.cos(p.a), sy = Math.sin(p.a);
+    const tip = [cx * len, sy * len];
+    const g = ctx.createLinearGradient(0, 0, tip[0], tip[1]);
+    g.addColorStop(0, `rgba(255,244,200,${alpha})`);
+    g.addColorStop(0.35, `rgba(255,${190 - Math.round(p.hue * 60)},40,${0.9 * alpha})`);
+    g.addColorStop(1, 'rgba(255,61,46,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-sy * w, cx * w);
+    ctx.quadraticCurveTo(tip[0] * 0.55 - sy * w * 1.4, tip[1] * 0.55 + cx * w * 1.4, tip[0], tip[1]);
+    ctx.quadraticCurveTo(tip[0] * 0.55 + sy * w * 1.4, tip[1] * 0.55 - cx * w * 1.4, sy * w, -cx * w);
+    ctx.closePath();
+    ctx.fill();
+  }
+  const core = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.55);
+  core.addColorStop(0, `rgba(255,255,230,${alpha})`);
+  core.addColorStop(1, 'rgba(255,157,26,0)');
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// A teleport: a pillar of light standing where the fighter is, narrowing to
+// nothing as they vanish, opening then fading as they arrive.
+function drawWarp(ctx, b, k) {
+  const Wp = FX_ART.WARP;
+  const vanish = b.kind === 'vanish';
+  const width = vanish ? b.r * (1 - k) : b.r * Math.min(1, k * 4) * (1 - 0.4 * k);
+  const a = vanish ? 1 - k * 0.5 : 1 - k;
+  if (width <= 0.5 || a <= 0) return;
+  const cy = -Wp.H / 2;
+  for (const [scale, alpha] of [[2.2, 0.35 * a], [1, 0.9 * a]]) {
+    const g = ctx.createLinearGradient(-width * scale, 0, width * scale, 0);
+    g.addColorStop(0, rgba(b.color, 0));
+    g.addColorStop(0.5, scale > 1 ? rgba(b.color, alpha) : `rgba(255,255,255,${alpha})`);
+    g.addColorStop(1, rgba(b.color, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(0, cy, width * scale, Wp.H / 2 * (vanish ? 1 : 0.7 + 0.3 * Math.min(1, k * 4)), 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = rgba(b.color, 0.8 * a);
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(0, -4, b.r * (1.2 + k * 1.8), b.r * 0.3 * (1.2 + k * 1.8), 0, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+const DRAW = { hit: drawHit, guard: drawGuard, parry: drawGuard, launch: drawLaunch, blast: drawBlast, vanish: drawWarp, arrive: drawWarp };
+
+// ------------------------------------------------------------ auras
+
+// What a fighter is in the middle of, drawn behind them: the glow of their
+// ALIGNMENT SHIFT stance, a flicker while a counter is live, speed lines
+// behind a rush. Read straight from the fighter each frame; nothing stored.
+export function drawAura(ctx, f, t) {
+  if (!FX_STYLE.impact || f.state === 'ko') return;
+  const A = FX_ART.AURA;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  if (f.stanceId) {
+    const S = A.STANCE;
+    const color = f.stanceId === 'safety' ? S.SAFETY : S.CAPABILITIES;
+    const pulse = 0.75 + 0.25 * Math.sin(t * S.RATE);
+    const g = ctx.createRadialGradient(f.x, f.y - 95, 10, f.x, f.y - 95, S.R);
+    g.addColorStop(0, rgba(color, S.ALPHA * pulse));
+    g.addColorStop(1, rgba(color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(f.x - S.R, f.y - 95 - S.R, S.R * 2, S.R * 2);
+    // and a stance circle on the floor, which reads even against a bright stage
+    ctx.strokeStyle = rgba(color, 0.7 * pulse);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y - 2, 62, 14, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  if (typeof f.counterActive === 'function' && f.counterActive()) {
+    const C = A.COUNTER;
+    const flick = 0.55 + 0.45 * Math.abs(Math.sin(t * C.RATE));
+    ctx.strokeStyle = rgba(C.COLOR, 0.85 * flick);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y - 92, 58, 104, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y - 92, 70, 118, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const a = f.attack;
+  if (f.state === 'attack' && a?.kind === 'rush' && f.stateT >= a.startup) {
+    const R = A.RUSH;
+    const color = signatureColour(f.def);
+    for (let i = 0; i < R.LINES; i++) {
+      const y = f.y - 20 - ((i * 37) % 150);
+      const len = R.LENGTH * (0.5 + ((i * 53) % 50) / 100);
+      const x0 = f.x - f.facing * (30 + ((i * 29 + t * 900) % 60));
+      const g = ctx.createLinearGradient(x0, y, x0 - f.facing * len, y);
+      g.addColorStop(0, i % 2 ? rgba(color, 0.8) : 'rgba(255,255,255,0.7)');
+      g.addColorStop(1, rgba(color, 0));
+      ctx.strokeStyle = g;
+      ctx.lineWidth = i % 3 === 0 ? 3 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x0, y);
+      ctx.lineTo(x0 - f.facing * len, y);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 // ------------------------------------------------------------ strike trails

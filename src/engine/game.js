@@ -486,6 +486,7 @@ export class Game {
       words: ['SLIDE!', 'NEXT SLIDE!'], sfx: 'paperHit', shake: 5,
     });
     this.fx.ring(owner.x + owner.facing * 48, owner.y - 112, owner.def.c.accent, 260, 3, 0.18);
+    this.fx.launch(owner.x + owner.facing * 48, owner.y - 112 + (i - 1) * 10, owner.facing, null, owner.def);
   }
 
   spawnRain(owner) {
@@ -669,16 +670,19 @@ export class Game {
     const dir = Math.sign(opp.x - f.x) || 1;
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);
+    this.fx.warp(f.x, f.y, null, false, f.def);
     f.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x + dir * 84));
     f.facing = Math.sign(opp.x - f.x) || -dir;
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);
+    this.fx.warp(f.x, f.y, null, true, f.def);
     this.audio.sfx('teleport');
   }
 
   onBurnBlast(f) {
     this.audio.sfx('burn');
     this.fx.flames(f.x + f.facing * 30, f.y, 22, f.facing);
+    this.fx.blast(f.x + f.facing * 70, f.y - 60, f.facing);
     this.fx.ring(f.x + f.facing * 70, f.y - 80, '#ff9d1a', 600, 7, 0.3);
     this.fx.flash('#ff9d1a', 0.18);
     this.fx.shake(8);

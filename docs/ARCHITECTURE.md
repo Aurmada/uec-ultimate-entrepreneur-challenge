@@ -510,6 +510,11 @@ character. `founder.glb` is a base body plus one named mesh per look option, and
   states, so the block briefcase appears only while blocking. Every part the
   roster carries has one: the universal briefcase and all nine signature props.
   Hand-held props ride `grip.L` or `grip.R`; the rest hang off the torso or head.
+* `fx:<condition>` draws while the fighter is in that condition (`CONDITIONS`
+  in `models3d.js`): `fx:unicorn` is Unicorn Mode's golden horn, in matches and
+  in a bust drawn with `unicorn`.
+* A founder who fights with a photo wears no modelled eyewear or facial hair,
+  as `drawHead` draws none over a photo: the person's own are in it.
 
 Colours come from the fighter's palette by material role, as below, so the same
 bomber is green with pink trim on one player and pink with green trim on Kim.
@@ -526,7 +531,7 @@ which is the point: an artist can rebuild it by hand in Blender.
   time (from the inverse bind matrices), never bone rolls. glTF stores joints but
   not bone ends, so `models3d.js` records where the leaf bones end and where the
   skull centre sits.
-* Meshes are named `body`, `<slot>:<option>` or `prop:<id>`, as above.
+* Meshes are named `body`, `<slot>:<option>`, `prop:<id>` or `fx:<condition>`, as above.
 * Each material is named for the palette role it takes its colour from (`suit`,
   `suit2`, `skin`, `pants`, `shoe`, `hair`, `accent`); any other name keeps its
   exported colour. `models3d.js` can mark a material `inkless` (glasses frames:
@@ -599,6 +604,18 @@ the same texture rather than modelled (`PAINTED_LOOKS`), because in 2D it is a
 translucent shade over the jaw. None of this touches the 2D path: with 3D off,
 fighters and portraits hash identically before and after.
 
+A founder with a photo fights with it. Their face texture is the photo, one
+picture for every expression as in 2D, keyed by a fingerprint of the photo
+alone. Projected whole it failed: the photo is cropped around the face with
+room to spare, and what surrounded the face showed as a grey patch down the
+side of the head. So the face is cut out of the crop by where `screens.js`
+framed it (`GL3D.PHOTO`: the share of the crop the face takes, and where it
+sits) and feathered into the skin, which the profile screen samples from the
+same photo. Until
+the photo has decoded the painter declines and the head goes bare, rather than
+caching a face that is about to change. Their portraits stay 2D: a flat photo
+reads better in a frame than one wrapped round a head.
+
 What it took to look right:
 
 * **The head is sculpted to the 2D face.** Projected onto the first head (a brow
@@ -630,9 +647,7 @@ screen rather than per frame. Kim's ring light is pre-turned for the match head
 yaw (above), so in a bust, where the head turns further, it sits a third of a
 radian off square.
 
-Not done yet: a photo founder fights with the default drawn face in 3D, the
-Unicorn horn has no 3D equivalent, and body knobs scale bones rather than using
-shape keys.
+Not done yet: body knobs scale bones rather than using shape keys.
 
 **Sharp fighters.** Both renderers shared one resolution limit: the whole world,
 fighters included, is drawn at 960x540 and the camera crop scales it up (about
@@ -743,6 +758,14 @@ sparks, rings and comic words:
   with the fighter's bust (`drawPortrait` with `bare`, so the 3D bust when there
   is one) and the move's name, and dims the stage behind the fighters while it
   plays.
+* **A signature for each kind of special.** A projectile leaves the hand in a
+  flare (`fx.launch`); BURN RATE BLAST and BURN IT ALL throw fire up and forward
+  over a shock along the floor (`fx.blast`); a teleport leaves a pillar of light
+  that pinches out where the fighter was and opens where they land
+  (`fx.warp`). Three conditions are drawn behind the fighter straight from its
+  state, with nothing stored (`drawAura`): the glow and floor circle of an
+  ALIGNMENT SHIFT stance, a flickering outline while a counter is live, speed
+  lines behind a rush. A grab, the coin rain and a trap already had their own.
 
 An effect wears the fighter's accent, or their suit when the accent is too
 pale to read as a colour (`signatureColour`). The numbers are `FX_ART` in

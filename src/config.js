@@ -58,6 +58,15 @@ export const FX_ART = {
   // game time, WIDTH px at its head and nothing at its tail.
   TRAIL: { SPAN: 0.14, WIDTH: 26, ALPHA: 0.8, MIN_TRAVEL: 14 },
   PROJECTILE: { GLOW: 36, ECHOES: 7, SPACING: 0.018 },
+  // Signature effects, one per kind of special. Radii in world px, times in s.
+  LAUNCH: { R: 30, DUR: 0.14 },                 // a projectile leaving the hand
+  BLAST: { R: 96, DUR: 0.5, PETALS: 11 },       // BURN RATE BLAST, BURN IT ALL
+  WARP: { W: 34, H: 200, DUR: 0.32 },           // a teleport's vanish and arrival
+  AURA: {
+    STANCE: { R: 130, ALPHA: 0.38, RATE: 2.2, SAFETY: '#29d9ff', CAPABILITIES: '#ff3d6e' },
+    COUNTER: { COLOR: '#ff9df3', RATE: 18 },   // the window a counter is live
+    RUSH: { LINES: 7, LENGTH: 150 },            // speed lines behind a rush
+  },
 };
 
 export const PHYS = {
@@ -442,6 +451,13 @@ export const GL3D = {
   FACE_CELL: 160,
   FACE_SPAN: 24,
   FACE_TEXTURES: 12,
+  // A photo founder's face texture. A profile photo is cropped around the
+  // detected face with room to spare (screens.js pads the face 1.9x), so the
+  // face is FACE of the crop's width and sits FACE_DROP of it below centre.
+  // That face is placed SIZE head radii wide, FACE_Y radii below the eye line,
+  // and faded out between the two FEATHER shares of its radius, so what
+  // surrounded it in the photo never reaches the sides of the head.
+  PHOTO: { FACE: 0.53, FACE_DROP: 0.06, SIZE: 1.7, FACE_Y: 0.22, FEATHER: [0.62, 1.05] },
   // Portraits: a bust framed on the head, turned further toward the viewer
   // than a fighter in a match. SPAN is the rig px across the portrait, set so
   // the 3D head fills about what drawPortrait's 2D head does; HEAD_AT is where

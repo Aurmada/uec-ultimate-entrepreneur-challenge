@@ -508,10 +508,41 @@ function computePose(f, t) {
 // The face alone, for the 3D renderer's face textures: centred on the origin
 // of a head of radius r (a fight-size head unless the model asks otherwise),
 // exactly as drawHead would draw it there, with any look the model paints on
-// rather than models (stubble) over it in the same order.
+// rather than models (stubble) over it in the same order. A photo founder's
+// face is their photo, in the same circle drawHead crops it to, and it has no
+// expressions; until the photo has decoded this returns false.
 function paintFace3D(ctx, def, face, r = STYLIZE.HEAD_R) {
+  if (def.photo) {
+    const photo = getPhoto(def.photo);
+    if (!photo) return false;
+    paintPhotoFace(ctx, photo, r);
+    return true;
+  }
   drawFace(ctx, 0, 0, r, face, def.c, def.face);
   if (PAINTED_LOOKS.facialHair.includes(resolveLook3D(def).facialHair)) drawFacialHair(ctx, 0, 0, r, def);
+  return true;
+}
+
+// The face out of a profile photo, feathered so only the face itself lands on
+// the 3D head: projected whole, the photo's background showed as a grey patch
+// down the side of the head. See GL3D.PHOTO.
+function paintPhotoFace(ctx, photo, r) {
+  const P = GL3D.PHOTO;
+  const crop = (r * P.SIZE) / P.FACE;                   // the whole photo, px
+  const n = Math.max(8, Math.ceil(crop * (ctx.getTransform().a || 1)));   // in texels
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = n;
+  const t = tmp.getContext('2d');
+  t.imageSmoothingQuality = 'high';
+  t.drawImage(photo, 0, 0, n, n);
+  const cx = n / 2, cy = n / 2 + n * P.FACE_DROP, fr = (n * P.FACE) / 2;
+  const mask = t.createRadialGradient(cx, cy, fr * P.FEATHER[0], cx, cy, fr * P.FEATHER[1]);
+  mask.addColorStop(0, '#000');
+  mask.addColorStop(1, 'rgba(0,0,0,0)');
+  t.globalCompositeOperation = 'destination-in';
+  t.fillStyle = mask;
+  t.fillRect(0, 0, n, n);
+  ctx.drawImage(tmp, -crop / 2, r * P.FACE_Y - crop * (0.5 + P.FACE_DROP), crop, crop);
 }
 
 // `look` is the character's own facial geometry, layered over STYLIZE.FACE.
@@ -1509,7 +1540,7 @@ function drawBust3D(canvas, ctx, def, opts) {
   P.armF = { x: hf[0], y: P.hipY + hf[1] };
   P.armB = { x: hb[0], y: P.hipY + hb[1] };
   return renderBust3D(ctx, { x: 0, y: 0, w: canvas.width, h: canvas.height }, def, P, {
-    expression: opts.face || 'idle', paintFace: paintFace3D, mirror: !!opts.mirror,
+    expression: opts.face || 'idle', paintFace: paintFace3D, mirror: !!opts.mirror, unicorn: !!opts.unicorn,
   });
 }
 

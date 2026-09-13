@@ -15,7 +15,7 @@ import { buildRig, solvePose, transformPoint, ik, BONES } from '../src/engine/gl
 import { wearing } from '../src/engine/gl3d/index.js';
 import { invertAffine, multiply, boneFrame } from '../src/engine/gl3d/math.js';
 import {
-  MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, LOOK_SLOTS, PAINTED_LOOKS, resolveLook3D, FACE_STATES, faceCell, faceKey,
+  MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, LOOK_SLOTS, CONDITIONS, PAINTED_LOOKS, resolveLook3D, FACE_STATES, faceCell, faceKey,
 } from '../src/data/models3d.js';
 import { restPose } from '../src/engine/anim.js';
 import { applyProportions, clampBody } from '../src/engine/proportions.js';
@@ -48,9 +48,9 @@ test('every model honours the rig contract', () => {
         const w = p.weights[v * 4] + p.weights[v * 4 + 1] + p.weights[v * 4 + 2] + p.weights[v * 4 + 3];
         assert.ok(Math.abs(w - 1) < 0.01, `${p.name}: vertex ${v} weights sum to ${w}`);
       }
-      const slot = p.name.includes(':') ? p.name.split(':')[0] : null;
-      assert.ok(slot === null || slot === 'prop' || LOOK_SLOTS.includes(slot),
-        `mesh "${p.name}" names a slot the runtime does not know`);
+      const [slot, option] = p.name.includes(':') ? p.name.split(':') : [null, null];
+      assert.ok(slot === null || slot === 'prop' || LOOK_SLOTS.includes(slot) || (slot === 'fx' && CONDITIONS.includes(option)),
+        `mesh "${p.name}" names a slot or condition the runtime does not know`);
     }
   }
 });
@@ -138,6 +138,24 @@ test('a fighter wears their own options and nobody else\'s', () => {
   assert.equal(p('prop:mat'), false, 'a player build carries no roster props');
 });
 
+test('Unicorn Mode shows its horn, and only then', () => {
+  assert.ok(meshNames.has('fx:unicorn'), 'the model has no horn');
+  const adam = FIGHTERS.find((f) => f.id === 'max');
+  assert.equal(wearing(adam, 'idle')('fx:unicorn'), false);
+  assert.equal(wearing(adam, 'idle', { unicorn: false })('fx:unicorn'), false);
+  assert.equal(wearing(adam, 'attack', { unicorn: true })('fx:unicorn'), true);
+});
+
+// drawHead draws no eyewear or facial hair over a photo, since the person's
+// own are in it; a modelled pair of glasses would float in front of the photo.
+test('a photo founder wears no modelled eyewear or facial hair', () => {
+  const base = { ...BASE_CHARACTERS[0], eyewear: 'glasses', facialHair: 'beard', hairStyle: 'short', headwear: 'cap' };
+  const drawn = wearing(base, 'idle'), photo = wearing({ ...base, photo: 'data:image/png;base64,AAAA' }, 'idle');
+  assert.equal(drawn('eyewear:glasses') && drawn('facialHair:beard'), true);
+  assert.equal(photo('eyewear:glasses') || photo('facialHair:beard'), false);
+  assert.equal(photo('hair:short') && photo('headwear:cap'), true, 'hair and headwear still frame the photo');
+});
+
 test('a prop follows its part\'s states', () => {
   const carl = FIGHTERS.find((f) => f.id === 'dex');
   assert.equal(wearing(carl, 'idle')('prop:guard-case'), false);
@@ -180,6 +198,11 @@ test('fighters share a face texture exactly when their painted faces match', () 
   assert.equal(faceKey({ ...a, name: 'someone else' }), faceKey(a), 'the key reads more than the face');
   const adam = FIGHTERS.find((f) => f.id === 'max');
   assert.notEqual(faceKey(adam), faceKey({ ...adam, accessory: null }), 'stubble is painted, so it is in the key');
+  const one = 'data:image/jpeg;base64,' + 'A'.repeat(90000) + 'one';
+  const two = 'data:image/jpeg;base64,' + 'A'.repeat(90000) + 'two';
+  assert.notEqual(faceKey({ ...a, photo: one }), faceKey(a), 'a photo face is not the drawn face');
+  assert.notEqual(faceKey({ ...a, photo: one }), faceKey({ ...a, photo: two }), 'two photos share a texture');
+  assert.equal(faceKey({ ...a, photo: one }), faceKey({ ...b, photo: one }), 'the same photo is the same face');
 });
 
 // Where a 2D face point (px from the head centre, y down) lands in the

@@ -1,6 +1,7 @@
 // The fighting-game effects (engine/vfx.js) in a real match, captured at the
 // moments they exist for: a strike's trail, the burst when it lands, a guard
-// flash, a parry, a special's cut-in and its projectile, a super's cut-in.
+// flash, a parry, each kind of special's signature (a launch, a blast, a
+// teleport, a rush, a stance, a counter), a special's cut-in, a super's.
 // Run from the game page with the debug harness and the 3D prototype on:
 //
 //   http://localhost:4173/?gl&debug=1     (served by dev-server.py, for the PUT)
@@ -65,6 +66,37 @@ const SCENES = [
     label: 'super', p1: 'ava', p2: 'scam', arena: 'summit', energy: 100,
     press: { 0: { 3: 'super' } },
     shots: [['super cut-in', (g) => g.fx.playing && g.fx.playing.t > 0.35]],
+  },
+  {
+    label: 'pitch deck', p1: 'kai', p2: 'dex', arena: 'exchange', energy: 100, apart: 300,
+    press: { 0: { 3: 'special' } },
+    shots: [['launch flash', (g) => g.fx.bursts.some((b) => b.kind === 'launch' && b.t > b.dur * 0.3)]],
+  },
+  {
+    label: 'burn rate blast', p1: 'elo', p2: 'max', arena: 'garage', energy: 100, apart: 150,
+    press: { 0: { 3: 'special' } },
+    shots: [['blast', (g) => g.fx.bursts.some((b) => b.kind === 'blast' && b.t > b.dur * 0.3)]],
+  },
+  {
+    label: 'pivot punch', p1: 'ava', p2: 'bozo', arena: 'boardroom', energy: 100, apart: 260,
+    press: { 0: { 3: 'special' } },
+    shots: [['teleport', (g) => g.fx.bursts.some((b) => b.kind === 'arrive' && b.t > b.dur * 0.15)]],
+  },
+  {
+    label: 'growth hack', p1: 'zara', p2: 'eleanor', arena: 'unicorn', energy: 100, apart: 360,
+    press: { 0: { 3: 'special' } },
+    shots: [['rush', (g) => { const f = g.fighters[0]; return f.attack?.kind === 'rush' && f.stateT > f.attack.startup + 0.12; }]],
+  },
+  {
+    label: 'alignment shift', p1: 'scam', p2: 'kai', arena: 'demoday', energy: 100, apart: 220,
+    press: { 0: { 3: 'special' } },
+    shots: [['stance aura', (g) => g.fighters[0].stanceId && !g.fx.playing]],
+  },
+  {
+    label: 'the demo (counter)', p1: 'ava', p2: 'max', arena: 'summit', apart: 200,
+    hold: { 0: { from: 0, to: 12, key: 'right' } },
+    press: { 0: { 4: 'slap' } },
+    shots: [['counter live', (g) => { const f = g.fighters[0]; return typeof f.counterActive === 'function' && !!f.counterActive(); }]],
   },
 ];
 

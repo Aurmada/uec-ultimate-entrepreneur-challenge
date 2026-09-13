@@ -24,6 +24,9 @@ test('with the flag off, hits, guards and specials leave no effects state behind
   const fx = new FXSystem();
   fx.impact(100, 200, 1, '#ffd23f', 1);
   fx.guard(100, 200, 1);
+  fx.launch(100, 200, 1, null, {});
+  fx.blast(100, 200, 1);
+  fx.warp(100, 200, null, true, {});
   fx.cutIn({ def: {} }, 'PITCH DECK STRIKE', '#29d9ff', -1, true);
   const hitstop = fx.hitstopT;
   fx.update(1 / 60);
@@ -97,6 +100,25 @@ test('a cut-in slides in, holds, slides out, and a new one replaces it', () => {
   });
 });
 
+test('each kind of special leaves its own signature', () => {
+  withFlag(() => {
+    const fx = new FXSystem();
+    const steve = FIGHTERS.find((f) => f.id === 'kai');
+    fx.launch(0, 0, 1, null, steve);
+    fx.blast(0, 0, -1);
+    fx.warp(0, 0, null, false, steve);
+    fx.warp(90, 0, null, true, steve);
+    assert.deepEqual(fx.bursts.map((b) => b.kind), ['launch', 'blast', 'vanish', 'arrive']);
+    assert.equal(fx.bursts[0].who, steve, 'a launch wears its owner\'s colour');
+    const blast = fx.bursts[1];
+    assert.equal(blast.petals.length, FX_ART.BLAST.PETALS);
+    const upward = blast.petals.filter((p) => Math.sin(p.a) < 0).length;
+    assert.ok(upward >= blast.petals.length * 0.7, 'a blast throws its fire upward');
+    fx.update(Math.max(FX_ART.LAUNCH.DUR, FX_ART.BLAST.DUR, FX_ART.WARP.DUR) + 0.01);
+    assert.equal(fx.bursts.length, 0);
+  });
+});
+
 test('limbs land in the world the way drawFighter puts them there', () => {
   const P = { rot: 0, armF: { x: 40, y: -150 }, armB: { x: -10, y: -140 }, legF: { x: 20, y: 0 }, legB: { x: -20, y: 0 } };
   const right = limbsInWorld({ x: 300, y: 480, facing: 1 }, P);
@@ -117,8 +139,9 @@ test('the trail follows the limb that is actually striking', () => {
 // The flag is per client: one peer in a live match can have ?gl and the other
 // not. So the effects may draw anything they like but must never move the
 // simulation, and the obvious way they could is hitstop, which is sim time.
-// A busy scripted match (strikes, blocks, specials, a super) must fingerprint
-// identically with the effects on and off, and must actually fire effects.
+// Busy scripted matches (strikes, blocks, every kind of special, a super)
+// must fingerprint identically with the effects on and off, and must actually
+// fire effects: a projectile, a grab, a teleport, a burn, a rush and a stance.
 test('the effects never change the simulation', () => {
   const pads = [
     { right: 1 }, { right: 1, punch: 1 }, {}, {}, { kick: 1 }, {}, { block: 1 }, { block: 1 },
@@ -128,10 +151,10 @@ test('the effects never change the simulation', () => {
     let i = offset;
     return { isHuman: false, update(f) { f.pad = { ...pads[i++ % pads.length] }; } };
   };
-  const run = () => {
+  const run = ([a, b]) => {
     const game = new Game({
-      p1: { def: FIGHTERS.find((f) => f.id === 'kai'), controller: script(0) },
-      p2: { def: FIGHTERS.find((f) => f.id === 'dex'), controller: script(7) },
+      p1: { def: FIGHTERS.find((f) => f.id === a), controller: script(0) },
+      p2: { def: FIGHTERS.find((f) => f.id === b), controller: script(7) },
       arena: { id: 'test', draw() {}, mood: 'none' }, mode: 'solo', difficulty: 'founder',
       hud: new Proxy({}, { get: () => () => {} }), onEnd: () => {}, seed: 20260913,
     });
@@ -146,14 +169,16 @@ test('the effects never change the simulation', () => {
     }
     return { hashes, effects };
   };
-  const off = run();
-  FX_STYLE.impact = true;
-  let on;
-  try { on = run(); } finally { FX_STYLE.impact = false; }
-  assert.equal(off.effects, 0);
-  assert.ok(on.effects > 0, 'the scripted match fired no effects, so it proves nothing');
-  assert.ok(new Set(off.hashes).size > 10, 'the match should actually move');
-  assert.deepEqual(on.hashes, off.hashes, 'turning the effects on moved the simulation');
+  for (const pair of [['kai', 'dex'], ['ava', 'elo'], ['zara', 'scam']]) {
+    const off = run(pair);
+    FX_STYLE.impact = true;
+    let on;
+    try { on = run(pair); } finally { FX_STYLE.impact = false; }
+    assert.equal(off.effects, 0);
+    assert.ok(on.effects > 0, `${pair} fired no effects, so it proves nothing`);
+    assert.ok(new Set(off.hashes).size > 10, `${pair}: the match should actually move`);
+    assert.deepEqual(on.hashes, off.hashes, `${pair}: turning the effects on moved the simulation`);
+  }
 });
 
 test('an effect wears the fighter\'s own colour, unless it is too pale to read', () => {
