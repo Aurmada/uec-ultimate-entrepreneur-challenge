@@ -78,7 +78,13 @@ export class AIController {
           if (n < 3) this.pulse.punch = true;
           else this.pulse.kick = true;
         } else if (f.energy >= METER.SPECIAL_COST) {
-          this.pulse.special = true;
+          // A stance special is a toggle toward preferredStance(). Pressing it
+          // while already there paid full meter and started the cooldown for
+          // a switch that changed nothing; decide() guards this, and this
+          // reflex did not.
+          if (f.special.type !== 'stance' || this.preferredStance(f) !== f.stanceId) {
+            this.pulse.special = true;
+          }
         } else if (f.energy >= METER.SUPER_COST) {
           this.pulse.super = true;
         }

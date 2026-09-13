@@ -116,12 +116,19 @@ class HUD {
       if (f.usesRunway) {
         this.el.rw[i].style.transform = `scaleX(${Math.max(0, f.runway / RUNWAY.MAX)})`;
         this.el.rwTrack[i].classList.toggle('winded', f.winded);
-        if (this.lastRunway[i] !== null && f.runway > this.lastRunway[i] + 0.01) {
-          this.el.rw[i].classList.remove('refill');
-          void this.el.rw[i].offsetWidth;             // restart the flash
-          this.el.rw[i].classList.add('refill');
+        // A new round refills the tank too, and that is not a landed hit, so
+        // only a rise during live play flashes. Outside it, forget the last
+        // value; the first live frame of the next round records a fresh one.
+        if (game.state !== 'fighting') {
+          this.lastRunway[i] = null;
+        } else {
+          if (this.lastRunway[i] !== null && f.runway > this.lastRunway[i] + 0.01) {
+            this.el.rw[i].classList.remove('refill');
+            void this.el.rw[i].offsetWidth;             // restart the flash
+            this.el.rw[i].classList.add('refill');
+          }
+          this.lastRunway[i] = f.runway;
         }
-        this.lastRunway[i] = f.runway;
       }
     }
     const sec = Math.ceil(game.timer);
