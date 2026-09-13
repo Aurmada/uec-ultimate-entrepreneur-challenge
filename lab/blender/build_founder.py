@@ -19,7 +19,9 @@
 #     thigh.R/L, shin.R/L, foot.R/L. The runtime reads only where each sits at
 #     bind time, never bone rolls.
 #   * Mesh objects are named for what selects them:
-#       body          always drawn (skin, face, legs, shoes)
+#       body          always drawn (skin, legs, shoes). The head is bare: the
+#                     runtime projects each fighter's own drawn face onto it,
+#                     in whatever expression the pose calls for
 #       <slot>:<id>   drawn when the fighter's look picks that option; slots are
 #                     hair, headwear, eyewear, facialHair, outfit, accessory
 #       prop:<id>     drawn when the fighter carries a part with that id, in
@@ -45,11 +47,8 @@ scene = bpy.context.scene
 # replaces every role colour from the fighter's own palette.
 ROLE_COLOUR = dict(skin='#e8b48c', suit='#5865f2', suit2='#3d47c9', accent='#29d9ff',
                    hair='#2a2320', pants='#23294f', shoe='#eef1ff')
-FIXED = dict(sole='#9aa0aa', ink='#1b1210', white='#fbf6ee', shirt='#f4f6ff',
+FIXED = dict(sole='#9aa0aa', white='#fbf6ee', shirt='#f4f6ff',
              lens='#15171f', case='#6b4a2b', frame='#1b1a22', visor='#29d9ff')
-# Derived roles: the runtime computes these from the palette rather than
-# storing a colour. skinShade is the skin darkened, which is what stubble is.
-DERIVED = dict(skinShade='#9b7458')
 
 # Decimation targets below are counted in the metaball mesh's quads; the
 # decimated result is triangles, about twice as many. DETAIL scales every target.
@@ -150,8 +149,8 @@ class Family:
 FAMILIES = []      # (Family, faces, bones its vertices may use)
 
 
-# Bones belong to each PART, not to the object it joins. The base body is six
-# parts (skin, face, eyes, pants, shoes, soles) under one name; keyed by name,
+# Bones belong to each PART, not to the object it joins. The base body is four
+# parts (skin, pants, shoes, soles) under one name; keyed by name,
 # the last part's list won and the whole body was weighted to the feet.
 def part(obj, role, bones, faces, res=0.010):
     f = Family(obj, role, res)
@@ -183,21 +182,16 @@ for s in ('R', 'L'):
     skin.cube(wr + d * 0.075, (0.074, 0.062, 0.068), 0.032, q)          # fist
     skin.ellip(wr + d * 0.10 + q @ V((0, 0, 0.05)), (0.05, 0.058, 0.02), q)
 skin.ellip(H(-0.01, 0, 0.025), (0.118, 0.103, 0.128))                  # cranium
-skin.ellip(H(0.045, 0, -0.075), (0.088, 0.086, 0.066))                 # jaw
-skin.ball(H(0.096, 0, -0.108), 0.038)                                    # chin
-skin.ellip(H(0.122, 0, -0.005), (0.036, 0.021, 0.034))                 # nose
-skin.ellip(H(0.10, 0, 0.042), (0.028, 0.088, 0.022))                   # brow ridge
+skin.ellip(H(0.04, 0, -0.055), (0.092, 0.094, 0.064))                   # jaw, short and round
+skin.ball(H(0.088, 0, -0.085), 0.034)                                    # chin
+skin.ellip(H(0.07, 0, 0.0), (0.06, 0.09, 0.08))                         # face front, broad and flat
+skin.ball(H(0.12, 0, 0.007), 0.015)                                      # button nose, clear of the mouth
 for sy in (1, -1):
-    skin.ball(H(0.082, 0.06 * sy, -0.014), 0.03)
-    skin.ellip(H(-0.012, 0.104 * sy, -0.012), (0.028, 0.013, 0.039))
+    skin.ellip(H(-0.012, 0.104 * sy, -0.012), (0.028, 0.013, 0.039))    # ears
 
-face = part('body', 'ink', HEAD, 500, res=0.005)
-white = part('body', 'white', HEAD, 300, res=0.005)
-for sy in (1, -1):
-    face.ellip(H(0.116, 0.04 * sy, 0.056), (0.011, 0.032, 0.009), Rx(-10 * sy).to_quaternion())
-    white.ellip(H(0.107, 0.038 * sy, 0.02), (0.009, 0.019, 0.014))
-    face.ball(H(0.116, 0.036 * sy, 0.019), 0.008)
-face.ellip(H(0.118, 0, -0.062), (0.009, 0.04, 0.014))
+# No brows, eyes or mouth here. A modelled face has one expression; the
+# runtime paints drawFighter's face for every state (MODELS3D.founder.face says
+# where it lands) so the head only has to give it a shape to sit on.
 
 pants = part('body', 'pants', ['hips', 'thigh.R', 'thigh.L', 'shin.R', 'shin.L'], 2400, res=0.012)
 shoe = part('body', 'shoe', ['shin.R', 'shin.L', 'foot.R', 'foot.L'], 1400)
@@ -344,7 +338,7 @@ for i in range(8):
     f.ball(H(-0.03 + 0.05 * math.cos(a), 0.05 * math.sin(a), 0.145), 0.045)
 f.ellip(H(-0.08, 0, -0.01), (0.06, 0.10, 0.10))
 f = hair('afro', faces=900, res=0.012)
-f.ellip(H(-0.02, 0, 0.09), (0.17, 0.17, 0.16))
+f.ellip(H(-0.05, 0, 0.10), (0.16, 0.17, 0.15))           # set back, so it frames the face
 f = hair('bob', faces=900); cap_shell(f)
 for sy in (1, -1): f.ellip(H(-0.01, 0.105 * sy, -0.04), (0.08, 0.035, 0.10))
 f.ellip(H(-0.10, 0, -0.05), (0.05, 0.10, 0.10)); f.ellip(H(0.08, 0, 0.095), (0.04, 0.09, 0.03))
@@ -365,57 +359,69 @@ for sy in (1, -1): f.ball(H(-0.02, 0.11 * sy, 0.10), 0.06)
 # bald has no mesh: the base skull is the look
 # 'cap' is a HAIR style on the roster (Adam, Carl): a backwards cap and no
 # hair, exactly as drawHair draws it. The player-facing cap is headwear below.
+# Crowns are pitched back, so they sit on the brow line at the front (where
+# drawHeadwear puts a 2D crown's edge, clear of the eyes) and low at the back.
 f = part('hair:cap', 'suit2', HEAD, 800, res=0.008)
-f.ellip(H(-0.005, 0, 0.065), (0.128, 0.115, 0.092))
+f.ellip(H(-0.01, 0, 0.075), (0.13, 0.116, 0.09), Ry(-14).to_quaternion())
 f.cube(H(-0.165, 0, 0.05), (0.082, 0.088, 0.01), 0.008, Ry(-12).to_quaternion())
 
 # ================================================================ HEADWEAR
 # player cap: brim forward and clear of the eyes, as drawHeadwear draws it
 f = part('headwear:cap', 'suit2', HEAD, 800, res=0.008)
-f.ellip(H(-0.01, 0, 0.07), (0.128, 0.115, 0.09))
-f.cube(H(0.15, 0, 0.065), (0.08, 0.088, 0.01), 0.008, Ry(10).to_quaternion())
+f.ellip(H(-0.01, 0, 0.078), (0.13, 0.116, 0.09), Ry(-14).to_quaternion())
+f.cube(H(0.15, 0, 0.078), (0.08, 0.088, 0.01), 0.008, Ry(4).to_quaternion())
 f = part('headwear:beanie', 'suit', HEAD, 800, res=0.009)
-f.ellip(H(-0.02, 0, 0.08), (0.132, 0.118, 0.12))
+f.ellip(H(-0.02, 0, 0.09), (0.132, 0.118, 0.12), Ry(-10).to_quaternion())
 band = part('headwear:beanie', 'accent', HEAD, 500, res=0.008)
-band.ellip(H(0.0, 0, 0.055), (0.13, 0.12, 0.03))
-band.ball(H(-0.02, 0, 0.215), 0.035)                                     # bobble
+band.ellip(H(0.0, 0, 0.075), (0.13, 0.12, 0.03), Ry(-10).to_quaternion())
+band.ball(H(-0.03, 0, 0.225), 0.035)                                     # bobble
+# Bands ride higher at the front than the back, above the brows as in 2D, and
+# are capsules end to end: a ring of balls reads as beads once decimated.
+def band_ring(f, rx, ry, z, lift, r, n=18):
+    pts = [H(-0.01 + rx * math.cos(i / n * math.tau), ry * math.sin(i / n * math.tau),
+             z + lift * math.cos(i / n * math.tau)) for i in range(n)]
+    for a, b in zip(pts, pts[1:] + pts[:1]):
+        f.capsule(a, b, r)
+
+
 f = part('headwear:headband', 'accent', HEAD, 400, res=0.007)
-for i in range(18):
-    a = i / 18 * math.tau
-    f.ball(H(-0.01 + 0.118 * math.cos(a), 0.108 * math.sin(a), 0.075), 0.017)
+band_ring(f, 0.118, 0.108, 0.078, 0.01, 0.015)
 f = part('headwear:bandana', 'accent', HEAD, 500, res=0.007)
-for i in range(18):
-    a = i / 18 * math.tau
-    f.ball(H(-0.01 + 0.12 * math.cos(a), 0.11 * math.sin(a), 0.07), 0.02)
+band_ring(f, 0.12, 0.11, 0.075, 0.012, 0.019)
 f.ball(H(-0.14, 0, 0.06), 0.03)
 f.capsule(H(-0.15, 0, 0.05), H(-0.20, 0.02, -0.03), 0.014)
 
 # ================================================================ EYEWEAR
-f = part('eyewear:glasses', 'frame', HEAD, 400, res=0.005)
+# Rings and lenses sit where MODELS3D.founder.face projects the drawn eyes (the
+# eye line at H z = 0.02, about 0.045 either side), just proud of the face.
+f = part('eyewear:glasses', 'frame', HEAD, 700, res=0.004)
 for sy in (1, -1):
-    for i in range(12):
-        a = i / 12 * math.tau
-        f.ball(H(0.13, 0.04 * sy + 0.022 * math.cos(a), 0.02 + 0.016 * math.sin(a)), 0.0045)
-    f.capsule(H(0.125, 0.064 * sy, 0.025), H(-0.01, 0.106 * sy, 0.02), 0.004)
-f.capsule(H(0.132, -0.018, 0.028), H(0.132, 0.018, 0.028), 0.004)
+    ring = [H(0.142, 0.045 * sy + 0.024 * math.cos(i / 16 * math.tau), 0.02 + 0.02 * math.sin(i / 16 * math.tau))
+            for i in range(16)]
+    for a, b in zip(ring, ring[1:] + ring[:1]):
+        f.capsule(a, b, 0.004)
+    f.capsule(H(0.132, 0.07 * sy, 0.025), H(-0.01, 0.106 * sy, 0.02), 0.004)
+f.capsule(H(0.146, -0.021, 0.028), H(0.146, 0.021, 0.028), 0.004)
 f = part('eyewear:shades', 'lens', HEAD, 300, res=0.005)
-for sy in (1, -1): f.ellip(H(0.128, 0.04 * sy, 0.02), (0.012, 0.028, 0.02))
+for sy in (1, -1): f.ellip(H(0.14, 0.045 * sy, 0.02), (0.012, 0.03, 0.022))
 g = part('eyewear:shades', 'frame', HEAD, 200, res=0.005)
-g.capsule(H(0.132, -0.02, 0.03), H(0.132, 0.02, 0.03), 0.005)
-for sy in (1, -1): g.capsule(H(0.12, 0.066 * sy, 0.028), H(-0.01, 0.106 * sy, 0.02), 0.004)
+g.capsule(H(0.148, -0.02, 0.032), H(0.148, 0.02, 0.032), 0.005)
+for sy in (1, -1): g.capsule(H(0.13, 0.072 * sy, 0.03), H(-0.01, 0.106 * sy, 0.02), 0.004)
 f = part('eyewear:visor', 'visor', HEAD, 400, res=0.006)
-f.ellip(H(0.10, 0, 0.022), (0.04, 0.118, 0.026))
+f.ellip(H(0.11, 0, 0.022), (0.04, 0.118, 0.032))
 
 # ================================================================ FACIAL HAIR
-f = part('facialHair:stubble', 'skinShade', HEAD, 400, res=0.008)
-f.ellip(H(0.05, 0, -0.084), (0.085, 0.09, 0.061)); f.ball(H(0.10, 0, -0.114), 0.04)
+# All of it stays clear of the drawn mouth (H z -0.022 to -0.061 at the
+# centre) so every expression reads; test/gl3d.test.js holds it to that.
+# Stubble has no mesh: in 2D it is a translucent shade, so the runtime paints
+# it into the face texture instead.
 f = part('facialHair:moustache', 'hair', HEAD, 250, res=0.005)
-f.ellip(H(0.128, 0, -0.035), (0.015, 0.042, 0.012))
+f.ellip(H(0.137, 0, -0.0145), (0.013, 0.05, 0.0075))
 f = part('facialHair:goatee', 'hair', HEAD, 350, res=0.006)
-f.ellip(H(0.128, 0, -0.035), (0.015, 0.042, 0.012)); f.ellip(H(0.105, 0, -0.115), (0.035, 0.035, 0.032))
+f.ellip(H(0.112, 0, -0.094), (0.028, 0.034, 0.03))
 f = part('facialHair:beard', 'hair', HEAD, 500, res=0.008)
-f.ellip(H(0.05, 0, -0.09), (0.092, 0.098, 0.07)); f.ball(H(0.105, 0, -0.13), 0.048)
-f.ellip(H(0.128, 0, -0.035), (0.015, 0.045, 0.013))
+f.ellip(H(0.045, 0, -0.094), (0.098, 0.102, 0.058)); f.ball(H(0.098, 0, -0.118), 0.04)
+for sy in (1, -1): f.ellip(H(0.03, 0.098 * sy, -0.03), (0.035, 0.018, 0.045))
 
 # ================================================================ ACCESSORIES
 f = part('accessory:earrings', 'accent', HEAD, 200, res=0.005)
@@ -516,7 +522,7 @@ def material(role):
         try: m.use_nodes = True
         except Exception: pass
         p = m.node_tree.nodes.get('Principled BSDF')
-        p.inputs['Base Color'].default_value = lin(ROLE_COLOUR.get(role) or FIXED.get(role) or DERIVED[role])
+        p.inputs['Base Color'].default_value = lin(ROLE_COLOUR.get(role) or FIXED[role])
         p.inputs['Roughness'].default_value = 1.0
         MATERIALS[role] = m
     return MATERIALS[role]

@@ -173,7 +173,7 @@ function reallyStartMatch(cfg) {
   // VS splash
   const vs = $('vsSplash');
   drawPortrait($('vsFace1'), cfg.p1Def);
-  drawPortrait($('vsFace2'), cfg.p2Def);
+  drawPortrait($('vsFace2'), cfg.p2Def, { mirror: true });   // a 3D bust turns to face P1
   $('vsName1').textContent = cfg.p1Def.name;
   $('vsName2').textContent = cfg.p2Def.name;
   vs.classList.remove('hidden');
@@ -610,7 +610,7 @@ function startOnlineMatch(cfg) {
 
   const vs = $('vsSplash');
   drawPortrait($('vsFace1'), hostDef);
-  drawPortrait($('vsFace2'), guestDef);
+  drawPortrait($('vsFace2'), guestDef, { mirror: true });    // a 3D bust turns to face the host
   $('vsName1').textContent = hostDef.name;
   $('vsName2').textContent = guestDef.name;
   vs.classList.remove('hidden');

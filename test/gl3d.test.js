@@ -14,11 +14,13 @@ import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { buildRig, solvePose, transformPoint, ik, BONES } from '../src/engine/gl3d/rig.js';
 import { wearing } from '../src/engine/gl3d/index.js';
 import { invertAffine, multiply, boneFrame } from '../src/engine/gl3d/math.js';
-import { MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, LOOK_SLOTS, resolveLook3D, DERIVED_ROLES } from '../src/data/models3d.js';
+import {
+  MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, LOOK_SLOTS, PAINTED_LOOKS, resolveLook3D, FACE_STATES, faceCell, faceKey,
+} from '../src/data/models3d.js';
 import { restPose } from '../src/engine/anim.js';
 import { applyProportions, clampBody } from '../src/engine/proportions.js';
 import { FIGHTERS, BASE_CHARACTERS, LOOKS } from '../src/data/fighters.js';
-import { GL3D } from '../src/config.js';
+import { GL3D, STYLIZE } from '../src/config.js';
 
 function loadModel(id) {
   const b = readFileSync(new URL(`../${MODELS3D[id].url}`, import.meta.url));
@@ -29,6 +31,7 @@ const meshNames = new Set(founder.primitives.map((p) => p.name));
 const near = (a, b, eps = 1e-4) => a.every((v, i) => Math.abs(v - b[i]) < eps);
 const isIdentity = (m) => m.every((v, i) => Math.abs(v - (i % 5 === 0 ? 1 : 0)) < 1e-6);
 const ROSTER = [...FIGHTERS, ...BASE_CHARACTERS];
+const painted = (slot, option) => (PAINTED_LOOKS[slot] || []).includes(option);
 
 test('every model honours the rig contract', () => {
   for (const id of new Set([DEFAULT_MODEL, ...Object.values(FIGHTER_MODELS)])) {
@@ -81,14 +84,17 @@ test('every vertex is weighted to a bone near it', () => {
 });
 
 // The reason the model is modular. A player picks from LOOKS on the profile
-// screen; an option with no mesh would silently fight without it.
-test('every look option a player can pick has a mesh', () => {
+// screen; an option with no mesh would silently fight without it. An option
+// painted into the face texture must NOT also have a mesh, or it shows twice.
+test('every look option a player can pick has a mesh or is painted, never both', () => {
   const SLOT = { hairStyle: 'hair', headwear: 'headwear', eyewear: 'eyewear', facialHair: 'facialHair', outfit: 'outfit' };
   const NO_MESH = new Set(['none', 'bald']);     // the base body is the look
   for (const [field, options] of Object.entries(LOOKS)) {
     for (const { id } of options) {
       if (NO_MESH.has(id)) continue;
-      assert.ok(meshNames.has(`${SLOT[field]}:${id}`), `no mesh for ${field} "${id}"`);
+      const mesh = meshNames.has(`${SLOT[field]}:${id}`);
+      if (painted(SLOT[field], id)) assert.ok(!mesh, `${field} "${id}" is painted and also has a mesh`);
+      else assert.ok(mesh, `no mesh for ${field} "${id}"`);
     }
   }
 });
@@ -98,7 +104,7 @@ test('every roster and base fighter resolves to meshes that exist', () => {
     const look = resolveLook3D(def);
     for (const slot of LOOK_SLOTS) {
       const option = look[slot];
-      if (option === 'none' || option === 'bald') continue;
+      if (option === 'none' || option === 'bald' || painted(slot, option)) continue;
       assert.ok(meshNames.has(`${slot}:${option}`), `${def.id} wears ${slot} "${option}", which has no mesh`);
     }
   }
@@ -121,14 +127,14 @@ test('a fighter wears their own options and nobody else\'s', () => {
   assert.equal(w('headwear:cap'), false, 'and not the player headwear cap');
   assert.equal(w('outfit:hoodie'), true);
   assert.equal(w('outfit:suit'), false);
-  assert.equal(w('facialHair:stubble'), true, 'accessory "stubble" still means stubble');
+  assert.equal(resolveLook3D(adam).facialHair, 'stubble', 'accessory "stubble" still means stubble');
   assert.equal(w('eyewear:glasses'), false);
   assert.equal(w('prop:mat'), true, 'Adam carries his mat in every state');
 
   const player = { ...adam, hairStyle: 'long', headwear: 'beanie', eyewear: 'glasses', accessory: null, parts: undefined };
   const p = wearing(player, 'idle');
   assert.equal(p('hair:long') && p('headwear:beanie') && p('eyewear:glasses'), true);
-  assert.equal(p('facialHair:stubble'), false);
+  assert.equal(resolveLook3D(player).facialHair, 'none');
   assert.equal(p('prop:mat'), false, 'a player build carries no roster props');
 });
 
@@ -138,14 +144,102 @@ test('a prop follows its part\'s states', () => {
   assert.equal(wearing(carl, 'block')('prop:guard-case'), true);
 });
 
-test('the model wears its palette by role, including roles derived from it', () => {
+test('the model wears every palette role', () => {
   const roles = new Set(founder.primitives.map((p) => p.role));
   for (const role of ['suit', 'suit2', 'skin', 'pants', 'shoe', 'hair', 'accent']) {
     assert.ok(roles.has(role), `no primitive takes its colour from "${role}"`);
   }
-  for (const role of roles) {
-    if (DERIVED_ROLES[role]) assert.ok(['skin', 'suit', 'suit2', 'accent', 'hair', 'pants', 'shoe'].includes(DERIVED_ROLES[role].from));
+});
+
+// ---- faces
+//
+// The head is bare and each fighter's own 2D face is painted into a texture,
+// one cell per expression, then projected onto it. What can go wrong without a
+// browser: an expression the pose sets with no cell of its own (the fighter
+// takes a hit with an idle face), two different faces sharing one texture, and
+// a mesh built over the spot where a feature is drawn (a beard over the mouth).
+
+test('every expression the game asks for has a face cell of its own', () => {
+  const src = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+  const asked = new Set();
+  for (const m of src('src/engine/drawFighter.js').matchAll(/P\.face = '(\w+)'|face: '(\w+)'/g)) asked.add(m[1] || m[2]);
+  for (const path of ['src/main.js', 'src/ui/resultCard.js', 'src/ui/screens.js', 'src/ui/hud.js']) {
+    for (const m of src(path).matchAll(/drawPortrait\([^)]*face: '(\w+)'/g)) asked.add(m[1]);
   }
+  assert.ok(asked.size >= 6, `found only ${[...asked]}; has the pose code moved?`);
+  for (const face of asked) assert.ok(FACE_STATES.includes(face), `"${face}" has no face cell`);
+  const cells = FACE_STATES.map(faceCell);
+  assert.equal(new Set(cells.map(String)).size, cells.length, 'two expressions share a cell');
+  for (const [u, v, w, h] of cells) assert.ok(u >= 0 && v >= 0 && u + w <= 1 + 1e-9 && v + h <= 1 + 1e-9);
+  assert.equal(faceCell('no-such-face'), faceCell('idle'));
+});
+
+test('fighters share a face texture exactly when their painted faces match', () => {
+  const [a, b] = FIGHTERS;
+  assert.notEqual(faceKey(a), faceKey(b), 'two roster faces share a texture');
+  assert.equal(faceKey({ ...a, name: 'someone else' }), faceKey(a), 'the key reads more than the face');
+  const adam = FIGHTERS.find((f) => f.id === 'max');
+  assert.notEqual(faceKey(adam), faceKey({ ...adam, accessory: null }), 'stubble is painted, so it is in the key');
+});
+
+// Where a 2D face point (px from the head centre, y down) lands in the
+// projection: across (along the turned lateral axis) and bind y. The same
+// arithmetic as the vertex shader in toon.js.
+const FACE = MODELS3D.founder.face;
+const R = FACE.r ?? STYLIZE.HEAD_R;
+const [AX, AZ] = [Math.cos(FACE.turn || 0), Math.sin(FACE.turn || 0)];
+const toFace = ([x, y]) => [FACE.at[0] - x * FACE.px[0], FACE.at[1] - y * FACE.px[1]];
+const acrossOf = (p, v) => p.positions[v * 3 + 2] * AX - p.positions[v * 3] * AZ;
+const aheadOf = (p, v) => p.positions[v * 3] * AX + p.positions[v * 3 + 2] * AZ;
+// The drawn features as boxes, centre and half-size in 2D px, as drawFace lays
+// them out for the default face: an eye from the top of its lid to the bottom
+// of its pupil, wide enough for the lid, the X of a KO and the arc of a win;
+// the mouth from corner to corner, deep enough for a snarl's curve.
+const F0 = STYLIZE.FACE;
+const EYE_TOP = F0.LID_Y + F0.LID_W / 2, EYE_BOTTOM = 0.6 + F0.PUPIL_R;
+const FEATURES = {
+  eyeNear: [[-0.34 * R + 1, (EYE_BOTTOM - EYE_TOP) / 2], [6, (EYE_BOTTOM + EYE_TOP) / 2]],
+  eyeFar: [[0.34 * R + 1, (EYE_BOTTOM - EYE_TOP) / 2], [6, (EYE_BOTTOM + EYE_TOP) / 2]],
+  mouth: [[1, F0.MOUTH_Y * R], [F0.MOUTH_W + 1, 2.5]],
+};
+function inBox(p, v, [[cx, cy], [hx, hy]]) {
+  const [a0, y0] = toFace([cx + hx, cy - hy]), [a1, y1] = toFace([cx - hx, cy + hy]);
+  const a = acrossOf(p, v), y = p.positions[v * 3 + 1];
+  return a >= a0 && a <= a1 && y <= y0 && y >= y1 && aheadOf(p, v) > FACE.front;
+}
+
+// The middle of each feature (a pupil, the centre of the mouth) must land where
+// the projection is at full strength. Its ends can fade: the far eye's lid
+// runs onto the side of the head, which a turned face foreshortens anyway.
+test('the middle of every drawn feature lands on skin facing the projection', () => {
+  const skin = founder.primitives.find((p) => p.name === FACE.mesh && p.role === FACE.role);
+  for (const [name, [centre]] of Object.entries(FEATURES)) {
+    const box = [[centre[0] + (name === 'mouth' ? 0 : 1), centre[1]], [3, 3]];
+    let hits = 0;
+    for (let v = 0; v < skin.positions.length / 3; v++) {
+      if (!inBox(skin, v, box)) continue;
+      hits++;
+      const n = skin.normals[v * 3] * AX + skin.normals[v * 3 + 2] * AZ;
+      assert.ok(n >= FACE.fade[0], `the ${name} lands on skin turned away (facing ${n.toFixed(2)})`);
+    }
+    assert.ok(hits > 0, `the ${name} lands where the head has no skin`);
+  }
+});
+
+test('no hair, headwear or facial hair is built over a drawn eye or the mouth', () => {
+  const skin = founder.primitives.find((p) => p.name === FACE.mesh && p.role === FACE.role);
+  const covered = [];
+  for (const [name, box] of Object.entries(FEATURES)) {
+    let face = -Infinity;
+    for (let v = 0; v < skin.positions.length / 3; v++) if (inBox(skin, v, box)) face = Math.max(face, aheadOf(skin, v));
+    for (const p of founder.primitives) {
+      if (!/^(hair|headwear|facialHair):/.test(p.name)) continue;
+      let over = 0;
+      for (let v = 0; v < p.positions.length / 3; v++) if (inBox(p, v, box) && aheadOf(p, v) > face - 0.01) over++;
+      if (over) covered.push(`${p.name} covers the ${name} (${over} vertices)`);
+    }
+  }
+  assert.deepEqual(covered, []);
 });
 
 test('invertAffine undoes a scaled bone frame', () => {
@@ -210,6 +304,19 @@ test('the lead limbs go to the far side of the turned body', () => {
   const zOf = (bone) => transformPoint(m, rig.names.indexOf(bone), rig.rest[bone].head)[2];
   assert.ok(zOf('upper_arm.L') < 0 && zOf('upper_arm.R') > 0, 'shoulders are not split far and near');
   assert.ok(zOf('thigh.L') < 0 && zOf('thigh.R') > 0, 'hips are not split far and near');
+});
+
+test('a portrait turns the head further toward the viewer than a match does', () => {
+  const rig = buildRig(founder, MODELS3D.founder);
+  const head = rig.names.indexOf('head');
+  const facing = (turn) => {
+    const m = solvePose(rig, { ...restPose(), bodyLean: 0 }, {}, turn);
+    const a = transformPoint(m, head, [0, 1.8, 0]), b = transformPoint(m, head, [0.1, 1.8, 0]);
+    return Math.atan2(b[2] - a[2], b[0] - a[0]);    // 0 is side-on, PI/2 faces the camera
+  };
+  const match = facing(null), bust = facing(GL3D.BUST.TURN);
+  assert.ok(Math.abs(match - (GL3D.YAW + GL3D.HEAD_YAW)) < 1e-6, `a match head turns ${match}`);
+  assert.ok(bust > match && bust < Math.PI / 2, `a portrait head turns ${bust}`);
 });
 
 test('every roster body poses to finite matrices', () => {

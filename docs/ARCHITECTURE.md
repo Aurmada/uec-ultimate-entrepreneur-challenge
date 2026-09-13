@@ -482,7 +482,7 @@ data/models3d.js               model registry, and how a fighter's look picks it
 engine/gl3d/glb.js             minimal .glb reader: one skin, indexed triangles, base colours
 engine/gl3d/rig.js             2D pose -> 3D joints -> two-bone IK -> skinning matrices
 engine/gl3d/toon.js            WebGL2: an ink pass (inflated back faces), then banded lighting
-engine/gl3d/index.js           flags, loading, what a fighter wears, and render3D() for drawFighter
+engine/gl3d/index.js           flags, loading, what a fighter wears, faces, render3D() and renderBust3D()
 ```
 
 `drawFighter` asks `has3D(def)` and hands `render3D()` the same proportioned
@@ -495,7 +495,8 @@ founder is the same data from the profile screen, so there is no model per
 character. `founder.glb` is a base body plus one named mesh per look option, and
 `wearing(def, state)` picks which to draw:
 
-* `body` always draws: skin, face, legs and shoes.
+* `body` always draws: skin, legs and shoes. The head is bare; each fighter's
+  face is painted onto it (see Faces, below).
 * `<slot>:<option>` draws when the fighter's look picks it. The slots are `hair`
   (13 styles, including the roster's backwards `cap`), `headwear`, `eyewear`,
   `facialHair`, `outfit` (all nine) and `accessory`. `resolveLook3D` reads a look
@@ -524,13 +525,15 @@ which is the point: an artist can rebuild it by hand in Blender.
   skull centre sits.
 * Meshes are named `body`, `<slot>:<option>` or `prop:<id>`, as above.
 * Each material is named for the palette role it takes its colour from (`suit`,
-  `suit2`, `skin`, `pants`, `shoe`, `hair`, `accent`), or a derived role the
-  runtime computes (`skinShade`, the skin darkened, for stubble); any other name
-  keeps its exported colour.
+  `suit2`, `skin`, `pants`, `shoe`, `hair`, `accent`); any other name keeps its
+  exported colour. `models3d.js` can mark a material `inkless` (glasses frames:
+  wire thinner than the outline, which the ink pass would swell into a black
+  bar) or `glass`, with an opacity (the visor, a tint the eyes show through, as
+  in 2D). Glass draws last, blended, with no outline.
 
 `test/gl3d.test.js` holds the model to this: every option a player can pick has a
-mesh, every roster fighter resolves to meshes that exist, every part has a 3D
-prop, and every vertex is weighted to a bone near it.
+mesh or is painted on (never both), every roster fighter resolves to meshes that
+exist, every part has a 3D prop, and every vertex is weighted to a bone near it.
 
 **How a 2D pose drives the bones.** The procedural rig stores hand and foot
 TARGETS, not elbows and knees, and stretches a limb to reach a target, which is
@@ -553,7 +556,7 @@ choices shape the result:
 
 Hazards found while building it:
 
-* **Bones belong to parts, not to object names.** The base body is six parts
+* **Bones belong to parts, not to object names.** The base body is several parts
   joined under one name. The build script first stored each name's bone list,
   so the last part's list (the soles) won and the whole body was weighted to the
   feet; every structural check passed and every fighter rendered with its head
@@ -579,9 +582,54 @@ Hazards found while building it:
 * **One WebGL context serves every fighter**, with `preserveDrawingBuffer` on,
   because each fighter is read back with `drawImage` straight after it is drawn.
 
-Not done yet: a player's photo face has no 3D equivalent, the per-character face
-data (brows, lids, mouth) is not used, and body knobs scale bones rather than
-using shape keys.
+**Faces.** A modelled face has one expression, and in 2D every character has
+their own brows, lids and mouth, changing with state (`P.face`: idle, angry,
+block, hurt, ko, happy). So the 3D head is bare, and `drawFighter`'s own
+`drawFace` paints it. The first time a fighter is drawn, `index.js` has the
+painter draw every expression into one texture, a cell each (`FACE_STATES`,
+`GL3D.FACE_CELL`), keyed by the face values so fighters with the same face
+share it. The toon shader projects the pose's cell onto the `body` skin in
+BIND space, so the face rides the head bone. `MODELS3D.founder.face` says
+where: the eye line, the model units per 2D px, how far forward a surface must
+be, and how the face fades as the surface turns away. Stubble is painted into
+the same texture rather than modelled (`PAINTED_LOOKS`), because in 2D it is a
+translucent shade over the jaw. None of this touches the 2D path: with 3D off,
+fighters and portraits hash identically before and after.
+
+What it took to look right:
+
+* **The head is sculpted to the 2D face.** Projected onto the first head (a brow
+  ridge, cheekbones, a long jaw and a real nose), the same drawing read as a
+  skull: the brows sank into sockets and the mouth landed on the nose. The face
+  is now broad and flat at the front, the jaw short, the nose a small button
+  above where the mouth is drawn, and one scale serves every feature.
+* **Nothing is built over a drawn feature.** Facial hair stops short of the
+  mouth, and cap, beanie and band crowns sit on the brow line, as
+  `drawHeadwear` keeps 2D crowns clear of the eyes. A test measures every hair,
+  headwear and facial hair mesh against the eyes and mouth; it caught the afro,
+  the beard, the moustache, both caps, the beanie and the bandana.
+* **The projection turns a little toward the camera** (`turn`, 0.15 rad). The
+  camera sees the near side of the face almost square on, and a straight-ahead
+  projection spread the near brow across it. At 0.3 the near side read best in
+  a portrait, but in a match the far eye slid round to the silhouette. Judge a
+  face change at the match angle, not only in a portrait.
+
+**Portraits.** With 3D on, `drawPortrait` draws a 3D bust (`drawBust3D`) instead
+of the 2D head and shoulders, keeping the backdrop, grade and frame. The pose is
+the fighter's idle with the hands dropped below the frame, where a guard would
+cover the face; `renderBust3D` turns the body further toward the viewer
+(`GL3D.BUST.TURN`) and frames the orthographic view on the head. `opts.mirror`
+turns a bust to face left, which the VS splash and HUD use on the right-hand
+side. A portrait drawn while the model is still loading is drawn in 2D and
+again once it lands (`pending3D`, `on3DReady`). A player with a photo keeps the
+2D bust, since the photo is the face. A bust costs about 2 ms, drawn once per
+screen rather than per frame. Kim's ring light is pre-turned for the match head
+yaw (above), so in a bust, where the head turns further, it sits a third of a
+radian off square.
+
+Not done yet: a photo founder fights with the default drawn face in 3D, the
+Unicorn horn has no 3D equivalent, and body knobs scale bones rather than using
+shape keys.
 
 **Sharp fighters.** Both renderers shared one resolution limit: the whole world,
 fighters included, is drawn at 960x540 and the camera crop scales it up (about
@@ -595,12 +643,15 @@ both versions).
 
 Measured in September 2026 on an M2 Max, in a live AI-vs-AI match at 60 fps,
 whole-frame render time: 1.73 ms with both fighters in 2D, 1.93 ms with both in
-3D; with sharp fighters, 1.98 ms and 2.07 ms. The model holds 47 meshes and 43.4k triangles in 1.3 MB, and a fighter draws
-about 10k of them. Phone numbers come from `lab/gl3d-bench.html`, a match that
+3D; with sharp fighters, 1.98 ms and 2.07 ms. Adding faces moved neither number
+past the noise between runs (1.3 to 2.3 ms in 2D in the same session). The model
+holds 46 meshes and 42.7k triangles in 1.3 MB, and a fighter draws about 10k of
+them. Phone numbers come from `lab/gl3d-bench.html`, a match that
 needs no sign-in: serve with `python3 dev-server.py 4173` and open
 `http://<this machine's LAN address>:4173/lab/gl3d-bench.html` on a phone on the
 same network. `lab/gl3d-gallery.js` renders one fighter through every state, the
-whole roster, or every look option, and `lab/blender/build_founder.py` rebuilds
+whole roster, every look option (as bodies or as busts), every face close up in
+each expression, or every portrait, and `lab/blender/build_founder.py` rebuilds
 the model in about five seconds.
 
 ---

@@ -395,6 +395,27 @@ export const GL3D = {
   BAND_K: [1.0, 0.80, 0.60],
   SHADOW_TINT: [0.86, 0.88, 1.06],
   RIM: 0.40,
+  // Faces. Each fighter's 2D face is painted once per expression into a
+  // texture (cells FACE_CELL texels square, each spanning FACE_SPAN 2D px
+  // either side of the face centre) and projected onto the head. Up to
+  // FACE_TEXTURES faces stay uploaded, about 0.8 MB each with mipmaps; the
+  // least recently used goes first. A character select needs a dozen.
+  FACE_CELL: 160,
+  FACE_SPAN: 24,
+  FACE_TEXTURES: 12,
+  // Portraits: a bust framed on the head, turned further toward the viewer
+  // than a fighter in a match. SPAN is the rig px across the portrait, set so
+  // the 3D head fills about what drawPortrait's 2D head does; HEAD_AT is where
+  // the skull centre sits, as fractions of the portrait. The hands hang by
+  // the hips (rig px forward, and down from the hip), below the frame, since
+  // an idle guard would cover the face.
+  BUST: {
+    SPAN: 64,
+    HEAD_AT: [0.5, 0.42],
+    TURN: { yaw: 0.9, hipYaw: 0.6, headYaw: 0.35 },
+    HAND_F: [14, 16],
+    HAND_B: [-8, 16],
+  },
 };
 
 // ---------------------------------------------------------------------------

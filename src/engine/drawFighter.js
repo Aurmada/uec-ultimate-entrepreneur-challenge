@@ -3,13 +3,14 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE } from '../config.js';
+import { STYLES, STYLIZE, GL3D } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
-import { has3D, render3D, mark2D, timing3D } from './gl3d/index.js';
+import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D } from './gl3d/index.js';
+import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
@@ -502,6 +503,15 @@ function computePose(f, t) {
 }
 
 // ---------------------------------------------------------------- head & face
+
+// The face alone, for the 3D renderer's face textures: centred on the origin
+// of a head of radius r (a fight-size head unless the model asks otherwise),
+// exactly as drawHead would draw it there, with any look the model paints on
+// rather than models (stubble) over it in the same order.
+function paintFace3D(ctx, def, face, r = STYLIZE.HEAD_R) {
+  drawFace(ctx, 0, 0, r, face, def.c, def.face);
+  if (PAINTED_LOOKS.facialHair.includes(resolveLook3D(def).facialHair)) drawFacialHair(ctx, 0, 0, r, def);
+}
 
 // `look` is the character's own facial geometry, layered over STYLIZE.FACE.
 // RENDER-ONLY: it is read here and nowhere else — never by the state machine,
@@ -1199,6 +1209,7 @@ export function drawFighter(ctx, f, t) {
       elbowF: stanceEl?.elbowF ?? STYLIZE.ELBOW,
       elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,
       jitter: f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0,
+      paintFace: paintFace3D,
     })) {
       if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);
       if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
@@ -1462,6 +1473,39 @@ function drawPortraitNeckline(ctx, def, S, k) {
   }
 }
 
+// The 3D bust, when the live 3D renderer (?gl) has this fighter: the model
+// and face they fight with, turned toward the viewer, hands down below the
+// frame where a guard would cover the face. `opts.mirror` turns them to face
+// left. A photo founder keeps the 2D bust, since the photo is the face. A
+// portrait drawn while the model is still loading is drawn again once it lands.
+const bustRedraws = new Map();          // canvas -> [def, opts]; the latest call wins
+function drawBust3D(canvas, ctx, def, opts) {
+  if (def.photo) return false;
+  if (pending3D(def)) {
+    if (!bustRedraws.size) {
+      on3DReady(() => {
+        const queued = [...bustRedraws];
+        bustRedraws.clear();
+        for (const [c, [d, o]] of queued) drawPortrait(c, d, o);
+      });
+    }
+    bustRedraws.set(canvas, [def, opts]);
+    return false;
+  }
+  if (!has3D(def)) return false;
+  const body = clampBody(def.body);
+  const P = applyProportions(computePose({
+    def, body, side: 0, x: 0, y: 0, facing: 1, state: 'idle', stateT: 0, walkPhase: 0, vy: 0,
+    airborne: false, crouching: false, movingBack: false, unicornT: 0, flashT: 0, attack: null,
+  }, 0), body);
+  const { HAND_F: hf, HAND_B: hb } = GL3D.BUST;
+  P.armF = { x: hf[0], y: P.hipY + hf[1] };
+  P.armB = { x: hb[0], y: P.hipY + hb[1] };
+  return renderBust3D(ctx, { x: 0, y: 0, w: canvas.width, h: canvas.height }, def, P, {
+    expression: opts.face || 'idle', paintFace: paintFace3D, mirror: !!opts.mirror,
+  });
+}
+
 export function drawPortrait(canvas, def, opts = {}) {
   const ctx = canvas.getContext('2d');
   const S = canvas.width;
@@ -1486,23 +1530,25 @@ export function drawPortrait(canvas, def, opts = {}) {
     ctx.restore();
   }
   ctx.globalAlpha = 1;
-  // shoulders
-  blob(ctx, () => {
-    ctx.moveTo(S * 0.1, S * 1.05);
-    ctx.quadraticCurveTo(S * 0.12, S * 0.68, S * 0.5, S * 0.66);
-    ctx.quadraticCurveTo(S * 0.88, S * 0.68, S * 0.9, S * 1.05);
-    ctx.closePath();
-  }, def.c.suit);
-  drawPortraitNeckline(ctx, def, S, k);
-  ctx.save();
-  ctx.translate(0, 0);
-  const headR = S * 0.24;
-  const scale = headR / 22;
-  ctx.translate(S / 2, S * 0.42);
-  ctx.scale(scale, scale);
-  ctx.translate(0, 0);
-  drawHead(ctx, def, 0, 0, 22, opts.face || 'idle', opts.t || 1, !!opts.unicorn);
-  ctx.restore();
+  if (!drawBust3D(canvas, ctx, def, opts)) {
+    // shoulders
+    blob(ctx, () => {
+      ctx.moveTo(S * 0.1, S * 1.05);
+      ctx.quadraticCurveTo(S * 0.12, S * 0.68, S * 0.5, S * 0.66);
+      ctx.quadraticCurveTo(S * 0.88, S * 0.68, S * 0.9, S * 1.05);
+      ctx.closePath();
+    }, def.c.suit);
+    drawPortraitNeckline(ctx, def, S, k);
+    ctx.save();
+    ctx.translate(0, 0);
+    const headR = S * 0.24;
+    const scale = headR / 22;
+    ctx.translate(S / 2, S * 0.42);
+    ctx.scale(scale, scale);
+    ctx.translate(0, 0);
+    drawHead(ctx, def, 0, 0, 22, opts.face || 'idle', opts.t || 1, !!opts.unicorn);
+    ctx.restore();
+  }
 
   // ---- cinematic light, matching the in-fight fighter shading (v2.0) ----
   // Still inside the rounded-rect clip, so it lights the whole bust + backdrop

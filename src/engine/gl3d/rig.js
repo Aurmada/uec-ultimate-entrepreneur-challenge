@@ -110,8 +110,9 @@ const onHinge = (hinge, from, to) => cross(hinge, normalize(sub(to, from)));
 
 // Writes one skinning matrix per joint into rig.matrices and returns it.
 // `P` is the proportioned 2D pose; `elbow` carries the per-state bend signs
-// drawFighter uses ({ F, B }).
-export function solvePose(rig, P, elbow = {}) {
+// drawFighter uses ({ F, B }). `turn` can replace GL3D's YAW, HIP_YAW and
+// HEAD_YAW ({ yaw, hipYaw, headYaw }), as a portrait does to face the viewer.
+export function solvePose(rig, P, elbow = {}, turn = null) {
   const U = GL3D.UNIT;
   const pt = (x, y, z = 0) => [x / U, -y / U, z];
   const leanRad = (P.bodyLean || 0) * GL3D.LEAN;
@@ -123,7 +124,8 @@ export function solvePose(rig, P, elbow = {}) {
   };
   const tip = (v, a) => rotZ(v, -a);         // positive lean tips forward
 
-  const yc = GL3D.YAW, yp = GL3D.HIP_YAW, yh = GL3D.YAW + GL3D.HEAD_YAW;
+  const yc = turn?.yaw ?? GL3D.YAW, yp = turn?.hipYaw ?? GL3D.HIP_YAW;
+  const yh = yc + (turn?.headYaw ?? GL3D.HEAD_YAW);
   const chestFwd = tip([Math.cos(yc), 0, Math.sin(yc)], leanRad);
   const chestLat = tip([-Math.sin(yc), 0, Math.cos(yc)], leanRad);   // toward the near side
   const chestUp = tip([0, 1, 0], leanRad);
