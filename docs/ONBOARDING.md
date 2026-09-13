@@ -11,7 +11,8 @@ plain JavaScript with no framework to learn.
 
 ## 1. Run it
 
-You need Python 3 (for the dev server) and Node 18 or newer (for the tests).
+You need Python 3 (for the dev server) and Node 21 or newer (for the tests; the
+test script passes a quoted glob to `node --test`, which older versions reject).
 Nothing else. There is no `npm install`, because there are no dependencies.
 
 ```bash
@@ -34,7 +35,7 @@ Run the tests:
 npm test
 ```
 
-Roughly 245 tests at the time of writing, about a second, no framework. They
+324 tests at v3.8, about a second, no framework. They
 should all pass on a clean checkout. If they do not, stop and find out why
 before changing anything.
 
@@ -102,10 +103,9 @@ c: { skin: '#8a5a3b', suit: '#e332a9', /* ... */ }
 Reload the browser. That is the entire cycle. No build, no watcher, no restart.
 
 To get into a fight quickly without clicking through the menus, open the console
-and use the debug hooks:
+and use the debug hooks. Sign in first:
 
 ```js
-UEC.skipSplash();
 UEC.signInAs({ id: 'test-uid', email: 'you@example.com' });
 ```
 
@@ -118,6 +118,8 @@ then start a match directly:
 ```js
 const { getFighter } = await import('./src/data/fighters.js');
 const { getArena }   = await import('./src/data/arenas.js');
+const { Save }       = await import('./src/state.js');
+Save.data.tutorialSeen = true;   // or startMatch shows the tutorial instead
 UEC.startMatch({
   mode: 'solo',
   p1Def: getFighter('dex'),      // NOTE: p1Def is the HUMAN slot
@@ -126,7 +128,13 @@ UEC.startMatch({
   difficulty: 'founder',         // KEY, not label. See below.
   isChallenge: false,
 });
+UEC.skipSplash();                // AFTER startMatch: it dismisses the VS splash
 ```
+
+`skipSplash` only has something to skip once `startMatch` has put up the VS
+splash; called before, it does nothing and the match sits paused for 1.6 seconds.
+On a fresh save, `startMatch` shows the tutorial rather than a fight, which is
+why the snippet marks the tutorial seen first.
 
 Difficulty **keys** are `intern` / `founder` / `mogul`. The names on screen
 (`ROOKIE` / `CONTENDER` / `CHAMPION`) are labels in `AI_LEVELS` and are not
@@ -134,8 +142,9 @@ accepted here. An unknown key falls back to `founder` without warning, so a
 typo looks like it worked.
 
 Other hooks that save time: `UEC.setHP(i, v)`, `UEC.setEnergy(i, v)`,
-`UEC.setTimer(v)`, `UEC.game` (the live match object), and `UEC.step(dt)` to
-advance the simulation by hand.
+`UEC.setTimer(v)`, `UEC.game` (the live match object), and
+`UEC.step(seconds = 1, dt = 1/60)` to advance the simulation by hand and render
+the result.
 
 ---
 
