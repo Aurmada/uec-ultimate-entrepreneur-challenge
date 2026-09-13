@@ -71,6 +71,18 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.8: the profile screen opens again
+
+A maintenance release. No new moves; several things that were quietly wrong now aren't.
+
+- 👤 **Your profile opens again.** If you picked ALIGNMENT SHIFT before v3.6 made it Scam Alt's alone, the profile screen stopped opening, so you couldn't change it. It opens now and swaps you to Pitch Deck Strike until you choose another.
+- 🔒 **Roster moves stay on the roster.** A stale save, a hand-edited challenge link, or a tampered live pick could still hand a player build Scam Alt's or Adam Weumann's signature, and even Adam's runway. All three doors are shut, and a live match now refuses a rival on an older version rather than letting the two of you drift apart mid-fight.
+- 🤖 **Scam Alt's AI stops paying for nothing.** It sometimes spent 50 meter switching to the stance it was already in. That was more than a third of its switches.
+- 💸 **The runway bar** no longer flashes "refilled" at the start of every round.
+- 🎮 **Controls card and help** now list Launch, and say what's true: you can play as any roster fighter.
+
+Behind the scenes: tests that could never fail now can, dead code and settings nothing read are gone, and every document was checked line by line against the code.
+
 ## What's new in v3.7 — Adam Weumann is running out of money
 
 Every fighter's meter goes up. Adam's runway goes down.
