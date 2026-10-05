@@ -69,6 +69,11 @@ export class Game {
     this.timescale = 1;
     this.dt = 0;
     this.t = 0;
+    // Game time that stops for hitstop and slows with the KO slow motion: the
+    // clock the fighters' poses move on. Render-only effects that follow a
+    // pose (strike trails, projectile wakes) age on it, since `t` keeps
+    // running through the freeze. Nothing in the simulation reads it.
+    this.simT = 0;
     this.paused = false;
     this.winnerIdx = -1;
     this.roundWinner = -1;
@@ -95,6 +100,7 @@ export class Game {
 
     const dt = rawDt * this.timescale;
     this.dt = dt;
+    this.simT += dt;
 
     switch (this.state) {
       case 'intro': this.updateIntro(rawDt); break;

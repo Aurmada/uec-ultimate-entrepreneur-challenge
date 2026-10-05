@@ -1,7 +1,7 @@
 // Fighting-game effects for the live 3D prototype (?gl). RENDER-ONLY.
 //
-// engine/fx.js keeps the state (impact bursts, the cut-in, the stage dim), and
-// the simulation reports hits and specials to it as it always has. This draws:
+// engine/fx.js keeps the state (impact bursts, the cut-in), and the
+// simulation reports hits and specials to it as it always has. This draws:
 //   * impact bursts and guard flashes, in the world, over the fighters;
 //   * the swipe that follows a striking limb, from the pose drawFighter drew;
 //   * a glow and a wake behind every projectile;
@@ -12,11 +12,9 @@
 import { FX_ART } from '../config.js';
 import { FX_STYLE } from './fx.js';
 import { drawPortrait, poseOf } from './drawFighter.js';
+import { hexToRGB } from './gl3d/toon.js';
 
-const rgb = (hex) => {
-  const h = String(hex || '#ffffff').replace('#', '');
-  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) || 0);
-};
+const rgb = (hex) => hexToRGB(hex).map((v) => Math.round(v * 255) || 0);
 const rgba = (hex, a) => `rgba(${rgb(hex).join(',')},${a})`;
 // How saturated a colour is, 0 grey .. 1 pure.
 const saturation = (hex) => {
@@ -307,8 +305,11 @@ export function strikingLimb(histories) {
 const trails = new WeakMap();                 // fighter -> { limbs: [[{x, y, t}] x 4], lastT }
 
 // Call straight after drawFighter(f): it reads the pose just drawn, so the
-// trail's head sits on the limb in this very frame.
-export function drawTrail(ctx, f, t) {
+// trail's head sits on the limb in this very frame. `clock` is game.simT, the
+// time the poses move on: it stops for hitstop, so the trail holds still
+// through the freeze instead of draining away, and clears once the strike is
+// over. (game.t keeps running during hitstop, which is why it is not used.)
+export function drawTrail(ctx, f, clock) {
   if (!FX_STYLE.impact) return;
   const T = FX_ART.TRAIL;
   let tr = trails.get(f);
@@ -317,14 +318,12 @@ export function drawTrail(ctx, f, t) {
     trails.set(f, tr);
   }
   const pose = poseOf(f);
-  if (f.state === 'attack' && pose && pose.t > tr.lastT) {
-    limbsInWorld(f, pose.P).forEach((p, i) => tr.limbs[i].push({ x: p.x, y: p.y, t: pose.t }));
-    tr.lastT = pose.t;
+  if (f.state === 'attack' && pose && clock > tr.lastT) {
+    limbsInWorld(f, pose.P).forEach((p, i) => tr.limbs[i].push({ x: p.x, y: p.y, t: clock }));
+    tr.lastT = clock;
   }
-  // Points age out on game time, so a trail holds still through hitstop and
-  // clears once the strike is over.
   for (const pts of tr.limbs) {
-    while (pts.length && pts[0].t < t - T.SPAN) pts.shift();
+    while (pts.length && pts[0].t < clock - T.SPAN) pts.shift();
   }
   const { limb, travel } = strikingLimb(tr.limbs);
   if (limb < 0 || travel < T.MIN_TRAVEL) return;
@@ -371,8 +370,9 @@ function ribbon(ctx, pts, color, T) {
 const wakes = new WeakMap();                  // projectile -> [{x, y, t}]
 
 // Draw before the projectile itself: a halo in its owner's colour and a wake
-// of fading echoes along the path it has flown.
-export function drawProjectileGlow(ctx, p, t) {
+// of fading echoes along the path it has flown. `clock` is game.simT, as for
+// trails, so a wake holds its shape through hitstop.
+export function drawProjectileGlow(ctx, p, clock) {
   if (!FX_STYLE.impact || p.delay > 0) return;
   const P = FX_ART.PROJECTILE;
   const color = signatureColour(p.owner?.def);
@@ -382,8 +382,8 @@ export function drawProjectileGlow(ctx, p, t) {
     wakes.set(p, wake);
   }
   const last = wake[wake.length - 1];
-  if (!last || t - last.t >= P.SPACING) {
-    wake.push({ x: p.x, y: p.y, t });
+  if (!last || clock - last.t >= P.SPACING) {
+    wake.push({ x: p.x, y: p.y, t: clock });
     if (wake.length > P.ECHOES) wake.shift();
   }
   ctx.save();

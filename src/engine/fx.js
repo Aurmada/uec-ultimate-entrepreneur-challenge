@@ -17,7 +17,6 @@ export class FXSystem {
     this.rings = [];
     this.bursts = [];            // FX_STYLE.impact only
     this.playing = null;         // the cut-in on screen
-    this.dimT = 0;
     this.shakeMag = 0;
     this.hitstopT = 0;
     this.flashCol = null;
@@ -53,7 +52,6 @@ export class FXSystem {
       this.playing.t += dt;
       if (this.playing.t >= this.playing.dur) this.playing = null;
     }
-    this.dimT = Math.max(0, this.dimT - dt);
   }
 
   // A landed hit: a white-hot core, spikes thrown away from the attacker and
@@ -121,7 +119,6 @@ export class FXSystem {
     if (!FX_STYLE.impact) return;
     const C = FX_ART.CUTIN;
     this.playing = { fighter, name, color, side, big, t: 0, dur: big ? C.SUPER_DUR : C.DUR, bust: null };
-    this.dimT = Math.max(this.dimT, this.playing.dur);
   }
 
   get shakeX() { return this.shakeMag ? (Math.random() * 2 - 1) * this.shakeMag : 0; }

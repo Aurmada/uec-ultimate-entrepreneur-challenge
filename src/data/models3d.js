@@ -91,21 +91,24 @@ const CELLS = FACE_STATES.map((_, i) => [
 export const faceCell = (state) => CELLS[Math.max(0, FACE_STATES.indexOf(state))];
 
 // Fighters whose painted faces match share one texture. drawFace reads only
-// the expression and the fighter's face values, the painted look options read
-// nothing but themselves, and a photo founder's face is their photo, so those
-// are the key (the photo by a short fingerprint: it is a data URL).
-const keys = new WeakMap();
-export function faceKey(def) {
-  if (!keys.has(def)) {
-    if (def.photo) {
-      keys.set(def, JSON.stringify(['photo', fingerprint(def.photo)]));     // nothing else is painted over it
-    } else {
-      const look = resolveLook3D(def);
-      const painted = Object.entries(PAINTED_LOOKS).map(([slot, options]) => (options.includes(look[slot]) ? look[slot] : null));
-      keys.set(def, JSON.stringify([def.face || null, ...painted]));
-    }
+// the expression and the fighter's face values, and the painted look options
+// read nothing but themselves, so those are the key of a drawn face. A photo
+// founder's face is their photo, keyed by a short fingerprint of it (it is a
+// data URL); until it decodes they wear their drawn face, under its own key.
+const drawnKeys = new WeakMap();
+export function drawnFaceKey(def) {
+  if (!drawnKeys.has(def)) {
+    const look = resolveLook3D(def);
+    const painted = Object.entries(PAINTED_LOOKS).map(([slot, options]) => (options.includes(look[slot]) ? look[slot] : null));
+    drawnKeys.set(def, JSON.stringify([def.face || null, ...painted]));
   }
-  return keys.get(def);
+  return drawnKeys.get(def);
+}
+const photoKeys = new WeakMap();
+export function faceKey(def) {
+  if (!def.photo) return drawnFaceKey(def);
+  if (!photoKeys.has(def)) photoKeys.set(def, JSON.stringify(['photo', fingerprint(def.photo)]));
+  return photoKeys.get(def);
 }
 
 // FNV-1a over a string: every character of its ends, and a sample of a long

@@ -9,6 +9,7 @@
 // the files arrive, the procedural arena draws exactly as before.
 
 import { STAGE, STAGE_ART } from '../config.js';
+import { FILTER_OK } from './drawFighter.js';
 
 const { W, H } = STAGE;
 
@@ -63,7 +64,6 @@ function load(arena) {
 
 // The glow is blurred once, here, into a world-size halo; per frame it is
 // only blended. Without canvas filters it stays the sharp layer it was.
-const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
 function soften(img) {
   if (!FILTER_OK) return img;
   const c = document.createElement('canvas');

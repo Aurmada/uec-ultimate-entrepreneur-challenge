@@ -449,6 +449,11 @@ export const GL3D = {
   // the rim, and a back light that rims whatever faces away from the camera.
   // Anything a stage leaves out keeps these, which are exactly the look with
   // no stage behind the fighters: white light, the rim above, no back light.
+  // Directions (KEY above, `back` here) are in the FIGHTER's frame: +x toward
+  // the opponent, +y up, +z toward the camera. The finished fighter is
+  // mirrored with its facing, so both fighters are lit alike from their own
+  // front, as the 2D shading does: a stage light sets a mood, it is not a
+  // lamp at a fixed place in the world.
   LIGHT: { LIT: [1, 1, 1], BACK: [0, 0.35, -1], BACK_COLOR: [0, 0, 0] },
   // Faces. Each fighter's 2D face is painted once per expression into a
   // texture (cells FACE_CELL texels square, each spanning FACE_SPAN 2D px

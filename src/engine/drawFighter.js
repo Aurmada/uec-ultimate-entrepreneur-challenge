@@ -17,7 +17,7 @@ import { FX_STYLE } from './fx.js';
 const IDLE_RATE = 0.62;
 
 const OUTLINE = '#0a0c16';
-const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
+export const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
 
 // dataURL → Image cache for photo faces
 const photoCache = new Map();
@@ -508,20 +508,24 @@ function computePose(f, t) {
 // The face alone, for the 3D renderer's face textures: centred on the origin
 // of a head of radius r (a fight-size head unless the model asks otherwise),
 // exactly as drawHead would draw it there, with any look the model paints on
-// rather than models (stubble) over it in the same order. A photo founder's
-// face is their photo, in the same circle drawHead crops it to, and it has no
-// expressions; until the photo has decoded this returns false.
-function paintFace3D(ctx, def, face, r = STYLIZE.HEAD_R) {
-  if (def.photo) {
-    const photo = getPhoto(def.photo);
-    if (!photo) return false;
+// rather than models (stubble) over it in the same order. Given a decoded
+// `photo`, the face is the photo, which has no expressions.
+function paintFace3D(ctx, def, face, r = STYLIZE.HEAD_R, photo = null) {
+  if (photo) {
     paintPhotoFace(ctx, photo, r);
-    return true;
+    return;
   }
   drawFace(ctx, 0, 0, r, face, def.c, def.face);
   if (PAINTED_LOOKS.facialHair.includes(resolveLook3D(def).facialHair)) drawFacialHair(ctx, 0, 0, r, def);
-  return true;
 }
+
+// What the 3D renderer paints faces with: the painter above, and a founder's
+// photo once it has decoded (null until then, and for good if it never does,
+// when the 3D head keeps the drawn face just as drawHead does in 2D).
+const FACE_PAINTER = {
+  paint: paintFace3D,
+  photo: (def) => (def.photo ? getPhoto(def.photo) : null),
+};
 
 // The face out of a profile photo, feathered so only the face itself lands on
 // the 3D head: projected whole, the photo's background showed as a grey patch
@@ -548,7 +552,7 @@ function paintPhotoFace(ctx, photo, r) {
 // `look` is the character's own facial geometry, layered over STYLIZE.FACE.
 // RENDER-ONLY: it is read here and nowhere else — never by the state machine,
 // hit resolution, the budget, or the codec. A face cannot change a fight.
-function drawFace(ctx, cx, cy, r, face, c, look) {
+export function drawFace(ctx, cx, cy, r, face, c, look) {
   ctx.lineCap = 'round';
   const e = r * 0.34;                       // eye offset
   ctx.strokeStyle = OUTLINE; ctx.fillStyle = OUTLINE;
@@ -626,8 +630,11 @@ function drawFace(ctx, cx, cy, r, face, c, look) {
     if (face === 'block') {                       // gritted, teeth together
       ctx.moveTo(cx - mw, my); ctx.lineTo(cx + mw + 2, my);
     } else if (face === 'angry') {                // snarl — corners pulled down
-      ctx.moveTo(cx - mw, my - 2.4);
-      ctx.quadraticCurveTo(cx + 2, my + 2.8, cx + mw + 2, my - 2.4);
+      // Canvas y runs DOWN: corners below the control point make a frown.
+      // This had the signs the other way round, a U, so every fighter grinned
+      // through every attack while the comment promised a snarl.
+      ctx.moveTo(cx - mw, my + 2.4);
+      ctx.quadraticCurveTo(cx + 2, my - 2.8, cx + mw + 2, my + 2.4);
     } else {
       // idle: the character's own set. MOUTH_CURVE < 0 pulls the corners down
       // into a scowl, > 0 lets one or two of them look pleased with themselves.
@@ -1247,7 +1254,7 @@ export function drawFighter(ctx, f, t) {
       elbowF: stanceEl?.elbowF ?? STYLIZE.ELBOW,
       elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,
       jitter: f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0,
-      paintFace: paintFace3D,
+      face: FACE_PAINTER,
     })) {
       if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);
       if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
@@ -1514,20 +1521,29 @@ function drawPortraitNeckline(ctx, def, S, k) {
 // The 3D bust, when the live 3D renderer (?gl) has this fighter: the model
 // and face they fight with, turned toward the viewer, hands down below the
 // frame where a guard would cover the face. `opts.mirror` turns them to face
-// left. A photo founder keeps the 2D bust, since the photo is the face. A
-// portrait drawn while the model is still loading is drawn again once it lands.
-const bustRedraws = new Map();          // canvas -> [def, opts]; the latest call wins
+// left. A photo founder keeps the 2D bust, since the photo is the face.
+//
+// A portrait drawn while the model is still loading is drawn in 2D, and again
+// once the model lands (or fails, when it simply stays 2D). Only the latest
+// thing drawn into a canvas counts: drawPortrait cancels a queued redraw of
+// its canvas, and anything else that draws into a portrait canvas (the
+// RANDOM tile) calls releasePortrait, or the late redraw would paint over it.
+const bustRedraws = new Map();          // canvas -> [def, opts]
+let redrawArmed = false;
+export function releasePortrait(canvas) { bustRedraws.delete(canvas); }
 function drawBust3D(canvas, ctx, def, opts) {
   if (def.photo) return false;
   if (pending3D(def)) {
-    if (!bustRedraws.size) {
+    bustRedraws.set(canvas, [def, opts]);
+    if (!redrawArmed) {
+      redrawArmed = true;
       on3DReady(() => {
+        redrawArmed = false;
         const queued = [...bustRedraws];
         bustRedraws.clear();
         for (const [c, [d, o]] of queued) drawPortrait(c, d, o);
       });
     }
-    bustRedraws.set(canvas, [def, opts]);
     return false;
   }
   if (!has3D(def)) return false;
@@ -1540,13 +1556,14 @@ function drawBust3D(canvas, ctx, def, opts) {
   P.armF = { x: hf[0], y: P.hipY + hf[1] };
   P.armB = { x: hb[0], y: P.hipY + hb[1] };
   return renderBust3D(ctx, { x: 0, y: 0, w: canvas.width, h: canvas.height }, def, P, {
-    expression: opts.face || 'idle', paintFace: paintFace3D, mirror: !!opts.mirror, unicorn: !!opts.unicorn,
+    expression: opts.face || 'idle', face: FACE_PAINTER, mirror: !!opts.mirror, unicorn: !!opts.unicorn,
   });
 }
 
 // `opts.bare` draws the bust alone on a transparent canvas, with no backdrop,
 // grade or frame: for a cut-in that brings its own (engine/vfx.js).
 export function drawPortrait(canvas, def, opts = {}) {
+  releasePortrait(canvas);                 // this call supersedes any queued redraw
   const ctx = canvas.getContext('2d');
   const S = canvas.width;
   const k = S / 100;

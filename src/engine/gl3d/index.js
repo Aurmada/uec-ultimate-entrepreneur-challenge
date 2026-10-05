@@ -17,7 +17,7 @@ import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
 import { GL3D } from '../../config.js';
 import {
   MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D,
-  FACE_STATES, FACE_GRID, faceCell, faceKey,
+  FACE_STATES, FACE_GRID, faceCell, faceKey, drawnFaceKey,
 } from '../../data/models3d.js';
 
 let enabled = false;
@@ -70,8 +70,10 @@ function load(id) {
     })
     .catch((e) => {
       entry.failed = true;
-      waiting.length = 0;              // nothing will render in 3D, so there is nothing to redraw
       console.warn('[gl3d] model failed:', e);
+      // Whoever was waiting is told all the same: they draw again, in 2D
+      // now, and anything queued for another model's load queues again.
+      for (const fn of waiting.splice(0)) fn();
     });
   return entry;
 }
@@ -94,26 +96,31 @@ export function pending3D(def) {
 }
 export function on3DReady(fn) { waiting.push(fn); }
 
-// The last pose rendered, and whether every bone matrix came out finite.
-let last = null;
-export const debug3D = () => last;
+// The last pose rendered, for probes and the lab: whose, in what state, and
+// whether every bone matrix came out finite. Worked out when asked, not per
+// frame.
+const last = { id: null, state: null, P: null, matrices: null };
+export const debug3D = () => (last.matrices
+  ? { id: last.id, state: last.state, P: last.P, finite: last.matrices.every(Number.isFinite) }
+  : null);
 
 // Renders fighter f into B.buf, the same offscreen buffer the procedural rig
 // fills, so the caller's key line, hit flash and blit stay exactly as they are.
-// `paintFace(ctx, def, expression, r)` is drawFighter's own face painter; it
-// returns false when it cannot paint yet. Without it the head is bare.
-export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, paintFace = null }) {
+// `face` is drawFighter's face painter: { paint(ctx, def, expression, r,
+// photo), photo(def) }, the second giving a founder's decoded photo or null.
+// Without it the head is bare.
+export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, face = null }) {
   const entry = modelFor(f.def);
   if (!entry) return false;
   const t0 = performance.now();
   solvePose(entry.rig, P, { F: elbowF, B: elbowB });
-  last = { id: f.def.id, state: f.state, P, finite: entry.rig.matrices.every(Number.isFinite) };
+  last.id = f.def.id; last.state = f.state; last.P = P; last.matrices = entry.rig.matrices;
   const t1 = performance.now();
   // A non-finite squash is ignored by ctx.scale, so the 2D rig never shows
   // one; in a projection matrix it blanks the fighter. A staged fighter with
   // no `vy` produces exactly that in the jump pose.
   const sq = (v) => (Number.isFinite(v) ? v : 1);
-  const { vw, vh } = drawModel(entry, f.def, f.state, { unicorn: f.unicornT > 0 }, P.face, paintFace, {
+  const { vw, vh } = drawModel(entry, f.def, f.state, f.unicornT > 0, P.face, face, {
     box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight,
   });
   if (perf) renderer.finish();
@@ -131,7 +138,7 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, paintFace = null
 // GL3D.BUST.TURN, framed on the head and drawn into ctx over rect
 // ({ x, y, w, h } in canvas px), mirrored if asked. False wherever render3D
 // would be, so the caller draws its 2D bust instead.
-export function renderBust3D(ctx, rect, def, P, { expression = 'idle', paintFace = null, mirror = false, unicorn = false } = {}) {
+export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = null, mirror = false, unicorn = false } = {}) {
   const entry = modelFor(def);
   if (!entry) return false;
   const U = GL3D.UNIT, BUST = GL3D.BUST;
@@ -139,7 +146,7 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', paintFace
   const [hx, hy] = transformPoint(entry.rig.matrices, entry.head, entry.skull);
   const w = BUST.SPAN, h = (BUST.SPAN * rect.h) / rect.w;
   const box = { ox: w * BUST.HEAD_AT[0] - hx * U, oy: h * BUST.HEAD_AT[1] + hy * U, w, h };
-  const { vw, vh } = drawModel(entry, def, 'idle', { unicorn }, expression, paintFace, { box, ss: rect.w / w });
+  const { vw, vh } = drawModel(entry, def, 'idle', unicorn, expression, face, { box, ss: rect.w / w });
   ctx.save();
   if (mirror) {
     ctx.translate(2 * rect.x + rect.w, 0);
@@ -152,18 +159,41 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', paintFace
 
 // One posed model onto the renderer's canvas: the fighter's palette, what
 // they wear in this state and condition, and their face in this expression.
-function drawModel(entry, def, state, conditions, expression, paintFace, view) {
+function drawModel(entry, def, state, unicorn, expression, painter, view) {
+  const memo = memoFor(def);
   const palette = def.c || {};
-  const colourCache = new Map();
   const colours = (p) => {
-    if (!colourCache.has(p.role)) colourCache.set(p.role, palette[p.role] ? hexToRGB(palette[p.role]) : p.color);
-    return colourCache.get(p.role);
+    let rgb = memo.colours.get(p.role);
+    if (!rgb) {
+      rgb = palette[p.role] ? hexToRGB(palette[p.role]) : p.color;
+      memo.colours.set(p.role, rgb);
+    }
+    return rgb;
   };
-  const wears = wearing(def, state, conditions);
-  const face = entry.face && paintFace ? faceFor(entry.face, def, expression, paintFace) : null;
+  const photo = def.photo && painter ? painter.photo(def) : null;
+  const face = entry.face && painter ? faceFor(entry.face, def, expression, painter, photo) : null;
+  const wkey = `${state}|${unicorn ? 'u' : ''}|${photo ? 'p' : ''}`;
+  let wears = memo.wears.get(wkey);
+  if (!wears) {
+    wears = wearing(def, state, { unicorn, photo: !!photo });
+    memo.wears.set(wkey, wears);
+  }
   return renderer.render(entry.gpu, entry.rig.matrices, {
     ...view, colours, visible: (p) => wears(p.name), face, inkless: entry.inkless, glass: entry.glass,
   });
+}
+
+// A def's look and palette do not change once it is drawn (a new look is a
+// new def), so its colours and what it wears in each state are worked out
+// once, not every frame on the per-fighter path.
+const memos = new WeakMap();
+function memoFor(def) {
+  let m = memos.get(def);
+  if (!m) {
+    m = { colours: new Map(), wears: new Map() };
+    memos.set(def, m);
+  }
+  return m;
 }
 
 // What the renderer needs to put a model's face on (see MODELS3D.face). The
@@ -178,19 +208,15 @@ function faceSlot(id, F) {
   };
 }
 
-// The model's face slot, filled in for this fighter and expression, or null
-// while the face cannot be painted yet (a photo still decoding): the head goes
-// bare for those frames rather than caching a face that is about to change.
-// Render is synchronous, so one slot per model serves every fighter wearing it.
-function faceFor(slot, def, expression, paint) {
-  const key = slot.key + faceKey(def);
-  let texture = renderer.texture(key);
-  if (!texture) {
-    const art = paintFaces(slot, def, paint);
-    if (!art) return null;
-    texture = renderer.uploadTexture(key, art);
-  }
-  slot.texture = texture;
+// The model's face slot, filled in for this fighter and expression. A photo
+// founder wears their photo once it has decoded (`photo`) and their drawn
+// face until then, as drawHead does in 2D, so a photo that never decodes
+// still leaves a face. Each is its own cached texture, so neither is painted
+// more than once. Render is synchronous, so one slot per model serves every
+// fighter wearing it.
+function faceFor(slot, def, expression, painter, photo) {
+  const key = slot.key + (photo ? faceKey(def) : drawnFaceKey(def));
+  slot.texture = renderer.texture(key) || renderer.uploadTexture(key, paintFaces(slot, def, painter.paint, photo));
   slot.cell = faceCell(expression);
   return slot;
 }
@@ -198,23 +224,22 @@ function faceFor(slot, def, expression, paint) {
 // Every expression, one cell each, drawn by the same painter the 2D rig uses.
 // Cells are clipped so a long stroke never reaches its neighbour.
 let faceCanvas = null;
-function paintFaces(slot, def, paint) {
+function paintFaces(slot, def, paint, photo) {
   const C = GL3D.FACE_CELL, S = GL3D.FACE_SPAN, [cols, rows] = FACE_GRID;
   faceCanvas ||= document.createElement('canvas');
   faceCanvas.width = C * cols;              // resizing also clears it
   faceCanvas.height = C * rows;
   const g = faceCanvas.getContext('2d');
-  let painted = true;
   FACE_STATES.forEach((expression, i) => {
     g.setTransform(C / (2 * S), 0, 0, C / (2 * S), (i % cols + 0.5) * C, (Math.floor(i / cols) + 0.5) * C);
     g.save();
     g.beginPath();
     g.rect(-S, -S, 2 * S, 2 * S);
     g.clip();
-    if (paint(g, def, expression, slot.r) === false) painted = false;
+    paint(g, def, expression, slot.r, photo);
     g.restore();
   });
-  return painted ? faceCanvas : null;
+  return faceCanvas;
 }
 
 // The procedural rig reports its own cost here when timing is on, so the
@@ -227,9 +252,9 @@ export const timing3D = () => !!perf;
 // carry a part with that id, in that part's states, exactly as the 2D parts
 // system gates it (the block briefcase only shows while blocking).
 // "fx:<flag>" when the fighter is in that condition right now (`conditions`,
-// such as { unicorn: true } in Unicorn Mode). A founder who fights with their
-// photo wears no modelled eyewear or facial hair, as drawHead draws none over
-// a photo: the person's own are in it.
+// such as { unicorn: true } in Unicorn Mode). While a founder's face is their
+// photo (`conditions.photo`) they wear no modelled eyewear or facial hair, as
+// drawHead draws none over a photo: the person's own are in it.
 export function wearing(def, state, conditions = {}) {
   const look = resolveLook3D(def);
   const cache = new Map();
@@ -244,7 +269,7 @@ export function wearing(def, state, conditions = {}) {
         on = !!part && (!part.states || part.states.includes(state));
       } else if (slot === 'fx') {
         on = !!conditions[option];
-      } else if (def.photo && (slot === 'eyewear' || slot === 'facialHair')) {
+      } else if (conditions.photo && (slot === 'eyewear' || slot === 'facialHair')) {
         on = false;
       } else {
         on = look[slot] === option;

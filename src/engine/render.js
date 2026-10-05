@@ -93,8 +93,9 @@ function drawStageGrade(ctx, t, arena, stage) {
   // Backdrop scrim across the whole play field. The arena is scenery; the
   // fighters are the subject. One fillRect, so it costs nothing. An arena that
   // is unusually bright behind the fighters can ask for more of it.
-  // A rendered stage is a different picture from the procedural one, lit
-  // differently, and carries its own figure.
+  // A rendered stage can set its own (`stage.scrim`). None does yet: the
+  // arenas' figures were measured on the renders too and held up (see
+  // "Rendered stages" in docs/ARCHITECTURE.md), so a stage inherits its arena's.
   const scrim = (stage && arena.stage.scrim) ?? arena?.scrim ?? STAGE.SCRIM;
   if (scrim > 0) {
     ctx.fillStyle = `rgba(6,9,22,${scrim})`;
@@ -340,7 +341,8 @@ const CAM = {
 // The KO shot, one of the fighting-game effects (FX_STYLE.impact, ?gl): the
 // moment a round ends in a KO the camera pushes in on the fighter going down,
 // quicker than it ever follows play, and holds there through the slow motion.
-// Rendered stages are drawn at twice the world, which is what affords the zoom.
+// Only where the zoom stays sharp: sharp fighters on a rendered stage, which
+// is drawn at twice the world. Anywhere else 1.6x would blur the whole frame.
 const KO_CAM = {
   Z: 1.6,
   EASE: 0.16,
@@ -362,7 +364,8 @@ function updateCamera(game) {
     y: STAGE.FLOOR - CAM.AIM - ((STAGE.FLOOR - Math.min(a.y, b.y)) * CAM.LIFT),
   };
   let ease = CAM.EASE;
-  if (FX_STYLE.impact && game.state === 'roundEnd' && game.roundWasKO && game.stateT < KO_CAM.HOLD) {
+  const koShot = FX_STYLE.impact && RENDER.sharpFighters && stageFor(game.arena);
+  if (koShot && game.state === 'roundEnd' && game.roundWasKO && game.stateT < KO_CAM.HOLD) {
     const down = game.fighters[1 - game.roundWinner];
     if (down) {
       want.z = KO_CAM.Z;
@@ -474,7 +477,7 @@ function renderSharp(ctx, game, t, c) {
   for (const f of order) {
     drawAura(ctx, f, t);
     drawFighter(ctx, f, t);
-    drawTrail(ctx, f, t);
+    drawTrail(ctx, f, game.simT);
   }
   ctx.restore();
   ctx.drawImage(fc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
@@ -494,7 +497,7 @@ function renderWorld(ctx, game, t) {
   for (const f of fighterOrder(game)) {
     drawAura(ctx, f, t);
     drawFighter(ctx, f, t);
-    drawTrail(ctx, f, t);
+    drawTrail(ctx, f, game.simT);
   }
   renderInFront(ctx, game, t);
 }
@@ -529,7 +532,7 @@ function renderInFront(ctx, game, t) {
   for (const f of game.fighters) drawBuffIcons(ctx, f);
 
   for (const p of game.projectiles) {
-    drawProjectileGlow(ctx, p, t);
+    drawProjectileGlow(ctx, p, game.simT);
     drawProjectile(ctx, p, t);
   }
 

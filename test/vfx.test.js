@@ -32,7 +32,6 @@ test('with the flag off, hits, guards and specials leave no effects state behind
   fx.update(1 / 60);
   assert.deepEqual(fx.bursts, []);
   assert.equal(fx.playing, null);
-  assert.equal(fx.dimT, 0);
   assert.equal(fx.hitstopT, hitstop);
 });
 
@@ -87,7 +86,6 @@ test('a cut-in slides in, holds, slides out, and a new one replaces it', () => {
     fx.cutIn(f, 'SECOND', '#fff', 1, true);
     assert.equal(fx.playing.name, 'SECOND');
     assert.equal(fx.playing.dur, FX_ART.CUTIN.SUPER_DUR);
-    assert.ok(fx.dimT >= fx.playing.dur, 'the stage stays dim for the whole cut-in');
     const C = FX_ART.CUTIN, c = fx.playing;
     assert.deepEqual(cutInEnvelope({ ...c, t: 0 }), { enter: 0, leave: 0 });
     const mid = cutInEnvelope({ ...c, t: c.dur / 2 });
@@ -179,6 +177,27 @@ test('the effects never change the simulation', () => {
     assert.ok(new Set(off.hashes).size > 10, `${pair}: the match should actually move`);
     assert.deepEqual(on.hashes, off.hashes, `${pair}: turning the effects on moved the simulation`);
   }
+});
+
+// Trails and projectile wakes age on game.simT, not game.t: during hitstop
+// the poses freeze but game.t runs on, and a trail keyed to it drained away
+// during the very freeze it exists to show. simT must stop with the poses.
+test('the effects clock stops for hitstop, where game time does not', () => {
+  const game = new Game({
+    p1: { def: FIGHTERS[0], controller: { isHuman: false, update(f) { f.pad = {}; } } },
+    p2: { def: FIGHTERS[1], controller: { isHuman: false, update(f) { f.pad = {}; } } },
+    arena: { id: 'test', draw() {}, mood: 'none' }, mode: 'solo', difficulty: 'founder',
+    hud: new Proxy({}, { get: () => () => {} }), onEnd: () => {}, seed: 1,
+  });
+  for (let i = 0; i < 30; i++) game.update(1 / 60);
+  const t0 = game.t, sim0 = game.simT;
+  assert.ok(sim0 > 0, 'simT should advance in normal play');
+  game.fx.hitstop(0.2);
+  for (let i = 0; i < 6; i++) game.update(1 / 60);       // 0.1 s, all inside the freeze
+  assert.ok(game.t > t0 + 0.09, 'game.t runs through hitstop');
+  assert.equal(game.simT, sim0, 'simT must hold still while the poses are frozen');
+  for (let i = 0; i < 12; i++) game.update(1 / 60);      // past the end of the freeze
+  assert.ok(game.simT > sim0, 'simT resumes once the freeze ends');
 });
 
 test('an effect wears the fighter\'s own colour, unless it is too pale to read', () => {

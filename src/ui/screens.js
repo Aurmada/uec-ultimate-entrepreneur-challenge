@@ -7,7 +7,7 @@ import { Save, buildChallengeLink } from '../state.js';
 import { STYLES, rankFor, AI_LEVELS, BODY } from '../config.js';
 import { SLOT_GLYPH, commandCost } from '../data/schema.js';
 import { PLAYER_MOVES, PLAYER_BUDGET, toCommandNormal } from '../data/playerMoves.js';
-import { drawPortrait, setPhotoReadyCallback, ensurePhoto } from '../engine/drawFighter.js';
+import { drawPortrait, releasePortrait, setPhotoReadyCallback, ensurePhoto } from '../engine/drawFighter.js';
 import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
 import { renderResultCard, renderChallengeCard } from './resultCard.js';
@@ -60,6 +60,7 @@ function resolveDef(id) {
 }
 
 function drawRandomTile(canvas) {
+  releasePortrait(canvas);        // a 3D bust still loading must not land on this tile
   const ctx = canvas.getContext('2d');
   const S = canvas.width;
   const g = ctx.createLinearGradient(0, 0, S, S);
