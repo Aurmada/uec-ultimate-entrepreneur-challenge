@@ -1,4 +1,6 @@
-.claude/
+# Claude Code keeps per-machine state here; the dev-server definition is shared.
+.claude/*
+!.claude/launch.json
 .DS_Store
 .superpowers/
 __pycache__/
