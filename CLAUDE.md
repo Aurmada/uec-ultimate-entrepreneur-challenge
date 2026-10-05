@@ -40,5 +40,5 @@ npm test                      # Node 21+, no npm install: there are no dependenc
 
 ## Environment
 
-- Blender 5.0 is needed only to rebuild `assets/models/founder.glb` or `assets/stages/` (scripts in `lab/blender/`). The built files are committed.
+- Blender 5.0 is needed only to rebuild the prototype's model and stages on `live-3d` (`assets/models/founder.glb`, `assets/stages/`, scripts in `lab/blender/`). The built files are committed.
 - Keep the checkout out of iCloud-synced folders (`~/Documents`, `~/Desktop`): iCloud evicts files from `.git` and git hangs. See HANDOFF.

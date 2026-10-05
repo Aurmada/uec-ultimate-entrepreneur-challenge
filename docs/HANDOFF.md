@@ -21,7 +21,7 @@ The open question is how it runs on a phone: that has never been measured.
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.8 (`SIM_VERSION` 7) | Deployed. A push here is a release. |
-| `live-3d` | `main` plus the 3D prototype, a bug fix and these docs | Pushed, not merged. 374 tests pass. |
+| `live-3d` | `main` plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 
 Nothing else is outstanding: the local `cleanup` branch was merged into `main`
 as v3.8, and there are no stashes or other worktrees.
@@ -105,7 +105,7 @@ read it), which the determinism and effects tests check.
 
 ## Next steps, in the order they pay off
 
-1. **Phone benchmark.** Serve with `python3 dev-server.py 4173`, open
+1. **Phone benchmark.** On `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
    phone (no sign-in needed), and read the modes: All 2D, Both 3D, without stage,
    without effects. The budget is about 2 ms a frame for the 3D rig over 2D. If
@@ -213,12 +213,15 @@ survive it. ARCHITECTURE section 11 has more.
 
 Deliberately left out, and gone if the original folder is deleted:
 
-- `lab/assets/` (101 MB, gitignored): the source GLB models the dormant
-  `?sprites` baker (`lab/baker.html`) reads. Where they came from is not
-  recorded, so they stay out of this public repo. The baked atlases they produced
-  are committed (`assets/sprites/founder/`). They are only needed to re-bake
+- `lab/assets/` (about 136 MB in 14 files, gitignored): the source models the
+  dormant `?sprites` baker (`lab/baker.html`) reads, a base model with its
+  texture and twelve animation clips. Where they came from is not recorded, so
+  they stay out of this public repo. The baked atlases they produced are
+  committed (`assets/sprites/founder/`). They are only needed to re-bake
   sprites.
-- `lab/previews/` and `lab/*.png` (about 80 MB, gitignored): lab output, all
+- `lab/atlas/` (gitignored): the baker's output, byte for byte the committed
+  `assets/sprites/founder/`. Nothing is lost without it.
+- `lab/previews/` and `lab/*.png` (about 120 MB, gitignored): lab output, all
   regenerable with the `lab/` tools. The useful pictures are copied into
   `docs/images/live-3d/`.
 - `.superpowers/`: two mockups from an August brainstorm (the v3.3 silhouette
