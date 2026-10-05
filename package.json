@@ -5,8 +5,11 @@
   "type": "module",
   "description": "UEC: Ultimate Entrepreneur Challenge — a browser arcade fighter where founders battle with Pitch Deck Strikes, Hostile Takeovers and Unicorn Mode.",
   "scripts": {
-    "start": "python3 -m http.server 4173",
+    "start": "python3 dev-server.py 4173",
     "serve": "npx --yes serve -l 4173 .",
     "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=21"
   }
 }

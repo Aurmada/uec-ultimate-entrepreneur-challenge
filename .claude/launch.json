@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "uec",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "dev-server.py",
+        "4173"
+      ],
+      "port": 4173
+    }
+  ]
+}

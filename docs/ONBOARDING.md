@@ -35,9 +35,9 @@ Run the tests:
 npm test
 ```
 
-324 tests at v3.8, about a second, no framework. They
-should all pass on a clean checkout. If they do not, stop and find out why
-before changing anything.
+328 tests on `main` at v3.8 and 374 on `live-3d` (October 2026), about a
+second, no framework. They should all pass on a clean checkout. If they do not,
+stop and find out why before changing anything.
 
 ---
 
@@ -55,6 +55,12 @@ The important thing to understand before you open a file: **the repo is the
 deployed artifact.** There is no build step. The browser loads `src/*.js` as
 native ES modules, so the file you edit is literally the file that runs, and
 deploying is `git push`. This is a deliberate constraint, not an oversight.
+
+Two branches matter. `main` is the live game (v3.8): a push to it deploys.
+`live-3d` is the 3D prototype (3D fighters, rendered stages, hit effects, all
+behind `?gl`), built on top of `main` and not merged yet. Read
+`docs/HANDOFF.md` before working on either: it says where things stand, what
+is next, and which decisions belong to the owner.
 
 ---
 
@@ -314,7 +320,8 @@ simply unused before you build a new one. It usually does.
 
 | Document | Contents |
 | --- | --- |
-| `docs/ARCHITECTURE.md` | System design, the simulation and rendering boundary, netcode protocol, the budget, rendering pipeline, known hazards. |
+| `docs/HANDOFF.md` | Where the project stands, what is next, open decisions, and what lives only outside the repo. Start here. |
+| `docs/ARCHITECTURE.md` | System design, the simulation and rendering boundary, netcode protocol, the budget, rendering pipeline, known hazards. On `live-3d`, section 7 also covers the 3D prototype. |
 | `docs/GAME-MATH.md` | Damage, combos, stats, progression. The balance maths. |
 | `docs/CHARACTER-ART-BRIEF.md` | The art direction problem, written for an outside reviewer. |
 | `docs/AUTH-SETUP.md` | Google and Microsoft sign in credentials for Supabase. |
