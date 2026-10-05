@@ -35,7 +35,7 @@ Run the tests:
 npm test
 ```
 
-324 tests on `main` at v3.8 and 374 on `live-3d` (October 2026), about a
+328 tests on `main` at v3.8 and 374 on `live-3d` (October 2026), about a
 second, no framework. They should all pass on a clean checkout. If they do not,
 stop and find out why before changing anything.
 
