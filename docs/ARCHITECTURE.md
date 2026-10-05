@@ -462,6 +462,10 @@ first nine and all worth checking before adjusting offsets:
 
 ### Live 3D fighters (prototype, `?gl`)
 
+> Status, October 2026: this lives on the `live-3d` branch and is not merged
+> into `main`, so the live site does not have it. `docs/HANDOFF.md` has where it
+> stands and what is next.
+
 A second body renderer, behind a URL flag and off by default. It exists to test
 whether a 3D model can replace the procedural rig without losing what the rig
 gets for free: every authored track, stance, command normal, body knob, colour
@@ -611,10 +615,16 @@ room to spare, and what surrounded the face showed as a grey patch down the
 side of the head. So the face is cut out of the crop by where `screens.js`
 framed it (`GL3D.PHOTO`: the share of the crop the face takes, and where it
 sits) and feathered into the skin, which the profile screen samples from the
-same photo. Until
-the photo has decoded the painter declines and the head goes bare, rather than
-caching a face that is about to change. Their portraits stay 2D: a flat photo
-reads better in a frame than one wrapped round a head.
+same photo. Until the photo has decoded, and for good if it never does, the
+founder wears their drawn face, exactly as `drawHead` falls back in 2D. The
+drawn face and the photo are separate cached textures (`drawnFaceKey`,
+`faceKey`), so neither is painted more than once. Modelled eyewear and facial
+hair hide only while the photo is actually the face (`conditions.photo` in
+`wearing`); with the drawn fallback the founder keeps their whole look. (The
+first version left the head bare while a photo decoded and repainted it every
+frame, and a photo that never decoded left a blank head for the whole match.)
+Their portraits stay 2D: a flat photo reads better in a frame than one wrapped
+round a head.
 
 What it took to look right:
 
@@ -641,8 +651,12 @@ cover the face; `renderBust3D` turns the body further toward the viewer
 (`GL3D.BUST.TURN`) and frames the orthographic view on the head. `opts.mirror`
 turns a bust to face left, which the VS splash and HUD use on the right-hand
 side. A portrait drawn while the model is still loading is drawn in 2D and
-again once it lands (`pending3D`, `on3DReady`). A player with a photo keeps the
-2D bust, since the photo is the face. A bust costs about 2 ms, drawn once per
+again once it lands (`pending3D`, `on3DReady`), or stays 2D if the load fails.
+Only the latest thing drawn into a canvas counts: `drawPortrait` cancels any
+queued redraw of its canvas, and anything else that draws into a portrait
+canvas must call `releasePortrait` first (the select screen's RANDOM tile
+does), or the late redraw paints a fighter over it. A player with a photo keeps
+the 2D bust, since the photo is the face. A bust costs about 2 ms, drawn once per
 screen rather than per frame. Kim's ring light is pre-turned for the match head
 yaw (above), so in a bust, where the head turns further, it sits a third of a
 radian off square.
@@ -764,18 +778,20 @@ sparks, rings and comic words:
 * **Strike trails.** The swipe behind a strike follows whichever limb target
   travelled furthest in the last 0.14 s of game time, tapered from nothing to
   its full width at the fist or foot, in the fighter's own colour. It reads the
-  pose drawFighter just drew (`poseOf`), so it works for both renderers and
-  holds still through hitstop.
+  pose drawFighter just drew (`poseOf`), so it works for both renderers. Its
+  points age on `game.simT`, which stops for hitstop, so a trail holds still
+  through the freeze. (They first aged on `game.t`, which runs on through
+  hitstop, and the trail drained away during the very freeze it is for.)
 * **Projectile wakes.** A halo and a trail of fading echoes behind every slide,
-  envelope and coin.
+  envelope and coin, on the same clock.
 * **Cut-ins.** A special or Unicorn Mode slides a band across the upper screen
   with the fighter's bust (`drawPortrait` with `bare`, so the 3D bust when there
   is one) and the move's name, and dims the stage behind the fighters while it
   plays.
 * **The KO shot.** When a round ends in a KO the camera pushes in on the fighter
-  going down, past the zoom play is allowed (the rendered stages are drawn at
-  twice the world, which is what affords it), and holds through the slow
-  motion (`KO_CAM` in `render.js`).
+  going down, past the zoom play is allowed, and holds through the slow motion
+  (`KO_CAM` in `render.js`). Only with sharp fighters on a rendered stage, which
+  is drawn at twice the world: anywhere else a 1.6x zoom blurs the whole frame.
 * **A signature for each kind of special.** A projectile leaves the hand in a
   flare (`fx.launch`); BURN RATE BLAST and BURN IT ALL throw fire up and forward
   over a shock along the floor (`fx.blast`); a teleport leaves a pillar of light
@@ -826,10 +842,10 @@ what lets a measurement harness sweep a value without editing engine code.
 `npm test` runs the Node built in test runner. No framework, no mocks, no DOM.
 The simulation is fully headless, which is why the tests can drive real matches.
 
-Run `npm test` for the current count; it was 324 across 15 files at v3.8, and a
-pinned number in a document is a number that rots. It needs Node 21 or newer,
-because the script passes a quoted glob to `node --test`. The files
-worth knowing:
+Run `npm test` for the current count; it was 324 across 15 files at v3.8 on
+`main` and 374 across 19 files on `live-3d` in October 2026, and a pinned number
+in a document is a number that rots. It needs Node 21 or newer, because the
+script passes a quoted glob to `node --test`. The files worth knowing:
 
 | File | What it protects |
 | --- | --- |
@@ -838,6 +854,10 @@ worth knowing:
 | `schema.test.js` | Validation and pricing, including the `params` axes. |
 | `playerBuild.test.js` | The founder creator's economics: that trades exist and that the priciest move is still reachable. |
 | `codec.test.js` | Challenge links survive a round trip and cannot be hand edited into inventing a move. |
+| `gl3d.test.js` | The 3D model honours its contract: joints, weights near their bones, a mesh for every look option and prop, the pose solver landing fists and feet, faces kept clear of hair. |
+| `stages.test.js` | Every rendered stage has its images at the right size, its floor on `STAGE.FLOOR`, a painter for every live screen, and a usable light. |
+| `vfx.test.js` | The effects never move the simulation (scripted matches on and off), their clock stops for hitstop, and each effect's state behaves. |
+| `faces.test.js` | The 2D mouths curve the way the faces mean them to: the attack snarl frowns, idle follows `MOUTH_CURVE`. |
 
 Two testing lessons this codebase keeps re-teaching:
 
@@ -960,6 +980,16 @@ exists for the same reason: hooks for a driver that isn't committed yet.
   hitstop changes the match. A render-only effect (and anything behind a URL
   flag, which one peer can have and the other not) must never call
   `fx.hitstop`.
+* **`game.t` runs through hitstop; `game.simT` does not.** `game.t` is advanced
+  before the hitstop early return, so it is wall time for animation that should
+  keep moving (a stage's glow, a billboard). Anything that follows a fighter's
+  pose must use `game.simT`, which stops with the poses and slows with the KO
+  slow motion, or it drifts away from the frozen frame.
+* **The 2D attack face had its mouth upside down.** The snarl's quadratic had its
+  corners above its control point, which on a canvas (y runs down) is a grin.
+  `test/faces.test.js` now reads each mouth's shape. Curves are easy to get
+  backwards here: check a mouth or a brow against that test, not by eye at
+  thumbnail size.
 * **`setState` resets `stateT`.** Calling it every frame for a state the fighter
   is already in freezes that state's clock. That is how a held block parried
   every hit from v1.4 to v3.8: the parry check reads `stateT <= PARRY.WINDOW`,
