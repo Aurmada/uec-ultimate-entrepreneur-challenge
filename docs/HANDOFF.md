@@ -29,8 +29,8 @@ trail, rims that stay on the outline, and hit bursts that follow the blow.
 | --- | --- | --- |
 | `main` | The live game, v3.8 (`SIM_VERSION` 7) | Deployed. A push here is a release. |
 | `live-3d` | `main` plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
-| `claude/same-day-delivery` | `main` plus v3.9 (`SIM_VERSION` 8) | Local, not pushed. 353 tests pass. Ready to release. |
-| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 410 tests pass. |
+| `claude/same-day-delivery` | `main` plus v3.9 (`SIM_VERSION` 8) | Local, not pushed. 355 tests pass. Ready to release. |
+| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
 
 The two `claude/` branches were built in a git worktree under
 `.claude/worktrees/`; nothing else is outstanding.
@@ -54,6 +54,12 @@ ARCHITECTURE section 5, "A deferred effect".
   range. Fixed on the way: the melee "create space" roll never moved (a rookie
   froze for a third of its melee decisions).
 - **Fingerprint**: `hashGameState` now counts traps, which it never did.
+- **Reviewed** by a second pass, which found two things, both fixed with tests that
+  fail without the fix: an order could go out after the bell if the round ended
+  during Jeff's startup, and the AI re-rolled its notice every decision, so a
+  fighter that had stepped clear often walked back in (a Champion signed for 4 in
+  60 point-blank orders, a Contender 15; now 0 and 4). Left as it is, like traps: a
+  parcel landing in the same frame as a KO still resolves, deterministically.
 - **Measured** in AI-versus-AI matches over the whole roster (scratch harness, 20
   per ordered pair, run twice): Jeff at Champion went from about 27% to 35%;
   nobody else moved outside the noise. With the flags off, nine staged frames over

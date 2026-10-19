@@ -29,6 +29,8 @@ export class AIController {
     this.dir = 0;
     this.blockT = 0;
     this.counterCD = 0;
+    this.heedOrder = false;    // has this AI noticed the rival's current delivery?
+    this.orderT = 0;           // that delivery's clock when last seen, to tell a new one
     this.pulse = {};           // one-frame button presses
     this.isHuman = false;
     this.cmds = (def.commandNormals || []).filter(cn => cn && cn.slot);
@@ -141,10 +143,12 @@ export class AIController {
     const safe = opp.special.radius + PHYS.BODY_W * f.body.build * 0.6;
     const off = f.x - opp.deliveryX;
     if (Math.abs(off) >= safe) {
-      // Clear of it. Do not walk back in while it is about to land: an
-      // approach toward the rival that crosses the mark waits instead.
-      const nearMark = Math.abs(off) < safe + 50 && opp.deliveryT < 0.9;
-      return nearMark && Math.sign(-off) === toward ? { dir: 0 } : null;
+      // Clear of it. Do not walk back in while it could still land on you: an
+      // approach toward the rival that would cross the mark before it lands
+      // waits instead. Only when the mark really is between the two of them.
+      const between = Math.sign(-off) === toward && Math.abs(off) < Math.abs(opp.x - f.x);
+      const reach = PHYS.WALK * f.speedMult * (opp.deliveryT + 0.1);
+      return between && Math.abs(off) - safe < reach ? { dir: 0 } : null;
     }
     const room = (d) => (d < 0 ? f.x - STAGE.MIN_X : STAGE.MAX_X - f.x);
     const blocked = (d) => room(d) < safe - d * off + 8
@@ -199,8 +203,14 @@ export class AIController {
     // way a counter does. After the threat response, so a real swing is still
     // blocked first, and gated on blockProb, so a rookie sometimes stands
     // there and signs for it.
+    // Noticing is rolled each decision until it happens, and then holds for
+    // that order: rolled every time, a fighter that had stepped clear walked
+    // straight back over the mark on the next failed roll (found in review).
+    if (!(opp.deliveryT > 0) || opp.deliveryT > this.orderT + 1e-9) this.heedOrder = false;
+    this.orderT = opp.deliveryT || 0;
     const dodge = this.dodgeDelivery(f, opp, toward);
-    if (dodge && Math.random() < L.blockProb + 0.25) {
+    if (dodge && !this.heedOrder && Math.random() < L.blockProb + 0.25) this.heedOrder = true;
+    if (dodge && this.heedOrder) {
       this.dir = dodge.dir;
       if (dodge.block) this.blockT = dodge.block;
       return;

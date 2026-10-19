@@ -79,7 +79,10 @@ hitstop both return before it, so a hitstop freezes the parcel in the air.
 "The hard part is not the mechanic, it is timers surviving KO, round end and match
 end without leaking or double-firing."
 
-* **Round end, KO or time-up.** `endRound` cancels every order. A parcel still in the
+* **Round end, KO or time-up.** `endRound` cancels every order, and `placeOrder`
+  refuses outside the live round: the round can end while Jeff is in startup, and
+  attacks keep running through round end, so the order would otherwise go out after
+  the bell (found in review). A parcel still in the
   air when the bell rings is never delivered, so a fighter can not be hit after they
   have already won, and the marker does not hang over the KO slow motion.
 * **Next round.** The registry resets both keys. Nothing to remember.
@@ -104,10 +107,17 @@ runway left.
 Both sides, or the mechanic exists only for the player.
 
 * **The rival** (every AI). A pending order is read in `decide()`, after the threat
-  response: standing in the zone, walk out the side with more room, or block if the
-  parcel lands before they could make it. Standing just outside it, do not walk back
-  in while it is close to landing. Gated on `blockProb` so a rookie sometimes stands
-  there and signs for it. A 1.5 s clock does not need a per-frame reflex.
+  response: standing in the zone, walk out the near side (the far side if a wall or
+  the rival is in the way), or block if the parcel lands before they could make it.
+  Clear of it, do not take an approach that crosses the mark before it lands.
+  Noticing is gated on `blockProb`, rolled each decision until it happens and then
+  held for that order, so a rookie sometimes stands there and signs for it but a
+  fighter that has stepped clear never walks back in. A 1.5 s clock does not need a
+  per-frame reflex.
+
+  (Found in review, and fixed: the gate was first rolled on every decision, and a
+  failed roll walked a fighter that had already escaped straight back over the
+  mark; a Champion signed for 4 in 60 point-blank orders that way, a Contender 15.)
 * **Jeff.** Orders from mid range, where the rival has to choose between walking
   toward him and backing into the corner, and never while an order is already out.
 

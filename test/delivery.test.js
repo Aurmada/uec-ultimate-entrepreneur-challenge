@@ -373,3 +373,45 @@ test('the zone stays on the stage', () => {
   const x = game.fighters[0].deliveryX;
   assert.ok(x >= STAGE.MIN_X && x <= STAGE.MAX_X);
 });
+
+// Found in review: the round can end while Jeff is still in his 0.14 s
+// startup, and Fighter.update keeps running attacks through roundEnd, so the
+// order went out AFTER endRound had cancelled everything, and its mark sat
+// frozen over the round-end banner (and over the whole victory screen in a
+// final round).
+test('an order still in startup when the bell rings never goes out', () => {
+  const game = ordered();
+  const a = game.fighters[0];
+  step(game, 2);                          // the special has started, the order is not out yet
+  assert.equal(a.state, 'attack');
+  assert.equal(a.deliveryT, 0);
+  game.timer = 0.01;
+  step(game, 30);
+  assert.equal(game.state, 'roundEnd');
+  assert.equal(a.deliveryT, 0, 'an order went out after the bell');
+});
+
+// Found in review: the AI rolled its "heed it" chance on EVERY decision, so a
+// fighter that had stepped clear often walked straight back over the mark on
+// the next roll and took the whole parcel. One roll per order.
+test('a champion AI that has stepped clear does not walk back into the parcel', () => {
+  // Point-blank, with Jeff standing idle beside the mark: the rival steps out
+  // the far side, and walking back toward Jeff crosses the mark. Before the
+  // fix a champion signed for it 4 times in these 60 runs.
+  let hit = 0, tries = 0;
+  for (const id of ['zara', 'kai', 'eleanor', 'dex', 'ava', 'elo']) {
+    for (let seed = 1; seed <= 10; seed++) seeded(seed * 7919 + id.length, () => {
+      const game = ordered({ p2: id });
+      const [a, b] = game.fighters;
+      a.x = 500; b.x = 520; b.energy = 0;
+      untilOrdered(game);
+      a.controller = idler();
+      b.controller = new AIController('mogul', b.def);
+      const hp0 = b.hp;
+      step(game, 100);
+      tries++;
+      if (hp0 - b.hp > 4) hit++;            // more than chip: it signed for it
+    });
+  }
+  assert.ok(hit <= 1, `a champion AI took the full parcel ${hit} times out of ${tries}`);
+});
