@@ -92,6 +92,20 @@ branch. In short:
   at screen resolution between two world layers instead of being upscaled with
   the 960x540 world.
 
+Added on `claude/game-review-enhance-29bffb` (2026-10-18; ARCHITECTURE section 7):
+
+- **Parallax.** Each stage is also rendered in depth layers (the far distance,
+  the floor, bands of the room) and each moves by its own depth as the camera
+  pans; the floor is one skewed image. The boardroom's city and the summit's
+  mountains hold still behind the window frames and railing. `STAGE_ART.PARALLAX`.
+- **Secondary motion.** Ponytails, long hair, bobs and Cathie's coat trail their
+  anchor on a spring, bent in the vertex shader; no new bones.
+- **Rims on the outline only**, through a silhouette mask: the back light no
+  longer streaks down inner legs.
+- **Bursts follow the blow** (up for a launcher, low for a sweep, down for a
+  parcel), and SAME-DAY DELIVERY's landing slams the floor in 3D.
+- `lab/vfx.js` has scenes for those, and `lab/gl3d-bench.html` a flat-stage mode.
+
 Flags: `?gl` turns everything on; `&stages=0` and `&fx=0` take out a piece;
 `?stages`, `?fx` and `?sharp` try one piece with the 2D fighters; `?gl=max,dex`
 puts only those fighters in 3D; `&perf` shows timing.
@@ -114,11 +128,11 @@ With the flags off, one thing: the 2D attack face. It used to grin through every
 attack (a curve with its signs flipped); it now snarls, as it was always meant
 to. Everything else with the flags off renders exactly as v3.8, checked by
 hashing game frames on all six arenas and every 2D portrait in the same
-browser. It adds about 3.6 MB to the repo (the 1.3 MB model, 0.8 MB of stages
-and 1.5 MB of screenshots), and the game only downloads the model and stages
+browser. It adds about 4.6 MB to the repo (the 1.3 MB model, 1.8 MB of stages with
+their depth layers, and 1.5 MB of screenshots), and the game only downloads the model and stages
 when `?gl` is on.
 
-To merge: bump `VERSION` to v3.9, turn the README's "In progress" section into a
+To merge: bump `VERSION` past v3.9 (v3.10, or v4.0 if it is the headline), turn the README's "In progress" section into a
 release note, merge, push, and verify with the `curl` check in ONBOARDING
 section 7. `SIM_VERSION` does not change: nothing the simulation computes is
 different (`game.simT` is new, but it is not hashed and the simulation does not

@@ -692,6 +692,29 @@ radian off square.
 
 Not done yet: body knobs scale bones rather than using shape keys.
 
+**Rims on the outline only.** The key-side rim and a stage's back light light a
+surface turned away from the camera, and so did any inner edge: a near leg over
+the far one, an arm over the chest, which read as bright streaks down the middle
+of a fighter under the boardroom's moonlight. The toon renderer now draws the
+body's silhouette into an offscreen mask first (pass 0 in `toon.js`), and a rim
+lands only where that mask is empty `GL3D.RIM_REACH` device px out along the
+surface's normal. A first attempt that judged "outer" by the normal against the
+hips missed these streaks, which sit near the body's centre line; the mask does
+not guess. The mask is a texture attached to a framebuffer, so it is unbound from
+its sampler while it is drawn (WebGL refuses a draw that could read what it
+writes) and bound on unit 1 so the face texture on unit 0 is never disturbed.
+
+**Secondary motion.** What hangs trails what it hangs from (`engine/gl3d/sway.js`).
+Each fighter keeps a render-only spring per anchor (the head, the hips), in a
+`WeakMap` in `index.js` rather than on the Fighter, whose own properties are all
+simulation state by test. The vertex shader adds the anchor's lag to a hanging mesh
+by how far each vertex hangs from the mesh's pivot, squared, so a ponytail bends
+from its tie. `MODELS3D.founder.sway` lists the meshes (the ponytail, long hair,
+the bob at half gain, Cathie's coat) with pivots read off `build_founder.py`, so the
+model and its contract are unchanged. At rest the lag is zero; a turn round, a
+teleport or a new round snaps the spring rather than flinging the hair
+(`GL3D.SWAY.SNAP`). It runs on real time, so it keeps settling through a hitstop.
+
 **Sharp fighters.** Both renderers shared one resolution limit: the whole world,
 fighters included, is drawn at 960x540 and the camera crop scales it up (about
 2.2x with the device pixel ratio), which throws away the fighter's own 2x
@@ -835,6 +858,10 @@ tint costs. `lab/stages.js` `lighting()` renders each stage with and without.
 lands. With `?gl` (`&fx=0` turns it off) the game adds, on top of the classic
 sparks, rings and comic words:
 
+* **Bursts follow the blow.** A burst turns with the move that landed it
+  (`blowTilt` in `game.js`, `FX_ART.IMPACT`): up with a launcher's knock, a little
+  up for a kick, low along a sweep such as UNDERCUT, and down for a delivered
+  parcel, which also slams the floor (`fx.slam`).
 * **Impact bursts.** A landed hit draws a white-hot core, spikes thrown hardest
   along the blow and streaks racing away from it, bigger and longer-lived the
   heavier the move (a slap, a punch, a kick or launcher). Blocks draw a
@@ -908,7 +935,7 @@ what lets a measurement harness sweep a value without editing engine code.
 The simulation is fully headless, which is why the tests can drive real matches.
 
 Run `npm test` for the current count; it was 353 across 17 files at v3.9 on
-`main` and 410 across 22 files with v3.9 on the prototype in October 2026, and a
+`main` and 410 across 21 files with v3.9 on the prototype in October 2026, and a
 pinned number in a document is a number that rots. It needs Node 21 or newer,
 because the script passes a quoted glob to `node --test`. The files worth knowing:
 

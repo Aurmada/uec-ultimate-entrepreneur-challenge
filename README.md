@@ -82,6 +82,8 @@ Answering "can the fighters look more like a modern fighting game, without copyi
 | `?stages`, `?fx`, `?sharp` | each piece on its own, with the 2D fighters |
 | `?gl=max,dex` | only those fighters in 3D; `&perf` adds a timing readout |
 
+Since the first version: the rendered arenas have depth (the city outside the boardroom and the mountains behind the summit hold still while the room slides in front of them), hair and coats trail when a fighter moves, the back light stays on the outline instead of streaking down a leg, and a hit's burst flies the way the blow went.
+
 The model and the stages are built by scripts in `lab/blender/` (Blender 5, headless, a few seconds each) and committed, so nothing needs Blender to run. Where it stands, what is next and the decisions still open are in [docs/HANDOFF.md](docs/HANDOFF.md); how it works is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 7.
 
 ## What's new in v3.9: Jeff Bozo delivers
