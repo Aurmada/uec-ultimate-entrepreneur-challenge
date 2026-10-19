@@ -33,6 +33,9 @@ uniform vec4 uFaceMap;    // face centre across and up; model units the cell spa
 uniform float uFaceFront; // how far forward a surface must be to take the face
 uniform vec2 uFaceAxis;   // the projection's forward axis in the bind xz plane
 uniform vec2 uFaceFade;   // facing at full strength, facing at none
+uniform vec2 uSway;       // the anchor's lag, model units; zero for what does not hang
+uniform vec3 uSwayHang;   // pivot x, y and reach, in bind space
+uniform vec2 uSwayDir;    // the way the mesh hangs from the pivot
 out vec3 vNrm;
 out vec2 vFaceUV;
 out float vFaceMask;
@@ -41,6 +44,10 @@ void main() {
             + aWeight.z * uBones[int(aJoint.z)] + aWeight.w * uBones[int(aJoint.w)];
   vec3 n = normalize(mat3(skin) * aNrm);
   vec4 p = skin * vec4(aPos, 1.0);
+  // Secondary motion: the further a vertex hangs from its pivot, the more of
+  // the anchor's lag it takes, so a ponytail bends from the tie, not the scalp.
+  float hang = clamp(dot(aPos.xy - uSwayHang.xy, uSwayDir) / max(uSwayHang.z, 1e-4), 0.0, 1.0);
+  p.xy += uSway * hang * hang;
   p.xyz += n * uInflate;
   vNrm = n;
   gl_Position = uView * p;
@@ -136,7 +143,8 @@ export function createToon() {
   const loc = {};
   for (const n of ['uBones', 'uView', 'uInflate', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
     'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
-    'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach']) {
+    'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
+    'uSway', 'uSwayHang', 'uSwayDir']) {
     loc[n] = gl.getUniformLocation(prog, n);
   }
   gl.useProgram(prog);
@@ -165,6 +173,7 @@ export function createToon() {
     gl.activeTexture(gl.TEXTURE0);
   };
   const NO_FACE = [0, 0, 0, 0];
+  const NO_SWAY = [0, 0];
   const NONE = new Set(), NO_GLASS = new Map();
   const textures = new Map();            // key -> texture, least recently used first
 
@@ -239,9 +248,11 @@ export function createToon() {
     // projects. `inkless` is a Set of roles drawn without an outline, `glass`
     // a Map of see-through roles to their opacity. `light` is a stage's
     // lighting (see GL3D.LIGHT); null lights the fighter as with no stage.
+    // `sway(p)`, when given, is a primitive's hang ({ lag, pivot, dir, reach })
+    // or null for one that rides its bones rigidly.
     render(gpu, matrices, {
       colours, box, squash = { x: 1, y: 1 }, jitter = 0, ss = GL3D.SS, visible = () => true, face = null,
-      inkless = NONE, glass = NO_GLASS, light = null,
+      inkless = NONE, glass = NO_GLASS, light = null, sway = null,
     }) {
       const U = GL3D.UNIT;
       const vw = Math.round(box.w * ss), vh = Math.round(box.h * ss);
@@ -303,8 +314,17 @@ export function createToon() {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.cullFace(gl.BACK);
       gl.uniform1f(loc.uMaskPass, 1);
+      const swayOf = (p) => {
+        const h = sway && sway(p);
+        gl.uniform2fv(loc.uSway, h ? h.lag : NO_SWAY);
+        if (h) {
+          gl.uniform3f(loc.uSwayHang, h.pivot[0], h.pivot[1], h.reach);
+          gl.uniform2fv(loc.uSwayDir, h.dir);
+        }
+      };
       for (const p of gpu) {
         if (!visible(p) || glass.has(p.role)) continue;
+        swayOf(p);
         gl.bindVertexArray(p.vao);
         gl.drawElements(gl.TRIANGLES, p.count, p.indexType, 0);
       }
@@ -335,6 +355,7 @@ export function createToon() {
           if (!ink) gl.uniform3fv(loc.uColor, colours(p));
           if (alpha !== undefined) gl.uniform1f(loc.uAlpha, alpha);
           if (faced) gl.uniform4fv(loc.uFaceCell, face.cell);
+          swayOf(p);
           gl.bindVertexArray(p.vao);
           gl.drawElements(gl.TRIANGLES, p.count, p.indexType, 0);
           if (faced) gl.uniform4fv(loc.uFaceCell, NO_FACE);

@@ -392,3 +392,80 @@ test('the ring light was built for the head yaw the renderer uses', () => {
   assert.ok(Math.abs(GL3D.YAW + GL3D.HEAD_YAW - HEAD_TURN) < 1e-9,
     `GL3D.YAW + GL3D.HEAD_YAW is ${GL3D.YAW + GL3D.HEAD_YAW}; rebuild founder.glb with HEAD_TURN to match`);
 });
+
+// ------------------------------------------------------------- secondary motion
+//
+// What hangs (MODELS3D sway: a ponytail, long hair, a bob, Cathie's coat)
+// trails its anchor on a spring (engine/gl3d/sway.js) and the shader bends
+// it by how far each vertex hangs from its pivot. The bend itself is GPU work;
+// what is checked here is that the numbers point at real geometry and that the
+// spring does what a lag should.
+
+import { stepSway, swayState, SWAY_ANCHORS, anchorInPose } from '../src/engine/gl3d/sway.js';
+
+const SWAY = MODELS3D[DEFAULT_MODEL].sway;
+const hangOf = (h, x, y) => Math.max(0, Math.min(1, ((x - h.pivot[0]) * h.dir[0] + (y - h.pivot[1]) * h.dir[1]) / h.reach));
+
+test('everything that sways is a mesh, hangs from a known anchor, and is described sanely', () => {
+  assert.ok(Object.keys(SWAY).length > 0);
+  for (const [name, h] of Object.entries(SWAY)) {
+    assert.ok(meshNames.has(name), `${name} sways but the model has no such mesh`);
+    assert.ok(SWAY_ANCHORS.includes(h.anchor), `${name} hangs from ${h.anchor}`);
+    assert.ok(Math.abs(Math.hypot(...h.dir) - 1) < 0.01, `${name}: dir is not a direction`);
+    assert.ok(h.reach > 0 && h.gain > 0 && h.gain <= 1, `${name}: reach ${h.reach}, gain ${h.gain}`);
+  }
+});
+
+// The pivot is where the part is tied on, so the part's top stays put and its
+// far end takes the whole lag. A pivot in the wrong place bends the scalp, or
+// leaves the tip rigid.
+test('a hanging part bends from its tie: the top stays put and the far end takes the lag', () => {
+  for (const [name, h] of Object.entries(SWAY)) {
+    const pos = founder.primitives.filter((p) => p.name === name).flatMap((p) => [...p.positions]);
+    let most = 0, above = 0;
+    for (let i = 0; i < pos.length; i += 3) {
+      const w = hangOf(h, pos[i], pos[i + 1]);
+      most = Math.max(most, w);
+      if (pos[i + 1] > h.pivot[1] + 0.02) above = Math.max(above, w);
+    }
+    assert.ok(most > 0.8, `${name}: its far end takes only ${most.toFixed(2)} of the lag`);
+    assert.ok(above < 0.15, `${name}: geometry above the pivot bends by ${above.toFixed(2)}`);
+  }
+});
+
+const P0 = { headX: 4, headY: -160, hipY: -92 };
+const worldAt = (x, P = P0) => Object.fromEntries(SWAY_ANCHORS.map((k) => {
+  const [ax, ay] = anchorInPose(P, k);
+  return [k, [x + ax, 480 + ay]];
+}));
+
+test('at rest nothing sways, so a still fighter is the model as built', () => {
+  const s = swayState(worldAt(300), 1, 0);
+  let lag;
+  for (let i = 1; i <= 30; i++) lag = stepSway(s, worldAt(300), 1, i / 60);
+  for (const k of SWAY_ANCHORS) assert.deepEqual(lag[k].map((v) => Math.abs(v) < 1e-9), [true, true]);
+});
+
+test('moving forward leaves the hair behind, and it settles once the fighter stops', () => {
+  const s = swayState(worldAt(300), 1, 0);
+  let x = 300, lag;
+  for (let i = 1; i <= 12; i++) { x += 4; lag = stepSway(s, worldAt(x), 1, i / 60); }
+  assert.ok(lag.head[0] < 0, `walking forward, the hair should trail backward (lag ${lag.head[0]})`);
+  const facingLeft = swayState(worldAt(300), -1, 0);
+  x = 300;
+  for (let i = 1; i <= 12; i++) { x -= 4; lag = stepSway(facingLeft, worldAt(x), -1, i / 60); }
+  assert.ok(lag.head[0] < 0, 'facing left and walking left is forward too: the lag is in the fighter\'s own frame');
+  for (let i = 13; i <= 13 + 120; i++) lag = stepSway(facingLeft, worldAt(x), -1, i / 60);
+  assert.ok(Math.hypot(...lag.head) < 0.01, `two seconds after stopping it still sways by ${Math.hypot(...lag.head)}`);
+});
+
+test('a sway never exceeds its limit, and a turn or a teleport starts it over', () => {
+  const s = swayState(worldAt(300), 1, 0);
+  let lag, x = 300;
+  for (let i = 1; i <= 20; i++) { x += 60; lag = stepSway(s, worldAt(x), 1, i / 60); }
+  assert.ok(Math.hypot(...lag.hips) * GL3D.UNIT <= GL3D.SWAY.MAX + 1e-6);
+  lag = stepSway(s, worldAt(x), -1, 21 / 60);
+  assert.equal(Math.hypot(...lag.head), 0, 'turning round flung the hair');
+  lag = stepSway(s, worldAt(x + 400), -1, 22 / 60);
+  assert.equal(Math.hypot(...lag.hips), 0, 'a teleport flung the coat');
+});

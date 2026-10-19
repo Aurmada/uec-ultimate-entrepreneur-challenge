@@ -461,6 +461,12 @@ export const GL3D = {
   // normal. Without it, the edge of a near leg over the far one, or an arm over
   // the chest, caught the back light as a bright streak in the middle of the body.
   RIM_REACH: 4,
+  // Secondary motion (engine/gl3d/sway.js): what hangs trails what it hangs
+  // from on a spring, K stiffness and C damping (about 0.5 of critical, so it
+  // overshoots once and settles), at most MAX world px, stepped on real time
+  // at most MAX_DT a step. An anchor that moves SNAP px in one step (a
+  // teleport, a new round) starts the spring over.
+  SWAY: { K: 110, C: 11, MAX: 24, MAX_DT: 1 / 30, SNAP: 90 },
   // How a fighter is lit. A rendered stage brings its own (the arena's
   // `stage.light`): the key light's colour on lit surfaces, the shadow tint,
   // the rim, and a back light that rims whatever faces away from the camera.

@@ -44,6 +44,18 @@ export const MODELS3D = {
     // See-through materials and their opacity, drawn after everything opaque.
     // The 2D visor is a tint the eyes show through; so is this one.
     glass: { visor: 0.45 },
+    // What hangs, and how (engine/gl3d/sway.js). Each mesh trails its anchor
+    // (the head or the hips): a vertex moves with the anchor's lag by how far
+    // it hangs from `pivot` along `dir` (bind space, x forward and y up),
+    // squared, all of it at `reach` and beyond, times `gain`. Taken from
+    // lab/blender/build_founder.py: the ponytail's tie, the long hair's nape,
+    // the bob's sides, the coat's waist.
+    sway: {
+      'hair:ponytail': { anchor: 'head', pivot: [-0.13, 1.82], dir: [-0.25, -0.97], reach: 0.26, gain: 1 },
+      'hair:long': { anchor: 'head', pivot: [-0.10, 1.78], dir: [-0.1, -0.995], reach: 0.32, gain: 1 },
+      'hair:bob': { anchor: 'head', pivot: [0, 1.80], dir: [0, -1], reach: 0.16, gain: 0.5 },
+      'prop:coat': { anchor: 'hips', pivot: [-0.10, 0.84], dir: [-0.1, -0.995], reach: 0.6, gain: 1 },
+    },
   },
 };
 export const DEFAULT_MODEL = 'founder';

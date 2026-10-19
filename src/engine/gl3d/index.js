@@ -14,6 +14,7 @@
 import { parseGLB, extractModel } from './glb.js';
 import { buildRig, solvePose, transformPoint } from './rig.js';
 import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
+import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import {
   MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D,
@@ -62,6 +63,7 @@ function load(id) {
       entry.gpu = renderer.upload(model);
       entry.inkless = new Set(spec.inkless || []);
       entry.glass = new Map(Object.entries(spec.glass || {}));
+      entry.sway = new Map(Object.entries(spec.sway || {}));
       entry.head = model.jointNames.indexOf('head');
       entry.skull = model.restHeads[entry.head].map((v, i) => v + (i === 1 ? spec.skull : 0));
       if (spec.face) entry.face = faceSlot(id, spec.face);
@@ -120,8 +122,10 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, face = null }) {
   // one; in a projection matrix it blanks the fighter. A staged fighter with
   // no `vy` produces exactly that in the jump pose.
   const sq = (v) => (Number.isFinite(v) ? v : 1);
+  const lags = swayOf(f, P);
   const { vw, vh } = drawModel(entry, f.def, f.state, f.unicornT > 0, P.face, face, {
     box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight,
+    sway: entry.sway.size ? (p) => hangOf(entry, p, lags) : null,
   });
   if (perf) renderer.finish();
   const t2 = performance.now();
@@ -155,6 +159,34 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
   ctx.drawImage(renderer.canvas, 0, 0, vw, vh, rect.x, rect.y, rect.w, rect.h);
   ctx.restore();
   return true;
+}
+
+// Secondary motion. Each fighter's springs live here, keyed by the fighter, so
+// nothing is added to the Fighter (whose own properties are all simulation
+// state, by test). A staged fighter drawn once, as the lab and portraits do,
+// starts at rest and so does not sway at all.
+const sways = new WeakMap();
+function swayOf(f, P) {
+  const t = performance.now() / 1000;
+  const facing = f.facing || 1;
+  const world = {};
+  for (const k of SWAY_ANCHORS) {
+    const [ax, ay] = anchorInPose(P, k);
+    world[k] = [(f.x || 0) + facing * ax, (f.y || 0) + ay];
+  }
+  let s = sways.get(f);
+  if (!s) {
+    sways.set(f, swayState(world, facing, t));
+    return null;
+  }
+  return stepSway(s, world, facing, t);
+}
+
+function hangOf(entry, p, lags) {
+  const h = lags && entry.sway.get(p.name);
+  if (!h) return null;
+  const lag = lags[h.anchor];
+  return { lag: [lag[0] * h.gain, lag[1] * h.gain], pivot: h.pivot, dir: h.dir, reach: h.reach };
 }
 
 // One posed model onto the renderer's canvas: the fighter's palette, what
