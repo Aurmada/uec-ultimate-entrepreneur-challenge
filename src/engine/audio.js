@@ -109,6 +109,10 @@ class AudioEngine {
       defeat:     () => [7, 5, 3, 0].forEach((s, i) => this.tone({ freq: 294 * Math.pow(2, s / 12), type: 'triangle', dur: 0.3, vol: 0.35, delay: i * 0.18 })),
       timeTick:   () => this.tone({ freq: 1000, type: 'square', dur: 0.05, vol: 0.2 }),
       parry:      () => { this.tone({ freq: 1900, type: 'triangle', dur: 0.09, vol: 0.4 }); this.tone({ freq: 2540, type: 'triangle', dur: 0.16, vol: 0.32, delay: 0.05 }); this.noise({ dur: 0.08, vol: 0.16, freq: 5200, q: 3 }); },
+      // SAME-DAY DELIVERY: a two-note scanner chirp when the order goes out,
+      // and a falling whistle into a cardboard thud when it lands.
+      order:      () => { this.tone({ freq: 1568, type: 'square', dur: 0.05, vol: 0.2 }); this.tone({ freq: 2093, type: 'square', dur: 0.08, vol: 0.2, delay: 0.07 }); },
+      parcel:     () => { this.tone({ freq: 1400, type: 'sine', dur: 0.16, vol: 0.18, slide: -1000 }); this.noise({ dur: 0.18, vol: 0.6, freq: 380, slide: -260, q: 0.7, delay: 0.12 }); this.tone({ freq: 95, type: 'sine', dur: 0.2, vol: 0.7, slide: -45, delay: 0.12 }); },
       steal:      () => { this.tone({ freq: 1320, type: 'square', dur: 0.07, vol: 0.24 }); this.tone({ freq: 1980, type: 'square', dur: 0.09, vol: 0.24, delay: 0.06 }); this.noise({ dur: 0.14, vol: 0.2, freq: 2400, slide: 2600, q: 1.6, delay: 0.03 }); },
     };
     (S[name] || (() => {}))();

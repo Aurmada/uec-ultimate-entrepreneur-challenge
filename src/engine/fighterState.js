@@ -48,6 +48,13 @@ export const FIGHTER_STATE = [
   // wrong.
   { key: 'runway',        init: RUNWAY.MAX, round: 'reset', hash: 'q8' },
 
+  // ---- a deferred effect (SAME-DAY DELIVERY) -------------------------------
+  // One pending order per fighter: seconds until it lands (0 = nothing out)
+  // and where. Game.updateFighting runs the clock and endRound cancels it, so
+  // an order can neither land after the bell nor survive into the next round.
+  { key: 'deliveryT',     init: 0,     round: 'reset', hash: 'q8' },
+  { key: 'deliveryX',     init: 0,     round: 'reset', hash: 'q8' },
+
   // ---- movement ------------------------------------------------------------
   { key: 'airborne',      init: false, round: 'reset', hash: 'int' },
   { key: 'airAttackUsed', init: false, round: 'reset', hash: 'int' },

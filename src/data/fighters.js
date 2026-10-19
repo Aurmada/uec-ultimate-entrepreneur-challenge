@@ -82,6 +82,25 @@ export const SPECIALS = {
     // a player build. PLAYER_SPECIALS below is what screens.js actually reads.
     rosterOnly: true,
   },
+  sameday: {
+    id: 'sameday',
+    name: 'SAME-DAY DELIVERY',
+    icon: '📦',
+    type: 'deferred',
+    desc: 'Ships a parcel to wherever you are standing. A second and a half later it lands '
+        + 'right there, from the sky. Move, block, or sign for it.',
+    startup: 0.14, active: 0.06, recovery: 0.26,
+    // The order goes out on the rival's spot at the end of startup and lands
+    // `delay` seconds later on everything within `radius` of it, airborne or
+    // not. A clean hit pops them up, which is the juggle Jeff has to stay
+    // close enough to collect. See
+    // docs/superpowers/specs/2026-10-18-same-day-delivery-design.md.
+    delay: 1.5, radius: 62,
+    dmg: 18, kb: 140, kbUp: -380, stun: 0.5,
+    // Roster-only for the reason BURN IT ALL is: the budget has no axis to
+    // price a delay, so it cannot be offered to a player build.
+    rosterOnly: true,
+  },
 };
 
 // What a PLAYER may pick. Roster-only specials are authored for one character
@@ -531,7 +550,9 @@ export const FIGHTERS = [
     // MOTION (render-only): Efficient. Compact coil, real weight through the hip, crisp return. The
     // motion of someone who has optimised this and knows the numbers.
     motion: { windup: 0.90, follow: 0.85, drop: 4, squash: 0.05, brace: 6, thrust: 3 },
-    special: 'takeover', style: 'technical',
+    // His own move since v3.9. He shared HOSTILE TAKEOVER with Carl, the last
+    // of the three sharing pairs; Carl is the grappler and keeps the grab.
+    special: 'sameday', style: 'technical',
     // Compact and barrel-chested with short arms — the warehouse build.
     body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
     stats: { speed: 0.9, power: 1.2, hp: 108 },

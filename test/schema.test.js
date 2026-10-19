@@ -155,7 +155,8 @@ test('the archetype list is append-only — challenge links index into it', () =
     'strike', 'projectile', 'aoe', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap', 'stance',
   ], 'the first ten indices are a shipped wire format and may not be reordered');
   assert.equal(ARCHETYPES[10], 'burn');
-  assert.equal(ARCHETYPES.length, 11);
+  assert.equal(ARCHETYPES[11], 'deferred');
+  assert.equal(ARCHETYPES.length, 12);
 });
 
 // Same reasoning as 'stance', and the same failure mode if it is skipped:

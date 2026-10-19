@@ -216,7 +216,40 @@ function drawWarp(ctx, b, k) {
   ctx.stroke();
 }
 
-const DRAW = { hit: drawHit, guard: drawGuard, parry: drawGuard, launch: drawLaunch, blast: drawBlast, vanish: drawWarp, arrive: drawWarp };
+// A parcel landing: a shock spreading flat across the floor in the thrower's
+// colour, dust rays fanned upward round the box, and a white flash where it
+// struck. Drawn flat (scaled in y) because it happens ON the floor.
+function drawSlam(ctx, b, k, size, alpha) {
+  const r = b.r * size;
+  ctx.save();
+  ctx.scale(1, 0.24);
+  ctx.strokeStyle = rgba(b.color, 0.85 * alpha);
+  ctx.lineWidth = 12 * (1 - k) + 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * (0.5 + k * 1.3), 0, Math.PI * 2);
+  ctx.stroke();
+  const pool = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.9);
+  pool.addColorStop(0, `rgba(255,255,255,${0.8 * alpha * (1 - k)})`);
+  pool.addColorStop(1, rgba(b.color, 0));
+  ctx.fillStyle = pool;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = `rgba(235,225,200,${0.75 * alpha})`;
+  ctx.lineCap = 'round';
+  for (const ray of b.rays) {
+    const from = r * (0.25 + 0.5 * k), to = from + r * ray.len * (0.6 + 0.6 * k);
+    const cx = Math.cos(ray.a), sy = Math.sin(ray.a);
+    ctx.lineWidth = Math.max(1, r * ray.w * (1 - k));
+    ctx.beginPath();
+    ctx.moveTo(cx * from, sy * from * 0.8);
+    ctx.lineTo(cx * to, sy * to * 0.8);
+    ctx.stroke();
+  }
+}
+
+const DRAW = { hit: drawHit, guard: drawGuard, parry: drawGuard, launch: drawLaunch, blast: drawBlast, vanish: drawWarp, arrive: drawWarp, slam: drawSlam };
 
 // ------------------------------------------------------------ auras
 

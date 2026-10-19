@@ -112,3 +112,30 @@ test('an AI-controlled Adam actually throws BURN IT ALL on a full tank', () => {
     `AI-controlled ADAM WEUMANN threw ${attacks} attacks over 1200 frames on a full tank `
     + 'and never once threw BURN IT ALL — decide()\'s `fits` list has no burn entry');
 });
+
+// The melee branch of decide() rolls one number for slap, punch, kick, block
+// and "create space". The last of those set a direction and then fell through
+// to `dir = 0`, so it never stepped back: a rookie (aggr 0.45) simply stood
+// in melee range doing nothing for about a third of its decisions there.
+test('an AI that rolls "create space" in melee range actually steps back', () => {
+  const kim = FIGHTERS.find(f => f.id === 'zara');
+  const carl = FIGHTERS.find(f => f.id === 'dex');
+  const game = new Game({
+    p1: { def: kim, controller: new AIController('intern', kim) },
+    p2: { def: carl, controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'intern',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20261018,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  const [ai, dummy] = game.fighters;
+  ai.x = 400; dummy.x = 480;
+  ai.controller.decideT = 0;                 // decide on the next frame
+  const real = Math.random;
+  Math.random = () => 0.9;                   // past every attack and the block
+  try {
+    for (let i = 0; i < 8; i++) game.update(1 / 60);
+  } finally {
+    Math.random = real;
+  }
+  assert.ok(ai.x < 390, `the AI rolled "create space" and stayed put at x ${ai.x.toFixed(1)}`);
+});

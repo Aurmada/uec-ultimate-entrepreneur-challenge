@@ -1,7 +1,7 @@
 // AI opponent: periodic decision ticks (rate = difficulty reaction speed),
 // personality-flavored per fighter (aggression / jumpiness / preferred range).
 
-import { AI_LEVELS, METER, STAGE, RUNWAY } from '../config.js';
+import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS } from '../config.js';
 import { slotButton } from '../data/schema.js';
 
 // When a command normal is worth throwing, by its combo verb. An AI that never
@@ -81,10 +81,9 @@ export class AIController {
           // A stance special is a toggle toward preferredStance(). Pressing it
           // while already there paid full meter and started the cooldown for
           // a switch that changed nothing; decide() guards this, and this
-          // reflex did not.
-          if (f.special.type !== 'stance' || this.preferredStance(f) !== f.stanceId) {
-            this.pulse.special = true;
-          }
+          // reflex did not. An order already out is the same shape: the press
+          // is refused, so it is a wasted beat in the middle of a combo.
+          if (this.specialWorthPressing(f)) this.pulse.special = true;
         } else if (f.energy >= METER.SUPER_COST) {
           this.pulse.super = true;
         }
@@ -125,6 +124,38 @@ export class AIController {
     f.pad = pad;
   }
 
+  // False when pressing special would change nothing: a stance switch to the
+  // stance already held, or a second order while the first is still out.
+  specialWorthPressing(f) {
+    if (f.special.type === 'stance') return this.preferredStance(f) !== f.stanceId;
+    if (f.special.type === 'deferred') return f.deliveryT <= 0;
+    return true;
+  }
+
+  // Where to stand while a rival's parcel is on its way, or null when there is
+  // nothing to do about it. `safe` is how far from the mark a body is clear of
+  // the drop; the escape goes out the near side unless a wall or the rival is
+  // in the way, and blocks when there is no time left to walk it.
+  dodgeDelivery(f, opp, toward) {
+    if (!(opp.deliveryT > 0)) return null;
+    const safe = opp.special.radius + PHYS.BODY_W * f.body.build * 0.6;
+    const off = f.x - opp.deliveryX;
+    if (Math.abs(off) >= safe) {
+      // Clear of it. Do not walk back in while it is about to land: an
+      // approach toward the rival that crosses the mark waits instead.
+      const nearMark = Math.abs(off) < safe + 50 && opp.deliveryT < 0.9;
+      return nearMark && Math.sign(-off) === toward ? { dir: 0 } : null;
+    }
+    const room = (d) => (d < 0 ? f.x - STAGE.MIN_X : STAGE.MAX_X - f.x);
+    const blocked = (d) => room(d) < safe - d * off + 8
+      || (Math.sign(opp.x - f.x) === d && Math.abs(opp.x - f.x) < safe * 2);
+    let away = off !== 0 ? Math.sign(off) : (room(1) >= room(-1) ? 1 : -1);
+    if (blocked(away)) away = -away;
+    const need = (safe - away * off) / (PHYS.WALK * f.speedMult);
+    if (blocked(away) || need > opp.deliveryT) return { dir: 0, block: opp.deliveryT + 0.25 };
+    return { dir: away };
+  }
+
   // Below a third HP, survive; above it, close the round out. Exposed as its
   // own method so the threshold is testable without driving a whole match.
   preferredStance(f) {
@@ -160,6 +191,19 @@ export class AIController {
         this.dir = toward;
         return;
       }
+    }
+
+    // --- a parcel on its way to where I am standing ---
+    // A delivery is a clock, and a second and a half is long enough for
+    // decide() to read it on its own cadence; it needs no per-frame reflex the
+    // way a counter does. After the threat response, so a real swing is still
+    // blocked first, and gated on blockProb, so a rookie sometimes stands
+    // there and signs for it.
+    const dodge = this.dodgeDelivery(f, opp, toward);
+    if (dodge && Math.random() < L.blockProb + 0.25) {
+      this.dir = dodge.dir;
+      if (dodge.block) this.blockT = dodge.block;
+      return;
     }
 
     // --- winded ---
@@ -236,7 +280,10 @@ export class AIController {
         // BURN IT ALL spends the whole tank whatever is in it, so throwing it
         // near-empty pays 50 meter for the floor damage AND winds you. Half a
         // tank is the point below which it is strictly a bad idea.
-        (sp === 'burn' && dist < 170 && f.runway >= RUNWAY.MAX * 0.5);
+        (sp === 'burn' && dist < 170 && f.runway >= RUNWAY.MAX * 0.5) ||
+        // From mid range, where the rival has to choose between walking at
+        // Jeff and backing toward the corner, and never with an order out.
+        (sp === 'deferred' && dist > 140 && dist < 520 && f.deliveryT <= 0);
       if (fits) {
         this.pulse.special = true;
         this.dir = 0;
@@ -258,7 +305,10 @@ export class AIController {
       else if (r < L.aggr * 0.66) this.pulse.punch = true;
       else if (r < L.aggr) this.pulse.kick = true;
       else if (r < L.aggr + 0.18) { this.blockT = 0.25; this.dir = 0; return; }
-      else this.dir = -toward;                   // create space
+      // Create space. This used to set the direction and then fall through to
+      // the `dir = 0` below, so the step back never happened and a rookie
+      // stood still in melee range for a third of its decisions.
+      else { this.dir = -toward; return; }
       this.dir = 0;
       return;
     }

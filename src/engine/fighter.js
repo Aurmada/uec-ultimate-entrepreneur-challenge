@@ -516,6 +516,10 @@ export class Fighter {
       game.onSpecialStart(this, sp);
       return;
     }
+    // One order out at a time. Refused before the charge, for the reason the
+    // stance switch above is: 50 meter for a press that does nothing is a
+    // trap, not a cost.
+    if (sp.type === 'deferred' && this.deliveryT > 0) { game.onSpecialDenied(this, 'delivery'); return; }
     this.energy -= METER.SPECIAL_COST;
     const a = {
       kind: sp.type, special: sp, hasHit: false,

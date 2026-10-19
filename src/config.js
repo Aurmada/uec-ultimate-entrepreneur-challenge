@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.8';
+export const VERSION = 'v3.9';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -62,6 +62,7 @@ export const FX_ART = {
   LAUNCH: { R: 30, DUR: 0.14 },                 // a projectile leaving the hand
   BLAST: { R: 96, DUR: 0.5, PETALS: 11 },       // BURN RATE BLAST, BURN IT ALL
   WARP: { W: 34, H: 200, DUR: 0.32 },           // a teleport's vanish and arrival
+  SLAM: { R: 88, DUR: 0.42, RAYS: 9 },          // SAME-DAY DELIVERY landing
   AURA: {
     STANCE: { R: 130, ALPHA: 0.38, RATE: 2.2, SAFETY: '#29d9ff', CAPABILITIES: '#ff3d6e' },
     COUNTER: { COLOR: '#ff9df3', RATE: 18 },   // the window a counter is live

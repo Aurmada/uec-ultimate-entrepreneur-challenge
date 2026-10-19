@@ -84,6 +84,18 @@ Answering "can the fighters look more like a modern fighting game, without copyi
 
 The model and the stages are built by scripts in `lab/blender/` (Blender 5, headless, a few seconds each) and committed, so nothing needs Blender to run. Where it stands, what is next and the decisions still open are in [docs/HANDOFF.md](docs/HANDOFF.md); how it works is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 7.
 
+## What's new in v3.9: Jeff Bozo delivers
+
+Every move in the game used to happen the moment you pressed it. This one happens later.
+
+- 📦 **SAME-DAY DELIVERY.** Jeff Bozo stops borrowing Carl's Hostile Takeover and gets a move that is his business model: he ships a parcel to the spot you're standing on. A ring appears under you and tightens, and a second and a half later the box lands right there, from the sky, so jumping doesn't save you. Walk off the mark, block it, or parry it. Sign for it cleanly and you're popped into the air while Jeff walks over to collect. He can only have one order out at a time, and pressing for a second one costs nothing.
+- 🎭 **Nobody shares a signature any more.** Carl keeps the grab. That was the last of the three pairs.
+- 🤖 **The computer plays around it.** Every AI reads a parcel on its way and steps off the mark (or blocks, if it's too late to walk), and won't walk back into one that's about to land. Jeff's AI ships from mid range, where you have to choose between walking at him and backing into the corner.
+- 🧠 **A rookie AI no longer freezes up close.** One of its options in melee range was meant to step back and make space; it set the direction and then threw it away, so a third of the time it simply stood there.
+- 🔒 **Traps are in the live-match fingerprint.** A trap one player has and the other doesn't used to surface as a damage mismatch seconds later; now it's caught at the next sync. Live play needs both players on v3.9.
+
+Behind the scenes, this is the third new kind of move built on the same foundation as Alignment Shift and Runway: a timer that has to survive a KO, the round bell and the next round without landing on anyone afterwards. It doesn't: an order still out when the round ends is cancelled. Measured in AI-versus-AI matches across the whole roster, Jeff's win rate at Champion went from about 27% to 35%, and nobody else's moved outside the noise.
+
 ## What's new in v3.8: a block is a block again
 
 No new moves. One old bug that changed how every fight played is gone, along with several that were quietly wrong.
@@ -328,7 +340,7 @@ The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkz
 | **Cathie Woodz** · The True Believer | ARKK Capital | 💰 **Funding Round**: rains gold and pockets energy on every hit |
 | **Carl Icahnt** · The Asset Stripper | Icahnt Holdings | 🦈 **Hostile Takeover**: unblockable command grab |
 | **Elo Ma** · The Technoking | Spacey-X | 🔥 **Burn Rate Blast**: slow, point-blank inferno |
-| **Jeff Bozo** · The Everything Guy | Primezon | 🦈 **Hostile Takeover**: unblockable command grab |
+| **Jeff Bozo** · The Everything Guy | Primezon | 📦 **Same-Day Delivery**: ships a parcel to wherever you're standing; it lands a second and a half later |
 | **Scam Alt** · The Alignment Guy | ClosedAI | ⚖️ **Alignment Shift**: toggles between the SAFETY and CAPABILITIES stances |
 
 | Unicorn Mode in The Unicorn Club | Pitch Deck Strike on The Stock Exchange |

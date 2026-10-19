@@ -149,11 +149,12 @@ recovery, damage and reach, and a stance scales startup and recovery on top.
 | 🦈 Hostile Takeover | grab | **20** | **unblockable** — jump it. Beats parry. |
 | ⚖️ Alignment Shift | stance | none | switches stance (below); 0.8 s cooldown, and the 50 is only spent if the switch happens. Scam Alt only. |
 | 🔥 Burn It All | burn | `8 + 0.18 × runway`, up to **26** | runway is read at contact, and a clean hit empties it (§4). 130 px reach, 0.18 s startup. Adam Weumann only. |
+| 📦 Same-Day Delivery | deferred | **18** | the order goes out on the rival's spot at the end of a 0.14 s startup and lands **1.5 s** later on anyone within 62 px of it, airborne or not. Blockable (chip), parryable, pops the rival up on a clean hit. One order out at a time; a second press is refused and costs nothing. Jeff Bozo only. |
 
 Specials use their raw damage (no `STYLE.dmg`), and multi-hit totals are before
-combo scaling. Alignment Shift and Burn It All are roster-only: player builds and
-challenge-link ghosts resolve their special through `playerSpecialId()` in
-`src/data/fighters.js`, which never hands out either one.
+combo scaling. Alignment Shift, Burn It All and Same-Day Delivery are roster-only:
+player builds and challenge-link ghosts resolve their special through
+`playerSpecialId()` in `src/data/fighters.js`, which never hands out any of them.
 
 ### Alignment Shift stances
 

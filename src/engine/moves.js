@@ -5,8 +5,8 @@
 // The legal set is ARCHETYPES in data/schema.js. `strike` covers the basics;
 // projectile, aoe, teleport, rush, rain and grab are the original special
 // types; counter and trap are defensive reads with no hitbox; stance toggles a
-// stance set and never swings; burn spends a runway. Each has a shape below,
-// a per-frame tick, or both.
+// stance set and never swings; burn spends a runway; deferred places an order
+// that lands later. Each has a shape below, a per-frame tick, or both.
 
 // Per-archetype shaping applied when a special starts.
 export const ARCHETYPE_SHAPES = {
@@ -72,6 +72,14 @@ export const ARCHETYPE_SHAPES = {
     a.words = ['TORCHED!', 'BURN IT ALL!', 'ALL OF IT!'];
     a.hitY = -85;
     a.dmg = sp.dmgBase ?? 8;
+  },
+
+  // SAME-DAY DELIVERY. Placing the order is the whole animation, so like a
+  // trap it swings nothing; the hit comes later, from Game.updateDeliveries.
+  deferred: (a) => {
+    a.words = ['DELIVERED!', 'SIGNED FOR!'];
+    a.noHitbox = true;
+    a.hitY = -95;
   },
 };
 
@@ -145,6 +153,14 @@ export const ARCHETYPE_TICKS = {
     if (a.fxDone) return;
     a.fxDone = true;
     game.onBurnBlast(f);
+  },
+  // Once, on the first active frame: the order goes out on the rival's spot
+  // as it is NOW, not as it was when the button went down, so startup is the
+  // last moment the rival can be anywhere else for free.
+  deferred: (f, a, sp, dt, game) => {
+    if (a.hasFired) return;
+    a.hasFired = true;
+    game.placeOrder(f, sp);
   },
   // `counter` has no tick on purpose: nothing happens until someone swings at
   // it, so the window is read by the hit resolver rather than polled here.
