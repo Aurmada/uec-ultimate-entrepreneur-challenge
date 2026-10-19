@@ -1,7 +1,9 @@
 // The fighting-game effects (engine/vfx.js) in a real match, captured at the
 // moments they exist for: a strike's trail, the burst when it lands, a guard
 // flash, a parry, each kind of special's signature (a launch, a blast, a
-// teleport, a rush, a stance, a counter), a special's cut-in, a super's.
+// teleport, a rush, a stance, a counter, a delivery), a special's cut-in, a
+// super's, and the bursts that follow the blow (up for a launcher, low for a
+// sweep, down for a parcel).
 // Run from the game page with the debug harness and the 3D prototype on:
 //
 //   http://localhost:4173/?gl&debug=1     (served by dev-server.py, for the PUT)
@@ -16,7 +18,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Each scene: who fights where, what each presses on which frame, and the
 // moments to capture, as tests run once per frame after it is drawn.
-const SCENES = [
+export const SCENES = [
   {
     label: 'whiffed kick: the trail alone', p1: 'kai', p2: 'max', arena: 'garage', apart: 320,
     press: { 0: { 3: 'kick' } },
@@ -98,6 +100,26 @@ const SCENES = [
     shots: [
       ['the shot pushes in', (g) => g.state === 'roundEnd' && g.roundWasKO && g.stateT > 0.25],
       ['and holds', (g) => g.state === 'roundEnd' && g.roundWasKO && g.stateT > 0.9],
+    ],
+  },
+  {
+    label: 'launcher: the burst flies up', p1: 'max', p2: 'kai', arena: 'garage',
+    press: { 0: { 3: 'launch' } },
+    shots: [['burst', (g) => g.fx.bursts.some((b) => b.kind === 'hit' && b.tilt > 0.5 && b.t > b.dur * 0.25)]],
+  },
+  {
+    label: 'undercut: a low burst', p1: 'bozo', p2: 'zara', arena: 'exchange',
+    hold: { 0: { from: 0, to: 8, key: 'right' } },
+    press: { 0: { 3: 'kick' } },
+    shots: [['burst', (g) => g.fx.bursts.some((b) => b.kind === 'hit' && b.tilt < 0 && b.t > b.dur * 0.25)]],
+  },
+  {
+    label: 'same-day delivery', p1: 'bozo', p2: 'eleanor', arena: 'boardroom', energy: 100, apart: 300,
+    press: { 0: { 3: 'special' } },
+    shots: [
+      ['the order', (g) => g.fighters[0].deliveryT > 0 && g.fighters[0].deliveryT < 1.0],
+      ['the drop', (g) => g.fighters[0].deliveryT > 0 && g.fighters[0].deliveryT < 0.08],
+      ['delivered', (g) => g.fx.bursts.some((b) => b.kind === 'slam' && b.t > b.dur * 0.2)],
     ],
   },
   {

@@ -57,6 +57,7 @@ export function drawBursts(ctx, fx) {
     const { k, size, alpha } = burstEnvelope(b);
     ctx.save();
     ctx.translate(b.x, b.y);
+    if (b.tilt) ctx.rotate(-b.tilt * b.dir);      // the blow's own direction, not always level
     const draw = DRAW[b.kind] || drawGuard;
     draw(ctx, b.color ? b : { ...b, color: signatureColour(b.who) }, k, size, alpha);
     ctx.restore();

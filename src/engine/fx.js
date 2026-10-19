@@ -81,8 +81,10 @@ export class FXSystem {
 
   // A landed hit: a white-hot core, spikes thrown away from the attacker and
   // streaks along the blow. `dir` is the way the blow travels (+1 rightward);
-  // `weight` runs from 0 (a slap) to 1 (a launcher).
-  impact(x, y, dir, color, weight = 0.5) {
+  // `weight` runs from 0 (a slap) to 1 (a launcher); `tilt` turns the blow
+  // up (radians, positive) or down from the horizontal, so a launcher's burst
+  // flies up with the rival and a sweep's skims the floor.
+  impact(x, y, dir, color, weight = 0.5, tilt = 0) {
     if (!FX_STYLE.impact) return;
     const I = FX_ART.IMPACT, mix = (range) => range[0] + (range[1] - range[0]) * weight;
     const n = Math.round(mix(I.SPIKES));
@@ -96,7 +98,7 @@ export class FXSystem {
     for (let i = Math.round(mix(I.STREAKS)); i > 0; i--) {
       streaks.push({ dy: (Math.random() - 0.5) * 2, len: 0.6 + Math.random() * 0.8, speed: 0.8 + Math.random() * 0.8 });
     }
-    this.bursts.push({ kind: 'hit', x, y, dir, color, r: mix(I.R), t: 0, dur: mix(I.DUR), weight, spikes, streaks });
+    this.bursts.push({ kind: 'hit', x, y, dir, color, r: mix(I.R), t: 0, dur: mix(I.DUR), weight, spikes, streaks, tilt });
   }
 
   // A blocked hit (a hexagonal guard flash) or, with `parry`, a parried one.

@@ -48,6 +48,11 @@ export const FX_ART = {
     SPIKES: [7, 13],
     STREAKS: [2, 6],      // lines thrown along the blow
     GROW: 0.28,           // share of the lifetime spent swelling to full size
+    // Which way a blow travels, read from the move: a launch's upward knock
+    // (kbUp) turns its burst up, to at most UP radians at LIFT, and a low hit
+    // (hitY under LOW_Y) skims down by LOW radians, and a parcel that falls
+    // on you bursts DOWN radians toward the floor.
+    UP: 0.9, LIFT: 420, LOW_Y: -60, LOW: 0.28, DOWN: 1.25,
   },
   GUARD: { R: 38, PARRY_R: 60, DUR: 0.22, PARRY_DUR: 0.34 },
   // A special's cut-in: a band across the upper screen with the fighter and

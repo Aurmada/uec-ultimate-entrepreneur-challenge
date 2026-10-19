@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, FX_ART } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -41,6 +41,16 @@ export const DROP_EFFECTS = [
     o.vx = (Math.sign(o.x - f.x) || 1) * 260;
   } },
 ];
+
+// Which way a landed blow travels, for the impact burst (FX_ART.IMPACT): up
+// with a launcher's knock, down along a low hit. Render-only.
+function blowTilt(a) {
+  const I = FX_ART.IMPACT;
+  if (a.kind === 'delivery') return -I.DOWN;
+  if (a.hitY > I.LOW_Y) return -I.LOW;      // before the knock: a sweep is low even if it lifts a little
+  if (a.kbUp < 0) return I.UP * Math.min(1, -a.kbUp / I.LIFT);
+  return 0;
+}
 
 // Drawn from the seeded RNG, so both peers in a live match see the same one.
 const VICTORY_CRIES = ['ACQUIRED!', 'EXIT!', 'LIQUIDATED!', 'UNICORN!', 'IPO!', 'DUE DILIGENCE!'];
@@ -366,7 +376,8 @@ export class Game {
     const words = a.words || ['POW!'];
     this.fx.popup(cx, cy - 30, words[Math.floor(Math.random() * words.length)], slap ? '#ff9df3' : heavy ? '#ff3d6e' : '#ffd23f');
     this.fx.spark(cx, cy, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 7 : heavy ? 14 : 9, slap ? 280 : heavy ? 430 : 330);
-    this.fx.impact(cx, cy, dir, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 0.15 : heavy ? 0.85 : 0.45);
+    this.fx.impact(cx, cy, dir, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 0.15 : heavy ? 0.85 : 0.45,
+      blowTilt(a));
     this.fx.shake(a.shake || 6);
     this.fx.hitstop(slap ? 0.045 : heavy ? 0.1 : 0.06);
   }
