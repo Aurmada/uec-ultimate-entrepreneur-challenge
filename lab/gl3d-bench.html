@@ -22,7 +22,8 @@
   time but also costs it, so read fps from the plain modes. The match is in the
   garage, which has a rendered stage: on in the 3D modes as with ?gl, and
   `stages=0` or `stages=1` forces it either way. The hit effects and cut-ins
-  follow the same rule, with `fx=0` or `fx=1`.
+  follow the same rule, with `fx=0` or `fx=1`, and the stage's depth layers
+  (parallax) with `parallax=0` or `parallax=1`, on by default.
 -->
 <div class="modes">
   <a href="?mode=2d">All 2D</a>
@@ -31,11 +32,12 @@
   <a href="?mode=all&amp;detail=1">Both 3D, detail</a>
   <a href="?mode=all&amp;stages=0">Both 3D, no stage</a>
   <a href="?mode=all&amp;fx=0">Both 3D, no effects</a>
+  <a href="?mode=all&amp;parallax=0">Both 3D, flat stage</a>
 </div>
 <canvas id="c"></canvas>
 <div id="hud">loading…</div>
 <script type="module">
-import { STAGE } from '../src/config.js';
+import { STAGE, STAGE_ART } from '../src/config.js';
 import { Game } from '../src/engine/game.js';
 import { renderGame, RENDER } from '../src/engine/render.js';
 import { getFighter } from '../src/data/fighters.js';
@@ -56,6 +58,7 @@ if (mode !== '2d') enable3D({ ids: mode === 'adam' ? ['max'] : null, timing: det
 // &sharp=0 measures the original native-size path instead.
 RENDER.sharpFighters = q.get('sharp') !== '0';
 STAGES.enabled = q.has('stages') ? q.get('stages') !== '0' : mode !== '2d';
+STAGE_ART.PARALLAX = q.get('parallax') !== '0';
 FX_STYLE.impact = q.has('fx') ? q.get('fx') !== '0' : mode !== '2d';
 
 const canvas = document.getElementById('c');
@@ -111,7 +114,7 @@ setInterval(() => {
   const r = stat('render'), sim = stat('sim'), gap = stat('gap');
   const st = stats3D();
   const lines = [
-    `mode ${mode}${detail ? ' (detail: gl.finish per 3D fighter)' : ''}   sharp ${RENDER.sharpFighters}   stage ${STAGES.enabled}   fx ${FX_STYLE.impact}   models ${JSON.stringify(st.models)}`,
+    `mode ${mode}${detail ? ' (detail: gl.finish per 3D fighter)' : ''}   sharp ${RENDER.sharpFighters}   stage ${STAGES.enabled}   parallax ${STAGE_ART.PARALLAX}   fx ${FX_STYLE.impact}   models ${JSON.stringify(st.models)}`,
     `device ${navigator.userAgent.replace(/^Mozilla\/5.0 /, '').slice(0, 90)}`,
     `gpu    ${gpuName}   dpr ${dpr}`,
     '',

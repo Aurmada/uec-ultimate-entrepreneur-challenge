@@ -510,7 +510,7 @@ export function renderGame(ctx, game) {
   const wx = wc.getContext('2d');
   wx.setTransform(1, 0, 0, 1, 0, 0);
   wx.clearRect(0, 0, W, H);
-  renderWorld(wx, game, t);
+  renderWorld(wx, game, t, c);
 
   ctx.save();
   ctx.translate(game.fx.shakeX, game.fx.shakeY);
@@ -551,7 +551,7 @@ function renderSharp(ctx, game, t, c) {
   if (stage) {
     ctx.save();
     toScreen();
-    drawStage(ctx, stage, t);
+    drawStage(ctx, stage, t, c.x - W / 2);
     ctx.restore();
   }
   ctx.drawImage(wc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
@@ -575,8 +575,8 @@ function renderSharp(ctx, game, t, c) {
 // renderWorld reads game.fighters in a fixed order (camera, then shadows, then
 // bodies, then icons) that lab/contrast.js and lab/roster.js count on, so the
 // split into these helpers keeps that order exactly.
-function renderWorld(ctx, game, t) {
-  renderBehind(ctx, game, t);
+function renderWorld(ctx, game, t, cam = null) {
+  renderBehind(ctx, game, t, false, cam);
   setLight3D(stageFor(game.arena)?.arena.stage.light);
   for (const f of fighterOrder(game)) {
     drawAura(ctx, f, t);
@@ -588,10 +588,10 @@ function renderWorld(ctx, game, t) {
 
 // `stageOnScreen`: the caller has already drawn a rendered stage straight to
 // the screen, so this layer leaves the arena out.
-function renderBehind(ctx, game, t, stageOnScreen = false) {
+function renderBehind(ctx, game, t, stageOnScreen = false, cam = null) {
   const stage = stageFor(game.arena);
   if (!stage) game.arena.draw(ctx, t);
-  else if (!stageOnScreen) drawStage(ctx, stage, t);
+  else if (!stageOnScreen) drawStage(ctx, stage, t, cam ? cam.x - W / 2 : 0);
   drawStageGrade(ctx, t, game.arena, stage);   // push the backdrop back + haze
   if (!stage) drawPerspectiveFloor(ctx, t);   // receding grid; a rendered stage has a floor of its own
 

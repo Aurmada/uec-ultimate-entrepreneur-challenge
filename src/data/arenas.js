@@ -453,6 +453,7 @@ export const ARENAS = [
         right: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + 3, 260),
       },
       overlay: sparkles,
+      overlayP: 0.65,          // they glitter on the back wall, so they move with it
     } },
   // scrim: the mountains sit directly behind the fighters at close to their own
   // mid-tones, which makes this the hardest stage to read a character against.
@@ -472,6 +473,9 @@ export const ARENAS = [
         sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 20),
       },
       overlay: clouds,
+      // the clouds drift in the sky, so they move with it when the camera
+      // pans (the far layer is about 0.07), not with the fighters
+      overlayP: 0.1,
     } },
 ];
 

@@ -4,6 +4,7 @@
     1080
   ],
   "floorY": 480.0,
+  "horizon": 330.0,
   "screens": {
     "board": [
       [
@@ -59,5 +60,89 @@
         378.83
       ]
     ]
-  }
+  },
+  "screenP": {
+    "board": 0.6765,
+    "sponsor": 0.7973,
+    "ticker": 0.6877
+  },
+  "layers": [
+    {
+      "id": "far",
+      "kind": "far",
+      "p": 0.0,
+      "rect": [
+        0,
+        0,
+        960,
+        540
+      ],
+      "file": "far.webp",
+      "glow": null
+    },
+    {
+      "id": "floor",
+      "kind": "floor",
+      "rect": [
+        -100,
+        414.5,
+        1160,
+        125.5
+      ],
+      "file": "floor.webp",
+      "glow": null
+    },
+    {
+      "id": "room1",
+      "kind": "room",
+      "p": 0.6523,
+      "rect": [
+        0.0,
+        0.0,
+        960.0,
+        440.5
+      ],
+      "file": "room1.webp",
+      "glow": null
+    },
+    {
+      "id": "room2",
+      "kind": "room",
+      "p": 0.6793,
+      "rect": [
+        0.0,
+        4.5,
+        960.0,
+        429.0
+      ],
+      "file": "room2.webp",
+      "glow": null
+    },
+    {
+      "id": "room3",
+      "kind": "room",
+      "p": 0.7559,
+      "rect": [
+        7.5,
+        341.0,
+        206.0,
+        105.0
+      ],
+      "file": "room3.webp",
+      "glow": "room3-glow.webp"
+    },
+    {
+      "id": "room4",
+      "kind": "room",
+      "p": 0.7951,
+      "rect": [
+        0.0,
+        383.0,
+        940.0,
+        69.5
+      ],
+      "file": "room4.webp",
+      "glow": null
+    }
+  ]
 }

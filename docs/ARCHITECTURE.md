@@ -724,7 +724,7 @@ game frames on all six arenas hash identically before and after.
 ```
 lab/blender/build_stage.py       the shared part: camera, helpers, renders, stage.json
 lab/blender/stages/<arena id>.py one scene each, as build(kit)
-assets/stages/<arena id>/        back.webp, glow.webp, stage.json (about 750 KB for all six)
+assets/stages/<arena id>/        back.webp, glow.webp, the depth layers, stage.json (1.8 MB for all six)
 src/engine/stage.js              loads a stage and draws it
 src/data/arenas.js               each arena's `stage`: where it lives, its live screens, its overlay
 ```
@@ -748,6 +748,42 @@ one stage in about five seconds. What it writes:
   clouds, sweeping spotlights, sparkles) is the arena's `stage.overlay`, drawn
   over the stage in world px. Both reuse the procedural arena's own drawing,
   split out of it without changing a pixel.
+
+**Depth: the stage in layers.** A picture moves as one piece when the camera
+pans, so nothing in it read as nearer or further. The build therefore also
+renders each stage in depth layers, and with `STAGE_ART.PARALLAX` (on) the
+runtime draws those instead of `back.webp`, each moved against the fight lane by
+its own depth: `pan * (1 - p)`, where `pan` is how far the camera is from the
+centre and `p` is `DISTANCE / (DISTANCE + depth)`, 1 at the lane and 0 at the
+horizon. Nothing moves until the camera does, so a still frame is the picture
+(the layers composited at rest differ from `back.webp` by about 3 levels on
+average, at anti-aliased edges).
+
+* `far.webp`: everything whose nearest face is at least `FAR_Y` (8 units) deep,
+  over the sky. The boardroom's city and the summit's mountains hold almost
+  still while the window frames and the railing slide across them.
+* `floor.webp`: everything flat on the floor. A plane seen from a camera that
+  slides sideways shears, each row at the rate of its own depth, and that rate
+  is a straight line in the row (0 at the horizon, 1 at the floor line), so the
+  floor is one skewed `drawImage` (`floorSkew`). The fighters' feet stay put on
+  it and the rows nearer than the lane run faster than the camera, which is why
+  it is rendered `OVERSCAN` (100 px) past each side.
+* `room<n>.webp`: everything else, in bands no wider than `P_STEP` (0.03) of
+  parallax, each cropped to what it covers. Two props in one band slide against
+  each other by at most 1.5 px at the widest pan. A band is rendered with only
+  its own objects visible to the camera (the rest still light it and cast its
+  shadows) and the floor as a holdout, so a wall's foot below floor level stays
+  hidden as it is in the picture.
+* Each layer with an emitter has a `-glow.webp` at the world's own size; screens
+  move with the layer they hang in (`screenP`), and an arena can give its overlay
+  a depth (`overlayP`: the summit's clouds move with the sky).
+
+`test/stages.test.js` holds the layers to the files (sizes, draw order) and checks
+that no pan the camera can make, up to the KO shot's 1.6x, opens a gap at the
+edge of the frame; that test fails without the floor's overscan. Measured on an
+M2 Max, drawing a layered stage costs 0.05 to 0.12 ms a frame more than the
+picture (0.22 to 0.32 ms against 0.16 to 0.26 ms for the stage alone). The six
+stages went from about 0.75 MB to 1.8 MB, most of it the boardroom's lit city.
 
 **The camera is the contract.** A stage is only usable if the fighters stand on
 its floor, so the build camera is fixed by the game, not the scene: it never

@@ -22,7 +22,11 @@
 #   * assets/stages/<id>/back.webp   the stage, opaque, 2x the 960x540 world
 #     assets/stages/<id>/glow.webp   only what emits light, on transparent, for
 #                                    the runtime to pulse over the stage
-#     assets/stages/<id>/stage.json  { size, floorY, screens: { id: quad } }
+#     assets/stages/<id>/stage.json  { size, floorY, horizon, screens: { id: quad },
+#                                    screenP: { id: parallax }, layers: [...] }
+#     assets/stages/<id>/far.webp, floor.webp, room<n>.webp and their -glow
+#                                    the stage again in depth layers, for
+#                                    parallax (see "depth layers" below)
 #   * A screen is a flat panel facing the camera that the runtime paints live
 #     (a sponsor board, a chart). Its quad is four corners in world px, in the
 #     order top left, top right, bottom right, bottom left.
@@ -297,6 +301,208 @@ def render(path, rgba):
     bpy.ops.render.render(write_still=True)
 
 
+# ---- depth layers, for parallax --------------------------------------------
+#
+# A single picture moves as one piece when the game's camera pans, so nothing
+# in it reads as nearer or further. So the stage is also rendered in layers,
+# each moved at its own rate by the runtime (src/engine/stage.js):
+#
+#   * far    everything whose nearest face is FAR_Y or deeper (a city, the
+#            mountains) over the sky. Opaque and full frame: the bottom layer.
+#   * floor  everything flat on the floor. The floor is a plane, and a plane
+#            seen from a camera that slides sideways shears: each row moves at
+#            the rate of its own depth, which is a straight line in the row,
+#            so the runtime draws it as one skewed image. Rendered OVERSCAN px
+#            past each side, because the rows nearer than the fight lane move
+#            faster than the camera and would otherwise open a gap.
+#   * room   everything else, grouped into bands of parallax no wider than
+#            P_STEP, so two things in one band slide against each other by at
+#            most P_STEP / 2 of a pan. Each band is cropped to what it covers.
+#
+# Each layer that holds an emitter also gets a glow, at the world's own size
+# rather than twice it, since the runtime blurs it into a halo anyway.
+#
+# A layer is rendered with only its own objects visible to the camera; the
+# rest still cast their light and shadows, so a layer is lit as it is in the
+# whole picture. In a room band the floor is a holdout, which hides anything
+# below floor level the way the floor does in the whole picture.
+FAR_Y = 8.0
+P_STEP = 0.03
+OVERSCAN = 100
+CROP_PAD = 4                # px of margin round a cropped band, for its soft edges
+
+
+def parallax(depth):
+    """How fast something at `depth` moves for a camera pan, against the fight
+    lane at 1: further is slower, nearer is faster."""
+    return DISTANCE / (DISTANCE + depth)
+
+
+def renderables():
+    return [o for o in sc.objects if o.type in ('MESH', 'CURVE', 'FONT') and not o.hide_render]
+
+
+def world_bounds(o):
+    bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
+    return (min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb),
+            max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)), bb
+
+
+def plan_layers():
+    """Every renderable object into the far distance, the floor, or a band of
+    room depth. Returns the layers back to front."""
+    far, floor, room = [], [], []
+    for o in renderables():
+        (x0, y0, z0, x1, y1, z1), _ = world_bounds(o)
+        if z1 <= 0.06 and z0 >= -0.15 and z1 - z0 < 0.16:
+            floor.append(o)
+        elif y0 >= FAR_Y:
+            far.append((parallax(y0), o))
+        else:
+            room.append((parallax(max(y0, 0.0)), o))
+    far_p = sorted(p for p, _ in far)[len(far) // 2] if far else 0.0
+    layers = [{'id': 'far', 'kind': 'far', 'p': round(far_p, 4), 'objects': [o for _, o in far]},
+              {'id': 'floor', 'kind': 'floor', 'objects': floor}]
+    bands = []
+    for p, o in sorted(room, key=lambda r: r[0]):
+        if not bands or p - bands[-1]['lo'] > P_STEP:
+            bands.append({'lo': p, 'ps': [], 'objects': []})
+        bands[-1]['ps'].append(p)
+        bands[-1]['objects'].append(o)
+    for i, b in enumerate(bands):
+        layers.append({'id': f'room{i + 1}', 'kind': 'room',
+                       'p': round((b['lo'] + max(b['ps'])) / 2, 4), 'objects': b['objects']})
+    return layers, floor
+
+
+def crop_box(camera, objects, res_x, res_y):
+    """The px rectangle (x0, y0, x1, y1, top down) the objects cover in a
+    res_x x res_y render, padded and clamped to it."""
+    xs, ys = [], []
+    for o in objects:
+        for c in world_bounds(o)[1]:
+            v = world_to_camera_view(sc, camera, c)
+            if v.z <= 0:
+                continue
+            xs.append(v.x * res_x)
+            ys.append((1 - v.y) * res_y)
+    if not xs:
+        return None
+    x0 = max(0, int(math.floor(min(xs))) - CROP_PAD)
+    y0 = max(0, int(math.floor(min(ys))) - CROP_PAD)
+    x1 = min(res_x, int(math.ceil(max(xs))) + CROP_PAD)
+    y1 = min(res_y, int(math.ceil(max(ys))) + CROP_PAD)
+    return (x0, y0, x1, y1) if x1 > x0 and y1 > y0 else None
+
+
+def set_border(box, res_x, res_y):
+    r = sc.render
+    if box is None:
+        r.use_border = False
+        return
+    x0, y0, x1, y1 = box
+    r.use_border, r.use_crop_to_border = True, True
+    # Blender's border runs bottom up, in fractions of the frame.
+    r.border_min_x, r.border_max_x = x0 / res_x, x1 / res_x
+    r.border_min_y, r.border_max_y = 1 - y1 / res_y, 1 - y0 / res_y
+
+
+def show_only(layer, everything, floor):
+    """Camera sees the layer's own objects (and, for a room band, the floor
+    as a holdout); everything else is hidden from it but still lights it."""
+    mine = set(layer['objects'])
+    hold = set(floor) if layer['kind'] == 'room' else set()
+    for o in everything:
+        o.visible_camera = o in mine or o in hold
+        o.is_holdout = o in hold
+
+
+class FloorCamera:
+    """The fight camera widened by OVERSCAN each side, at the same scale: the
+    sensor widens with the image and the lens stays put."""
+
+    def __init__(self, camera):
+        self.cam = camera.data
+        self.wide = W + 2 * OVERSCAN
+
+    def __enter__(self):
+        self.sensor, self.shift = self.cam.sensor_width, self.cam.shift_y
+        self.cam.sensor_width = self.sensor * self.wide / W
+        self.cam.shift_y = self.shift * W / self.wide
+        sc.render.resolution_x = self.wide * SCALE
+        return self
+
+    def __exit__(self, *exc):
+        self.cam.sensor_width, self.cam.shift_y = self.sensor, self.shift
+        sc.render.resolution_x = W * SCALE
+
+
+def render_layer(camera, layer, path, rgba):
+    """Renders one layer (its visibility already set) to `path`, cropped to
+    its box, and returns its rect in world px: [x, y, w, h]."""
+    res_x, res_y = W * SCALE, H * SCALE
+    if layer['kind'] == 'far':
+        set_border(None, res_x, res_y)
+        render(path, rgba)
+        return [0, 0, W, H]
+    if layer['kind'] == 'floor':
+        with FloorCamera(camera) as fc:
+            wide_x = fc.wide * SCALE
+            box = layer.get('box') or crop_box(camera, layer['objects'], wide_x, res_y)
+            box = (0, box[1], wide_x, box[3])
+            layer['box'] = box
+            set_border(box, wide_x, res_y)
+            render(path, rgba)
+        return [-OVERSCAN, box[1] / SCALE, fc.wide, (box[3] - box[1]) / SCALE]
+    box = layer.get('box') or crop_box(camera, layer['objects'], res_x, res_y)
+    layer['box'] = box
+    set_border(box, res_x, res_y)
+    render(path, rgba)
+    return [box[0] / SCALE, box[1] / SCALE, (box[2] - box[0]) / SCALE, (box[3] - box[1]) / SCALE]
+
+
+def render_layers(kit, camera, out):
+    layers, floor = plan_layers()
+    everything = renderables()
+    res_x, res_y = W * SCALE, H * SCALE
+    written = []
+    for layer in layers:
+        if layer['kind'] != 'far' and not layer['objects']:
+            continue
+        if layer['kind'] == 'room' and crop_box(camera, layer['objects'], res_x, res_y) is None:
+            continue                       # entirely out of shot
+        show_only(layer, everything, floor)
+        layer['file'] = f"{layer['id']}.webp"
+        layer['rect'] = render_layer(camera, layer, os.path.join(out, layer['file']), rgba=layer['kind'] != 'far')
+        written.append(layer)
+
+    # The glow of each layer: only its own emitters, on transparent, cut by
+    # whatever stands in front of them inside the layer, as the whole-picture
+    # glow is cut by the whole picture.
+    kit.sky('#000000', 0.0)
+    for layer in written:
+        mine = set(layer['objects'])
+        glowing = {o for o in mine if {m.name for m in o.data.materials if m} & kit.glowing}
+        layer['glow'] = None
+        if not glowing:
+            continue
+        show_only(layer, everything, floor)
+        for o in mine - glowing:
+            o.is_holdout = True
+        layer['glow'] = f"{layer['id']}-glow.webp"
+        # At the world's own size, not twice it: the runtime blurs a glow into
+        # a soft halo before it is ever drawn, so the extra pixels are bytes
+        # nobody sees (the boardroom's lit city was 300 KB at twice).
+        sc.render.resolution_percentage = 100 // SCALE
+        render_layer(camera, layer, os.path.join(out, layer['glow']), rgba=True)
+        sc.render.resolution_percentage = 100
+    set_border(None, res_x, res_y)
+    for o in everything:
+        o.visible_camera, o.is_holdout = True, False
+    keep = ('id', 'kind', 'p', 'rect', 'file', 'glow')
+    return [{k: L[k] for k in keep if k in L} for L in written]
+
+
 def main():
     sys.dont_write_bytecode = True          # no __pycache__ beside the stage scripts
     spec = importlib.util.spec_from_file_location('stage', os.path.join(HERE, 'stages', f'{STAGE_ID}.py'))
@@ -312,7 +518,11 @@ def main():
         raise SystemExit(f'camera drifted: floor at {floor_y}, {lane_px} px per unit')
 
     os.makedirs(OUT, exist_ok=True)
+    for name in os.listdir(OUT):           # layers from an earlier build may no longer exist
+        if name.endswith('.webp') and name not in ('back.webp', 'glow.webp'):
+            os.remove(os.path.join(OUT, name))
     render(os.path.join(OUT, 'back.webp'), rgba=False)
+    layers = render_layers(kit, camera, OUT)
 
     # Glow: only emissive surfaces, everything else cut out but still hiding
     # what it stands in front of, on transparent.
@@ -326,12 +536,19 @@ def main():
     data = {
         'size': [W * SCALE, H * SCALE],
         'floorY': floor_y,
+        # The row where the floor's parallax reaches 0: the horizon, EYE above
+        # the floor line. The runtime skews the floor layer about it.
+        'horizon': round(to_world_px(camera, (0, 1e6, 0))[1], 2),
         'screens': {id: quad(camera, o) for id, o in sorted(kit.screens.items())},
+        # How fast each screen moves for a pan, as its layer would.
+        'screenP': {id: round(parallax(max(world_bounds(o)[0][1], 0.0)), 4) for id, o in sorted(kit.screens.items())},
+        'layers': layers,
     }
     with open(os.path.join(OUT, 'stage.json'), 'w') as f:
         json.dump(data, f, indent=2)
         f.write('\n')
-    print(f'[stage] {STAGE_ID}: floor {floor_y}px, {len(kit.screens)} screens -> {OUT}')
+    print(f'[stage] {STAGE_ID}: floor {floor_y}px, {len(kit.screens)} screens, '
+          f'{len(layers)} layers ({", ".join(L["id"] + (" p" + str(L["p"]) if "p" in L else "") for L in layers)}) -> {OUT}')
 
 
 main()

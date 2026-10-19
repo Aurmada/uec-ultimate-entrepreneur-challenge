@@ -27,10 +27,16 @@ export const STAGE = {
 // between LOW and HIGH opacity RATE radians a second; an arena's `stage.glow`
 // can override any of the three. A decoded stage holds about 10 MB, so only
 // the KEEP most recently used stay loaded.
+//
+// PARALLAX draws a stage from its depth layers (stage.json `layers`, built by
+// lab/blender/build_stage.py) instead of the one picture, each moved by its
+// own depth as the camera pans, so the room has depth when the fight moves.
+// Off, or for a stage built before layers, the picture draws as it always did.
 export const STAGE_ART = {
   GLOW_BLUR: 7,
   GLOW: { LOW: 0.35, HIGH: 0.75, RATE: 1.6 },
   KEEP: 2,
+  PARALLAX: true,
 };
 
 // Fighting-game effects for the live 3D prototype (engine/vfx.js, ?gl).

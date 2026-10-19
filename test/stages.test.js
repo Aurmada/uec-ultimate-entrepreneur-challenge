@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { ARENAS } from '../src/data/arenas.js';
 import { STAGE } from '../src/config.js';
-import { STAGES, stageFor } from '../src/engine/stage.js';
+import { STAGES, stageFor, layerShift, floorSkew } from '../src/engine/stage.js';
 import { lighting } from '../src/engine/gl3d/toon.js';
 import { GL3D } from '../src/config.js';
 
@@ -128,5 +128,110 @@ test('no stage light is the old light, and every stage light is usable', () => {
     const L = lighting(light);
     assert.ok(unit(L.back) && unit(L.key), `${arena.id}: directions must normalise`);
     assert.ok(L.back[2] < 0, `${arena.id}: a back light shines from behind the fighters`);
+  }
+});
+
+// ------------------------------------------------------------ parallax
+//
+// A stage built with depth layers is drawn from them, each moved by its own
+// depth as the camera pans (STAGE_ART.PARALLAX). What can be checked without
+// a canvas: the layers exist at the size their rects say, they are in the
+// order they must be drawn, and no pan the camera can make opens a gap at the
+// edge of the frame.
+
+const LAYER_KINDS = ['far', 'floor', 'room'];
+
+test('every rendered stage has its depth layers, at the size their rects say', () => {
+  for (const arena of STAGED) {
+    const { layers } = spec(arena);
+    assert.ok(Array.isArray(layers) && layers.length >= 3, `${arena.id} has no depth layers`);
+    for (const L of layers) {
+      assert.ok(LAYER_KINDS.includes(L.kind), `${arena.id}/${L.id} is a ${L.kind}`);
+      assert.ok(existsSync(file(arena, L.file)), `${arena.id} has no ${L.file}`);
+      const [w, h] = webpSize(readFileSync(file(arena, L.file)));
+      assert.ok(Math.abs(w - L.rect[2] * 2) <= 1 && Math.abs(h - L.rect[3] * 2) <= 1,
+        `${arena.id}/${L.file} is ${w}x${h}, its rect says ${L.rect[2] * 2}x${L.rect[3] * 2}`);
+      if (L.glow) {
+        // A glow is rendered at the world's own size, not twice it.
+        const [gw, gh] = webpSize(readFileSync(file(arena, L.glow)));
+        assert.ok(Math.abs(gw - L.rect[2]) <= 1 && Math.abs(gh - L.rect[3]) <= 1,
+          `${arena.id}/${L.glow} is ${gw}x${gh}, its rect says ${L.rect[2]}x${L.rect[3]}`);
+      }
+    }
+  }
+});
+
+test('layers are drawn back to front: the far distance, the floor, then the room by depth', () => {
+  for (const arena of STAGED) {
+    const { layers } = spec(arena);
+    assert.equal(layers[0].kind, 'far', `${arena.id} does not start with the far distance`);
+    assert.deepEqual(layers[0].rect, [0, 0, STAGE.W, STAGE.H], `${arena.id}: the far layer must fill the frame`);
+    assert.equal(layers[1].kind, 'floor', `${arena.id}: the floor goes under the room`);
+    const room = layers.slice(2);
+    assert.ok(room.every((L) => L.kind === 'room'), `${arena.id}: one far and one floor layer only`);
+    for (let i = 1; i < room.length; i++) {
+      assert.ok(room[i].p > room[i - 1].p, `${arena.id}: ${room[i].id} is drawn after something nearer`);
+    }
+    for (const L of [layers[0], ...room]) {
+      assert.ok(L.p >= 0 && L.p < 1, `${arena.id}/${L.id} moves at ${L.p}: behind the lane is under 1`);
+    }
+  }
+});
+
+test('the floor shears about the horizon: still at the fight lane, moving with the camera at the horizon', () => {
+  const s = spec(STAGED[0]);
+  assert.ok(Math.abs(s.horizon - (STAGE.FLOOR - 150)) < 0.5, `horizon at ${s.horizon}`);
+  const [a, b, c, d, e, f] = floorSkew(s, 60);
+  const shift = (row) => c * row + e;          // x' = a x + c y + e, with a = 1
+  assert.equal(a, 1); assert.equal(b, 0); assert.equal(d, 1); assert.equal(f, 0);
+  assert.ok(Math.abs(shift(STAGE.FLOOR)) < 1e-9, 'the floor under the fighters must not slide');
+  assert.ok(Math.abs(shift(s.horizon) - 60) < 1e-9, 'the horizon moves with the camera');
+  assert.ok(shift(STAGE.H) < 0, 'the floor nearer than the lane runs faster than the camera');
+  assert.equal(layerShift(1, 80), 0);
+  assert.equal(layerShift(0, 80), 80);
+  assert.equal(layerShift(0.5, -40), -20);
+});
+
+test('every screen moves with the layer it hangs in', () => {
+  for (const arena of STAGED) {
+    const s = spec(arena);
+    assert.deepEqual(Object.keys(s.screenP).sort(), Object.keys(s.screens).sort(), `${arena.id}: a screen with no depth`);
+    for (const [id, p] of Object.entries(s.screenP)) assert.ok(p > 0 && p <= 1, `${arena.id}/${id} at ${p}`);
+  }
+});
+
+// The camera pans at most to the stage edge at its widest push-in (the KO shot
+// at 1.6x). Every layer that fills the frame width at rest must still fill
+// what the camera sees at every pan, or the frame opens onto nothing.
+test('no pan the camera can make opens a gap at the edge of the frame', () => {
+  for (const arena of STAGED) {
+    const s = spec(arena);
+    for (const z of [1, 1.1, 1.26, 1.6]) {
+      const halfW = STAGE.W / (2 * z);
+      for (const camX of [halfW, STAGE.W / 2, STAGE.W - halfW]) {
+        const pan = camX - STAGE.W / 2, left = camX - halfW, right = camX + halfW;
+        for (const L of s.layers) {
+          const [x, y, w, h] = L.rect;
+          if (x > 0.5 || x + w < STAGE.W - 0.5) continue;      // a cropped band: it never filled the frame
+          const rows = L.kind === 'floor' ? [y, y + h] : [y];
+          for (const row of rows) {
+            const dx = L.kind === 'floor' ? (() => { const m = floorSkew(s, pan); return m[2] * row + m[4]; })()
+              : layerShift(L.p, pan);
+            assert.ok(x + dx <= left + 0.5 && x + w + dx >= right - 0.5,
+              `${arena.id}/${L.id} at ${z}x, camera at ${camX.toFixed(0)}: covers ${(x + dx).toFixed(1)}..${(x + w + dx).toFixed(1)}, `
+              + `sees ${left.toFixed(1)}..${right.toFixed(1)}`);
+          }
+        }
+      }
+    }
+  }
+});
+
+test('an overlay that sits at a depth says so, and it is a depth', () => {
+  for (const arena of STAGED) {
+    const p = arena.stage.overlayP;
+    if (p === undefined) continue;
+    assert.ok(arena.stage.overlay, `${arena.id} gives a depth to an overlay it does not have`);
+    assert.ok(p > 0 && p <= 1.5, `${arena.id} overlay at ${p}`);
   }
 });
