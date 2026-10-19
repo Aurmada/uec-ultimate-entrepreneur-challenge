@@ -597,6 +597,11 @@ export class Game {
   // anyone is doing. One order per fighter, held in the registry
   // (deliveryT, deliveryX), so it is hashed and reset with everything else.
   placeOrder(f, sp) {
+    // The tick can still fire after the bell: the round can end while Jeff is
+    // in startup, and Fighter.update keeps running attacks through roundEnd
+    // and matchEnd. An order placed then would never land and its mark would
+    // hang over the round-end banner, so it is simply never placed.
+    if (this.state !== 'fighting') return;
     const opp = this.other(f);
     f.deliveryT = sp.delay;
     f.deliveryX = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x));
