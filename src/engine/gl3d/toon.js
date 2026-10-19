@@ -1,6 +1,8 @@
 // WebGL2 toon renderer for skinned models. RENDER-ONLY. No library: one
 // program, one vertex array per primitive, two passes per draw.
 //
+//   0. MASK: the body's silhouette, offscreen. The body pass reads it so a rim
+//      lands only where the outline meets the background (GL3D.RIM_REACH).
 //   1. INK: back faces pushed out along their normals, flat ink colour. Only
 //      the sliver that clears the body survives the depth test, which gives the
 //      silhouette line and the line between a limb and the torso behind it.
@@ -62,6 +64,10 @@ uniform vec3 uRimColor;   // the rim on the key side, colour and strength togeth
 uniform vec3 uBack;       // toward the back light
 uniform vec3 uBackColor;  // its rim; black for none
 uniform float uInk;
+uniform float uMaskPass;  // 1 while drawing the silhouette mask
+uniform sampler2D uMask;  // that mask, the same size as the canvas
+uniform vec2 uMaskTexel;  // 1 / its size
+uniform float uRimReach;  // device px out along the normal a rim looks for background
 uniform vec3 uInkColor;
 uniform sampler2D uFace;
 uniform vec4 uFaceCell;   // the expression's rect in the face texture; zero width is no face
@@ -70,6 +76,7 @@ in vec2 vFaceUV;
 in float vFaceMask;
 out vec4 outColor;
 void main() {
+  if (uMaskPass > 0.5) { outColor = vec4(1.0); return; }
   if (uInk > 0.5) { outColor = vec4(uInkColor, 1.0); return; }
   vec3 base = uColor;
   if (uFaceCell.z > 0.0) {
@@ -86,9 +93,13 @@ void main() {
          : d > uBands.y ? mix(lit, shade, 0.5) * uBandK.y
          : shade * uBandK.z;
   float edge = 1.0 - clamp(n.z * 1.6, 0.0, 1.0);
-  float rim = step(0.78, edge) * step(0.0, d + 0.25);
+  // Background a few px out along the normal: this is the outline. Body
+  // there: an inner edge (a leg over a leg, an arm over the chest), no rim.
+  vec2 out2 = n.xy / max(length(n.xy), 1e-4);
+  float outer = 1.0 - texture(uMask, (gl_FragCoord.xy + out2 * uRimReach) * uMaskTexel).a;
+  float rim = step(0.78, edge) * step(0.0, d + 0.25) * outer;
   c += rim * uRimColor;
-  float back = step(0.62, edge) * step(0.15, dot(n, uBack));
+  float back = step(0.62, edge) * step(0.15, dot(n, uBack)) * outer;
   c += back * uBackColor;
   outColor = vec4(c * uAlpha, uAlpha);      // premultiplied, as the canvas is
 }`;
@@ -125,11 +136,34 @@ export function createToon() {
   const loc = {};
   for (const n of ['uBones', 'uView', 'uInflate', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
     'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
-    'uLit', 'uRimColor', 'uBack', 'uBackColor']) {
+    'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach']) {
     loc[n] = gl.getUniformLocation(prog, n);
   }
   gl.useProgram(prog);
   gl.uniform1i(loc.uFace, 0);
+  gl.uniform1i(loc.uMask, 1);
+
+  // The silhouette mask: a colour texture and a depth buffer the size of the
+  // canvas, so a fragment's own coordinates address it. Grown with the canvas.
+  const mask = { fbo: gl.createFramebuffer(), tex: gl.createTexture(), depth: gl.createRenderbuffer(), w: 0, h: 0 };
+  const sizeMask = (w, h) => {
+    if (mask.w === w && mask.h === h) return;
+    mask.w = w; mask.h = h;
+    gl.activeTexture(gl.TEXTURE1);            // unit 0 holds the face; leave it be
+    gl.bindTexture(gl.TEXTURE_2D, mask.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, mask.depth);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, mask.fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, mask.tex, 0);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, mask.depth);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.activeTexture(gl.TEXTURE0);
+  };
   const NO_FACE = [0, 0, 0, 0];
   const NONE = new Set(), NO_GLASS = new Map();
   const textures = new Map();            // key -> texture, least recently used first
@@ -252,6 +286,36 @@ export function createToon() {
       }
 
       gl.uniform1f(loc.uAlpha, 1);
+      gl.uniform1f(loc.uInflate, 0);
+      gl.uniform1f(loc.uInk, 0);
+
+      // 0. The silhouette mask, from every opaque primitive this fighter
+      // wears, then back to the canvas with the mask bound for the body pass.
+      sizeMask(canvas.width, canvas.height);
+      // Unbound while it is the target: a texture attached to the framebuffer
+      // being drawn and also bound to a sampler is a feedback loop, and WebGL
+      // refuses the draw even in a branch that never reads it.
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, mask.fbo);
+      gl.viewport(0, canvas.height - vh, vw, vh);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.cullFace(gl.BACK);
+      gl.uniform1f(loc.uMaskPass, 1);
+      for (const p of gpu) {
+        if (!visible(p) || glass.has(p.role)) continue;
+        gl.bindVertexArray(p.vao);
+        gl.drawElements(gl.TRIANGLES, p.count, p.indexType, 0);
+      }
+      gl.uniform1f(loc.uMaskPass, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, mask.tex);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform2f(loc.uMaskTexel, 1 / canvas.width, 1 / canvas.height);
+      gl.uniform1f(loc.uRimReach, GL3D.RIM_REACH);
+
       for (const pass of ['ink', 'body', 'glass']) {
         const ink = pass === 'ink';
         if (pass === 'glass') {

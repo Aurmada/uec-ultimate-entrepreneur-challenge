@@ -451,6 +451,11 @@ export const GL3D = {
   SHADOW_TINT: [0.86, 0.88, 1.06],
   RIM: 0.40,
   RIM_COLOR: [0.5, 0.47, 0.42],   // the rim on the key side, scaled by RIM
+  // A rim lights only the outline against the background: a pixel is rimmed
+  // when the body's silhouette mask is empty RIM_REACH device px out along its
+  // normal. Without it, the edge of a near leg over the far one, or an arm over
+  // the chest, caught the back light as a bright streak in the middle of the body.
+  RIM_REACH: 4,
   // How a fighter is lit. A rendered stage brings its own (the arena's
   // `stage.light`): the key light's colour on lit surfaces, the shadow tint,
   // the rim, and a back light that rims whatever faces away from the camera.
