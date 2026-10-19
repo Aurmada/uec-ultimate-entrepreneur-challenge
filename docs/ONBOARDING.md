@@ -35,8 +35,9 @@ Run the tests:
 npm test
 ```
 
-328 tests on `main` at v3.8 and 374 on `live-3d` (October 2026), about a
-second, no framework. They should all pass on a clean checkout. If they do not,
+328 tests on `main` at v3.8 and 374 on `live-3d` (October 2026); 353 with v3.9
+(`claude/same-day-delivery`) and 410 with v3.9 on the prototype
+(`claude/game-review-enhance-29bffb`). About a second, no framework. They should all pass on a clean checkout. If they do not,
 stop and find out why before changing anything.
 
 ---

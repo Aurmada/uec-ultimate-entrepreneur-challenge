@@ -16,15 +16,52 @@ lit by their stage, and fighting-game hit effects. It is all behind URL flags,
 render-only, and off by default. It was reviewed and cleaned up in October 2026.
 The open question is how it runs on a phone: that has never been measured.
 
+A review session on 2026-10-18 added two local branches, neither pushed. One is
+the next release, **v3.9**: step 3 of the move system, a deferred effect, as Jeff
+Bozo's own signature (SAME-DAY DELIVERY), plus two AI fixes and a gap in the
+live-match fingerprint. The other is `live-3d` with v3.9 merged in and the
+prototype's leftovers done: parallax for the rendered stages, hair and coats that
+trail, rims that stay on the outline, and hit bursts that follow the blow.
+
 ## Branches
 
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.8 (`SIM_VERSION` 7) | Deployed. A push here is a release. |
 | `live-3d` | `main` plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
+| `claude/same-day-delivery` | `main` plus v3.9 (`SIM_VERSION` 8) | Local, not pushed. 353 tests pass. Ready to release. |
+| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 410 tests pass. |
 
-Nothing else is outstanding: the local `cleanup` branch was merged into `main`
-as v3.8, and there are no stashes or other worktrees.
+The two `claude/` branches were built in a git worktree under
+`.claude/worktrees/`; nothing else is outstanding.
+
+## v3.9 on `claude/same-day-delivery`
+
+Spec: `docs/superpowers/specs/2026-10-18-same-day-delivery-design.md`;
+ARCHITECTURE section 5, "A deferred effect".
+
+- **SAME-DAY DELIVERY** (`SPECIALS.sameday`, archetype `deferred`, the twelfth,
+  appended). Jeff orders a parcel onto the rival's spot; it lands 1.5 s later on
+  anything within 62 px, from the sky (a jump does not dodge it, moving does).
+  Blockable, parryable, a pop-up on a clean hit. One order at a time; a second
+  press is refused and costs nothing. Roster-only. Jeff no longer shares HOSTILE
+  TAKEOVER with Carl, so no two roster fighters share a signature.
+- **State**: `deliveryT` and `deliveryX` in the registry. The clock runs in
+  `updateFighting`; `endRound` cancels any order still out, so nothing lands
+  after the bell.
+- **AI**: every rival reads a pending order in `decide()` and steps off the mark,
+  or blocks when it is too late to walk (`dodgeDelivery`); Jeff orders from mid
+  range. Fixed on the way: the melee "create space" roll never moved (a rookie
+  froze for a third of its melee decisions).
+- **Fingerprint**: `hashGameState` now counts traps, which it never did.
+- **Measured** in AI-versus-AI matches over the whole roster (scratch harness, 20
+  per ordered pair, run twice): Jeff at Champion went from about 27% to 35%;
+  nobody else moved outside the noise. With the flags off, nine staged frames over
+  three arenas hash exactly as on `main`.
+
+To release: push `claude/same-day-delivery` to `main` (it is `main` plus these
+commits), then verify with the `curl` check in ONBOARDING section 7. `VERSION` is
+already v3.9 and the README has its section. Live play needs both players on v3.9.
 
 ## The prototype on `live-3d`
 
@@ -89,6 +126,9 @@ read it), which the determinism and effects tests check.
 
 ## Decisions that belong to the owner
 
+0. **Release v3.9** (push `claude/same-day-delivery` to `main`), and whether to
+   push `claude/game-review-enhance-29bffb` as the new `live-3d`. It is `live-3d`
+   plus v3.9 and the work below; merging it into `main` later carries v3.9 with it.
 1. **Merge `live-3d` now** (the prototype ships dark, behind `?gl`) **or after a
    phone check.**
 2. **Whether 3D ever becomes the default.** Not before phone numbers are in.
@@ -102,8 +142,20 @@ read it), which the determinism and effects tests check.
 5. **Art direction.** The model and stages are scripted, which has a ceiling. An
    artist working in Blender to the same contract (ARCHITECTURE section 7, "The
    model contract") is the step up, and the runtime would not need to change.
+6. **Fighters overlap at close range.** `pushApart` keeps bodies
+   `PHYS.BODY_W * 0.92` (51 px) apart whatever their build, while the hurtbox
+   scales with `build`, so a wide fighter (Adam, Carl, Jeff) visibly stands inside
+   a narrow one. Widening the push box with `build` would fix the look, but it is a
+   simulation change (spacing, combo step-ins, `SIM_VERSION`), so it was left.
+7. **Balance as the AI plays it.** In AI-versus-AI at Champion, Elo (about 20%)
+   and Carl (about 28%) sit at the bottom and Kim, Steve and Lizbeth near 70%.
+   That measures how well the AI plays each kit as much as the kits themselves.
 
 ## Next steps, in the order they pay off
+
+Done in the 2026-10-18 session (on `claude/game-review-enhance-29bffb`): depth for
+the stages (step 3 below), secondary motion (step 4), the back-light streak and
+per-move impact variations (step 5). Their notes are kept so the history reads.
 
 1. **Phone benchmark.** On `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
@@ -128,7 +180,12 @@ read it), which the determinism and effects tests check.
 
 ## Known limits
 
-- Phone performance: unmeasured.
+- Phone performance: unmeasured, and the review session added a silhouette pass
+  to the 3D fighters and more layers to the stages, both measured only on an M2
+  Max (within noise, and 0.05 to 0.12 ms a frame).
+- Secondary motion runs on real time, so hair keeps settling through a hitstop
+  and swings at full speed in the KO slow motion.
+- Kim's ring light still sits off-square in a bust; body knobs still scale bones.
 - WebGL context loss: the 3D path falls back to 2D for the rest of the session
   and does not try to restore.
 - The debug sign-in (`UEC.signInAs()`) uses the id `test-uid`, which is not a
