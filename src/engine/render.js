@@ -3,6 +3,7 @@
 
 import { STAGE } from '../config.js';
 import { drawFighter } from './drawFighter.js';
+import { drawParcel } from './fx.js';
 
 const { W, H, FLOOR } = STAGE;
 
@@ -265,6 +266,90 @@ function drawTrap(ctx, tr, t) {
   ctx.restore();
 }
 
+// SAME-DAY DELIVERY, drawn from the thrower's deliveryT/deliveryX. The mark
+// is the readout: it tightens from wide to the real zone as the clock runs,
+// blinks faster near the end, and a shadow grows under the parcel, so the
+// time left reads without a number. Everything here is render-only; the hit
+// itself is resolved in game.landDelivery.
+const DELIVERY_ART = {
+  WIDE: 1.7,          // the mark starts this many times the zone's width
+  FALL: 0.4,          // seconds of the parcel's fall that are drawn
+};
+
+function deliveryProgress(f) {
+  const sp = f.special;
+  return { k: 1 - f.deliveryT / sp.delay, r: sp.radius, col: f.def.c?.accent || '#ffd23f' };
+}
+
+function drawDeliveryMark(ctx, f, t) {
+  const { k, r, col } = deliveryProgress(f);
+  const x = f.deliveryX, y = FLOOR - 4;
+  ctx.save();
+  // the closing ring
+  const wide = r * (DELIVERY_ART.WIDE - (DELIVERY_ART.WIDE - 1) * k);
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([10, 8]);
+  ctx.lineDashOffset = -t * 40;
+  ctx.globalAlpha = 0.35 + 0.5 * k;
+  ctx.beginPath(); ctx.ellipse(x, y, wide, wide * 0.26, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  // the zone itself, blinking faster as the parcel gets close
+  const blink = 0.5 + 0.5 * Math.sin(t * (6 + 18 * k));
+  ctx.globalAlpha = 0.1 + 0.25 * k * blink;
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 0.55 + 0.45 * k;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  // four ticks on the zone's edge, pointing in
+  ctx.lineWidth = 2;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    ctx.beginPath();
+    ctx.moveTo(x + dx * r * 1.12, y + dy * r * 0.26 * 1.5);
+    ctx.lineTo(x + dx * r * 0.82, y + dy * r * 0.26 * 0.6);
+    ctx.stroke();
+  }
+  // the parcel's shadow
+  ctx.globalAlpha = 0.12 + 0.4 * k * k;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(x, y, 8 + 22 * k * k, (8 + 22 * k * k) * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  // the box icon, bobbing over the mark while it is still a long way off
+  if (k < 0.8) {
+    ctx.globalAlpha = (1 - k / 0.8) * 0.9;
+    ctx.font = '20px system-ui';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('📦', x, y - 30 + Math.sin(t * 5) * 3);
+  }
+  ctx.restore();
+}
+
+// It falls the way things fall, fastest at the end, and it stops on the head
+// of whoever is standing on the mark rather than passing through them to the
+// floor: the hit resolves the frame it lands, so that is where it should be.
+function drawDeliveryParcel(ctx, f, rival, t) {
+  if (f.deliveryT > DELIVERY_ART.FALL) return;
+  const p = 1 - f.deliveryT / DELIVERY_ART.FALL;   // 0 at the top of the fall, 1 on landing
+  const x = f.deliveryX;
+  const hb = rival.hurtbox();
+  const onMark = rival.state !== 'ko' && hb.x < x + f.special.radius && hb.x + hb.w > x - f.special.radius;
+  const end = onMark ? hb.y + 8 : FLOOR, top = -80;
+  const y = top + (end - top) * p * p;
+  const u = 1 - p;
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = '#eef1ff';
+  ctx.lineWidth = 2;
+  for (const dx of [-18, 0, 18]) {                 // speed lines above it
+    ctx.beginPath(); ctx.moveTo(x + dx, y - 56); ctx.lineTo(x + dx, y - 56 - 30 - p * 70); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.translate(x, y);
+  ctx.rotate(Math.sin(t * 9 + x) * 0.12 * u);
+  drawParcel(ctx, 0, 0);
+  ctx.restore();
+}
+
 function drawDrop(ctx, d, t) {
   // blink during the last 2 seconds
   if (d.landed && d.lifeT < 2 && Math.floor(t * 8) % 2 === 0) return;
@@ -401,6 +486,7 @@ function renderWorld(ctx, game, t) {
   // Traps sit on the floor, under everything, so they read as ground you must
   // avoid rather than an object in the fight.
   for (const tr of game.traps || []) drawTrap(ctx, tr, t);
+  for (const f of game.fighters) if (f.deliveryT > 0) drawDeliveryMark(ctx, f, t);
   for (const d of game.drops) drawDrop(ctx, d, t);
   for (const f of game.fighters) { drawShadow(ctx, f); drawFloorSheen(ctx, f); }
   for (const g of game.afterimages) drawAfterimage(ctx, g);
@@ -414,6 +500,7 @@ function renderWorld(ctx, game, t) {
   for (const f of game.fighters) drawBuffIcons(ctx, f);
 
   for (const p of game.projectiles) drawProjectile(ctx, p, t);
+  for (const f of game.fighters) if (f.deliveryT > 0) drawDeliveryParcel(ctx, f, game.other(f), t);
 
   drawForeground(ctx, game.arena, t);   // depth layer in front of the fighters
   game.fx.draw(ctx);                // sparks and words belong to the world

@@ -152,8 +152,19 @@ import { hashGameState, SIM_VERSION } from '../src/net/online.js';
 // A minimal game-shaped object: hashGameState only reads these.
 function fakeGame() {
   const f = () => { const x = mk(); return x; };
-  return { fighters: [f(), f()], timer: 60, roundWins: [0, 0], projectiles: [], drops: [] };
+  return { fighters: [f(), f()], timer: 60, roundWins: [0, 0], projectiles: [], drops: [], traps: [] };
 }
+
+// Traps are simulation (a trap that one peer has and the other does not bites
+// one of them two seconds later), and until v3.9 the fingerprint counted
+// projectiles and drops but not traps, so a trap desync surfaced as a damage
+// mismatch long after the cause.
+test('a placed trap moves the fingerprint', () => {
+  const g = fakeGame();
+  const before = hashGameState(g);
+  g.traps.push({ x: 400, armT: 0.35, life: 6 });
+  assert.notEqual(hashGameState(g), before, 'traps are invisible to the hash');
+});
 
 test('every hashed key actually moves the fingerprint', () => {
   for (const e of FIGHTER_STATE) {
@@ -177,9 +188,9 @@ test('an unhashed key never moves the fingerprint', () => {
 });
 
 test('the simulation version was bumped for the behaviour change', () => {
-  // 7, not 6: v3.8 holds a peer's custom build to player rules, and a held
-  // block takes chip instead of parrying (see online.js).
-  assert.equal(SIM_VERSION, 7);
+  // 8: SAME-DAY DELIVERY, the deferred effect, and traps in the fingerprint
+  // (see online.js).
+  assert.equal(SIM_VERSION, 8);
 });
 
 // initState() now assigns every registry field in the constructor, so the

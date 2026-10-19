@@ -152,7 +152,9 @@ export const DEFAULT_BODY = { height: 1, build: 1, reach: 1, stride: 1, shoulder
 // rather than swinging, hitting or placing anything. `burn` is the eleventh,
 // added for BURN IT ALL (runway-resource, 2026-08-15): a strike that reads
 // its damage from the thrower's RUNWAY at the moment of contact and empties
-// that runway by connecting. Both are known archetypes for
+// that runway by connecting. `deferred` is the twelfth, added for SAME-DAY
+// DELIVERY (2026-10-18): a move that places an order and resolves it seconds
+// later, on the thrower's own clock. All three are known archetypes for
 // `fighting.moves.special`/`signature` only — see the commandNormals guard
 // below for why each is rejected as a command-normal archetype.
 //
@@ -162,7 +164,7 @@ export const DEFAULT_BODY = { height: 1, build: 1, reach: 1, stride: 1, shoulder
 // already exists.
 export const ARCHETYPES = [
   'strike', 'projectile', 'aoe', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap', 'stance',
-  'burn',
+  'burn', 'deferred',
 ];
 export const STANCES = ['ready', 'coiled', 'heavy', 'poised', 'loose', 'flair'];
 export const PREF_RANGES = ['close', 'mid', 'far'];
@@ -371,7 +373,7 @@ export function validateCharacter(ch) {
         if (!ARCHETYPES.includes(cn.archetype)) {
           errors.push(`${at}.archetype ${JSON.stringify(cn.archetype)} is not a known archetype`);
           cmdsOk = false;
-        } else if (cn.archetype === 'stance' || cn.archetype === 'burn') {
+        } else if (cn.archetype === 'stance' || cn.archetype === 'burn' || cn.archetype === 'deferred') {
           // A stance is a toggle, not a swing, and neither half of the command
           // normal machinery knows what to do with one: BUDGET.CMD.ARCHETYPE
           // has no entry for it (it would silently price as free, same as
@@ -388,6 +390,11 @@ export function validateCharacter(ch) {
           // roster-only opt-in (`usesRunway`) that the power budget has no
           // axis to price. An authored burn normal would be free, and either
           // permanently weak or a resource handed out for nothing.
+          //
+          // `deferred` keeps one pending order per fighter, read back off the
+          // fighter's signature (`f.special`) when it lands, so a command
+          // normal's own numbers would never be the ones that arrive. And a
+          // delay has no budget axis either.
           errors.push(`${at}.archetype '${cn.archetype}' is not usable as a command normal yet`);
           cmdsOk = false;
         }

@@ -4,7 +4,7 @@ Technical reference for engineers working on the codebase. For "how do I run
 this and where is everything", read `ONBOARDING.md` first; this document assumes
 you have the game running and want to change it safely.
 
-Current version: `v3.8`. Simulation protocol version: `SIM_VERSION = 7`.
+Current version: `v3.9`. Simulation protocol version: `SIM_VERSION = 8`.
 
 ---
 
@@ -216,9 +216,10 @@ exists:
   supplies its own copy, so a table change is a protocol change.
 
 The later bumps: v5 moved persistent state behind the registry and added
-stance switching, v6 added the runway, and v7 holds a peer's custom build to
+stance switching, v6 added the runway, v7 holds a peer's custom build to
 player rules (a roster-only special or a roster base's runway is refused by
-`buildCustomFighter`, which `specToDef` rebuilds every peer through).
+`buildCustomFighter`, which `specToDef` rebuilds every peer through), and v8
+added the deferred effect (below) and put the trap count in the fingerprint.
 
 Render only changes never need a bump. A v3.1 and a v3.2 client see different
 hair colours and simulate identically.
@@ -287,10 +288,38 @@ Three placement decisions are load-bearing:
   challenge-link ghost resolves its special through `playerSpecialId()` and pins
   `usesRunway` to false, so neither a stale save nor a forged base id can reach it.
 
-`burn` joined `ARCHETYPES` (§6) as an eleventh entry, appended under the same append-only
+`burn` joined `ARCHETYPES` (§6) as an eleventh entry (and `deferred` later as the twelfth), appended under the same append-only
 contract as `stance`. BURN IT ALL reads its damage from the tank on every active frame and zeroes
 it on contact, and it is the one documented exception to the refill rule: refunding 15 on
 its own hit would hand back the entire cost of the move.
+
+---
+
+### A deferred effect, the third verb
+
+SAME-DAY DELIVERY (Jeff Bozo's special, v3.9) is the first move that resolves on
+its own clock rather than now or when someone steps somewhere. It is two registry
+entries, `deliveryT` (seconds until it lands, 0 for nothing out) and `deliveryX`
+(where), both `round: 'reset'` and hashed. The spec is
+`docs/superpowers/specs/2026-10-18-same-day-delivery-design.md`.
+
+* **The order goes out at the end of startup**, from the `deferred` tick, on the
+  rival's position at that moment. A Jeff hit during startup places nothing.
+* **The clock runs in `Game.updateFighting`** (`updateDeliveries`), beside the runway
+  drain, so pause and hitstop freeze it for free.
+* **It cannot land after the bell.** `endRound` cancels every order, so a KO or
+  time-up leaves nothing in the air through the slow motion and nothing to land on
+  a winner; the registry reset covers the next round. The landing clears
+  `deliveryT` before it resolves, so nothing can run it twice.
+* **It lands through `strike(..., fromProjectile = true)`**, like a trap: blockable,
+  parryable without staggering a thrower who is not there, and never turned back
+  by a counter stance.
+* **The AI reads it in `decide()`**, after the threat response (`dodgeDelivery`): a
+  1.5 s clock does not need the per-frame reflex a counter does.
+
+`deferred` is the twelfth entry in `ARCHETYPES`, appended under the same contract
+as `stance` and `burn`, legal for a special and refused as a command normal. It is
+roster-only: the budget has no axis to price a delay.
 
 ---
 
@@ -317,8 +346,8 @@ matters.
 
 ### Archetypes
 
-Eleven are legal: `strike`, `projectile`, `aoe`, `rush`, `grab`, `teleport`,
-`rain`, `counter`, `trap`, `stance`, `burn`. Each has an optional shape applied once
+Twelve are legal: `strike`, `projectile`, `aoe`, `rush`, `grab`, `teleport`,
+`rain`, `counter`, `trap`, `stance`, `burn`, `deferred`. Each has an optional shape applied once
 (`ARCHETYPE_SHAPES`) and an optional per frame tick (`ARCHETYPE_TICKS`).
 
 `counter` and `trap` are grouped as `NO_SWING`, meaning the move is not the
@@ -329,7 +358,7 @@ not anyone attacks, and an attacking opponent actually beats it out of its
 startup. Conflating those two readings will send you looking for a bug that is
 not there.
 
-`stance` and `burn` (§5) are legal for a character's special or signature but
+`stance`, `burn` and `deferred` (§5) are legal for a character's special or signature but
 rejected by `validateCharacter` as command-normal archetypes: neither the pricing
 table nor the command-normal dispatch in `fighter.js` has any behaviour for them,
 so allowing them there would validate, price as free, and fire as a no-op.

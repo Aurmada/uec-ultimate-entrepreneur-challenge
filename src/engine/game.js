@@ -141,6 +141,7 @@ export class Game {
     this.pushApart();
     this.updateProjectiles(dt);
     this.resolveHits();
+    this.updateDeliveries(dt);
     this.updateTraps(dt);
     this.updateDrops(dt);
     this.updateAfterimages(dt);
@@ -456,6 +457,7 @@ export class Game {
     if (kind === 'steal') msg = `💸 RECHARGING ${f.stealCD.toFixed(1)}s`;
     else if (kind === 'dash') msg = `💨 RECHARGING ${f.dashCD.toFixed(1)}s`;
     else if (kind === 'stance') msg = `🔄 RECHARGING ${f.stanceCD.toFixed(1)}s`;
+    else if (kind === 'delivery') msg = `📦 STILL OUT FOR DELIVERY`;
     else if (need[kind] !== undefined) {
       msg = `NEED ${Math.ceil(need[kind] - f.energy)} MORE ⚡`;
     }
@@ -586,6 +588,57 @@ export class Game {
       }, true);
     }
     this.traps = this.traps.filter(t => !t.dead);
+  }
+
+  // ---------------- deferred effects ----------------
+  // SAME-DAY DELIVERY. The only move in the game that resolves on its own
+  // clock rather than when someone steps somewhere or swings: the order goes
+  // out on the rival's spot and lands there `delay` seconds later whatever
+  // anyone is doing. One order per fighter, held in the registry
+  // (deliveryT, deliveryX), so it is hashed and reset with everything else.
+  placeOrder(f, sp) {
+    const opp = this.other(f);
+    f.deliveryT = sp.delay;
+    f.deliveryX = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x));
+    this.audio.sfx('order');
+    this.fx.popup(f.x, f.y - 170, 'ORDERED!', f.def.c.accent);
+  }
+
+  // Runs from updateFighting only, next to the runway drain and for the same
+  // reason: that is the one place the round is known to be live, and pause
+  // and hitstop both return before it, so a hitstop holds the parcel in the air.
+  updateDeliveries(dt) {
+    for (const f of this.fighters) {
+      if (f.deliveryT <= 0) continue;
+      f.deliveryT -= dt;
+      if (f.deliveryT > 0) continue;
+      f.deliveryT = 0;          // cleared BEFORE it resolves, so nothing can land it twice
+      this.landDelivery(f);
+    }
+  }
+
+  landDelivery(f) {
+    const sp = f.special;
+    const x = f.deliveryX;
+    const victim = this.other(f);
+    this.audio.sfx('parcel');
+    this.fx.dust(x, STAGE.FLOOR, 10);
+    this.fx.ring(x, STAGE.FLOOR - 8, f.def.c.accent, 520, 6, 0.3);
+    this.fx.parcel(x, STAGE.FLOOR);
+    this.fx.shake(7);
+    // A column from the floor to the top of the sky. It falls on you, so a
+    // jump in place does not clear it; stepping out of the zone does.
+    const col = { x: x - sp.radius, y: -STAGE.H, w: sp.radius * 2, h: STAGE.H + STAGE.FLOOR };
+    if (victim.state === 'ko' || !overlap(col, victim.hurtbox())) {
+      this.fx.popup(x, STAGE.FLOOR - 110, 'LEFT AT THE DOOR', '#c9b28a');
+      return;
+    }
+    // Indirect, like a trap or a projectile: nobody is swinging, so a counter
+    // stance has nothing to turn back and a parry staggers no one.
+    this.strike(f, victim, {
+      kind: 'delivery', dmg: sp.dmg, kb: sp.kb, kbUp: sp.kbUp, stun: sp.stun,
+      words: ['DELIVERED!', 'SIGNED FOR!'], sfx: 'throwSlam', shake: 9, hasHit: false,
+    }, true);
   }
 
   // ---------------- mystery drops ----------------
@@ -782,6 +835,11 @@ export class Game {
   }
 
   endRound(winnerIdx, byKO) {
+    // A parcel still in the air when the bell rings is never delivered. It
+    // can not hit someone who has already won, and its marker does not hang
+    // over the KO slow motion. The registry would clear it at the next round
+    // anyway; this is about the time in between.
+    for (const f of this.fighters) f.deliveryT = 0;
     this.roundWinner = winnerIdx;
     this.roundWasKO = byKO;
     if (winnerIdx >= 0) {

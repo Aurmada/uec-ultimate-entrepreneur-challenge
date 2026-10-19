@@ -1,5 +1,30 @@
 // Juice: particles, comic-book word popups, screen shake, hitstop, rings, flashes.
 
+// The SAME-DAY DELIVERY parcel: plain cardboard, a strip of tape and a
+// this-way-up arrow, sitting on (x, y) with its base on the floor. `squash`
+// above 1 flattens it, for the frame it lands. Shared by the falling parcel in
+// render.js and the one left behind here, so the two can never disagree.
+export function drawParcel(ctx, x, y, squash = 1) {
+  const w = 62 * Math.sqrt(squash), h = 48 / squash;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = '#c08a52';
+  ctx.strokeStyle = '#0a0c16';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(-w / 2, -h, w, h, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#9c6a3a';                      // the shaded side
+  ctx.fillRect(w / 2 - 12, -h + 2, 9, h - 4);
+  ctx.fillStyle = '#e9d7a6';                      // tape
+  ctx.fillRect(-6, -h + 1.5, 12, h - 3);
+  ctx.strokeStyle = '#3b2a1a';                    // this way up
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-w / 2 + 12, -h * 0.28); ctx.lineTo(-w / 2 + 12, -h * 0.72);
+  ctx.moveTo(-w / 2 + 7, -h * 0.56); ctx.lineTo(-w / 2 + 12, -h * 0.72); ctx.lineTo(-w / 2 + 17, -h * 0.56);
+  ctx.stroke();
+  ctx.restore();
+}
+
 export class FXSystem {
   constructor() {
     this.particles = [];
@@ -122,6 +147,16 @@ export class FXSystem {
     }
   }
 
+  // A delivered parcel, sitting where it landed for a beat before it goes.
+  // It is a particle so it costs the simulation nothing: the hit has already
+  // been resolved by the time this is drawn.
+  parcel(x, y) {
+    this.particles.push({
+      x, y, vx: 0, vy: 0, g: 0, life: 0.8, maxLife: 0.8, size: 1,
+      color: '#c08a52', shape: 'parcel', rot: 0,
+    });
+  }
+
   ring(x, y, color = '#ffd23f', vr = 700, width = 6, dur = 0.35) {
     this.rings.push({ x, y, r: 10, vr, t: 0, dur, color, width });
   }
@@ -184,6 +219,8 @@ export class FXSystem {
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
         ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.66);
         ctx.restore();
+      } else if (p.shape === 'parcel') {
+        drawParcel(ctx, p.x, p.y, 1 + Math.max(0, p.life - p.maxLife + 0.12) * 2.5);
       } else if (p.shape === 'star') {
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
         ctx.fillRect(-p.size, -1, p.size * 2, 2);

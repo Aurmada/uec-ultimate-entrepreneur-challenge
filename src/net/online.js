@@ -120,7 +120,14 @@ export const CHARACTER_WIRE_VERSION = 1;
 // v7 also covers the block fix: a held block now advances stateT, so it takes
 // chip once PARRY.WINDOW has passed, where a v6 peer parries the same hit.
 // Both changes ship in v3.8; 7 was never released without either.
-export const SIM_VERSION = 7;
+//
+// v8: the deferred effect. Jeff Bozo's SAME-DAY DELIVERY lands seconds after
+// it is thrown, on the registry's deliveryT/deliveryX, and Jeff no longer
+// throws HOSTILE TAKEOVER. A v7 peer gives the same Jeff a grab. v8 also puts
+// the trap count in the fingerprint, which changes the hash of the same
+// state, so a v7 and a v8 peer would report a desync on the first sync even
+// in a match where nobody played either.
+export const SIM_VERSION = 8;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {
@@ -153,7 +160,7 @@ export function hashGameState(game) {
     q(f[0].x), q(f[0].y), q(f[0].hp), q(f[0].energy),
     q(f[1].x), q(f[1].y), q(f[1].hp), q(f[1].energy),
     q(game.timer), game.roundWins[0], game.roundWins[1],
-    game.projectiles.length, game.drops.length,
+    game.projectiles.length, game.drops.length, game.traps.length,
     // Everything the registry declares hashable, both fighters, registry order.
     ...hashValues(f[0]), ...hashValues(f[1]),
   ]) mix(x);
