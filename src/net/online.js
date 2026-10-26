@@ -134,8 +134,10 @@ export const CHARACTER_WIRE_VERSION = 1;
 // and the two disagree on both x positions from the first throw. v9 also sets
 // the victim down THROW.BEHIND behind the thrower and steps a thrower flush
 // against a wall forward to make the room, where a v8 peer leaves a cornered
-// throw's side to pushApart's tie-break by slot. A real bump: v8 shipped in
-// v3.9 and v3.9.1.
+// throw's side to pushApart's tie-break by slot. And a throw that KOs now
+// sends the loser the way they were thrown: doKO reads its direction from the
+// two x positions, which v8 left equal, so every throw KO flew right. A real
+// bump: v8 shipped in v3.9 and v3.9.1.
 export const SIM_VERSION = 9;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.

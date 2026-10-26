@@ -79,7 +79,7 @@ Measured in AI-versus-AI matches across the whole roster, reading traps cost Kim
 
 ## What's new in v3.9.2: a throw goes behind you
 
-- 🦈 **A throw lands behind you from either side.** Carl's HOSTILE TAKEOVER and ASSET SEIZURE, and a built founder's DUE DILIGENCE, always threw to the right. From one side that was the promised swap; from the other, the victim landed right back in front of you and you were shoved backward, sometimes onto a trap. Now the victim lands behind you whichever side they stood on, and you step forward into the space they left.
+- 🦈 **A throw lands behind you from either side.** HOSTILE TAKEOVER (Carl's, and any founder who picks it, including the Closer and the Chief), Carl's ASSET SEIZURE and a built founder's DUE DILIGENCE always threw to the right. From one side that was the promised swap; from the other, the victim landed right back in front of you and you were shoved backward, sometimes onto a trap. Now the victim lands behind you whichever side they stood on, and you step forward into the space they left.
 - 🧱 **A throw gets you out of the corner.** With your back flat against the wall, whether the throw swapped sides used to depend on which player you were. Now it always does: they go into the corner and you walk out. Live play needs both players on v3.9.2.
 
 ## What's new in v3.9.1: a new address

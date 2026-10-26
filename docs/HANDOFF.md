@@ -156,6 +156,11 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
   and pushes away from the attacker or the owner. The shield branch at the top of
   `doGrab` has no double sign either, but it pushes the shielded victim toward the
   grabber; see the owner decisions.
+- **A throw that KOs** now sends the loser the way they were thrown. `doKO` takes
+  its direction from `sign(loser.x - winner.x) || 1`, and with the victim set down
+  on the thrower's own x that sign was 0, so every KO by a throw flung the loser
+  right. Found in review; covered by the same bump. Still cosmetic: on a cornered
+  KO the two bodies end 1 px apart, because `pushApart` stops once anyone is KO'd.
 - **`SIM_VERSION` 9**, not 8: `origin/main` already ships 8 in v3.9 and v3.9.1,
   so a v8 peer exists, and it puts a victim thrown from the right on the other
   side from the first such throw. `VERSION` is v3.9.2 and the README has its
@@ -165,7 +170,9 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
   to 23.9% (the first 80 per pair read 25.5 to 22.0, the second 26.1 to 25.9, so
   within the noise to about two points down); Lizbeth 65.9% to 65.9%; nobody else
   moved more than about a point. Every match without Carl is identical, since
-  nobody else has a grab. In Carl's matches, 1.3 s after a throw the victim is on
+  nobody else on the roster has a grab (a built founder can: HOSTILE TAKEOVER is a
+  player special, the Closer and Chief bases default to it, and the fix covers
+  them the same way). In Carl's matches, 1.3 s after a throw the victim is on
   the other side 65% of the time (was 21%; the rest have moved by then), Carl
   stands more than 5 px behind where he threw from after 3% of throws (was 64%),
   and he is still in a corner after 1% (was 3%). The fighter who lands the next
