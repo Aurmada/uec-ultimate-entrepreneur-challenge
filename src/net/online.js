@@ -127,7 +127,13 @@ export const CHARACTER_WIRE_VERSION = 1;
 // the trap count in the fingerprint, which changes the hash of the same
 // state, so a v7 and a v8 peer would report a desync on the first sync even
 // in a match where nobody played either.
-export const SIM_VERSION = 8;
+//
+// v9: a throw goes behind the thrower from either side. Game.doGrab applied
+// the throw's sign twice, so every throw flew right; a v8 peer lands the same
+// victim back where they started whenever they were thrown from the right,
+// and the two disagree on both x positions from the first throw. A real bump:
+// v8 shipped in v3.9 and v3.9.1.
+export const SIM_VERSION = 9;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

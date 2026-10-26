@@ -71,6 +71,10 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.9.2: a throw goes behind you
+
+- 🦈 **A throw lands behind you from either side.** Carl's HOSTILE TAKEOVER and ASSET SEIZURE, and a built founder's DUE DILIGENCE, always threw to the right. From one side that was the promised swap; from the other, the victim landed right back in front of you and you were shoved backward, sometimes onto a trap. Now the victim lands behind you whichever side they stood on, and you step forward into the space they left. Live play needs both players on v3.9.2.
+
 ## What's new in v3.9.1: a new address
 
 The game lives at **https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/** now; the old address stopped working when the project moved. Links you share show their preview picture again, because the page was still pointing its preview at the old address. Nothing about the fight changed.

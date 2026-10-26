@@ -420,9 +420,18 @@ export class Game {
     this.audio.sfx('grab');
     this.fx.hitstop(0.3);
     this.fx.popup(def.x, def.y - 150, 'ACQUIRED!', '#ff3d6e');
-    // hoisted and thrown behind the attacker — sides swap
+    // hoisted and thrown behind the attacker, sides swap. `-dir` is the
+    // direction of the throw, and applyHit already multiplies kb by it, so kb
+    // stays a plain magnitude like every other hit's. Until v3.9.2 it carried
+    // the sign as well, the two cancelled, and every throw went RIGHT: from the
+    // thrower's right side the victim landed back where they started and the
+    // thrower was shoved backward as the bodies came apart. The first frame of
+    // flight is what puts the victim past the thrower before pushApart looks,
+    // so the throw's direction decides the swap (test/throw.test.js), except
+    // with the thrower flush against a wall, where there is no room behind and
+    // pushApart's tie-break by slot decides (HANDOFF, known limits).
     def.x = att.x;
-    def.applyHit({ dmg, kb: -dir * sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: -dir });
+    def.applyHit({ dmg, kb: sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: -dir });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
     this.refillRunway(att);

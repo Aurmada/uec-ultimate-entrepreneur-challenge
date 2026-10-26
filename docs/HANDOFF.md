@@ -35,6 +35,7 @@ on the outline, and hit bursts that follow the blow).
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/same-day-delivery` | v3.9 | Released: `main` is this plus v3.9.1. Can be deleted. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
+| `claude/sweet-wiles-e88123` | `main` plus v3.9.2: a throw goes behind the thrower from either side (`SIM_VERSION` 9) | Local, not pushed. 357 tests pass. Ready to release. |
 
 The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
 The graphics branch does not have v3.9.1's address change yet; merging `main`
@@ -73,6 +74,45 @@ ARCHITECTURE section 5, "A deferred effect".
 Released as a fast-forward of `main` and checked with the `curl` check in
 ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSION`
 8); v3.9.1 changes nothing the simulation computes.
+
+## v3.9.2 on `claude/sweet-wiles-e88123`: a throw goes behind the thrower
+
+- **The bug**, there since v1.0. `Game.doGrab` promises "thrown behind the
+  attacker, sides swap" and applied the throw's sign twice: `kb: -dir * sp.kb`
+  with `dir: -dir`, and `applyHit` sets `vx = dir * kb`, so the victim's `vx` was
+  `+sp.kb` whichever side they started on. Thrown from the thrower's left they
+  swapped as promised; thrown from the right they landed back where they started,
+  and the thrower was shoved about 21 px backward as `pushApart` separated the
+  bodies. Found by the trap-AI session: Carl kept landing on Kim's RUG PULL off
+  his own throws.
+- **The fix** is `kb: sp.kb`; `applyHit` applies the sign. With Carl at x 600,
+  Kim thrown from 520 lands at 700 with Carl at 579, as before; thrown from 680
+  she now lands at 500 with Carl at 621 (was 700 and 579). Carl gives up those
+  21 px forward, into the space she left. `test/throw.test.js` throws both grabs
+  (HOSTILE TAKEOVER and ASSET SEIZURE) from both sides and from both player slots,
+  since `pushApart` breaks a tie by slot; it fails without the fix.
+- **Other callers checked.** Every other `applyHit` (a normal hit, a steal, a
+  counter's payback) and every direct knockback in `game.js` applies its sign once
+  and pushes away from the attacker or the owner. The shield branch at the top of
+  `doGrab` has no double sign either, but it pushes the shielded victim toward the
+  grabber; see the owner decisions.
+- **`SIM_VERSION` 9**, not 8: `origin/main` already ships 8 in v3.9 and v3.9.1,
+  so a v8 peer exists, and it puts a victim thrown from the right on the other
+  side from the first such throw. `VERSION` is v3.9.2 and the README has its
+  section.
+- **Measured** with the trap-AI session's harness (AI against AI at Champion, 160
+  matches per ordered pair over four seed bases): Carl 25.8% to 23.9% (the first
+  80 per pair read 25.5 to 21.6, the second 26.1 to 26.2, so within the noise to
+  about two points down); Lizbeth 65.9% to 66.0%; nobody else moved more than
+  about a point. Every match without Carl is identical, since nobody else has a
+  grab. In Carl's matches, 1.3 s after a throw the victim is on the other side 62%
+  of the time (was 21%; the rest have moved by then), and Carl stands more than
+  5 px behind where he threw from after 3% of throws (was 64%). The fighter who
+  lands the next hit after a throw did not change (Carl 12%, the victim 38%).
+- **With the trap AI.** `claude/friendly-sammet-70d4d4` is cut from v3.9 and
+  still lists this bug under known limits, and its README bullet sits in the v3.9
+  section that has since shipped. Whoever merges the two drops that entry and
+  gives the trap AI a release section of its own, or folds both into one release.
 
 ## The prototype on `live-3d`
 
@@ -165,6 +205,17 @@ read it), which the determinism and effects tests check.
 7. **Balance as the AI plays it.** In AI-versus-AI at Champion, Elo (about 20%)
    and Carl (about 28%) sit at the bottom and Kim, Steve and Lizbeth near 70%.
    That measures how well the AI plays each kit as much as the kits themselves.
+8. **Release v3.9.2** (push `claude/sweet-wiles-e88123` to `main`), alone or
+   together with the trap AI. Either way it needs `SIM_VERSION` 9, because 8 is
+   already live.
+9. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
+   sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
+   recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
+   Kim 60 px from Carl ends 51 px away, the minimum body gap. The other two
+   OBJECTIONs (on a strike and on a steal) push the victim away. It reads like a
+   slip of sign, but it may have been meant to let the victim punish a grabber
+   stuck in a long recovery. Flipping it is one sign and could ride on
+   `SIM_VERSION` 9 if it ships in the same release; left as it is.
 
 ## Next steps, in the order they pay off
 
@@ -207,6 +258,16 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   UUID, so one profile fetch to Supabase returns a harmless 400 in the console.
 - Full-frame pixel hashes changed between September and October with no code
   change: the browser updated. Hashes only compare within one browser version.
+- **A throw with the thrower flush against a wall.** The double sign that sent
+  every throw right is fixed in v3.9.2. What is left: when the thrower stands
+  exactly at a wall (x is clamped there, which is where a cornered fighter
+  stands), the victim has no room to land behind them, both bodies share one x,
+  and `pushApart` breaks the tie by slot. As p1, Carl throws out of the right
+  corner but not the left; as p2, the reverse. One pixel of room is enough for
+  the swap. Lockstep-safe (both peers compute the same), so it is a fairness
+  question: the genre's answer is that the throw swaps and the thrower walks out
+  of the corner, which would mean moving the thrower forward when there is no
+  room behind them. A simulation change, so `SIM_VERSION`; not done.
 
 ## Backend (Supabase)
 
