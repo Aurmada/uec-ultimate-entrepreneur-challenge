@@ -27,10 +27,9 @@ branch, not pushed: `live-3d` with v3.9 merged in and the prototype's leftovers
 done (parallax for the rendered stages, hair and coats that trail, rims that stay
 on the outline, and hit bursts that follow the blow).
 
-A session on 2026-10-25 left two more, each `main` plus its own commits and not
-pushed: v3.9.2 (`claude/sweet-wiles-e88123`), a throw that goes behind the thrower
-from either side, and v3.9.3 (`claude/friendly-sammet-70d4d4`), an AI that reads
-traps.
+Sessions on 2026-10-25 built two more releases, both reviewed, fixed and lined
+up on `claude/release-train` (not pushed): v3.9.2, a throw that goes behind the
+thrower from either side, and v3.9.3, an AI that reads traps.
 
 ## Branches
 
@@ -38,11 +37,8 @@ traps.
 | --- | --- | --- |
 | `main` | The live game, v3.9.1 (`SIM_VERSION` 8) | Deployed. A push here is a release. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
-| `claude/same-day-delivery` | v3.9 | Released: `main` is this plus v3.9.1. Can be deleted. |
 | `claude/release-train` | `main` plus v3.9.2 and v3.9.3, with the review's fixes | Local, not pushed. 370 tests pass. Ready to release. |
-| `claude/friendly-sammet-70d4d4` | `main` plus v3.9.3 as first built | Superseded by the train. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
-| `claude/sweet-wiles-e88123` | `main` plus v3.9.2: a throw goes behind the thrower from either side, corners included (`SIM_VERSION` 9) | Local, not pushed. 359 tests pass. Ready to release. |
 
 The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
 The graphics branch does not have v3.9.1's address change yet; merging `main`
@@ -50,7 +46,7 @@ into it brings it.
 
 ## v3.9.3 on `claude/release-train`: the AI reads traps
 
-Built on `claude/friendly-sammet-70d4d4` and merged onto v3.9.2 on the train. The same blind spot the delivery had: the AI
+Built on its own branch from v3.9.1 and merged onto v3.9.2 on the train. The same blind spot the delivery had: the AI
 never looked at `game.traps`, so every rival at every difficulty walked straight
 onto Kim's RUG PULL (and a built founder's POISON PILL). All of it is in `ai.js`;
 the AI is single-player only, so this branch changes nothing a live match
@@ -59,7 +55,7 @@ fix is in). `VERSION` is v3.9.3 and the README has its section.
 
 The throw fix (v3.9.2, `SIM_VERSION` 9) is under it on the train, so pushing
 `claude/release-train` to `main` releases both, as v3.9.3; then the `curl` check
-in ONBOARDING section 7. `claude/sweet-wiles-e88123` alone releases only v3.9.2.
+in ONBOARDING section 7. To release only v3.9.2, push the train's commit `d25f4b3`.
 
 - **Noticing** is rolled in `decide()` the way an order is: each decision while a
   trap is close enough to step onto before the next one, at `blockProb + 0.25`,
@@ -148,7 +144,7 @@ Released as a fast-forward of `main` and checked with the `curl` check in
 ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSION`
 8); v3.9.1 changes nothing the simulation computes.
 
-## v3.9.2 on `claude/sweet-wiles-e88123`: a throw goes behind the thrower
+## v3.9.2 on `claude/release-train`: a throw goes behind the thrower
 
 - **The bug**, there since v1.0. `Game.doGrab` promises "thrown behind the
   attacker, sides swap" and applied the throw's sign twice: `kb: -dir * sp.kb`
@@ -201,10 +197,8 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
   stands more than 5 px behind where he threw from after 3% of throws (was 64%),
   and he is still in a corner after 1% (was 3%). The fighter who lands the next
   hit after a throw did not change (Carl 12%, the victim 39%).
-- **With the trap AI.** `claude/friendly-sammet-70d4d4` is cut from v3.9 and
-  still lists this bug under known limits, and its README bullet sits in the v3.9
-  section that has since shipped. Whoever merges the two drops that entry and
-  gives the trap AI a release section of its own, or folds both into one release.
+- **With the trap AI.** Both are on `claude/release-train`, the trap AI merged on
+  top; the README has a section for each (v3.9.3 above v3.9.2).
 
 ## The prototype on `live-3d`
 
@@ -298,10 +292,10 @@ read it), which the determinism and effects tests check.
    and Carl (about 28%) sit at the bottom and Kim, Steve and Lizbeth near 70%.
    That measures how well the AI plays each kit as much as the kits themselves.
 8. **Ship v3.9.2 and v3.9.3.** They are lined up on `claude/release-train`: the
-   throw fix (`claude/sweet-wiles-e88123`, v3.9.2, `SIM_VERSION` 9 because 8 is
-   live) with the AI that reads traps (`claude/friendly-sammet-70d4d4`, v3.9.3)
-   merged on top. Pushing the train to `main` releases both as v3.9.3; pushing
-   `claude/sweet-wiles-e88123` alone first releases only v3.9.2.
+   throw fix (v3.9.2, `SIM_VERSION` 9 because 8 is live) with the AI that reads
+   traps (v3.9.3) merged on top, both reviewed and fixed. Pushing the train to
+   `main` releases both as v3.9.3; pushing its commit `d25f4b3` first releases
+   only v3.9.2.
 9. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
    sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
    recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
