@@ -34,6 +34,7 @@ on the outline, and hit bursts that follow the blow).
 | `main` | The live game, v3.9.1 (`SIM_VERSION` 8) | Deployed. A push here is a release. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/same-day-delivery` | v3.9 | Released: `main` is this plus v3.9.1. Can be deleted. |
+| `claude/friendly-sammet-70d4d4` | `main` plus an AI that reads traps | Local, not pushed. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
 
 The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
@@ -73,6 +74,43 @@ ARCHITECTURE section 5, "A deferred effect".
 Released as a fast-forward of `main` and checked with the `curl` check in
 ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSION`
 8); v3.9.1 changes nothing the simulation computes.
+
+### Traps, read by the AI (`claude/friendly-sammet-70d4d4`, on top of v3.9)
+
+The same blind spot the delivery had: the AI never looked at `game.traps`, so
+every rival at every difficulty walked straight onto Kim's RUG PULL (and a built
+founder's POISON PILL). All of it is in `ai.js`; the AI is single-player only, so
+`SIM_VERSION` does not move. The README's v3.9 section already describes it, so
+it can ship as part of v3.9 by pushing this branch instead; to ship it later,
+move that bullet and bump `VERSION`.
+
+- **Noticing** is rolled in `decide()` the way an order is: each decision while a
+  trap is close enough to step onto before the next one, at `blockProb + 0.25`,
+  held for that trap once it succeeds (`seenTraps`).
+- **The fence** (`fenceTraps`, per frame in `update()`) stops a walk at a noticed
+  trap's edge, or turns it into a jump when the jump lands clear on the far side
+  and the rival is out there; it drops a dash that would cross one, steers a
+  jump's drift to land clear, and holds back an air attack that would drop the
+  body onto one. Most of the roster cannot jump RUG PULL from its edge (a jump
+  carries 120 to 160 px; the trap denies about 160), so most of the time the AI
+  fights from the edge and the trap runs out.
+- **Inside one that is still arming** (laid point-blank, which a human Kim can
+  do), `leaveTrap` walks it out, jumps it out, or blocks when a wall or the rival
+  is in the way, since a blocked bite is chip.
+- **Moves that carry the body count as steps**: the chain reflex finishes with a
+  kick instead of a slap or jab (those step in `COMBO.STEP_IN`, moved into
+  `config.js` from a literal in `fighter.js`, same value), and a rush or teleport
+  that would set the body down on a noticed trap is not thrown.
+- **Measured**: in fixed scenarios (8 rivals, 20 seeds each), walking at an armed
+  trap with Kim beyond it, Champion is bitten 0 times in 160 (was 134), Contender
+  7 (138), Rookie 53 (138). Caught inside an arming trap: Champion 8 in 160 (was
+  160). Over the whole roster, AI against AI, both at the same level, 80 matches
+  per ordered pair: Kim at Champion went from 75.1% to 70.3% (the two halves read
+  71.6% and 69.1%), still the top Champion; Contender 66.1% to 62.3%, Rookie 40.9%
+  to 37.0%. Nobody else moved more than about two points at any level. Rivals now
+  take 1.26 trap bites a match at Champion, down from 2.48, and most of what is
+  left is Kim's own combos knocking them onto a fresh trap, which is the move
+  working.
 
 ## The prototype on `live-3d`
 
@@ -207,6 +245,13 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   UUID, so one profile fetch to Supabase returns a harmless 400 in the console.
 - Full-frame pixel hashes changed between September and October with no code
   change: the browser updated. Hashes only compare within one browser version.
+- **A throw always sends the victim to the right.** `Game.doGrab` applies the
+  knockback sign twice (`kb: -dir * sp.kb` and `dir: -dir`, and `applyHit` sets
+  `vx = dir * kb`), so the promised side swap only happens when the victim
+  started on the left, and the thrower is shoved about 21 px left as the bodies
+  come apart. Found while measuring the trap AI (Carl was thrown onto traps by
+  his own grab). It is simulation behaviour, so fixing it needs a `SIM_VERSION`
+  bump; not fixed.
 
 ## Backend (Supabase)
 

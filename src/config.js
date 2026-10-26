@@ -104,6 +104,7 @@ export const COMBO = {
   // remember which move could follow which, and a wrong guess did nothing.
   BASICS: ['slap', 'punch', 'kick', 'launch'],
   MAX_CHAIN: 5,          // basics per string before you must finish
+  STEP_IN: 12,           // px a chained slap or jab steps toward the rival; a kick does not
 };
 
 export const ATTACKS = {

@@ -649,3 +649,11 @@ exists for the same reason: hooks for a driver that isn't committed yet.
   invalidates a sweep.
 * **`cmdBySlot` is a `Map`.** `Object.keys` on it is always empty and will make
   you think command normals are not registered.
+* **An AI decision holds until the next one.** `decide()` runs every `react`
+  seconds (up to about 0.6 s for a Rookie) and sets `dir` and one-frame pulses;
+  nothing looks at them again in between unless `update()` does. That is why the
+  counter reflex and the trap fence (`fenceTraps`) run per frame, and why the
+  fence never writes `dir`: the moment a trap is gone, the walk it interrupted
+  carries on. Moves that carry the body are steps too: a chained slap or jab
+  steps in `COMBO.STEP_IN`, a rush runs to the rival and a teleport lands 84 px
+  past them, and an attack in the air holds the body still until it ends.
