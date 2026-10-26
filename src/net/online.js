@@ -131,8 +131,11 @@ export const CHARACTER_WIRE_VERSION = 1;
 // v9: a throw goes behind the thrower from either side. Game.doGrab applied
 // the throw's sign twice, so every throw flew right; a v8 peer lands the same
 // victim back where they started whenever they were thrown from the right,
-// and the two disagree on both x positions from the first throw. A real bump:
-// v8 shipped in v3.9 and v3.9.1.
+// and the two disagree on both x positions from the first throw. v9 also sets
+// the victim down THROW.BEHIND behind the thrower and steps a thrower flush
+// against a wall forward to make the room, where a v8 peer leaves a cornered
+// throw's side to pushApart's tie-break by slot. A real bump: v8 shipped in
+// v3.9 and v3.9.1.
 export const SIM_VERSION = 9;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.

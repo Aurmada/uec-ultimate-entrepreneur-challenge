@@ -189,7 +189,8 @@ test('an unhashed key never moves the fingerprint', () => {
 
 test('the simulation version was bumped for the behaviour change', () => {
   // 8: SAME-DAY DELIVERY, the deferred effect, and traps in the fingerprint.
-  // 9: a throw goes behind the thrower from either side (see online.js).
+  // 9: a throw goes behind the thrower from either side, corners included
+  // (see online.js).
   assert.equal(SIM_VERSION, 9);
 });
 

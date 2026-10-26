@@ -177,6 +177,14 @@ export const STEAL = {
   startup: 0.12, active: 0.08, recovery: 0.3, reach: 92, stun: 0.18,
 };
 
+// 🦈 Throws (HOSTILE TAKEOVER and every command grab). The victim is set down
+// BEHIND px behind the thrower before the throw carries them off, so the side
+// is settled on the spot, not left to pushApart, which breaks a tie between two
+// bodies on one x by slot. Any room at all is enough. A thrower with less than
+// this behind them (flush against a wall) steps forward to make it, and that
+// is what brings them out of the corner.
+export const THROW = { BEHIND: 1 };
+
 // Perfectly timed block (tap block just before impact) = parry.
 export const PARRY = { WINDOW: 0.12, STAGGER: 0.5, ENERGY: 10 };
 

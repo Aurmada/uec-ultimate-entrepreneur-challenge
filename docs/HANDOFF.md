@@ -35,7 +35,7 @@ on the outline, and hit bursts that follow the blow).
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/same-day-delivery` | v3.9 | Released: `main` is this plus v3.9.1. Can be deleted. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
-| `claude/sweet-wiles-e88123` | `main` plus v3.9.2: a throw goes behind the thrower from either side (`SIM_VERSION` 9) | Local, not pushed. 357 tests pass. Ready to release. |
+| `claude/sweet-wiles-e88123` | `main` plus v3.9.2: a throw goes behind the thrower from either side, corners included (`SIM_VERSION` 9) | Local, not pushed. 359 tests pass. Ready to release. |
 
 The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
 The graphics branch does not have v3.9.1's address change yet; merging `main`
@@ -88,9 +88,20 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
 - **The fix** is `kb: sp.kb`; `applyHit` applies the sign. With Carl at x 600,
   Kim thrown from 520 lands at 700 with Carl at 579, as before; thrown from 680
   she now lands at 500 with Carl at 621 (was 700 and 579). Carl gives up those
-  21 px forward, into the space she left. `test/throw.test.js` throws both grabs
-  (HOSTILE TAKEOVER and ASSET SEIZURE) from both sides and from both player slots,
-  since `pushApart` breaks a tie by slot; it fails without the fix.
+  21 px forward, into the space she left.
+- **The corner.** The victim used to be set down on the thrower's x, so the side
+  came from their first frame of flight. With the thrower flush against a wall
+  (x is clamped there, which is where a cornered fighter stands) there was no
+  room for that, both bodies shared one x, and `pushApart` broke the tie by slot:
+  as p1 Carl threw out of the right corner but not the left, as p2 the reverse.
+  Now the victim is set down `THROW.BEHIND` (1 px, `config.js`) behind the
+  thrower, and a thrower with less room than that steps forward to make it. A
+  cornered throw always swaps: Kim goes into the corner and Carl comes out to
+  51 px from the wall, from either wall and either slot. Mid-stage, landings move
+  by half a pixel.
+- **Tests.** `test/throw.test.js` throws both grabs (HOSTILE TAKEOVER and ASSET
+  SEIZURE) from both sides and both player slots mid-stage, and again with Carl
+  flush against each wall. Each half fails without its fix.
 - **Other callers checked.** Every other `applyHit` (a normal hit, a steal, a
   counter's payback) and every direct knockback in `game.js` applies its sign once
   and pushes away from the attacker or the owner. The shield branch at the top of
@@ -101,14 +112,15 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
   side from the first such throw. `VERSION` is v3.9.2 and the README has its
   section.
 - **Measured** with the trap-AI session's harness (AI against AI at Champion, 160
-  matches per ordered pair over four seed bases): Carl 25.8% to 23.9% (the first
-  80 per pair read 25.5 to 21.6, the second 26.1 to 26.2, so within the noise to
-  about two points down); Lizbeth 65.9% to 66.0%; nobody else moved more than
-  about a point. Every match without Carl is identical, since nobody else has a
-  grab. In Carl's matches, 1.3 s after a throw the victim is on the other side 62%
-  of the time (was 21%; the rest have moved by then), and Carl stands more than
-  5 px behind where he threw from after 3% of throws (was 64%). The fighter who
-  lands the next hit after a throw did not change (Carl 12%, the victim 38%).
+  matches per ordered pair over four seed bases), both fixes together: Carl 25.8%
+  to 23.9% (the first 80 per pair read 25.5 to 22.0, the second 26.1 to 25.9, so
+  within the noise to about two points down); Lizbeth 65.9% to 65.9%; nobody else
+  moved more than about a point. Every match without Carl is identical, since
+  nobody else has a grab. In Carl's matches, 1.3 s after a throw the victim is on
+  the other side 65% of the time (was 21%; the rest have moved by then), Carl
+  stands more than 5 px behind where he threw from after 3% of throws (was 64%),
+  and he is still in a corner after 1% (was 3%). The fighter who lands the next
+  hit after a throw did not change (Carl 12%, the victim 39%).
 - **With the trap AI.** `claude/friendly-sammet-70d4d4` is cut from v3.9 and
   still lists this bug under known limits, and its README bullet sits in the v3.9
   section that has since shipped. Whoever merges the two drops that entry and
@@ -258,16 +270,6 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   UUID, so one profile fetch to Supabase returns a harmless 400 in the console.
 - Full-frame pixel hashes changed between September and October with no code
   change: the browser updated. Hashes only compare within one browser version.
-- **A throw with the thrower flush against a wall.** The double sign that sent
-  every throw right is fixed in v3.9.2. What is left: when the thrower stands
-  exactly at a wall (x is clamped there, which is where a cornered fighter
-  stands), the victim has no room to land behind them, both bodies share one x,
-  and `pushApart` breaks the tie by slot. As p1, Carl throws out of the right
-  corner but not the left; as p2, the reverse. One pixel of room is enough for
-  the swap. Lockstep-safe (both peers compute the same), so it is a fairness
-  question: the genre's answer is that the throw swaps and the thrower walks out
-  of the corner, which would mean moving the thrower forward when there is no
-  room behind them. A simulation change, so `SIM_VERSION`; not done.
 
 ## Backend (Supabase)
 
