@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.9.2';
+export const VERSION = 'v3.9.3';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -104,6 +104,7 @@ export const COMBO = {
   // remember which move could follow which, and a wrong guess did nothing.
   BASICS: ['slap', 'punch', 'kick', 'launch'],
   MAX_CHAIN: 5,          // basics per string before you must finish
+  STEP_IN: 12,           // px a chained slap or jab steps toward the rival; a kick does not
 };
 
 export const ATTACKS = {

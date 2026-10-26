@@ -266,7 +266,7 @@ export class Fighter {
             if (n < COMBO.MAX_CHAIN) {                              // any basic → any basic
               this.startAttack(want, game);
               this.attack.chainN = n + 1;
-              if (wantKey !== 'kick') this.x += this.facing * 12;   // slaps/jabs step in
+              if (wantKey !== 'kick') this.x += this.facing * COMBO.STEP_IN;   // slaps/jabs step in
               break;
             }
           } else if (isBasic) {                                     // finishers from any basic

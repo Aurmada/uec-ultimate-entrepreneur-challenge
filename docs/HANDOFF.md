@@ -27,6 +27,11 @@ branch, not pushed: `live-3d` with v3.9 merged in and the prototype's leftovers
 done (parallax for the rendered stages, hair and coats that trail, rims that stay
 on the outline, and hit bursts that follow the blow).
 
+A session on 2026-10-25 left two more, each `main` plus its own commits and not
+pushed: v3.9.2 (`claude/sweet-wiles-e88123`), a throw that goes behind the thrower
+from either side, and v3.9.3 (`claude/friendly-sammet-70d4d4`), an AI that reads
+traps.
+
 ## Branches
 
 | Branch | What it is | State |
@@ -34,12 +39,56 @@ on the outline, and hit bursts that follow the blow).
 | `main` | The live game, v3.9.1 (`SIM_VERSION` 8) | Deployed. A push here is a release. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/same-day-delivery` | v3.9 | Released: `main` is this plus v3.9.1. Can be deleted. |
+| `claude/friendly-sammet-70d4d4` | `main` plus v3.9.3, an AI that reads traps | Local, not pushed. 362 tests pass. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
 | `claude/sweet-wiles-e88123` | `main` plus v3.9.2: a throw goes behind the thrower from either side, corners included (`SIM_VERSION` 9) | Local, not pushed. 359 tests pass. Ready to release. |
 
 The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
 The graphics branch does not have v3.9.1's address change yet; merging `main`
 into it brings it.
+
+## v3.9.3 on `claude/friendly-sammet-70d4d4`: the AI reads traps
+
+`main` plus two commits, not pushed. The same blind spot the delivery had: the AI
+never looked at `game.traps`, so every rival at every difficulty walked straight
+onto Kim's RUG PULL (and a built founder's POISON PILL). All of it is in `ai.js`;
+the AI is single-player only, so this branch changes nothing a live match
+computes and leaves `SIM_VERSION` at whatever `main` has (8 now, 9 once the throw
+fix is in). `VERSION` is v3.9.3 and the README has its section.
+
+The throw fix (`claude/sweet-wiles-e88123`, v3.9.2, `SIM_VERSION` 9) is numbered
+to ship first. Both branches start from `main` at v3.9.1, so whichever is pushed
+second needs the new `main` merged in first, with small conflicts in `VERSION`,
+the README's release notes (v3.9.3 goes above v3.9.2) and this file. To release:
+push to `main`, then the `curl` check in ONBOARDING section 7.
+
+- **Noticing** is rolled in `decide()` the way an order is: each decision while a
+  trap is close enough to step onto before the next one, at `blockProb + 0.25`,
+  held for that trap once it succeeds (`seenTraps`).
+- **The fence** (`fenceTraps`, per frame in `update()`) stops a walk at a noticed
+  trap's edge, or turns it into a jump when the jump lands clear on the far side
+  and the rival is out there; it drops a dash that would cross one, steers a
+  jump's drift to land clear, and holds back an air attack that would drop the
+  body onto one. Most of the roster cannot jump RUG PULL from its edge (a jump
+  carries 120 to 160 px; the trap denies about 160), so most of the time the AI
+  fights from the edge and the trap runs out.
+- **Inside one that is still arming** (laid point-blank, which a human Kim can
+  do), `leaveTrap` walks it out, jumps it out, or blocks when a wall or the rival
+  is in the way, since a blocked bite is chip.
+- **Moves that carry the body count as steps**: the chain reflex finishes with a
+  kick instead of a slap or jab (those step in `COMBO.STEP_IN`, moved into
+  `config.js` from a literal in `fighter.js`, same value), and a rush or teleport
+  that would set the body down on a noticed trap is not thrown.
+- **Measured**: in fixed scenarios (8 rivals, 20 seeds each), walking at an armed
+  trap with Kim beyond it, Champion is bitten 0 times in 160 (was 134), Contender
+  7 (138), Rookie 53 (138). Caught inside an arming trap: Champion 8 in 160 (was
+  160). Over the whole roster, AI against AI, both at the same level, 80 matches
+  per ordered pair: Kim at Champion went from 75.1% to 70.3% (the two halves read
+  71.6% and 69.1%), still the top Champion; Contender 66.1% to 62.3%, Rookie 40.9%
+  to 37.0%. Nobody else moved more than about two points at any level. Rivals now
+  take 1.26 trap bites a match at Champion, down from 2.48, and most of what is
+  left is Kim's own combos knocking them onto a fresh trap, which is the move
+  working.
 
 ## v3.9, released 2026-10-25
 
@@ -217,9 +266,11 @@ read it), which the determinism and effects tests check.
 7. **Balance as the AI plays it.** In AI-versus-AI at Champion, Elo (about 20%)
    and Carl (about 28%) sit at the bottom and Kim, Steve and Lizbeth near 70%.
    That measures how well the AI plays each kit as much as the kits themselves.
-8. **Release v3.9.2** (push `claude/sweet-wiles-e88123` to `main`), alone or
-   together with the trap AI. Either way it needs `SIM_VERSION` 9, because 8 is
-   already live.
+8. **Ship v3.9.2 and v3.9.3.** They are lined up on `claude/release-train`: the
+   throw fix (`claude/sweet-wiles-e88123`, v3.9.2, `SIM_VERSION` 9 because 8 is
+   live) with the AI that reads traps (`claude/friendly-sammet-70d4d4`, v3.9.3)
+   merged on top. Pushing the train to `main` releases both as v3.9.3; pushing
+   `claude/sweet-wiles-e88123` alone first releases only v3.9.2.
 9. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
    sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
    recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
