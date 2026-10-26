@@ -75,7 +75,7 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 - 🪤 **The computer sees traps now.** Kim Koindashian's RUG PULL (and a built founder's POISON PILL) caught every AI at every difficulty, because the computer never looked at traps at all. Now it stops at the edge and fights from there, jumps a trap when its jump is long enough to land clear, waits out one it can't, and steps out of one laid at its feet before it arms. It also stops taking combo steps, dashes, rushes, teleports and mid-air swings that would put it on one. A Champion almost never walks onto a trap now; a Rookie still does about a third of the time.
 
-Measured in AI-versus-AI matches across the whole roster, reading traps cost Kim about five points at Champion (75% to 70%), and she is still the Champion to beat; nobody else moved more than about two. Only the computer's play changed, so a live match between two players is exactly as it was.
+Measured in AI-versus-AI matches across the whole roster, with the throw fix in, reading traps cost Kim about twelve points at Champion (75% to 63%): she goes from the Champion to beat to one of the top group, level with Lizbeth, Cathie and Scam. Nobody else moved more than about two. Only the computer's play changed, so a live match between two players is exactly as it was.
 
 ## What's new in v3.9.2: a throw goes behind you
 

@@ -39,7 +39,8 @@ traps.
 | `main` | The live game, v3.9.1 (`SIM_VERSION` 8) | Deployed. A push here is a release. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/same-day-delivery` | v3.9 | Released: `main` is this plus v3.9.1. Can be deleted. |
-| `claude/friendly-sammet-70d4d4` | `main` plus v3.9.3, an AI that reads traps | Local, not pushed. 362 tests pass. |
+| `claude/release-train` | `main` plus v3.9.2 and v3.9.3, with the review's fixes | Local, not pushed. 370 tests pass. Ready to release. |
+| `claude/friendly-sammet-70d4d4` | `main` plus v3.9.3 as first built | Superseded by the train. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
 | `claude/sweet-wiles-e88123` | `main` plus v3.9.2: a throw goes behind the thrower from either side, corners included (`SIM_VERSION` 9) | Local, not pushed. 359 tests pass. Ready to release. |
 
@@ -47,20 +48,18 @@ The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
 The graphics branch does not have v3.9.1's address change yet; merging `main`
 into it brings it.
 
-## v3.9.3 on `claude/friendly-sammet-70d4d4`: the AI reads traps
+## v3.9.3 on `claude/release-train`: the AI reads traps
 
-`main` plus two commits, not pushed. The same blind spot the delivery had: the AI
+Built on `claude/friendly-sammet-70d4d4` and merged onto v3.9.2 on the train. The same blind spot the delivery had: the AI
 never looked at `game.traps`, so every rival at every difficulty walked straight
 onto Kim's RUG PULL (and a built founder's POISON PILL). All of it is in `ai.js`;
 the AI is single-player only, so this branch changes nothing a live match
 computes and leaves `SIM_VERSION` at whatever `main` has (8 now, 9 once the throw
 fix is in). `VERSION` is v3.9.3 and the README has its section.
 
-The throw fix (`claude/sweet-wiles-e88123`, v3.9.2, `SIM_VERSION` 9) is numbered
-to ship first. Both branches start from `main` at v3.9.1, so whichever is pushed
-second needs the new `main` merged in first, with small conflicts in `VERSION`,
-the README's release notes (v3.9.3 goes above v3.9.2) and this file. To release:
-push to `main`, then the `curl` check in ONBOARDING section 7.
+The throw fix (v3.9.2, `SIM_VERSION` 9) is under it on the train, so pushing
+`claude/release-train` to `main` releases both, as v3.9.3; then the `curl` check
+in ONBOARDING section 7. `claude/sweet-wiles-e88123` alone releases only v3.9.2.
 
 - **Noticing** is rolled in `decide()` the way an order is: each decision while a
   trap is close enough to step onto before the next one, at `blockProb + 0.25`,
@@ -88,7 +87,32 @@ push to `main`, then the `curl` check in ONBOARDING section 7.
   to 37.0%. Nobody else moved more than about two points at any level. Rivals now
   take 1.26 trap bites a match at Champion, down from 2.48, and most of what is
   left is Kim's own combos knocking them onto a fresh trap, which is the move
-  working.
+  working. (Those figures are from the branch as first built, on v3.9.)
+- **Reviewed** by a second pass, which found four gaps, each now fixed with a test
+  that fails without its fix:
+  - A teleport or rush only checked traps already noticed, and a walk only notices
+    nearby ones, so Lizbeth teleported onto RUG PULL behind Kim 19 times in 20.
+    A long move now looks along its path first (one noticing roll per trap,
+    `lookedAt`), and the README's "stops rushes, teleports" is true.
+  - Laying a trap swings nothing, so it never sets `hasHit`, and the threat
+    response blocked the laying: a champion stood guarding in the trap through
+    the arming time. `incoming()` leaves trap-laying out, the AI steps back from a
+    trap being laid, and walking out drops any guard. Over 160 point-blank layings
+    that turned 62 chip bites into clean escapes; full bites stayed about 40, from
+    specials the AI had committed before Kim pressed.
+  - Air steering judged a landing past a wall as clear; it is clamped to the
+    stage now (`onStage`).
+  - A jump judged only the trap, not the rival: one that met Kim in the air
+    stopped against her (`pushApart` works in the air under 120 px apart) and fell
+    onto the trap. Every jump now checks where it comes to rest, treating the
+    rival's body as a wall (`restsAt`), including jump-ins `decide()` chooses.
+  - The teleport distance and the push gap are now `TELEPORT.PAST` and
+    `PHYS.PUSH_GAP` in `config.js`, read by both `game.js` and `ai.js` (same
+    values, so no simulation change).
+- **Measured on the train** (20 matches per ordered pair, seeded, AI against AI at
+  the same level): Kim at Champion 75% on `main`, 66% with the trap AI as built,
+  63% with the review's fixes; Contender 63%, 62%, 60%. Trap bites a match at
+  Champion 0.54, 0.28, 0.24. Nobody else moved more than about two points.
 
 ## v3.9, released 2026-10-25
 

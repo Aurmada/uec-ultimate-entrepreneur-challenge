@@ -336,3 +336,116 @@ test('an AI jumping a trap does not swing in the air and drop onto it', () => {
   run.c.pulse.slap = true;
   assert.equal(landed(run), true, 'a slap mid-jump dropped it onto the trap');
 });
+
+// ------------------------------------- traps: found in review of v3.9.3
+//
+// Four gaps, each with a test that fails without its fix.
+
+// A teleport or a rush reaches far further than the AI looks for traps while
+// walking, so a trap it had not yet noticed was no guard at all: Lizbeth
+// teleported onto RUG PULL behind Kim 19 times in 20, and a rush from 400 px at
+// Kim standing on her trap was bitten every time. A long move now looks where
+// it is going before it commits.
+test('a champion AI does not teleport or rush onto a trap it had not noticed', () => {
+  const long = (id, aiX, kimX) => {
+    let bitten = 0;
+    for (let seed = 1; seed <= 10; seed++) seeded(seed * 104729 + id.length, () => {
+      const run = rugPulled(id, 'mogul', { aiX, trapX: 470, kimX, seed });
+      run.ai.energy = METER.MAX - 1;          // a special, not the unicorn
+      for (let i = 0; i < 90; i++) run.game.update(1 / 60);
+      if (run.bitten()) bitten++;
+    });
+    return bitten;
+  };
+  // Kim stands just short of her trap, so the teleport sets Lizbeth down on it.
+  const teleports = long('ava', 470 - 84 - 250, 470 - 84);
+  assert.ok(teleports <= 2, `Lizbeth teleported onto an unnoticed trap ${teleports} times in 10`);
+  // Kim on her trap, the rusher 400 px away: the rush runs straight across it.
+  const rushes = long('zara', 470 - 400, 470);
+  assert.ok(rushes <= 2, `a rush ran onto an unnoticed trap ${rushes} times in 10`);
+});
+
+// RUG PULL never swings, so it never sets hasHit, and the threat response read
+// Kim laying it as an incoming attack: a champion guarded through the whole
+// arming time, standing in the trap, and took the bite as chip when it could
+// have walked out. Measured over 160 runs, guarding took 62 chip bites and 39
+// full ones; stepping back takes no chip and the same full bites, which come
+// from a special the AI had already committed before Kim pressed.
+test('a champion AI steps out of a RUG PULL laid at its feet instead of guarding in it', () => {
+  let bitten = 0, tries = 0;
+  for (const id of RIVALS) {
+    for (let seed = 1; seed <= 5; seed++) seeded(seed * 7919 + id.length, () => {
+      const def = FIGHTERS.find(f => f.id === id);
+      const game = new Game({
+        p1: { def, controller: idler() }, p2: { def: KIM, controller: idler() },
+        arena: STUB_ARENA, mode: 'solo', difficulty: 'mogul',
+        hud: STUB_HUD, onEnd: () => {}, seed,
+      });
+      for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+      const [ai, kim] = game.fighters;
+      ai.x = 410; kim.x = 470; ai.energy = 0;
+      const c = new AIController('mogul', def);
+      c.decideT = c.level.react * Math.random();
+      ai.controller = c;
+      let frame = 0;                          // Kim holds toward the AI and kicks: RUG PULL
+      kim.controller = { isHuman: false, update(f) {
+        f.pad = { ...EMPTY, left: frame < 8, kick: frame >= 2 && frame < 6 };
+        frame++;
+      } };
+      let bite = false;
+      const strike = game.strike.bind(game);
+      game.strike = (att, victim, m, fp) => {
+        if (m && m.kind === 'trap') bite = true;
+        return strike(att, victim, m, fp);
+      };
+      for (let i = 0; i < 90; i++) game.update(1 / 60);
+      tries++;
+      if (bite) bitten++;
+    });
+  }
+  assert.ok(bitten <= tries * 0.3, `a champion AI was bitten by a RUG PULL laid at its feet ${bitten} times in ${tries}`);
+});
+
+// Steering in the air judged a landing past the stage wall as clear, but the
+// body is clamped to the wall, which can be on the trap: a jump toward the
+// left wall over a trap at x 140 came down at x 70, on it.
+test('an AI steering in the air near a wall lands where the wall lets it, not past it', () => {
+  const def = FIGHTERS.find(f => f.id === 'kai');
+  const game = new Game({
+    p1: { def, controller: idler() }, p2: { def: KIM, controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'mogul',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20261026,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  const [ai, kim] = game.fighters;
+  kim.x = 140;
+  game.spawnTrap(kim, RUG.params);
+  game.traps[0].armT = 0;
+  kim.x = 800;
+  // Quick (buffed), so drifting right lands clear: the trap spans 58 to 222
+  // and a buffed drift from the top of the arc carries about 100 px.
+  ai.x = 130; ai.airborne = true; ai.state = 'jump'; ai.y -= 140; ai.vy = 0;
+  ai.speedBuffT = 5;
+  const c = new AIController('mogul', def);
+  c.seenTraps.add(game.traps[0]);
+  c.dir = -1; c.decideT = 99;
+  ai.controller = c;
+  for (let i = 0; i < 90 && ai.airborne; i++) game.update(1 / 60);
+  game.update(1 / 60);
+  assert.equal(game.traps.length, 1, `came down at x ${ai.x.toFixed(0)}, on the trap by the wall`);
+});
+
+// A jump over a trap judged only the trap: landing in the rival's body gets the
+// jumper shoved back by pushApart, onto the trap it had just cleared.
+test('an AI does not jump a trap into the rival standing just past it', () => {
+  const R = RUG.params.radius;
+  let bitten = 0;
+  for (let seed = 1; seed <= 30; seed++) seeded(seed * 101, () => {
+    const run = rugPulled('kai', 'mogul', { aiX: 330, trapX: 470, kimX: 470 + R + 4 + 8, seed });
+    run.ai.speedBuffT = 10;                   // quick enough to clear it from the edge
+    run.ai.controller.seenTraps.add(run.game.traps[0]);
+    for (let i = 0; i < 150; i++) run.game.update(1 / 60);
+    if (run.bitten()) bitten++;
+  });
+  assert.ok(bitten <= 1, `jumped into Kim and was shoved onto the trap ${bitten} times in 30`);
+});

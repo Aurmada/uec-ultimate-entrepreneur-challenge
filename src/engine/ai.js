@@ -1,7 +1,7 @@
 // AI opponent: periodic decision ticks (rate = difficulty reaction speed),
 // personality-flavored per fighter (aggression / jumpiness / preferred range).
 
-import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS, DASH, COMBO } from '../config.js';
+import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS, DASH, COMBO, TELEPORT } from '../config.js';
 import { slotButton } from '../data/schema.js';
 
 // How far outside a trap's radius the AI stops. The bite is measured from the
@@ -11,8 +11,15 @@ const TRAP_EDGE = 4;
 // A jump's time in the air, from standing. Its drift at that speed is how far
 // a jump carries a body, which is what decides whether one clears a trap.
 const JUMP_AIR = -2 * PHYS.JUMP_V / PHYS.GRAVITY;
-// Game.doTeleport sets the body down this far past the rival.
-const TELEPORT_PAST = 84;
+// Where a body is set down once the stage's walls have had their say.
+const onStage = (x) => Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, x));
+
+// An attack that can actually land. Laying a trap swings nothing, so it never
+// sets hasHit, and reading it as an incoming blow sent a champion to its guard
+// for the whole arming time while it stood in the trap being laid (found in
+// review of v3.9.3).
+const incoming = (opp) => opp.state === 'attack' && opp.attack && !opp.attack.hasHit
+  && opp.attack.kind !== 'trap';
 
 // When a command normal is worth throwing, by its combo verb. An AI that never
 // used its character's own moves would make every ghost play like the same
@@ -42,6 +49,7 @@ export class AIController {
     this.heedOrder = false;    // has this AI noticed the rival's current delivery?
     this.orderT = 0;           // that delivery's clock when last seen, to tell a new one
     this.seenTraps = new WeakSet();   // the rival's traps this AI has noticed
+    this.lookedAt = new WeakSet();    // traps a long move has already looked along
     this.pulse = {};           // one-frame button presses
     this.isHuman = false;
     this.cmds = (def.commandNormals || []).filter(cn => cn && cn.slot);
@@ -122,7 +130,7 @@ export class AIController {
     // above: reactive, per-frame, and cheap.
     if (this.counterCD > 0) this.counterCD -= game.dt;
     if (this.counterCD <= 0 && f.actionable && this.cmds.length) {
-      const oa = opp.state === 'attack' && opp.attack && !opp.attack.hasHit;
+      const oa = incoming(opp);
       if (oa && opp.attack.kind !== 'grab' && Math.abs(opp.x - f.x) < 200) {
         const cn = this.cmds.find(c => (c.tags || []).includes('counter'));
         if (cn && Math.random() < this.level.blockProb * 0.5) {
@@ -214,6 +222,23 @@ export class AIController {
 
   jumpDrift(f) { return PHYS.WALK * f.speedMult * PHYS.AIR_DRIFT * JUMP_AIR; }
 
+  // Where a body travelling from x0 toward x actually comes to rest beside the
+  // rival. It cannot go through them: pushApart holds two bodies a push gap
+  // apart, in the air too unless one is well above the other, so a path that
+  // runs into the rival stops that far short of them, and a landing inside
+  // their body is parted from it. Found in review: a quick Steve jumped a trap
+  // toward Kim, met her in the air and dropped onto the trap he was clearing.
+  restsAt(x0, x, opp) {
+    const gap = PHYS.BODY_W * PHYS.PUSH_GAP;
+    const d = Math.sign(x - x0);
+    if (d && Math.sign(opp.x - x0) === d && Math.abs(x - x0) > Math.abs(opp.x - x0) - gap) {
+      return onStage(opp.x - d * gap);
+    }
+    const near = Math.abs(x - opp.x);
+    if (near >= gap) return x;
+    return onStage(x + (Math.sign(x - opp.x) || -d || -1) * (gap - near) / 2);
+  }
+
   // How far this fighter can carry itself before its next decision: walking
   // for the whole interval, a dash if one is ready, or a jump. A trap further
   // away than that cannot be stepped on before the AI gets another look.
@@ -226,14 +251,23 @@ export class AIController {
   // down just past them, so either one can be a step onto a noticed trap that
   // the walk would have stopped short of. A teleport over a trap that lies
   // between the two of them is the best way past it, and stays allowed.
+  //
+  // Either reaches much further than a walk's sight, so a trap it had not yet
+  // noticed was no guard at all (found in review: Lizbeth teleported onto one
+  // behind Kim 19 times in 20). So a long move looks along its path before it
+  // commits: a trap there gets the noticing roll a walk gives one in sight,
+  // once per trap.
   carriesOntoTrap(f, opp, type, game) {
     if (type !== 'rush' && type !== 'teleport') return false;
-    const traps = this.heededTraps(f, game);
-    if (!traps.length) return false;
-    if (type === 'rush') return traps.some(t => this.crosses(f.x, opp.x, t));
     const toward = Math.sign(opp.x - f.x) || 1;
-    const land = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x + toward * TELEPORT_PAST));
-    return traps.some(t => this.inTrap(land, t));
+    const land = onStage(opp.x + toward * TELEPORT.PAST);
+    const hits = type === 'rush' ? (t) => this.crosses(f.x, opp.x, t) : (t) => this.inTrap(land, t);
+    for (const t of game.traps || []) {
+      if (t.dead || t.owner === f || this.seenTraps.has(t) || this.lookedAt.has(t) || !hits(t)) continue;
+      this.lookedAt.add(t);
+      if (Math.random() < this.level.blockProb + 0.25) this.seenTraps.add(t);
+    }
+    return this.heededTraps(f, game).some(hits);
   }
 
   // Where to go from inside a noticed trap that has not armed yet (an armed
@@ -279,8 +313,12 @@ export class AIController {
       // The arc is stepped a frame at a time, so the body can drift up to one
       // frame longer than the smooth arc says: both ends have to land clear.
       // Found in review, when champions came down a pixel inside the edge.
-      const clear = (d) => this.landsClear(f.x + d * speed * airT, airT, traps)
-        && this.landsClear(f.x + d * speed * (airT + game.dt), airT, traps);
+      // And on the stage: a drift that would carry past a wall stops at it,
+      // which can be on the trap (found in review: a jump toward the left
+      // wall over a trap at x 140 judged x 20 clear and came down at 70).
+      const clearAt = (x) => this.landsClear(x, airT, traps) && this.landsClear(this.restsAt(f.x, x, opp), airT, traps);
+      const clear = (d) => clearAt(onStage(f.x + d * speed * airT))
+        && clearAt(onStage(f.x + d * speed * (airT + game.dt)));
       // An attack in the air holds the body where it is until it ends, so one
       // thrown over a trap drops the fighter onto it. Found in review: a jump
       // that was clearing RUG PULL came down on it after a slap at the top.
@@ -309,11 +347,22 @@ export class AIController {
       const t = traps.find(t => Math.abs(f.x - t.x) > t.radius && this.inTrap(next, t)
         && Math.abs(next - t.x) < Math.abs(f.x - t.x));
       if (t) {
-        const land = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, f.x + walk * this.jumpDrift(f)));
+        const land = onStage(f.x + walk * this.jumpDrift(f));
         const beyond = Math.sign(opp.x - t.x) === walk && !this.inTrap(opp.x, t);
-        if (beyond && this.landsClear(land, JUMP_AIR, traps)) pad.up = true;
+        if (beyond && this.landsClear(land, JUMP_AIR, traps)
+          && this.landsClear(this.restsAt(f.x, land, opp), JUMP_AIR, traps)) pad.up = true;
         else walk = 0;
       }
+    }
+    // Any other jump this frame (a jump-in from decide(), a hop) comes down
+    // where its drift takes it, and pushApart moves it on from there, so one
+    // that would end on a noticed trap is not taken. Found in review: a jump-in
+    // that cleared the trap landed in Kim and was shoved back onto it. A jump
+    // away from a grab stays: the throw costs more than the bite.
+    if (pad.up && f.grounded && !(incoming(opp) && opp.attack.kind === 'grab')) {
+      const land = onStage(f.x + walk * this.jumpDrift(f));
+      if (!this.landsClear(land, JUMP_AIR, traps)
+        || !this.landsClear(this.restsAt(f.x, land, opp), JUMP_AIR, traps)) pad.up = false;
     }
     if (pad.dash) {
       const d = walk || f.facing;              // where startDash will send it
@@ -338,7 +387,7 @@ export class AIController {
     if (Math.random() < L.mistake) { this.dir = 0; return; }
 
     // --- threat response ---
-    const oppAttacking = opp.state === 'attack' && opp.attack && !opp.attack.hasHit;
+    const oppAttacking = incoming(opp);
     const oppGrabbing = oppAttacking && opp.attack.kind === 'grab';
     const projThreat = game.projectiles.some(p =>
       p.owner !== f && Math.sign(f.x - p.x) === Math.sign(p.vx || 1) && Math.abs(p.x - f.x) < 300 && !p.delay);
@@ -357,6 +406,23 @@ export class AIController {
         this.pulse.up = true;
         this.dir = toward;
         return;
+      }
+    }
+
+    // --- a trap being laid at my feet ---
+    // RUG PULL goes down where its layer stands, so a rival laying one within
+    // its radius is about to put the floor under this fighter out of bounds.
+    // Step back out of it before it lands, rather than guard in it or swing
+    // into the laying (found in review: blocking the laying stood a champion
+    // in the trap for the whole arming time). Gated like noticing a trap.
+    const laying = opp.state === 'attack' && opp.attack?.kind === 'trap' && !opp.attack.hasFired;
+    if (laying && Math.random() < L.blockProb + 0.25) {
+      const reach = (opp.attack.special?.radius ?? 0) + TRAP_EDGE + 1;
+      const back = -toward;
+      const room = back < 0 ? f.x - STAGE.MIN_X : STAGE.MAX_X - f.x;
+      if (dist < reach) {
+        if (room >= reach - dist) { this.dir = back; this.blockT = 0; return; }
+        this.blockT = 0.3; this.dir = 0; return;       // cornered: a guarded bite is chip
       }
     }
 
@@ -398,7 +464,9 @@ export class AIController {
     if (out) {
       this.dir = out.dir;
       if (out.up) this.pulse.up = true;
-      if (out.block) this.blockT = out.block;
+      // A walk or a jump out drops a guard an earlier decision raised: held,
+      // the guard stops the feet, and the trap arms under them.
+      this.blockT = out.block || 0;
       return;
     }
 

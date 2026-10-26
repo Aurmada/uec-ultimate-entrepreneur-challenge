@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -194,7 +194,7 @@ export class Game {
     const [a, b] = this.fighters;
     if (a.state === 'ko' || b.state === 'ko') return;
     const dx = b.x - a.x;
-    const minGap = PHYS.BODY_W * 0.92;
+    const minGap = PHYS.BODY_W * PHYS.PUSH_GAP;
     if (Math.abs(dx) < minGap && Math.abs(a.y - b.y) < 120) {
       const push = (minGap - Math.abs(dx)) / 2;
       const dir = dx >= 0 ? 1 : -1;
@@ -729,7 +729,7 @@ export class Game {
     const dir = Math.sign(opp.x - f.x) || 1;
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);
-    f.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x + dir * 84));
+    f.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x + dir * TELEPORT.PAST));
     f.facing = Math.sign(opp.x - f.x) || -dir;
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);

@@ -506,7 +506,7 @@ what lets a measurement harness sweep a value without editing engine code.
 `npm test` runs the Node built in test runner. No framework, no mocks, no DOM.
 The simulation is fully headless, which is why the tests can drive real matches.
 
-Run `npm test` for the current count; it was 355 across 17 files at v3.9, and a
+Run `npm test` for the current count; it was 370 across 18 files at v3.9.3, and a
 pinned number in a document is a number that rots. It needs Node 21 or newer,
 because the script passes a quoted glob to `node --test`. The files
 worth knowing:
@@ -655,5 +655,9 @@ exists for the same reason: hooks for a driver that isn't committed yet.
   counter reflex and the trap fence (`fenceTraps`) run per frame, and why the
   fence never writes `dir`: the moment a trap is gone, the walk it interrupted
   carries on. Moves that carry the body are steps too: a chained slap or jab
-  steps in `COMBO.STEP_IN`, a rush runs to the rival and a teleport lands 84 px
-  past them, and an attack in the air holds the body still until it ends.
+  steps in `COMBO.STEP_IN`, a rush runs to the rival and a teleport lands
+  `TELEPORT.PAST` beyond them, and an attack in the air holds the body still
+  until it ends. And the rival's body is a wall: `pushApart` keeps two bodies
+  `PHYS.PUSH_GAP` of a body width apart, in the air too until one is 120 px above
+  the other, so a jump toward the rival stops against them rather than passing
+  (`restsAt` in `ai.js`).

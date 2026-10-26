@@ -28,6 +28,7 @@ export const PHYS = {
   GRAVITY: 2100,
   KB_DECAY: 7,         // knockback velocity decay per second (exponential)
   BODY_W: 56,          // hurtbox width
+  PUSH_GAP: 0.92,      // two bodies are pushed apart to this share of BODY_W
   BODY_H: 148,         // hurtbox height standing
 };
 
@@ -63,6 +64,10 @@ export const DASH = {
   COOLDOWN: 1.6,
   CANCEL_AFTER: 0.06,   // attacks can cancel the dash after this
 };
+
+// A teleport (PIVOT PUNCH, ONE MORE THING) sets the body down this far past the
+// rival. The AI reads it too, to know where one would land.
+export const TELEPORT = { PAST: 84 };
 
 // Mystery drops: seeded briefcases with hidden one-shot powers.
 export const DROPS = {
