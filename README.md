@@ -71,6 +71,12 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.9.3: the computer watches the floor
+
+- 🪤 **The computer sees traps now.** Kim Koindashian's RUG PULL (and a built founder's POISON PILL) caught every AI at every difficulty, because the computer never looked at traps at all. Now it stops at the edge and fights from there, jumps a trap when its jump is long enough to land clear, waits out one it can't, and steps out of one laid at its feet before it arms. It also stops taking combo steps, dashes, rushes, teleports and mid-air swings that would put it on one. A Champion almost never walks onto a trap now; a Rookie still does about a third of the time.
+
+Measured in AI-versus-AI matches across the whole roster, reading traps cost Kim about five points at Champion (75% to 70%), and she is still the Champion to beat; nobody else moved more than about two. Only the computer's play changed, so a live match between two players is exactly as it was.
+
 ## What's new in v3.9.1: a new address
 
 The game lives at **https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/** now; the old address stopped working when the project moved. Links you share show their preview picture again, because the page was still pointing its preview at the old address. Nothing about the fight changed.
@@ -82,11 +88,10 @@ Every move in the game used to happen the moment you pressed it. This one happen
 - 📦 **SAME-DAY DELIVERY.** Jeff Bozo stops borrowing Carl's Hostile Takeover and gets a move that is his business model: he ships a parcel to the spot you're standing on. A ring appears under you and tightens, and a second and a half later the box lands right there, from the sky, so jumping doesn't save you. Walk off the mark, block it, or parry it. Sign for it cleanly and you're popped into the air while Jeff walks over to collect. He can only have one order out at a time, and pressing for a second one costs nothing.
 - 🎭 **Nobody shares a signature any more.** Carl keeps the grab. That was the last of the three pairs.
 - 🤖 **The computer plays around it.** Every AI reads a parcel on its way and steps off the mark (or blocks, if it's too late to walk), and won't walk back into one that's about to land. Jeff's AI ships from mid range, where you have to choose between walking at him and backing into the corner.
-- 🪤 **The computer watches the floor, too.** Kim Koindashian's RUG PULL (and a built founder's POISON PILL) caught every AI at every difficulty, because the computer never looked at traps at all. Now it stops at the edge and fights from there, jumps a trap when its jump is long enough to land clear, waits out one it can't, and steps out of one laid at its feet before it arms. It also stops throwing combo steps, dashes, rushes and teleports that would put it on one. A Champion almost never walks onto a trap now; a Rookie still does about a third of the time.
 - 🧠 **A rookie AI no longer freezes up close.** One of its options in melee range was meant to step back and make space; it set the direction and then threw it away, so a third of the time it simply stood there.
 - 🔒 **Traps are in the live-match fingerprint.** A trap one player has and the other doesn't used to surface as a damage mismatch seconds later; now it's caught at the next sync. Live play needs both players on v3.9.
 
-Behind the scenes, this is the third new kind of move built on the same foundation as Alignment Shift and Runway: a timer that has to survive a KO, the round bell and the next round without landing on anyone afterwards. It doesn't: an order still out when the round ends is cancelled. Measured in AI-versus-AI matches across the whole roster, Jeff's win rate at Champion went from about 27% to 35%, and nobody else's moved outside the noise. Reading traps cost Kim about five points at Champion (75% to 70% in the same kind of run), and she is still the Champion to beat.
+Behind the scenes, this is the third new kind of move built on the same foundation as Alignment Shift and Runway: a timer that has to survive a KO, the round bell and the next round without landing on anyone afterwards. It doesn't: an order still out when the round ends is cancelled. Measured in AI-versus-AI matches across the whole roster, Jeff's win rate at Champion went from about 27% to 35%, and nobody else's moved outside the noise.
 
 ## What's new in v3.8: a block is a block again
 
