@@ -86,6 +86,10 @@ Since the first version: the rendered arenas have depth (the city outside the bo
 
 The model and the stages are built by scripts in `lab/blender/` (Blender 5, headless, a few seconds each) and committed, so nothing needs Blender to run. Where it stands, what is next and the decisions still open are in [docs/HANDOFF.md](docs/HANDOFF.md); how it works is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 7.
 
+## What's new in v3.9.1: a new address
+
+The game lives at **https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/** now; the old address stopped working when the project moved. Links you share show their preview picture again, because the page was still pointing its preview at the old address. Nothing about the fight changed.
+
 ## What's new in v3.9: Jeff Bozo delivers
 
 Every move in the game used to happen the moment you pressed it. This one happens later.
@@ -312,7 +316,7 @@ Perf cost of the whole pass: **~0.3 ms/frame**, roughly 98% headroom at 60 fps.
 
 The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkzkyiiahxmppgrkn`), isolated from other Aurmada projects. Sign-in needs the OAuth providers switched on. In the [Supabase dashboard](https://supabase.com/dashboard/project/oqzxkzkyiiahxmppgrkn):
 
-1. **Authentication → URL Configuration** — set Site URL to `https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/` and add it (plus `http://localhost:4173/**`) to Redirect URLs. **When you get a custom domain, add it here too** — the app code already uses whatever origin it's served from, so no code change is needed, only this allow-list entry.
+1. **Authentication → URL Configuration** — set Site URL to `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/` and add it (plus `http://localhost:4173/**`) to Redirect URLs. (The game moved there from `firdous-aurmada.github.io` when the repository moved to the Aurmada organisation; the old address no longer serves it.) **When you get a custom domain, add it here too** — the app code already uses whatever origin it's served from, so no code change is needed, only this allow-list entry.
 2. **Authentication → Providers → Email** — enable (magic links work with no extra setup).
 3. **Authentication → Providers → Google** — paste a Client ID/Secret from Google Cloud Console (authorized redirect URI: `https://oqzxkzkyiiahxmppgrkn.supabase.co/auth/v1/callback`).
 4. **Authentication → Providers → Azure** — same with a Microsoft Entra app registration (same callback URI).

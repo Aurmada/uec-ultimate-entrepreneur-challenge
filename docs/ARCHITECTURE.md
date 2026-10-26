@@ -4,7 +4,7 @@ Technical reference for engineers working on the codebase. For "how do I run
 this and where is everything", read `ONBOARDING.md` first; this document assumes
 you have the game running and want to change it safely.
 
-Current version: `v3.9`. Simulation protocol version: `SIM_VERSION = 8`.
+Current version: `v3.9.1`. Simulation protocol version: `SIM_VERSION = 8`.
 
 ---
 
