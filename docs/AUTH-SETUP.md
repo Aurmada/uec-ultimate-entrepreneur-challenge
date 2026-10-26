@@ -40,11 +40,18 @@ That's the game's dedicated Supabase project (`uec-game`). Users bounce Game →
 
 In [uec-game → Authentication → URL Configuration](https://supabase.com/dashboard/project/oqzxkzkyiiahxmppgrkn/auth/url-configuration):
 
-- **Site URL**: `https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/`
+- **Site URL**: `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`
 - **Redirect URLs** — add:
-  - `https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/**`
+  - `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/**`
   - `http://localhost:4173/**` (local dev)
   - *(your custom domain later — one extra line here, zero code changes)*
+
+The game moved to `aurmada.github.io` from `firdous-aurmada.github.io` in October
+2026, when the repository moved to the Aurmada organisation. GitHub forwards the
+repository but not the Pages site, so the old address returns 404: it can come off
+the Redirect URLs, and if the Site URL still names it, sign-in falls back to a dead
+page. The app sends Supabase its own address (`location.origin`), so this list is
+the only place an address change has to be made.
 
 Also recommended while you're in there:
 - **Authentication → Sign In / Providers → Email**: confirm enabled (magic links need no credentials).

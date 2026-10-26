@@ -50,7 +50,8 @@ are parodies of disgraced tech founders, and their moves are startup themed:
 Pitch Deck Strike, Hostile Takeover, Unicorn Mode.
 
 Live at
-`https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/`.
+`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`. (Until October
+2026 it was under `firdous-aurmada.github.io`; that address no longer serves it.)
 
 The important thing to understand before you open a file: **the repo is the
 deployed artifact.** There is no build step. The browser loads `src/*.js` as
@@ -228,7 +229,7 @@ Verify the deploy rather than trusting it. Fetch the deployed file and read the
 value back:
 
 ```bash
-curl -s "https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/src/config.js?c=$RANDOM" | grep VERSION
+curl -s "https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/src/config.js?c=$RANDOM" | grep VERSION
 ```
 
 ---

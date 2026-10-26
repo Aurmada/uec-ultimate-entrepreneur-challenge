@@ -6,8 +6,11 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.8 on GitHub Pages
-(`https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/`).
+The game is live at v3.9.1 on GitHub Pages
+(`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`). The repository
+moved to the Aurmada organisation in October 2026; GitHub forwards the old
+repository address but not the old Pages site (`firdous-aurmada.github.io`), which
+now returns 404.
 Alongside it, the `live-3d` branch holds a working prototype that answers the
 owner's question "can the fighters look and move more like a modern fighting
 game, without copying one": every fighter rendered as a toon-shaded 3D model
@@ -16,26 +19,28 @@ lit by their stage, and fighting-game hit effects. It is all behind URL flags,
 render-only, and off by default. It was reviewed and cleaned up in October 2026.
 The open question is how it runs on a phone: that has never been measured.
 
-A review session on 2026-10-18 added two local branches, neither pushed. One is
-the next release, **v3.9**: step 3 of the move system, a deferred effect, as Jeff
-Bozo's own signature (SAME-DAY DELIVERY), plus two AI fixes and a gap in the
-live-match fingerprint. The other is `live-3d` with v3.9 merged in and the
-prototype's leftovers done: parallax for the rendered stages, hair and coats that
-trail, rims that stay on the outline, and hit bursts that follow the blow.
+A review session on 2026-10-18 built **v3.9**, released on 2026-10-25: step 3 of
+the move system, a deferred effect, as Jeff Bozo's own signature (SAME-DAY
+DELIVERY), plus two AI fixes and a gap in the live-match fingerprint. v3.9.1
+points the page and the docs at the new address. The same session left one local
+branch, not pushed: `live-3d` with v3.9 merged in and the prototype's leftovers
+done (parallax for the rendered stages, hair and coats that trail, rims that stay
+on the outline, and hit bursts that follow the blow).
 
 ## Branches
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.8 (`SIM_VERSION` 7) | Deployed. A push here is a release. |
-| `live-3d` | `main` plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
-| `claude/same-day-delivery` | `main` plus v3.9 (`SIM_VERSION` 8) | Local, not pushed. 355 tests pass. Ready to release. |
-| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 410 tests pass. |
+| `main` | The live game, v3.9.1 (`SIM_VERSION` 8) | Deployed. A push here is a release. |
+| `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
+| `claude/same-day-delivery` | v3.9 | Released: `main` is this plus v3.9.1. Can be deleted. |
+| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
 
-The two `claude/` branches were built in a git worktree under
-`.claude/worktrees/`; nothing else is outstanding.
+The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
+The graphics branch does not have v3.9.1's address change yet; merging `main`
+into it brings it.
 
-## v3.9 on `claude/same-day-delivery`
+## v3.9, released 2026-10-25
 
 Spec: `docs/superpowers/specs/2026-10-18-same-day-delivery-design.md`;
 ARCHITECTURE section 5, "A deferred effect".
@@ -65,9 +70,9 @@ ARCHITECTURE section 5, "A deferred effect".
   nobody else moved outside the noise. With the flags off, nine staged frames over
   three arenas hash exactly as on `main`.
 
-To release: push `claude/same-day-delivery` to `main` (it is `main` plus these
-commits), then verify with the `curl` check in ONBOARDING section 7. `VERSION` is
-already v3.9 and the README has its section. Live play needs both players on v3.9.
+Released as a fast-forward of `main` and checked with the `curl` check in
+ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSION`
+8); v3.9.1 changes nothing the simulation computes.
 
 ## The prototype on `live-3d`
 
@@ -132,9 +137,13 @@ read it), which the determinism and effects tests check.
 
 ## Decisions that belong to the owner
 
-0. **Release v3.9** (push `claude/same-day-delivery` to `main`), and whether to
-   push `claude/game-review-enhance-29bffb` as the new `live-3d`. It is `live-3d`
-   plus v3.9 and the work below; merging it into `main` later carries v3.9 with it.
+0. **Check sign-in after the move.** In Supabase, Authentication → URL
+   Configuration must name `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`
+   as the Site URL and in Redirect URLs (docs/AUTH-SETUP.md section 3). If it still
+   names the old address, sign-in sends players to a page that no longer exists.
+   Then whether to push `claude/game-review-enhance-29bffb` as the new `live-3d`
+   (merge `main` into it first for v3.9.1): it is `live-3d` plus v3.9 and the
+   prototype work, and merging it into `main` later carries both.
 1. **Merge `live-3d` now** (the prototype ships dark, behind `?gl`) **or after a
    phone check.**
 2. **Whether 3D ever becomes the default.** Not before phone numbers are in.
@@ -228,6 +237,10 @@ Jekyll (there is no `.nojekyll`), and Jekyll reads Liquid tags before anything
 else, so two opening curly braces in a row, or an opening curly brace followed
 by a percent sign, in any markdown file can fail the build. The remote is
 HTTPS; on the original machine the `gh` CLI was signed in as `firdous-aurmada`.
+The repository is now `https://github.com/Aurmada/uec-ultimate-entrepreneur-challenge`;
+a clone that still names the old one works through GitHub's redirect, and
+`git remote set-url origin https://github.com/Aurmada/uec-ultimate-entrepreneur-challenge.git`
+points it at the new one.
 
 ## Lessons that cost real time
 
