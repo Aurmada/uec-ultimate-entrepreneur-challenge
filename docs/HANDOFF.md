@@ -6,9 +6,9 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.9.3 on GitHub Pages
+The game is live at v3.9.4 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-10-26. The repository
+on 2026-10-28. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
 now returns 404.
@@ -32,18 +32,17 @@ Sessions on 2026-10-25 built two more releases, v3.9.2 (a throw that goes
 behind the thrower from either side) and v3.9.3 (an AI that reads traps), and
 both shipped on 2026-10-26.
 
-A cloud session on 2026-10-28 built **v3.9.4** on `claude/ai-picks-its-moment`,
-from a fresh clone of `main`: the AI waits for an opening before it throws a
-grab or a slow strike, drops its guard to punish, and stops guarding swings
-that have already missed. It also kept the AI-versus-AI harness as
-`lab/balance.js`. Reviewed, not released.
+A cloud session on 2026-10-28 built **v3.9.4** from a fresh clone of `main`:
+the AI waits for an opening before it throws a grab or a slow strike, drops its
+guard to punish, and stops guarding swings that have already missed. It also
+kept the AI-versus-AI harness as `lab/balance.js`. Reviewed, fixed and released
+the same day.
 
 ## Branches
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.9.3 (`SIM_VERSION` 9) | Deployed. A push here is a release. 370 tests pass. |
-| `claude/ai-picks-its-moment` | `main` plus v3.9.4 (AI only) | Built in a cloud session, reviewed and fixed. 385 tests pass. Ready to release. |
+| `main` | The live game, v3.9.4 (`SIM_VERSION` 9) | Deployed. A push here is a release. 385 tests pass. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | **Only on the original Mac, never pushed.** 412 tests pass. |
 
@@ -54,7 +53,7 @@ hair and coats, rims on the outline, hit bursts that follow the blow) is one
 deleted folder away from gone. It does not have v3.9.1's address change or
 anything after it; merging `main` into it brings them.
 
-## v3.9.4 on `claude/ai-picks-its-moment`: the computer picks its moment
+## v3.9.4, released 2026-10-28: the computer picks its moment
 
 Measured first, with the harness this session kept (`lab/balance.js`, AI
 against AI, 60 matches per ordered pair, seeds 11 and 12): at Champion, Elo won
@@ -375,10 +374,7 @@ read it), which the determinism and effects tests check.
    (about 66%) the top, and Adam still wins over 80% at Contender and Rookie.
    `lab/balance.js` measures it; it measures how well the AI plays each kit as
    much as the kits themselves.
-8. **Ship v3.9.4.** It is on `claude/ai-picks-its-moment`, a fast-forward of
-   `main`. Pushing it to `main` releases it; then the `curl` check in
-   ONBOARDING section 7. Nothing a live match computes changes.
-9. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
+8. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
    sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
    recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
    Kim 60 px from Carl ends 51 px away, the minimum body gap. The other two
@@ -386,9 +382,9 @@ read it), which the determinism and effects tests check.
    slip of sign, but it may have been meant to let the victim punish a grabber
    stuck in a long recovery. Flipping it is one sign, but it changes what a live
    match computes, so it needs `SIM_VERSION` 10; left as it is.
-10. **Push the graphics branch from the original Mac.** `claude/game-review-enhance-29bffb`
-    is the only copy of the October prototype work (see Branches). From that
-    checkout: `git push origin claude/game-review-enhance-29bffb`.
+9. **Push the graphics branch from the original Mac.** `claude/game-review-enhance-29bffb`
+   is the only copy of the October prototype work (see Branches). From that
+   checkout: `git push origin claude/game-review-enhance-29bffb`.
 
 ## Next steps, in the order they pay off
 
