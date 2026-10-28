@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.9.3';
+export const VERSION = 'v3.9.4';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -29,6 +29,7 @@ export const PHYS = {
   KB_DECAY: 7,         // knockback velocity decay per second (exponential)
   BODY_W: 56,          // hurtbox width
   PUSH_GAP: 0.92,      // two bodies are pushed apart to this share of BODY_W
+  HITBOX_LEAD: 14,     // px in front of the body's centre where a swing's hitbox starts
   BODY_H: 148,         // hurtbox height standing
 };
 
@@ -197,9 +198,33 @@ export const PARRY = { WINDOW: 0.12, STAGGER: 0.5, ENERGY: 10 };
 // Internal keys stay intern/founder/mogul (used everywhere); label is the
 // display name shown to players.
 export const AI_LEVELS = {
-  intern:  { label: 'ROOKIE',    react: 0.42, blockProb: 0.16, aggr: 0.45, mistake: 0.30, specialProb: 0.25, chain: 0.2,  mult: 1.0 },
-  founder: { label: 'CONTENDER', react: 0.26, blockProb: 0.38, aggr: 0.68, mistake: 0.14, specialProb: 0.55, chain: 0.5,  mult: 1.5 },
-  mogul:   { label: 'CHAMPION',  react: 0.14, blockProb: 0.62, aggr: 0.85, mistake: 0.05, specialProb: 0.8,  chain: 0.85, mult: 2.5 },
+  intern:  { label: 'ROOKIE',    react: 0.42, blockProb: 0.16, aggr: 0.45, mistake: 0.30, specialProb: 0.25, chain: 0.2,  gamble: 1.0,  mult: 1.0 },
+  founder: { label: 'CONTENDER', react: 0.26, blockProb: 0.38, aggr: 0.68, mistake: 0.14, specialProb: 0.55, chain: 0.5,  gamble: 0.8,  mult: 1.5 },
+  mogul:   { label: 'CHAMPION',  react: 0.14, blockProb: 0.62, aggr: 0.85, mistake: 0.05, specialProb: 0.8,  chain: 0.85, gamble: 0.18, mult: 2.5 },
+};
+// gamble: the chance to throw a grab or a slow strike without an opening
+// (v3.9.4, ai.js picksMoment). A champion waits for the moment; a rookie
+// throws it and hopes, which is also what makes it a rookie. Measured with
+// lab/balance.js: below a champion the rival guards and jumps rarely enough
+// that waiting costs more than it saves, so a contender mostly gambles and a
+// rookie always does (in reach only, at every level).
+
+// How the AI picks its moment for the moves that only pay when they land
+// clean: a grab, which a rival who sees it coming simply jumps, and a slow
+// strike, which a rival who sees it coming parries (v3.9.4, ai.js
+// picksMoment). Read only by the AI, which is single-player only, so none of
+// this is simulation.
+export const AI_MOMENT = {
+  SLOW_STARTUP: 0.09,  // s; a standing command normal this slow waits for its moment
+  REACH_MARGIN: 6,     // px inside a move's furthest connect, for the steps taken during startup
+};
+
+// What the AI reads off the screen to defend itself. Also AI only.
+export const AI_READ = {
+  // px from the body's centre within which a falling FUNDING ROUND coin is on
+  // its way to this fighter: half a body, half a coin's box (32 px, game.js
+  // updateProjectiles), and a step either way.
+  RAIN_SIGHT: 60,
 };
 
 export const POINTS = {

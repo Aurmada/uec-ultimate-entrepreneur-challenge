@@ -181,7 +181,7 @@ export class Fighter {
     if (a.kind === 'projectile' || a.kind === 'rain' || a.kind === 'bomb') return null;   // damage via projectiles
     if (a.noHitbox) return null;              // counters absorb, traps place — neither swings
     const reach = a.reach || 82;
-    const x0 = this.x + (this.facing > 0 ? 14 : -14 - reach);
+    const x0 = this.x + (this.facing > 0 ? PHYS.HITBOX_LEAD : -PHYS.HITBOX_LEAD - reach);
     const yC = this.y + (a.hitY || -95);
     const tall = (a.kind === 'aoe' || a.kind === 'burn') ? 150 : 74;
     return { x: x0, y: yC - tall / 2, w: reach, h: tall, a };

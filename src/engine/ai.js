@@ -1,7 +1,7 @@
 // AI opponent: periodic decision ticks (rate = difficulty reaction speed),
 // personality-flavored per fighter (aggression / jumpiness / preferred range).
 
-import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS, DASH, COMBO, TELEPORT } from '../config.js';
+import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS, DASH, COMBO, TELEPORT, ATTACKS, AI_MOMENT, AI_READ } from '../config.js';
 import { slotButton } from '../data/schema.js';
 
 // How far outside a trap's radius the AI stops. The bite is measured from the
@@ -18,8 +18,13 @@ const onStage = (x) => Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, x));
 // sets hasHit, and reading it as an incoming blow sent a champion to its guard
 // for the whole arming time while it stood in the trap being laid (found in
 // review of v3.9.3).
+//
+// And only until its swing is over. A whiff never sets hasHit either, so its
+// whole recovery read as a blow still on its way: the AI raised its guard
+// against a punch that had already missed, and a held guard presses nothing,
+// so the one moment a whiff exists to give away went by every time (v3.9.4).
 const incoming = (opp) => opp.state === 'attack' && opp.attack && !opp.attack.hasHit
-  && opp.attack.kind !== 'trap';
+  && opp.attack.kind !== 'trap' && opp.stateT <= opp.attack.startup + opp.attack.active;
 
 // When a command normal is worth throwing, by its combo verb. An AI that never
 // used its character's own moves would make every ghost play like the same
@@ -36,6 +41,21 @@ const CMD_FIT = {
   safe:           (d) => d < 160,
   counter:        () => false,         // reactive — handled in threat response
 };
+
+// The moves that only pay when they land clean. Thrown on range alone, a
+// grab met a rival who simply jumped it (Carl's ASSET SEIZURE touched nobody
+// four times in five) and a slow strike met a rival who saw it coming and
+// parried it (Elo's PLATFORM BURN three and a half times a match, Jeff's
+// UNDERCUT four, each one a free combo the other way). These wait for a moment
+// the rival cannot answer; see picksMoment().
+//
+// Among the command normals: any grab, and any strike or blast that hits where
+// it stands and starts no quicker than AI_MOMENT.SLOW_STARTUP. A rush,
+// teleport, projectile, trap or counter has its own range logic and is a
+// different kind of move, not a heavier swing.
+const STAND_ARCHETYPES = new Set(['strike', 'aoe', 'grab']);
+// Among the specials: the grab, the area blast and BURN IT ALL.
+const MOMENT_SPECIALS = new Set(['grab', 'aoe', 'burn']);
 
 export class AIController {
   constructor(levelKey, def) {
@@ -65,14 +85,108 @@ export class AIController {
       const tags = cn.tags && cn.tags.length ? cn.tags : ['safe'];
       if (!tags.some(t => (CMD_FIT[t] || (() => false))(dist))) continue;
       if (this.carriesOntoTrap(f, opp, cn.archetype, game)) continue;
+      // A grab or a slow strike waits for its moment, and once the moment is
+      // there it is taken, whatever the character's appetite: the rival will
+      // not stay open while it makes up its mind.
+      const moment = this.waitsForMoment(f, cn) ? this.picksMoment(f, opp, cn) : null;
+      if (moment === false) continue;
       // Aggressive characters reach for their own move more often; a coin flip
       // for everyone would make every roster fighter feel the same again.
-      if (Math.random() > 0.35 + P.aggr * 0.45) continue;
+      if (moment !== 'open' && Math.random() > 0.35 + P.aggr * 0.45) continue;
       this.pulse[slotButton(cn.slot)] = true;
       this.dir = toward;                 // forward MUST be held on the press frame
       return true;
     }
     return false;
+  }
+
+  // ---- picking the moment ----
+  // A grab is jumped and a slow strike is parried by a rival who sees it
+  // coming, so both wait until the rival cannot answer in time. All of this
+  // reads only what is on screen: the rival's state and how long it has left.
+
+  // The startup and reach a move will have when it starts, built the way
+  // Fighter.startAttack (a command normal: its frame data over its basic's,
+  // scaled by style and stance) and Fighter.startSpecial (a special, as
+  // authored) build them. `cn` null means the special. Only for the moves
+  // that wait: a rush or a teleport has its reach reshaped by shapeAttack and
+  // is never measured here. Kept in step with the engine by a test that
+  // builds every such move on the roster and the bases and compares.
+  moveFrames(f, cn) {
+    if (!cn) {
+      const sp = f.special;
+      return { startup: sp.startup || 0.15, reach: sp.reach || 82 };
+    }
+    const fd = { ...(ATTACKS[slotButton(cn.slot)] || ATTACKS.punch), ...cn.frameData };
+    const st = f.stanceSet;
+    return {
+      startup: fd.startup * f.style.startup * (st ? st.startup : 1),
+      reach: (fd.reach || 84) * f.style.reach,
+    };
+  }
+
+  // Whether a swing of this reach, thrown now, would touch the rival once its
+  // startup is over. The hitbox starts HITBOX_LEAD in front of the body and the
+  // rival's hurtbox is their build wide (Fighter.hitbox and hurtbox), less a
+  // margin for the steps either of them takes during startup. A rival still
+  // sliding from the last hit keeps sliding: knockback decays at KB_DECAY a
+  // second (Fighter.update), so a string's next swing is judged where the
+  // rival will be, not where they were struck, and a wall stops the slide.
+  inReach(f, opp, reach, startup = 0) {
+    const k = PHYS.KB_DECAY;
+    const slide = (opp.vx || 0) * (1 - Math.exp(-k * startup)) / k;
+    return Math.abs(onStage(opp.x + slide) - f.x)
+      <= PHYS.HITBOX_LEAD + reach + PHYS.BODY_W * opp.body.build / 2 - AI_MOMENT.REACH_MARGIN;
+  }
+
+  // True when the rival cannot guard (or, against a grab, jump) before a move
+  // with this startup lands: still in hitstun on the ground, or recovering
+  // from a swing that has already finished. A grab also beats a held guard,
+  // which presses nothing and so cannot jump, and a counter stance, which
+  // turns back any strike but not a throw.
+  rivalOpen(opp, startup, grab) {
+    if (opp.state === 'hitstun') return opp.grounded && opp.stunT - opp.stateT > startup;
+    if (opp.state === 'attack' && opp.attack) {
+      const a = opp.attack;
+      if (a.kind === 'counter') return grab;
+      return opp.stateT > a.startup + a.active && a.startup + a.active + a.recovery - opp.stateT > startup;
+    }
+    if (opp.state === 'block') return grab && opp.grounded;
+    return false;
+  }
+
+  // Whether a command normal is one of the moves that wait (STAND_ARCHETYPES).
+  waitsForMoment(f, cn) {
+    if (!STAND_ARCHETYPES.has(cn.archetype)) return false;
+    return cn.archetype === 'grab' || this.moveFrames(f, cn).startup >= AI_MOMENT.SLOW_STARTUP;
+  }
+
+  // 'open' when the rival cannot answer the move in time and this AI noticed
+  // (gated like noticing a trap, so a rookie misses some), 'blind' on a throw
+  // anyway (the level's `gamble`, so the move is still a threat in neutral
+  // and a rookie still throws it and hopes), and false otherwise. Out of
+  // reach is always false.
+  picksMoment(f, opp, cn) {
+    const { startup, reach } = this.moveFrames(f, cn);
+    if (!this.inReach(f, opp, reach, startup)) return false;
+    const grab = (cn ? cn.archetype : f.special.type) === 'grab';
+    if (grab && !opp.grounded) return false;             // a grab whiffs against the air
+    if (this.rivalOpen(opp, startup, grab) && Math.random() < this.level.blockProb + 0.25) return 'open';
+    return Math.random() < (this.level.gamble ?? 0) ? 'blind' : false;
+  }
+
+  // Inside a string the next basic can come out as the character's own move
+  // on that button, by holding forward on the press. For one of the moves that
+  // wait, sitting on that button and in reach, the string is the moment: the
+  // rival in hitstun cannot guard it or jump it. When it would not reach,
+  // forward is let go so the basic comes out instead. Only for a character
+  // that has such a move: anyone else's string is left exactly as it was.
+  holdForChain(f, opp, button) {
+    const cn = f.cmdBySlot && f.cmdBySlot.get('fwd+' + button);
+    if (!cn || !this.waitsForMoment(f, cn)) return;
+    const grab = cn.archetype === 'grab';
+    const { startup, reach } = this.moveFrames(f, cn);
+    this.dir = this.inReach(f, opp, reach, startup) && (!grab || opp.grounded) ? (Math.sign(opp.x - f.x) || 1) : 0;
   }
 
   update(f, game) {
@@ -100,12 +214,13 @@ export class AIController {
         // there the string goes straight to the kick.
         const stepOnTrap = this.heededTraps(f, game)
           .some(t => this.inTrap(f.x + f.facing * COMBO.STEP_IN, t));
+        const press = (b) => { this.pulse[b] = true; this.holdForChain(f, opp, b); };
         if (atk.kind === 'slap') {
-          if (stepOnTrap) this.pulse.kick = true;
-          else this.pulse.punch = true;            // slap escalates into punches
+          if (stepOnTrap) press('kick');
+          else press('punch');                     // slap escalates into punches
         } else if (atk.kind === 'punch') {
-          if (n < 3 && !stepOnTrap) this.pulse.punch = true;
-          else this.pulse.kick = true;
+          if (n < 3 && !stepOnTrap) press('punch');
+          else press('kick');
         } else if (f.energy >= METER.SPECIAL_COST) {
           // A stance special is a toggle toward preferredStance(). Pressing it
           // while already there paid full meter and started the cooldown for
@@ -158,8 +273,17 @@ export class AIController {
   // stance already held, or a second order while the first is still out. Or
   // when it would carry the body onto a trap this AI has already read, which
   // decide() checks for the same specials and this reflex did not.
+  //
+  // And a grab or a blast that would not reach: a kick sends the rival
+  // sliding, and HOSTILE TAKEOVER thrown after one met nobody. The rival in
+  // hitstun cannot answer, so reach is the only question (v3.9.4).
   specialWorthPressing(f, opp, game) {
     if (this.carriesOntoTrap(f, opp, f.special.type, game)) return false;
+    if (MOMENT_SPECIALS.has(f.special.type)) {
+      const { startup, reach } = this.moveFrames(f, null);
+      if (!this.inReach(f, opp, reach, startup)) return false;
+      if (f.special.type === 'grab' && !opp.grounded) return false;
+    }
     if (f.special.type === 'stance') return this.preferredStance(f) !== f.stanceId;
     if (f.special.type === 'deferred') return f.deliveryT <= 0;
     return true;
@@ -386,11 +510,34 @@ export class AIController {
     // random hesitation (harder AIs hesitate less)
     if (Math.random() < L.mistake) { this.dir = 0; return; }
 
+    // --- the rival is open ---
+    // A held guard presses nothing, and it is held for all of blockT, so an
+    // AI that had just blocked a swing, or parried one, stood behind its guard
+    // while the rival recovered or staggered in front of it. Once the rival
+    // cannot swing before this fighter's quickest basic lands, the guard comes
+    // down and the rest of this decision picks the punish. Gated like noticing
+    // a trap, so a rookie still waits some of them out.
+    if (this.blockT > 0
+      && this.rivalOpen(opp, ATTACKS.slap.startup * f.style.startup, false)
+      && Math.random() < L.blockProb + 0.25) {
+      this.blockT = 0;
+    }
+
     // --- threat response ---
     const oppAttacking = incoming(opp);
     const oppGrabbing = oppAttacking && opp.attack.kind === 'grab';
-    const projThreat = game.projectiles.some(p =>
-      p.owner !== f && Math.sign(f.x - p.x) === Math.sign(p.vx || 1) && Math.abs(p.x - f.x) < 300 && !p.delay);
+    // A slide or a bomb flies at you; a coin from FUNDING ROUND falls on you.
+    // The old test read every projectile as flying, and a falling coin has no
+    // vx, so only coins to the left counted; and it read `!p.delay`, which is
+    // false for a coin whose delay has counted down past zero, so of the
+    // three coins only the first, laid with no delay at all, was ever seen.
+    // It went unnoticed because the AI also guarded through the whole of
+    // Cathie's recovery (see `incoming`), which happened to block the rest.
+    const projThreat = game.projectiles.some(p => {
+      if (p.owner === f || p.delay > 0) return false;
+      if (p.type === 'coin') return Math.abs(p.x - f.x) < AI_READ.RAIN_SIGHT;
+      return Math.sign(f.x - p.x) === Math.sign(p.vx || 1) && Math.abs(p.x - f.x) < 300;
+    });
     if (oppGrabbing && dist < 190 && Math.random() < L.blockProb + 0.15) {
       this.pulse.up = true;                      // grabs must be jumped
       this.dir = 0;
@@ -533,18 +680,21 @@ export class AIController {
     }
     if (f.energy >= METER.SPECIAL_COST && Math.random() < L.specialProb) {
       const sp = f.special.type;
+      // A grab, an area blast and BURN IT ALL are the slow, heavy specials:
+      // each waits for its moment (picksMoment) as the command normals do.
+      const moment = MOMENT_SPECIALS.has(sp) ? this.picksMoment(f, opp, null) : null;
       const fits =
         (sp === 'projectile' && dist > 240) ||
         (sp === 'rain' && dist > 180) ||
-        (sp === 'aoe' && dist < 170) ||
-        (sp === 'grab' && dist < 130 && opp.grounded) ||
+        (sp === 'aoe' && dist < 170 && moment) ||
+        (sp === 'grab' && moment) ||
         (sp === 'rush' && dist > 150 && dist < 460 && !this.carriesOntoTrap(f, opp, sp, game)) ||
         (sp === 'teleport' && dist > 200 && !this.carriesOntoTrap(f, opp, sp, game)) ||
         // Same range band as the `aoe` it replaces, plus the resource gate:
         // BURN IT ALL spends the whole tank whatever is in it, so throwing it
         // near-empty pays 50 meter for the floor damage AND winds you. Half a
         // tank is the point below which it is strictly a bad idea.
-        (sp === 'burn' && dist < 170 && f.runway >= RUNWAY.MAX * 0.5) ||
+        (sp === 'burn' && dist < 170 && f.runway >= RUNWAY.MAX * 0.5 && moment) ||
         // From mid range, where the rival has to choose between walking at
         // Jeff and backing toward the corner, and never with an order out.
         (sp === 'deferred' && dist > 140 && dist < 520 && f.deliveryT <= 0);
