@@ -218,21 +218,72 @@ test('a string by someone with no such move is left as it was', () => {
   assert.equal(run.c.dir, 0, 'the chain reflex took over the direction of a string it should leave alone');
 });
 
+// A real kick, not a stand-in: a kick lifts the rival (kbUp), so on the frame
+// the chain reflex decides the rival is in the air, and slides away under its
+// knockback. Found in review: a fixture with a grounded rival hid that the
+// grab after a kick was never pressed at all, though it lands every time.
+function kickThenSee(rivalX) {
+  const run = staged('dex', 'zara', { aiX: 400, rivalX });
+  const { game, ai } = run;
+  ai.energy = METER.SPECIAL_COST + 10;
+  let grabbed = 0, thrown = 0;
+  const doGrab = game.doGrab.bind(game);
+  game.doGrab = (att, def, a) => { if (att === ai) grabbed++; return doGrab(att, def, a); };
+  pinned(0, () => {
+    ai.startAttack('kick', game);
+    let seen = null;
+    for (let i = 0; i < 60; i++) {
+      game.update(1 / 60);
+      if (ai.attack && ai.attack !== seen) {
+        seen = ai.attack;
+        if (seen.kind === 'grab' && !seen.cmd) thrown++;
+      }
+    }
+  });
+  return { grabbed, thrown };
+}
+
+test('Carl follows a kick with HOSTILE TAKEOVER when the rival will be down and in reach', () => {
+  const near = kickThenSee(470);
+  assert.equal(near.thrown, 1, 'did not end the string in HOSTILE TAKEOVER');
+  assert.equal(near.grabbed, 1, 'threw HOSTILE TAKEOVER and it missed');
+});
+
 test('Carl does not follow a kick with HOSTILE TAKEOVER the rival has slid out of', () => {
-  const after = (rivalX, vx) => {
-    const run = staged('dex', 'zara', { aiX: 400, rivalX });
-    const { ai, opp, c } = run;
-    ai.energy = METER.SPECIAL_COST + 10;
-    ai.state = 'attack';
-    ai.attack = { kind: 'kick', button: 'kick', hasHit: true, chainN: 1, startup: 0.1, active: 0.08, recovery: 0.17 };
-    opp.setState('hitstun');
-    opp.stunT = 0.32;
-    opp.vx = vx;
-    pinned(0, () => c.update(ai, run.game));
-    return !!c.pulse.special;
-  };
-  assert.equal(after(540, 320), false, 'threw HOSTILE TAKEOVER at a rival sliding out of reach');
-  assert.equal(after(490, 0), true, 'with the rival in reach the string should end in the grab');
+  // Kicked from 125 px, the rival slides on past the grab's reach.
+  const far = kickThenSee(525);
+  assert.equal(far.thrown, 0, 'threw HOSTILE TAKEOVER at a rival sliding out of reach');
+});
+
+// ------------------------------------------- the guard: found in review
+
+test('an AI keeps its guard up while a projectile is still coming', () => {
+  // The rival is recovering from the throw, so it reads as open, but the
+  // slide it threw is still on its way. Pinned between blockProb and the
+  // notice roll, the one band where a dropped guard was not raised again.
+  const { game, ai, opp, c } = staged('kai', 'scam', { aiX: 300, rivalX: 600 });
+  ai.setState('block');
+  c.blockT = 0.4;
+  opp.state = 'attack';
+  opp.attack = { kind: 'projectile', startup: 0.07, active: 0.1, recovery: 0.3, hasHit: false };
+  opp.stateT = 0.25;
+  game.projectiles.push({ type: 'slide', owner: opp, delay: 0, x: 420, y: 370, vx: -520, vy: 0,
+    dmg: 6, kb: 220, kbUp: 0, stun: 0.24, dead: false });
+  pinned(0.7, () => c.decide(ai, opp, game));
+  assert.ok(c.blockT > 0, 'dropped its guard with a slide 120 px away and coming');
+});
+
+test('an AI keeps its guard up after blocking a basic that can still cancel', () => {
+  // A blocked jab can cancel into the next basic for its whole recovery, so
+  // the rival is not open: a guard dropped here eats the second jab.
+  const { game, ai, opp, c } = staged('elo', 'zara', { aiX: 400, rivalX: 470 });
+  ai.setState('block');
+  c.blockT = 0.4;
+  opp.state = 'attack';
+  opp.attack = { kind: 'punch', button: 'punch', startup: 0.05, active: 0.06, recovery: 0.11, hasHit: true, chainN: 1 };
+  opp.stateT = 0.13;
+  pinned(PAST_HESITATION, () => c.decide(ai, opp, game));
+  assert.ok(c.blockT > 0, 'dropped its guard against a jab string that can still cancel');
 });
 
 // ----------------------------------------------------------------- rain

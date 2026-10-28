@@ -506,7 +506,7 @@ what lets a measurement harness sweep a value without editing engine code.
 `npm test` runs the Node built in test runner. No framework, no mocks, no DOM.
 The simulation is fully headless, which is why the tests can drive real matches.
 
-Run `npm test` for the current count; it was 382 across 19 files at v3.9.4, and a
+Run `npm test` for the current count; it was 385 across 19 files at v3.9.4, and a
 pinned number in a document is a number that rots. It needs Node 21 or newer,
 because the script passes a quoted glob to `node --test`. The files
 worth knowing:

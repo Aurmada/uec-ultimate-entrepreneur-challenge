@@ -51,6 +51,19 @@ function label(a) {
   return a.kind;
 }
 
+// A projectile's hit, by what was thrown. Game.updateProjectiles hands strike()
+// a fresh object of kind 'projectile' for slides and coins alike, but keeps
+// each one's sound, which tells them apart.
+function projLabel(a) {
+  if (a.kind === 'projectile') return a.sfx === 'coin' ? 'proj:coin' : 'proj:slide';
+  return `proj:${a.kind || '?'}`;
+}
+
+// Moves whose damage lands later, under a proj: label (or not at all, for a
+// counter, which shows up on the rival's side as 'countered'). Their own line
+// counts throws only; "touched nobody" means nothing for them.
+const THROWS = new Set(['projectile', 'rain', 'bomb', 'trap', 'counter', 'deferred']);
+
 export async function runMatch(p1id, p2id, level, seed, mods = {}) {
   const { Game } = await import('../src/engine/game.js');
   const { AIController } = await import('../src/engine/ai.js');
@@ -70,17 +83,29 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
       onEnd: (r) => { result = r; }, seed,
     });
     if (mods.setup) mods.setup(game);
-    const tally = [0, 1].map(() => ({ starts: {}, out: {}, dmg: 0, specials: 0 }));
+    const tally = [0, 1].map(() => ({ starts: {}, out: {}, touched: {}, throws: {}, dmg: 0, specials: 0 }));
     const bump = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; };
     const outcome = (who, lab, how) => {
       const o = tally[who].out[lab] || (tally[who].out[lab] = {});
       bump(o, how);
     };
     const idx = (f) => game.fighters.indexOf(f);
+    // An attack that touched someone, counted once however many hits it
+    // landed: a rush's flurry reaches strike() as a copy per hit, so the
+    // fighter's own attack object is the identity.
+    const touchedOnce = new WeakSet();
+    const touch = (att, lab) => {
+      if (!att.attack || touchedOnce.has(att.attack)) return;
+      touchedOnce.add(att.attack);
+      bump(tally[idx(att)].touched, lab);
+    };
+    // Damage is counted where it is dealt, so a toxic briefcase or anything
+    // else that costs HP is not credited to the rival.
+    const dealt = (att, def, before) => { tally[idx(att)].dmg += Math.max(0, before - def.hp); };
 
     const strike = game.strike.bind(game);
     game.strike = (att, def, a, fromProjectile = false) => {
-      const lab = fromProjectile ? `proj:${a.kind || a.type || '?'}` : label(a);
+      const lab = fromProjectile ? projLabel(a) : label(a);
       let how = 'hit';
       if (def.shieldT > 0) how = 'shield';
       else if (def.counterActive() && a.kind !== 'grab' && !fromProjectile) how = 'countered';
@@ -88,12 +113,20 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
         how = def.stateT <= PARRY.WINDOW && a.kind !== 'grab' ? 'parried' : 'blocked';
       }
       outcome(idx(att), lab, how);
-      return strike(att, def, a, fromProjectile);
+      if (!fromProjectile) touch(att, lab);
+      const before = def.hp;
+      const r = strike(att, def, a, fromProjectile);
+      dealt(att, def, before);
+      return r;
     };
     const grab = game.doGrab.bind(game);
     game.doGrab = (att, def, a) => {
       outcome(idx(att), label(a), def.shieldT > 0 ? 'shield' : 'hit');
-      return grab(att, def, a);
+      touch(att, label(a));
+      const before = def.hp;
+      const r = grab(att, def, a);
+      dealt(att, def, before);
+      return r;
     };
 
     const steal = game.doSteal.bind(game);
@@ -101,11 +134,11 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
       const how = def.shieldT > 0 ? 'shield'
         : def.state === 'block' && def.grounded ? (def.stateT <= PARRY.WINDOW ? 'parried' : 'blocked') : 'hit';
       outcome(idx(att), 'steal', how);
+      touch(att, 'steal');
       return steal(att, def);
     };
 
     const seen = [null, null];
-    const hp = game.fighters.map(f => f.hp);
     let frames = 0;
     while (!result && frames < FRAME_CAP) {
       game.update(1 / 60);
@@ -115,13 +148,11 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
           seen[i] = f.attack;
           const lab = label(f.attack);
           bump(tally[i].starts, lab);
+          if (THROWS.has(f.attack.kind)) tally[i].throws[lab] = true;
           if (lab.startsWith('sp:')) tally[i].specials++;
         }
         if (f.state !== 'attack') seen[i] = null;
-        const o = game.fighters[1 - i];
-        if (o.hp < hp[1 - i]) tally[i].dmg += hp[1 - i] - o.hp;
       });
-      game.fighters.forEach((f, i) => { hp[i] = f.hp; });
     }
     return {
       p1: p1id, p2: p2id, seed, frames,
@@ -200,7 +231,7 @@ function report(results, o) {
     console.log(`  ${a.padEnd(7)}${cells.join('')}`);
   }
   for (const id of o.focus) {
-    const starts = {}, out = {};
+    const starts = {}, out = {}, touched = {}, throws = new Set();
     let dmg = 0, n = 0, specials = 0;
     for (const r of results) for (const [i, pid] of [[0, r.p1], [1, r.p2]]) {
       if (pid !== id) continue;
@@ -208,6 +239,8 @@ function report(results, o) {
       const t = r.tally[i];
       dmg += t.dmg; specials += t.specials;
       for (const [k, v] of Object.entries(t.starts)) starts[k] = (starts[k] || 0) + v;
+      for (const [k, v] of Object.entries(t.touched)) touched[k] = (touched[k] || 0) + v;
+      for (const k of Object.keys(t.throws)) throws.add(k);
       for (const [k, v] of Object.entries(t.out)) {
         out[k] = out[k] || {};
         for (const [h, c] of Object.entries(v)) out[k][h] = (out[k][h] || 0) + c;
@@ -219,10 +252,10 @@ function report(results, o) {
       .sort((a, b) => (starts[b] || 0) - (starts[a] || 0));
     for (const k of keys) {
       const s = starts[k] || 0, oc = out[k] || {};
-      const touched = Object.values(oc).reduce((x, y) => x + y, 0);
       const parts = Object.entries(oc).map(([h, c]) => `${h} ${(c / n).toFixed(2)}`).join(', ');
-      console.log(`  ${k.padEnd(26)} ${(s / n).toFixed(2).padStart(6)} a match`
-        + (s && !k.startsWith('proj:') ? `, ${(100 * (1 - Math.min(touched, s) / s)).toFixed(0)}% touched nobody` : '')
+      const whiff = s && !throws.has(k) && !k.startsWith('proj:')
+        ? `, ${(100 * (1 - Math.min(touched[k] || 0, s) / s)).toFixed(0)}% touched nobody` : '';
+      console.log(`  ${k.padEnd(26)} ${(s / n).toFixed(2).padStart(6)} a match${whiff}`
         + (parts ? `  [${parts}]` : ''));
     }
   }

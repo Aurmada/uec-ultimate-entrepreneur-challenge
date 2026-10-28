@@ -43,7 +43,7 @@ that have already missed. It also kept the AI-versus-AI harness as
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.9.3 (`SIM_VERSION` 9) | Deployed. A push here is a release. 370 tests pass. |
-| `claude/ai-picks-its-moment` | `main` plus v3.9.4 (AI only) | Built in a cloud session. 382 tests pass. Ready to release. |
+| `claude/ai-picks-its-moment` | `main` plus v3.9.4 (AI only) | Built in a cloud session, reviewed and fixed. 385 tests pass. Ready to release. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | **Only on the original Mac, never pushed.** 412 tests pass. |
 
@@ -72,15 +72,18 @@ single-player only, so `SIM_VERSION` stays 9.
 - **The guard comes down to punish.** A held guard presses nothing, and the AI
   held it for all of `blockT`, so after a block or a parry it stood behind it
   while the rival recovered or staggered. When the rival is open (below), the
-  next decision drops it, gated at `blockProb + 0.25` like noticing a trap.
+  next decision drops it, gated at `blockProb + 0.25` like noticing a trap,
+  and never while a projectile is coming or a coin is queued overhead.
 - **Grabs and slow strikes wait** (`picksMoment`). A command normal that is a
   grab, or a strike or blast that starts no quicker than
   `AI_MOMENT.SLOW_STARTUP` (0.09 s: Carl's ASSET SEIZURE, Elo's PLATFORM BURN,
   Jeff's UNDERCUT), and the grab, area and BURN IT ALL specials, are thrown only
   in real reach (`inReach`, from the hitbox and hurtbox geometry, with the
-  rival's knockback slide and the walls), and then when the rival cannot answer
-  (`rivalOpen`: grounded hitstun, recovering from a finished swing, and for a
-  grab also a held guard or a counter stance), or else on the level's new
+  rival's knockback slide and the walls), a grab only at a rival who will be on
+  the floor when it comes out (`downBy`), and then when the rival cannot answer
+  (`rivalOpen`: grounded hitstun, recovering from a finished swing on the
+  ground, and for a grab also a held guard or a counter stance; never a basic
+  that made contact and can still cancel into the next), or else on the level's new
   `gamble` (Champion 0.18, Contender 0.8, Rookie 1.0). An open moment skips
   the personality's aggression roll. `moveFrames` mirrors how the engine
   builds the move's startup and reach, and a test builds every such move and
@@ -95,16 +98,31 @@ single-player only, so `SIM_VERSION` stays 9.
   skipped any whose `delay` had counted down past zero, so of FUNDING ROUND's
   three coins only the first was ever seen. The guard through Cathie's
   recovery had been blocking the rest by accident.
-- **Measured** (same harness, Champion, 60 per pair, seeds 11 and 12, `main` then
-  this branch): Elo 17% to 29%, Carl 24% to 48%, Jeff 31% to 31%, Adam 50% to
-  44%, Kim 60% to 41%, Scam 64% to 62%, Cathie 64% to 63%, Steve 68% to 67%,
-  Lizbeth 71% to 65%. Best to worst closed from 55 points to 40. Kim's fall is
-  her rivals punishing her missed swings instead of guarding them. At Contender
-  (40 per pair) Carl 50% to 57%, Jeff 45% to 35%, Kim 59% to 52%, the rest
-  within about five; at Rookie everyone is within about four points of `main`.
-  The `gamble` values were chosen by these runs: with Contender at 0.35, Jeff
-  fell to 26% there.
-- **Tests**: `test/moment.test.js`, 12 tests; each that guards a fix fails
+- **Reviewed** by a second pass, which found three bugs, each now fixed with a
+  test that fails without its fix:
+  - The guard came down while the rival's projectile was still in flight, since
+    a thrower recovering reads as open. Cathie's coins landed more often than on
+    `main` (blocked 11.5 a match, hit 10.7; `main` 17.6 and 9.1). Now 18.9 and
+    8.4. The coin read on its own is worth about one more block a match.
+  - A basic that made contact (blocked counts) can cancel into the next basic
+    for its whole recovery, so dropping the guard after blocking a jab ate the
+    second one (up to 58 in 200 scripted strings for Elo; 0 to 2 on `main`).
+  - A kick lifts the rival for about a tenth of a second, so Carl's string
+    never ended in HOSTILE TAKEOVER after a kick, though it lands every time:
+    the grab now asks whether the rival will be down by its first frame.
+  - Also from the review: an attack thrown in the air never reads as open (it
+    ends on landing), and the harness tallies coins and slides apart, counts a
+    rush's flurry as one touch, and counts damage where it is dealt.
+- **Measured** after the review's fixes (same harness, Champion, 60 per pair,
+  seeds 11 and 12, `main` then this branch): Elo 17% to 29%, Carl 24% to 51%,
+  Jeff 31% to 32%, Adam 50% to 44%, Kim 60% to 40%, Scam 64% to 62%, Cathie 64%
+  to 62%, Steve 68% to 65%, Lizbeth 71% to 64%. Best to worst closed from 54
+  points to 36. Kim's fall is her rivals punishing her missed swings instead of
+  guarding them. At Contender (40 per pair, seed 11) Carl 50% to 58%, Jeff 45%
+  to 34%, Kim 59% to 52%, the rest within about three; at Rookie everyone is
+  within about four points of `main`. The `gamble` values were chosen by these
+  runs: with Contender at 0.35, Jeff fell to 26% there.
+- **Tests**: `test/moment.test.js`, 15 tests; each that guards a fix fails
   without it (checked by reverting each fix).
 
 
@@ -360,17 +378,17 @@ read it), which the determinism and effects tests check.
 8. **Ship v3.9.4.** It is on `claude/ai-picks-its-moment`, a fast-forward of
    `main`. Pushing it to `main` releases it; then the `curl` check in
    ONBOARDING section 7. Nothing a live match computes changes.
-10. **Push the graphics branch from the original Mac.** `claude/game-review-enhance-29bffb`
-    is the only copy of the October prototype work (see Branches). From that
-    checkout: `git push origin claude/game-review-enhance-29bffb`.
 9. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
    sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
    recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
    Kim 60 px from Carl ends 51 px away, the minimum body gap. The other two
    OBJECTIONs (on a strike and on a steal) push the victim away. It reads like a
    slip of sign, but it may have been meant to let the victim punish a grabber
-   stuck in a long recovery. Flipping it is one sign and could ride on
-   `SIM_VERSION` 9 if it ships in the same release; left as it is.
+   stuck in a long recovery. Flipping it is one sign, but it changes what a live
+   match computes, so it needs `SIM_VERSION` 10; left as it is.
+10. **Push the graphics branch from the original Mac.** `claude/game-review-enhance-29bffb`
+    is the only copy of the October prototype work (see Branches). From that
+    checkout: `git push origin claude/game-review-enhance-29bffb`.
 
 ## Next steps, in the order they pay off
 

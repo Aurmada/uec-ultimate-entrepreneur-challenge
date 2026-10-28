@@ -144,15 +144,37 @@ export class AIController {
   // from a swing that has already finished. A grab also beats a held guard,
   // which presses nothing and so cannot jump, and a counter stance, which
   // turns back any strike but not a throw.
+  //
+  // Not a basic that has made contact, blocked or not, while its string still
+  // has room: it can cancel into the next basic for the whole of its recovery
+  // (Fighter.update), so it is not recovering at all. Found in review: an AI
+  // that dropped its guard after blocking a jab ate the second jab. And not
+  // an attack thrown in the air, which ends the moment its thrower lands.
   rivalOpen(opp, startup, grab) {
     if (opp.state === 'hitstun') return opp.grounded && opp.stunT - opp.stateT > startup;
     if (opp.state === 'attack' && opp.attack) {
       const a = opp.attack;
       if (a.kind === 'counter') return grab;
+      if (opp.airborne) return false;
+      if (a.hasHit && COMBO.BASICS.includes(a.button || a.kind) && (a.chainN || 1) < COMBO.MAX_CHAIN) return false;
       return opp.stateT > a.startup + a.active && a.startup + a.active + a.recovery - opp.stateT > startup;
     }
     if (opp.state === 'block') return grab && opp.grounded;
     return false;
+  }
+
+  // Whether a body in the air will be on the floor before a move with this
+  // startup becomes active, from its height and fall (gravity, as
+  // Fighter.update applies it). A grab whose first frame meets a body still in
+  // the air is spent on nothing (Game.resolveHits), so a grab asks this rather
+  // than whether the rival is grounded now. Found in review: a kick lifts the
+  // rival for a tenth of a second, so the string's grab after a kick was never
+  // pressed, though the rival was always down again before it came out.
+  downBy(opp, startup) {
+    if (opp.grounded) return true;
+    const g = PHYS.GRAVITY, h = Math.max(0, STAGE.FLOOR - opp.y);
+    const land = (-opp.vy + Math.sqrt(opp.vy * opp.vy + 2 * g * h)) / g;
+    return land + 1 / 60 <= startup;
   }
 
   // Whether a command normal is one of the moves that wait (STAND_ARCHETYPES).
@@ -170,7 +192,7 @@ export class AIController {
     const { startup, reach } = this.moveFrames(f, cn);
     if (!this.inReach(f, opp, reach, startup)) return false;
     const grab = (cn ? cn.archetype : f.special.type) === 'grab';
-    if (grab && !opp.grounded) return false;             // a grab whiffs against the air
+    if (grab && !this.downBy(opp, startup)) return false;   // a grab whiffs against the air
     if (this.rivalOpen(opp, startup, grab) && Math.random() < this.level.blockProb + 0.25) return 'open';
     return Math.random() < (this.level.gamble ?? 0) ? 'blind' : false;
   }
@@ -186,7 +208,7 @@ export class AIController {
     if (!cn || !this.waitsForMoment(f, cn)) return;
     const grab = cn.archetype === 'grab';
     const { startup, reach } = this.moveFrames(f, cn);
-    this.dir = this.inReach(f, opp, reach, startup) && (!grab || opp.grounded) ? (Math.sign(opp.x - f.x) || 1) : 0;
+    this.dir = this.inReach(f, opp, reach, startup) && (!grab || this.downBy(opp, startup)) ? (Math.sign(opp.x - f.x) || 1) : 0;
   }
 
   update(f, game) {
@@ -282,7 +304,7 @@ export class AIController {
     if (MOMENT_SPECIALS.has(f.special.type)) {
       const { startup, reach } = this.moveFrames(f, null);
       if (!this.inReach(f, opp, reach, startup)) return false;
-      if (f.special.type === 'grab' && !opp.grounded) return false;
+      if (f.special.type === 'grab' && !this.downBy(opp, startup)) return false;
     }
     if (f.special.type === 'stance') return this.preferredStance(f) !== f.stanceId;
     if (f.special.type === 'deferred') return f.deliveryT <= 0;
@@ -510,22 +532,6 @@ export class AIController {
     // random hesitation (harder AIs hesitate less)
     if (Math.random() < L.mistake) { this.dir = 0; return; }
 
-    // --- the rival is open ---
-    // A held guard presses nothing, and it is held for all of blockT, so an
-    // AI that had just blocked a swing, or parried one, stood behind its guard
-    // while the rival recovered or staggered in front of it. Once the rival
-    // cannot swing before this fighter's quickest basic lands, the guard comes
-    // down and the rest of this decision picks the punish. Gated like noticing
-    // a trap, so a rookie still waits some of them out.
-    if (this.blockT > 0
-      && this.rivalOpen(opp, ATTACKS.slap.startup * f.style.startup, false)
-      && Math.random() < L.blockProb + 0.25) {
-      this.blockT = 0;
-    }
-
-    // --- threat response ---
-    const oppAttacking = incoming(opp);
-    const oppGrabbing = oppAttacking && opp.attack.kind === 'grab';
     // A slide or a bomb flies at you; a coin from FUNDING ROUND falls on you.
     // The old test read every projectile as flying, and a falling coin has no
     // vx, so only coins to the left counted; and it read `!p.delay`, which is
@@ -538,6 +544,30 @@ export class AIController {
       if (p.type === 'coin') return Math.abs(p.x - f.x) < AI_READ.RAIN_SIGHT;
       return Math.sign(f.x - p.x) === Math.sign(p.vx || 1) && Math.abs(p.x - f.x) < 300;
     });
+    // And a coin still queued to fall here (the second and third of a round
+    // wait their turn) is on its way too, as far as a guard is concerned.
+    const coinQueued = game.projectiles.some(p => p.owner !== f && p.type === 'coin'
+      && p.delay > 0 && Math.abs(p.x - f.x) < AI_READ.RAIN_SIGHT);
+
+    // --- the rival is open ---
+    // A held guard presses nothing, and it is held for all of blockT, so an
+    // AI that had just blocked a swing, or parried one, stood behind its guard
+    // while the rival recovered or staggered in front of it. Once the rival
+    // cannot swing before this fighter's quickest basic lands, the guard comes
+    // down and the rest of this decision picks the punish. Gated like noticing
+    // a trap, so a rookie still waits some of them out. Never while something
+    // the rival threw is still coming: its thrower recovering is not the same
+    // as nothing on the way (found in review: Cathie's coins landed more often
+    // once the guard came down under them).
+    if (this.blockT > 0 && !projThreat && !coinQueued
+      && this.rivalOpen(opp, ATTACKS.slap.startup * f.style.startup, false)
+      && Math.random() < L.blockProb + 0.25) {
+      this.blockT = 0;
+    }
+
+    // --- threat response ---
+    const oppAttacking = incoming(opp);
+    const oppGrabbing = oppAttacking && opp.attack.kind === 'grab';
     if (oppGrabbing && dist < 190 && Math.random() < L.blockProb + 0.15) {
       this.pulse.up = true;                      // grabs must be jumped
       this.dir = 0;
