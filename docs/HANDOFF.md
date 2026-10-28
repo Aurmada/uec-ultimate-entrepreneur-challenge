@@ -400,7 +400,17 @@ Done in the 2026-10-18 session (on `claude/game-review-enhance-29bffb`): depth f
 the stages (step 3 below), secondary motion (step 4), the back-light streak and
 per-move impact variations (step 5). Their notes are kept so the history reads.
 
-1. **Phone benchmark.** On `live-3d`, serve with `python3 dev-server.py 4173`, open
+1. **Phone benchmark.** A hosted copy of the benchmark, needing no server or
+   network setup, was published on 2026-10-28 as a private Claude artifact
+   ("UEC 3D Phone Test", from `claude/gfx-v3.9.4`): it times four setups (the
+   shipped 2D game, 2D fighters on the rendered stage, one fighter in 3D, both in
+   3D) for ten seconds each, reports the 3D rig's cost against the 2 ms budget,
+   and has a Copy results button. The artifact host serves no `.glb`, so that copy
+   carries the model as a base64 script module and answers the renderer's fetch
+   from memory; nothing in the repository changed for it. On the M2 Max in Chrome
+   it reads 120 fps in every setup, the rig adding 0.42 ms a frame on average and
+   0.10 ms at the 95th percentile, the whole prototype 0.50 ms at the 95th. The
+   phone run is still to do. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
    phone (no sign-in needed), and read the modes: All 2D, Both 3D, without stage,
    without effects. The budget is about 2 ms a frame for the 3D rig over 2D. If
