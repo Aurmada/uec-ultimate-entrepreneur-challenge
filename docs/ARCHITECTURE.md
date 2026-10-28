@@ -4,7 +4,7 @@ Technical reference for engineers working on the codebase. For "how do I run
 this and where is everything", read `ONBOARDING.md` first; this document assumes
 you have the game running and want to change it safely.
 
-Current version: `v3.9.1`. Simulation protocol version: `SIM_VERSION = 8`.
+Current version: `v3.9.4`. Simulation protocol version: `SIM_VERSION = 9`.
 
 ---
 
@@ -934,8 +934,8 @@ what lets a measurement harness sweep a value without editing engine code.
 `npm test` runs the Node built in test runner. No framework, no mocks, no DOM.
 The simulation is fully headless, which is why the tests can drive real matches.
 
-Run `npm test` for the current count; it was 355 across 17 files at v3.9 on
-`main` and 412 across 21 files with v3.9 on the prototype in October 2026, and a
+Run `npm test` for the current count; it was 385 across 19 files at v3.9.4 on
+`main` and 442 with v3.9.4 on the prototype in October 2026, and a
 pinned number in a document is a number that rots. It needs Node 21 or newer,
 because the script passes a quoted glob to `node --test`. The files worth knowing:
 pinned number in a document is a number that rots. It needs Node 21 or newer,
@@ -977,6 +977,18 @@ by intuition.
   `measure()` for all arenas.
 * `lab/roster.js` renders the whole cast, auto framed by bounding box.
 * `lab/marketing.js` regenerates the social image and screenshots.
+* `lab/balance.js` is the one that runs in Node rather than the browser: the
+  roster against itself, AI against AI, whole best-of-three matches through
+  the real `Game`, seeded so a run reproduces. It reports win rates by
+  fighter and by pair, and with `--focus` how often each of a fighter's moves
+  came out and how each one ended (hit, blocked, parried, countered,
+  shielded, touched nobody). `node lab/balance.js --level mogul --n 60 --seed
+  11` is about 20 s on two cores. Every balance figure before v3.9.4 came from
+  a scratch harness that was never kept; this is that harness, kept. Two
+  cautions. Matches are chaotic, so one AI change reshuffles every match after
+  it and 20 per pair moves a fighter by several points on noise alone: use 60
+  per pair and two seeds before believing a shift of less than about five
+  points. And it measures how well the AI plays a kit as much as the kit.
 
 **Harnesses have been wrong more often than the code.** A short catalogue, since
 the same shapes recur:
@@ -1098,3 +1110,15 @@ exists for the same reason: hooks for a driver that isn't committed yet.
   invalidates a sweep.
 * **`cmdBySlot` is a `Map`.** `Object.keys` on it is always empty and will make
   you think command normals are not registered.
+* **An AI decision holds until the next one.** `decide()` runs every `react`
+  seconds (up to about 0.6 s for a Rookie) and sets `dir` and one-frame pulses;
+  nothing looks at them again in between unless `update()` does. That is why the
+  counter reflex and the trap fence (`fenceTraps`) run per frame, and why the
+  fence never writes `dir`: the moment a trap is gone, the walk it interrupted
+  carries on. Moves that carry the body are steps too: a chained slap or jab
+  steps in `COMBO.STEP_IN`, a rush runs to the rival and a teleport lands
+  `TELEPORT.PAST` beyond them, and an attack in the air holds the body still
+  until it ends. And the rival's body is a wall: `pushApart` keeps two bodies
+  `PHYS.PUSH_GAP` of a body width apart, in the air too until one is 120 px above
+  the other, so a jump toward the rival stops against them rather than passing
+  (`restsAt` in `ai.js`).

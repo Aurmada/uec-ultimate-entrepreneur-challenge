@@ -1,4 +1,4 @@
-# UEC handoff: where things stand (October 2026)
+# UEC handoff: where things stand (late October 2026)
 
 Written so the work can continue from a fresh clone, in a cloud session or on a
 new machine, with nothing from the machine it was built on. Read `CLAUDE.md`
@@ -6,8 +6,9 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.9.1 on GitHub Pages
-(`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`). The repository
+The game is live at v3.9.4 on GitHub Pages
+(`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
+on 2026-10-28. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
 now returns 404.
@@ -22,21 +23,172 @@ The open question is how it runs on a phone: that has never been measured.
 A review session on 2026-10-18 built **v3.9**, released on 2026-10-25: step 3 of
 the move system, a deferred effect, as Jeff Bozo's own signature (SAME-DAY
 DELIVERY), plus two AI fixes and a gap in the live-match fingerprint. v3.9.1
-points the page and the docs at the new address. The same session left one local
-branch, not pushed: `live-3d` with v3.9 merged in and the prototype's leftovers
-done (parallax for the rendered stages, hair and coats that trail, rims that stay
-on the outline, and hit bursts that follow the blow).
+points the page and the docs at the new address. The same session built a
+branch, `claude/game-review-enhance-29bffb`: `live-3d` with v3.9 merged in and
+the prototype's leftovers done (parallax for the rendered stages, hair and coats
+that trail, rims that stay on the outline, and hit bursts that follow the blow).
+
+Sessions on 2026-10-25 built two more releases, v3.9.2 (a throw that goes
+behind the thrower from either side) and v3.9.3 (an AI that reads traps), and
+both shipped on 2026-10-26.
+
+A cloud session on 2026-10-28 built **v3.9.4** from a fresh clone of `main`:
+the AI waits for an opening before it throws a grab or a slow strike, drops its
+guard to punish, and stops guarding swings that have already missed. It also
+kept the AI-versus-AI harness as `lab/balance.js`. Reviewed, fixed and released
+the same day.
 
 ## Branches
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.9.1 (`SIM_VERSION` 8) | Deployed. A push here is a release. |
+| `main` | The live game, v3.9.4 (`SIM_VERSION` 9) | Deployed. A push here is a release. 385 tests pass. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
-| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
+| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Pushed from the original Mac on 2026-10-28. 412 tests pass. |
+| `claude/gfx-v3.9.4` | That branch with `main` merged up to v3.9.4 | Built in a cloud session. 442 tests pass. The candidate for the new `live-3d`. |
 
-The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
-The graphics branch has `main` merged in up to v3.9.1.
+The graphics branch was built in a git worktree under `.claude/worktrees/` on
+the original machine and pushed from there on 2026-10-28, so it is safe.
+`claude/gfx-v3.9.4` merges v3.9.2, v3.9.3 and v3.9.4 into it; the only code
+conflict was the teleport in `game.js` (the prototype's warp effect, and v3.9.3's
+`TELEPORT.PAST` in place of 84), and both are kept.
+
+## v3.9.4, released 2026-10-28: the computer picks its moment
+
+Measured first, with the harness this session kept (`lab/balance.js`, AI
+against AI, 60 matches per ordered pair, seeds 11 and 12): at Champion, Elo won
+17% and Carl 24%, and the move breakdowns said why. Carl's ASSET SEIZURE
+touched nobody in 78% of throws (jumped, or thrown from out of its 96 px
+reach) and Elo's PLATFORM BURN was parried 3.5 times a match (31% of throws),
+each one a free combo for the rival. Under both sat reads the AI got wrong for
+everyone. All of it is in `ai.js`, with its numbers in `config.js`; the AI is
+single-player only, so `SIM_VERSION` stays 9.
+
+- **A finished swing is not incoming.** `incoming()` ignored `hasHit` only, and
+  a whiff never sets it, so the whole recovery of a missed swing read as a blow
+  on its way and the AI guarded through it. It now stops at the end of the
+  active window.
+- **The guard comes down to punish.** A held guard presses nothing, and the AI
+  held it for all of `blockT`, so after a block or a parry it stood behind it
+  while the rival recovered or staggered. When the rival is open (below), the
+  next decision drops it, gated at `blockProb + 0.25` like noticing a trap,
+  and never while a projectile is coming or a coin is queued overhead.
+- **Grabs and slow strikes wait** (`picksMoment`). A command normal that is a
+  grab, or a strike or blast that starts no quicker than
+  `AI_MOMENT.SLOW_STARTUP` (0.09 s: Carl's ASSET SEIZURE, Elo's PLATFORM BURN,
+  Jeff's UNDERCUT), and the grab, area and BURN IT ALL specials, are thrown only
+  in real reach (`inReach`, from the hitbox and hurtbox geometry, with the
+  rival's knockback slide and the walls), a grab only at a rival who will be on
+  the floor when it comes out (`downBy`), and then when the rival cannot answer
+  (`rivalOpen`: grounded hitstun, recovering from a finished swing on the
+  ground, and for a grab also a held guard or a counter stance; never a basic
+  that made contact and can still cancel into the next), or else on the level's new
+  `gamble` (Champion 0.18, Contender 0.8, Rookie 1.0). An open moment skips
+  the personality's aggression roll. `moveFrames` mirrors how the engine
+  builds the move's startup and reach, and a test builds every such move and
+  compares.
+- **Strings finish with the character's move** (`holdForChain`). For a fighter
+  with one of those moves on the button the chain reflex presses, it holds
+  forward when the move will reach and lets go when it will not. Nobody else's
+  strings change. The chain's special after a kick is no longer pressed when a
+  grab or blast would not reach the sliding rival.
+- **Rain is read.** The projectile threat read treated every projectile as
+  flying (a falling coin has no `vx`, so only coins to one side counted) and
+  skipped any whose `delay` had counted down past zero, so of FUNDING ROUND's
+  three coins only the first was ever seen. The guard through Cathie's
+  recovery had been blocking the rest by accident.
+- **Reviewed** by a second pass, which found three bugs, each now fixed with a
+  test that fails without its fix:
+  - The guard came down while the rival's projectile was still in flight, since
+    a thrower recovering reads as open. Cathie's coins landed more often than on
+    `main` (blocked 11.5 a match, hit 10.7; `main` 17.6 and 9.1). Now 18.9 and
+    8.4. The coin read on its own is worth about one more block a match.
+  - A basic that made contact (blocked counts) can cancel into the next basic
+    for its whole recovery, so dropping the guard after blocking a jab ate the
+    second one (up to 58 in 200 scripted strings for Elo; 0 to 2 on `main`).
+  - A kick lifts the rival for about a tenth of a second, so Carl's string
+    never ended in HOSTILE TAKEOVER after a kick, though it lands every time:
+    the grab now asks whether the rival will be down by its first frame.
+  - Also from the review: an attack thrown in the air never reads as open (it
+    ends on landing), and the harness tallies coins and slides apart, counts a
+    rush's flurry as one touch, and counts damage where it is dealt.
+- **Measured** after the review's fixes (same harness, Champion, 60 per pair,
+  seeds 11 and 12, `main` then this branch): Elo 17% to 29%, Carl 24% to 51%,
+  Jeff 31% to 32%, Adam 50% to 44%, Kim 60% to 40%, Scam 64% to 62%, Cathie 64%
+  to 62%, Steve 68% to 65%, Lizbeth 71% to 64%. Best to worst closed from 54
+  points to 36. Kim's fall is her rivals punishing her missed swings instead of
+  guarding them. At Contender (40 per pair, seed 11) Carl 50% to 58%, Jeff 45%
+  to 34%, Kim 59% to 52%, the rest within about three; at Rookie everyone is
+  within about four points of `main`. The `gamble` values were chosen by these
+  runs: with Contender at 0.35, Jeff fell to 26% there.
+- **Tests**: `test/moment.test.js`, 15 tests; each that guards a fix fails
+  without it (checked by reverting each fix).
+
+
+## v3.9.3, released 2026-10-26: the AI reads traps
+
+Built on its own branch from v3.9.1 and merged onto v3.9.2 on the train. The same blind spot the delivery had: the AI
+never looked at `game.traps`, so every rival at every difficulty walked straight
+onto Kim's RUG PULL (and a built founder's POISON PILL). All of it is in `ai.js`;
+the AI is single-player only, so this branch changes nothing a live match
+computes and leaves `SIM_VERSION` at whatever `main` has (8 now, 9 once the throw
+fix is in). `VERSION` is v3.9.3 and the README has its section.
+
+The throw fix (v3.9.2, `SIM_VERSION` 9) was under it on `claude/release-train`,
+and the two shipped together as v3.9.3.
+
+- **Noticing** is rolled in `decide()` the way an order is: each decision while a
+  trap is close enough to step onto before the next one, at `blockProb + 0.25`,
+  held for that trap once it succeeds (`seenTraps`).
+- **The fence** (`fenceTraps`, per frame in `update()`) stops a walk at a noticed
+  trap's edge, or turns it into a jump when the jump lands clear on the far side
+  and the rival is out there; it drops a dash that would cross one, steers a
+  jump's drift to land clear, and holds back an air attack that would drop the
+  body onto one. Most of the roster cannot jump RUG PULL from its edge (a jump
+  carries 120 to 160 px; the trap denies about 160), so most of the time the AI
+  fights from the edge and the trap runs out.
+- **Inside one that is still arming** (laid point-blank, which a human Kim can
+  do), `leaveTrap` walks it out, jumps it out, or blocks when a wall or the rival
+  is in the way, since a blocked bite is chip.
+- **Moves that carry the body count as steps**: the chain reflex finishes with a
+  kick instead of a slap or jab (those step in `COMBO.STEP_IN`, moved into
+  `config.js` from a literal in `fighter.js`, same value), and a rush or teleport
+  that would set the body down on a noticed trap is not thrown.
+- **Measured**: in fixed scenarios (8 rivals, 20 seeds each), walking at an armed
+  trap with Kim beyond it, Champion is bitten 0 times in 160 (was 134), Contender
+  7 (138), Rookie 53 (138). Caught inside an arming trap: Champion 8 in 160 (was
+  160). Over the whole roster, AI against AI, both at the same level, 80 matches
+  per ordered pair: Kim at Champion went from 75.1% to 70.3% (the two halves read
+  71.6% and 69.1%), still the top Champion; Contender 66.1% to 62.3%, Rookie 40.9%
+  to 37.0%. Nobody else moved more than about two points at any level. Rivals now
+  take 1.26 trap bites a match at Champion, down from 2.48, and most of what is
+  left is Kim's own combos knocking them onto a fresh trap, which is the move
+  working. (Those figures are from the branch as first built, on v3.9.)
+- **Reviewed** by a second pass, which found four gaps, each now fixed with a test
+  that fails without its fix:
+  - A teleport or rush only checked traps already noticed, and a walk only notices
+    nearby ones, so Lizbeth teleported onto RUG PULL behind Kim 19 times in 20.
+    A long move now looks along its path first (one noticing roll per trap,
+    `lookedAt`), and the README's "stops rushes, teleports" is true.
+  - Laying a trap swings nothing, so it never sets `hasHit`, and the threat
+    response blocked the laying: a champion stood guarding in the trap through
+    the arming time. `incoming()` leaves trap-laying out, the AI steps back from a
+    trap being laid, and walking out drops any guard. Over 160 point-blank layings
+    that turned 62 chip bites into clean escapes; full bites stayed about 40, from
+    specials the AI had committed before Kim pressed.
+  - Air steering judged a landing past a wall as clear; it is clamped to the
+    stage now (`onStage`).
+  - A jump judged only the trap, not the rival: one that met Kim in the air
+    stopped against her (`pushApart` works in the air under 120 px apart) and fell
+    onto the trap. Every jump now checks where it comes to rest, treating the
+    rival's body as a wall (`restsAt`), including jump-ins `decide()` chooses.
+  - The teleport distance and the push gap are now `TELEPORT.PAST` and
+    `PHYS.PUSH_GAP` in `config.js`, read by both `game.js` and `ai.js` (same
+    values, so no simulation change).
+- **Measured on the train** (20 matches per ordered pair, seeded, AI against AI at
+  the same level): Kim at Champion 75% on `main`, 66% with the trap AI as built,
+  63% with the review's fixes; Contender 63%, 62%, 60%. Trap bites a match at
+  Champion 0.54, 0.28, 0.24. Nobody else moved more than about two points.
 
 ## v3.9, released 2026-10-25
 
@@ -71,6 +223,63 @@ ARCHITECTURE section 5, "A deferred effect".
 Released as a fast-forward of `main` and checked with the `curl` check in
 ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSION`
 8); v3.9.1 changes nothing the simulation computes.
+
+## v3.9.2, released with v3.9.3: a throw goes behind the thrower
+
+- **The bug**, there since v1.0. `Game.doGrab` promises "thrown behind the
+  attacker, sides swap" and applied the throw's sign twice: `kb: -dir * sp.kb`
+  with `dir: -dir`, and `applyHit` sets `vx = dir * kb`, so the victim's `vx` was
+  `+sp.kb` whichever side they started on. Thrown from the thrower's left they
+  swapped as promised; thrown from the right they landed back where they started,
+  and the thrower was shoved about 21 px backward as `pushApart` separated the
+  bodies. Found by the trap-AI session: Carl kept landing on Kim's RUG PULL off
+  his own throws.
+- **The fix** is `kb: sp.kb`; `applyHit` applies the sign. With Carl at x 600,
+  Kim thrown from 520 lands at 700 with Carl at 579, as before; thrown from 680
+  she now lands at 500 with Carl at 621 (was 700 and 579). Carl gives up those
+  21 px forward, into the space she left.
+- **The corner.** The victim used to be set down on the thrower's x, so the side
+  came from their first frame of flight. With the thrower flush against a wall
+  (x is clamped there, which is where a cornered fighter stands) there was no
+  room for that, both bodies shared one x, and `pushApart` broke the tie by slot:
+  as p1 Carl threw out of the right corner but not the left, as p2 the reverse.
+  Now the victim is set down `THROW.BEHIND` (1 px, `config.js`) behind the
+  thrower, and a thrower with less room than that steps forward to make it. A
+  cornered throw always swaps: Kim goes into the corner and Carl comes out to
+  51 px from the wall, from either wall and either slot. Mid-stage, landings move
+  by half a pixel.
+- **Tests.** `test/throw.test.js` throws both grabs (HOSTILE TAKEOVER and ASSET
+  SEIZURE) from both sides and both player slots mid-stage, and again with Carl
+  flush against each wall. Each half fails without its fix.
+- **Other callers checked.** Every other `applyHit` (a normal hit, a steal, a
+  counter's payback) and every direct knockback in `game.js` applies its sign once
+  and pushes away from the attacker or the owner. The shield branch at the top of
+  `doGrab` has no double sign either, but it pushes the shielded victim toward the
+  grabber; see the owner decisions.
+- **A throw that KOs** now sends the loser the way they were thrown. `doKO` takes
+  its direction from `sign(loser.x - winner.x) || 1`, and with the victim set down
+  on the thrower's own x that sign was 0, so every KO by a throw flung the loser
+  right. Found in review; covered by the same bump. Still cosmetic: on a cornered
+  KO the two bodies end 1 px apart, because `pushApart` stops once anyone is KO'd.
+- **`SIM_VERSION` 9**, not 8: `origin/main` already ships 8 in v3.9 and v3.9.1,
+  so a v8 peer exists, and it puts a victim thrown from the right on the other
+  side from the first such throw. `VERSION` is v3.9.2 and the README has its
+  section.
+- **Measured** with the trap-AI session's harness (AI against AI at Champion, 160
+  matches per ordered pair over four seed bases), both fixes together: Carl 25.8%
+  to 23.9% (the first 80 per pair read 25.5 to 22.0, the second 26.1 to 25.9, so
+  within the noise to about two points down); Lizbeth 65.9% to 65.9%; nobody else
+  moved more than about a point. Every match without Carl is identical, since
+  nobody else on the roster has a grab (a built founder can: HOSTILE TAKEOVER is a
+  player special, the Closer and Chief bases default to it, and the fix covers
+  them the same way). In Carl's matches, 1.3 s after a throw the victim is on
+  the other side 65% of the time (was 21%; the rest have moved by then), Carl
+  stands more than 5 px behind where he threw from after 3% of throws (was 64%),
+  and he is still in a corner after 1% (was 3%). The fighter who lands the next
+  hit after a throw did not change (Carl 12%, the victim 39%).
+- **With the trap AI.** Both were on `claude/release-train`, the trap AI merged
+  on top, and shipped together; the README has a section for each (v3.9.3 above
+  v3.9.2).
 
 ## The prototype on `live-3d`
 
@@ -149,13 +358,10 @@ read it), which the determinism and effects tests check.
 
 ## Decisions that belong to the owner
 
-0. **Check sign-in after the move.** In Supabase, Authentication → URL
-   Configuration must name `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`
-   as the Site URL and in Redirect URLs (docs/AUTH-SETUP.md section 3). If it still
-   names the old address, sign-in sends players to a page that no longer exists.
-   Then whether to push `claude/game-review-enhance-29bffb` as the new `live-3d`
-   (merge `main` into it first for v3.9.1): it is `live-3d` plus v3.9 and the
-   prototype work, and merging it into `main` later carries both.
+0. **Make `claude/gfx-v3.9.4` the new `live-3d`.** It is `live-3d` plus v3.9.4
+   and the prototype work, so merging it into `main` later carries both. (The
+   sign-in check after the move is done: the owner set Supabase's Site URL and
+   Redirect URLs to the new address on 2026-10-28.)
 1. **Merge `live-3d` now** (the prototype ships dark, behind `?gl`) **or after a
    phone check.**
 2. **Whether 3D ever becomes the default.** Not before phone numbers are in.
@@ -174,9 +380,19 @@ read it), which the determinism and effects tests check.
    scales with `build`, so a wide fighter (Adam, Carl, Jeff) visibly stands inside
    a narrow one. Widening the push box with `build` would fix the look, but it is a
    simulation change (spacing, combo step-ins, `SIM_VERSION`), so it was left.
-7. **Balance as the AI plays it.** In AI-versus-AI at Champion, Elo (about 20%)
-   and Carl (about 28%) sit at the bottom and Kim, Steve and Lizbeth near 70%.
-   That measures how well the AI plays each kit as much as the kits themselves.
+7. **Balance as the AI plays it.** v3.9.4 lifted Elo and Carl at Champion (see
+   its section). Jeff (31%) and Elo (29%) are now the bottom, Steve and Lizbeth
+   (about 66%) the top, and Adam still wins over 80% at Contender and Rookie.
+   `lab/balance.js` measures it; it measures how well the AI plays each kit as
+   much as the kits themselves.
+8. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
+   sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
+   recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
+   Kim 60 px from Carl ends 51 px away, the minimum body gap. The other two
+   OBJECTIONs (on a strike and on a steal) push the victim away. It reads like a
+   slip of sign, but it may have been meant to let the victim punish a grabber
+   stuck in a long recovery. Flipping it is one sign, but it changes what a live
+   match computes, so it needs `SIM_VERSION` 10; left as it is.
 
 ## Next steps, in the order they pay off
 

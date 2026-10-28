@@ -127,7 +127,18 @@ export const CHARACTER_WIRE_VERSION = 1;
 // the trap count in the fingerprint, which changes the hash of the same
 // state, so a v7 and a v8 peer would report a desync on the first sync even
 // in a match where nobody played either.
-export const SIM_VERSION = 8;
+//
+// v9: a throw goes behind the thrower from either side. Game.doGrab applied
+// the throw's sign twice, so every throw flew right; a v8 peer lands the same
+// victim back where they started whenever they were thrown from the right,
+// and the two disagree on both x positions from the first throw. v9 also sets
+// the victim down THROW.BEHIND behind the thrower and steps a thrower flush
+// against a wall forward to make the room, where a v8 peer leaves a cornered
+// throw's side to pushApart's tie-break by slot. And a throw that KOs now
+// sends the loser the way they were thrown: doKO reads its direction from the
+// two x positions, which v8 left equal, so every throw KO flew right. A real
+// bump: v8 shipped in v3.9 and v3.9.1.
+export const SIM_VERSION = 9;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

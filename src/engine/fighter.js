@@ -181,7 +181,7 @@ export class Fighter {
     if (a.kind === 'projectile' || a.kind === 'rain' || a.kind === 'bomb') return null;   // damage via projectiles
     if (a.noHitbox) return null;              // counters absorb, traps place — neither swings
     const reach = a.reach || 82;
-    const x0 = this.x + (this.facing > 0 ? 14 : -14 - reach);
+    const x0 = this.x + (this.facing > 0 ? PHYS.HITBOX_LEAD : -PHYS.HITBOX_LEAD - reach);
     const yC = this.y + (a.hitY || -95);
     const tall = (a.kind === 'aoe' || a.kind === 'burn') ? 150 : 74;
     return { x: x0, y: yC - tall / 2, w: reach, h: tall, a };
@@ -266,7 +266,7 @@ export class Fighter {
             if (n < COMBO.MAX_CHAIN) {                              // any basic → any basic
               this.startAttack(want, game);
               this.attack.chainN = n + 1;
-              if (wantKey !== 'kick') this.x += this.facing * 12;   // slaps/jabs step in
+              if (wantKey !== 'kick') this.x += this.facing * COMBO.STEP_IN;   // slaps/jabs step in
               break;
             }
           } else if (isBasic) {                                     // finishers from any basic

@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, FX_ART } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT, FX_ART } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -210,7 +210,7 @@ export class Game {
     const [a, b] = this.fighters;
     if (a.state === 'ko' || b.state === 'ko') return;
     const dx = b.x - a.x;
-    const minGap = PHYS.BODY_W * 0.92;
+    const minGap = PHYS.BODY_W * PHYS.PUSH_GAP;
     if (Math.abs(dx) < minGap && Math.abs(a.y - b.y) < 120) {
       const push = (minGap - Math.abs(dx)) / 2;
       const dir = dx >= 0 ? 1 : -1;
@@ -444,9 +444,21 @@ export class Game {
     this.audio.sfx('grab');
     this.fx.hitstop(0.3);
     this.fx.popup(def.x, def.y - 150, 'ACQUIRED!', '#ff3d6e');
-    // hoisted and thrown behind the attacker — sides swap
-    def.x = att.x;
-    def.applyHit({ dmg, kb: -dir * sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: -dir });
+    // Hoisted, set down just behind the attacker and thrown that way: sides
+    // swap. `back` is the direction of the throw, and applyHit multiplies kb by
+    // it, so kb stays a plain magnitude like every other hit's. Until v3.9.2 kb
+    // carried the sign as well, the two cancelled, and every throw went RIGHT:
+    // from the thrower's right side the victim landed back where they started
+    // and the thrower was shoved backward as the bodies came apart. The victim
+    // was also set down ON the attacker, which left the side to pushApart's
+    // tie-break by slot whenever the attacker was flush against a wall. Now a
+    // cornered attacker steps forward to make the room, and walks out of the
+    // corner as the bodies separate (THROW in config.js, test/throw.test.js).
+    const back = -dir;
+    const wall = back > 0 ? STAGE.MAX_X : STAGE.MIN_X;
+    if ((wall - att.x) * back < THROW.BEHIND) att.x = wall - back * THROW.BEHIND;
+    def.x = att.x + back * THROW.BEHIND;
+    def.applyHit({ dmg, kb: sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: back });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
     this.refillRunway(att);
@@ -747,7 +759,7 @@ export class Game {
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);
     this.fx.warp(f.x, f.y, null, false, f.def);
-    f.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x + dir * 84));
+    f.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x + dir * TELEPORT.PAST));
     f.facing = Math.sign(opp.x - f.x) || -dir;
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);

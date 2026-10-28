@@ -55,7 +55,7 @@ test('an AI whose special is a stance toggle still attacks and moves', () => {
   assert.ok(maxWalked > 0, 'AI-controlled SCAM ALT never moved over 900 frames');
 });
 
-import { METER, RUNWAY } from '../src/config.js';
+import { METER, RUNWAY, PHYS } from '../src/config.js';
 
 function adamMatch(seed) {
   const max = FIGHTERS.find(f => f.id === 'max');
@@ -138,4 +138,314 @@ test('an AI that rolls "create space" in melee range actually steps back', () =>
     Math.random = real;
   }
   assert.ok(ai.x < 390, `the AI rolled "create space" and stayed put at x ${ai.x.toFixed(1)}`);
+});
+
+// ------------------------------------------------------- the rival's traps
+//
+// Kim's RUG PULL (and a built fighter's POISON PILL) bites a grounded rival
+// within its radius once it arms. The AI never looked at game.traps, so every
+// difficulty walked straight onto one, the same blind spot SAME-DAY DELIVERY
+// had before the AI learned to read an order.
+
+// The AI rolls Math.random for every hesitation and every choice, so each run
+// gets its own seeded stream and a failure here reproduces. The same helper
+// as delivery.test.js.
+function seeded(seed, fn) {
+  let s = seed >>> 0;
+  const real = Math.random;
+  Math.random = () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  try { return fn(); } finally { Math.random = real; }
+}
+
+const KIM = FIGHTERS.find(f => f.id === 'zara');
+const RUG = KIM.commandNormals.find(c => c.archetype === 'trap');
+const RIVALS = FIGHTERS.filter(f => !f.base && f.id !== 'zara').map(f => f.id);
+
+// A live round with Kim's RUG PULL laid at `trapX` and Kim standing idle at
+// `kimX`, so nothing but the rival's own decisions moves it. The rival starts
+// at `aiX` with no meter, so it has to walk rather than special its way in,
+// and its first decision lands somewhere in its cadence, as it would mid-round.
+function rugPulled(id, level, { aiX = 200, trapX = 470, kimX = 760, armed = true, seed = 1 } = {}) {
+  const def = FIGHTERS.find(f => f.id === id);
+  const game = new Game({
+    p1: { def, controller: idler() },
+    p2: { def: KIM, controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: level,
+    hud: STUB_HUD, onEnd: () => {}, seed,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  const [ai, kim] = game.fighters;
+  kim.x = trapX;
+  game.spawnTrap(kim, RUG.params);
+  kim.x = kimX;
+  if (armed) game.traps[0].armT = 0;
+  ai.x = aiX;
+  ai.energy = 0;
+  const c = new AIController(level, def);
+  c.decideT = c.level.react * Math.random();
+  ai.controller = c;
+  let bites = 0;
+  const strike = game.strike.bind(game);
+  game.strike = (att, victim, m, fp) => {
+    if (m && m.kind === 'trap') bites++;
+    return strike(att, victim, m, fp);
+  };
+  return { game, ai, kim, bitten: () => bites > 0 };
+}
+
+// Every rival, three seeds each, `frames` of play; how many took the bite.
+function trapRuns(level, opts, frames, check = () => true) {
+  let bitten = 0, ok = 0, tries = 0;
+  for (const id of RIVALS) {
+    for (let seed = 1; seed <= 3; seed++) seeded(seed * 7919 + id.length, () => {
+      const run = rugPulled(id, level, { ...opts, seed });
+      for (let i = 0; i < frames; i++) run.game.update(1 / 60);
+      tries++;
+      if (run.bitten()) bitten++;
+      if (check(run)) ok++;
+    });
+  }
+  return { bitten, ok, tries };
+}
+
+test('a champion AI does not walk onto an armed trap between it and the rival', () => {
+  // Three seconds is long enough to walk the whole way in, and well inside
+  // the trap's 5.5 s life, so a trap that is gone was stepped on.
+  const { bitten, tries } = trapRuns('mogul', {}, 180);
+  assert.ok(bitten <= tries * 0.1,
+    `a champion AI walked onto an armed RUG PULL in ${bitten} of ${tries} runs`);
+});
+
+test('a champion AI fights Kim from the edge of the trap she stands on', () => {
+  // Kim on her own trap: the AI has to stop at the edge, and from there it is
+  // still in reach, so it should land hits rather than stand there. An AI that
+  // froze at the edge would pass the first check and fail the second.
+  const { bitten, ok, tries } = trapRuns('mogul', { kimX: 470 }, 240,
+    (run) => run.kim.hp < run.kim.maxHp);
+  assert.ok(bitten <= tries * 0.15,
+    `a champion AI stepped onto the trap under Kim in ${bitten} of ${tries} runs`);
+  assert.ok(ok >= tries * 0.8, `a champion AI hit Kim from the edge in only ${ok} of ${tries} runs`);
+});
+
+test('a rookie AI still walks onto some traps', () => {
+  // Noticing is gated on the difficulty's blockProb, like reading an order:
+  // the trap is meant to be the rookie's problem.
+  const { bitten, tries } = trapRuns('intern', {}, 180);
+  assert.ok(bitten >= tries * 0.25,
+    `a rookie AI walked onto an armed RUG PULL in only ${bitten} of ${tries} runs`);
+});
+
+test('a champion AI caught inside a trap that is still arming gets out', () => {
+  // Laid point-blank, which a human Kim can do: the rival is already inside
+  // the radius and has the 0.35 s arming time to leave.
+  const { bitten, tries } = trapRuns('mogul', { aiX: 420, trapX: 470, kimX: 470, armed: false }, 90);
+  assert.ok(bitten <= tries * 0.25,
+    `a champion AI stood in an arming RUG PULL until it bit in ${bitten} of ${tries} runs`);
+});
+
+// Found in review, in roster matches: the chain reflex presses special after a
+// kick connects without asking where it lands, and Lizbeth's special is a
+// teleport that sets her down 84 px past the rival, so a champion who had read
+// the trap teleported onto it anyway (59 bites in 640 Champion matches). The
+// roll is pinned so the chain always fires, and the pulse is read directly
+// because it is only applied to the pad on the following frame.
+test('the chain reflex does not teleport onto a trap it has noticed', () => {
+  const ava = FIGHTERS.find(f => f.id === 'ava');
+  const chainOffKick = (trapX) => {
+    const game = new Game({
+      p1: { def: ava, controller: idler() }, p2: { def: KIM, controller: idler() },
+      arena: STUB_ARENA, mode: 'solo', difficulty: 'mogul',
+      hud: STUB_HUD, onEnd: () => {}, seed: 20261025,
+    });
+    for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+    const [ai, kim] = game.fighters;
+    kim.x = trapX;
+    game.spawnTrap(kim, RUG.params);
+    game.traps[0].armT = 0;
+    ai.x = 300; kim.x = 380;                  // the teleport lands at 464
+    ai.energy = METER.MAX - 1;                // a special, not the unicorn
+    ai.state = 'attack';
+    ai.attack = { kind: 'kick', hasHit: true, chainN: 3 };
+    const c = new AIController('mogul', ava);
+    c.seenTraps.add(game.traps[0]);
+    const real = Math.random;
+    Math.random = () => 0;
+    try { c.update(ai, game); } finally { Math.random = real; }
+    return !!c.pulse.special;
+  };
+  assert.equal(chainOffKick(470), false, 'teleported onto a noticed trap');
+  assert.equal(chainOffKick(800), true, 'with the landing clear, the chain should still teleport');
+});
+
+// An AI in the air over a noticed trap, `y` px up at the top of its arc, with
+// `dir` as its last decision and no further decision due before it lands.
+function overTrap({ id = 'kai', x, dir, up = 140, vy = 0, buff = false }) {
+  const def = FIGHTERS.find(f => f.id === id);
+  const game = new Game({
+    p1: { def, controller: idler() }, p2: { def: KIM, controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'mogul',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20261025,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  const [ai, kim] = game.fighters;
+  kim.x = 470;
+  game.spawnTrap(kim, RUG.params);
+  game.traps[0].armT = 0;
+  kim.x = 800;
+  ai.x = x;
+  ai.airborne = true; ai.state = 'jump'; ai.y -= up; ai.vy = vy;
+  if (buff) ai.speedBuffT = 5;
+  const c = new AIController('mogul', def);
+  c.seenTraps.add(game.traps[0]);
+  c.dir = dir;
+  c.decideT = 99;
+  ai.controller = c;
+  return { game, ai, c };
+}
+const landed = ({ game, ai }) => {
+  for (let i = 0; i < 90 && ai.airborne; i++) game.update(1 / 60);
+  game.update(1 / 60);                      // the frame the trap checks the landing
+  return game.traps.length === 1;           // still down: it did not bite
+};
+
+// Found in review: the steering tried the drift it wanted, then none, then the
+// opposite, and with no drift wanted (dir 0) that is three tries at falling
+// straight down. A champion whose last decision was to stand still mid-jump
+// came down on the trap it was flying over.
+test('an AI in the air over a trap steers clear even when it meant to stand still', () => {
+  assert.equal(landed(overTrap({ x: 440, dir: 0 })), true, 'fell straight onto the trap it was over');
+});
+
+// Found in review: an attack in the air holds the body where it is until the
+// attack ends, so a slap at the top of a jump that was clearing RUG PULL
+// dropped the fighter onto it. Over a trap, an attack that would do that is
+// not thrown.
+test('an AI jumping a trap does not swing in the air and drop onto it', () => {
+  // Buffed, so the jump clears the trap from its edge if nothing stops the
+  // drift. The slap comes over the middle of it, past the point where drifting
+  // back the way it came would still land clear.
+  const run = overTrap({ x: 384, dir: 1, up: 1, vy: PHYS.JUMP_V, buff: true });
+  for (let i = 0; i < 20; i++) run.game.update(1 / 60);
+  assert.ok(Math.abs(run.ai.x - 470) < 20, `the fixture should be over the middle of the trap, at ${run.ai.x}`);
+  run.c.pulse.slap = true;
+  assert.equal(landed(run), true, 'a slap mid-jump dropped it onto the trap');
+});
+
+// ------------------------------------- traps: found in review of v3.9.3
+//
+// Four gaps, each with a test that fails without its fix.
+
+// A teleport or a rush reaches far further than the AI looks for traps while
+// walking, so a trap it had not yet noticed was no guard at all: Lizbeth
+// teleported onto RUG PULL behind Kim 19 times in 20, and a rush from 400 px at
+// Kim standing on her trap was bitten every time. A long move now looks where
+// it is going before it commits.
+test('a champion AI does not teleport or rush onto a trap it had not noticed', () => {
+  const long = (id, aiX, kimX) => {
+    let bitten = 0;
+    for (let seed = 1; seed <= 10; seed++) seeded(seed * 104729 + id.length, () => {
+      const run = rugPulled(id, 'mogul', { aiX, trapX: 470, kimX, seed });
+      run.ai.energy = METER.MAX - 1;          // a special, not the unicorn
+      for (let i = 0; i < 90; i++) run.game.update(1 / 60);
+      if (run.bitten()) bitten++;
+    });
+    return bitten;
+  };
+  // Kim stands just short of her trap, so the teleport sets Lizbeth down on it.
+  const teleports = long('ava', 470 - 84 - 250, 470 - 84);
+  assert.ok(teleports <= 2, `Lizbeth teleported onto an unnoticed trap ${teleports} times in 10`);
+  // Kim on her trap, the rusher 400 px away: the rush runs straight across it.
+  const rushes = long('zara', 470 - 400, 470);
+  assert.ok(rushes <= 2, `a rush ran onto an unnoticed trap ${rushes} times in 10`);
+});
+
+// RUG PULL never swings, so it never sets hasHit, and the threat response read
+// Kim laying it as an incoming attack: a champion guarded through the whole
+// arming time, standing in the trap, and took the bite as chip when it could
+// have walked out. Measured over 160 runs, guarding took 62 chip bites and 39
+// full ones; stepping back takes no chip and the same full bites, which come
+// from a special the AI had already committed before Kim pressed.
+test('a champion AI steps out of a RUG PULL laid at its feet instead of guarding in it', () => {
+  let bitten = 0, tries = 0;
+  for (const id of RIVALS) {
+    for (let seed = 1; seed <= 5; seed++) seeded(seed * 7919 + id.length, () => {
+      const def = FIGHTERS.find(f => f.id === id);
+      const game = new Game({
+        p1: { def, controller: idler() }, p2: { def: KIM, controller: idler() },
+        arena: STUB_ARENA, mode: 'solo', difficulty: 'mogul',
+        hud: STUB_HUD, onEnd: () => {}, seed,
+      });
+      for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+      const [ai, kim] = game.fighters;
+      ai.x = 410; kim.x = 470; ai.energy = 0;
+      const c = new AIController('mogul', def);
+      c.decideT = c.level.react * Math.random();
+      ai.controller = c;
+      let frame = 0;                          // Kim holds toward the AI and kicks: RUG PULL
+      kim.controller = { isHuman: false, update(f) {
+        f.pad = { ...EMPTY, left: frame < 8, kick: frame >= 2 && frame < 6 };
+        frame++;
+      } };
+      let bite = false;
+      const strike = game.strike.bind(game);
+      game.strike = (att, victim, m, fp) => {
+        if (m && m.kind === 'trap') bite = true;
+        return strike(att, victim, m, fp);
+      };
+      for (let i = 0; i < 90; i++) game.update(1 / 60);
+      tries++;
+      if (bite) bitten++;
+    });
+  }
+  assert.ok(bitten <= tries * 0.3, `a champion AI was bitten by a RUG PULL laid at its feet ${bitten} times in ${tries}`);
+});
+
+// Steering in the air judged a landing past the stage wall as clear, but the
+// body is clamped to the wall, which can be on the trap: a jump toward the
+// left wall over a trap at x 140 came down at x 70, on it.
+test('an AI steering in the air near a wall lands where the wall lets it, not past it', () => {
+  const def = FIGHTERS.find(f => f.id === 'kai');
+  const game = new Game({
+    p1: { def, controller: idler() }, p2: { def: KIM, controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'mogul',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20261026,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  const [ai, kim] = game.fighters;
+  kim.x = 140;
+  game.spawnTrap(kim, RUG.params);
+  game.traps[0].armT = 0;
+  kim.x = 800;
+  // Quick (buffed), so drifting right lands clear: the trap spans 58 to 222
+  // and a buffed drift from the top of the arc carries about 100 px.
+  ai.x = 130; ai.airborne = true; ai.state = 'jump'; ai.y -= 140; ai.vy = 0;
+  ai.speedBuffT = 5;
+  const c = new AIController('mogul', def);
+  c.seenTraps.add(game.traps[0]);
+  c.dir = -1; c.decideT = 99;
+  ai.controller = c;
+  for (let i = 0; i < 90 && ai.airborne; i++) game.update(1 / 60);
+  game.update(1 / 60);
+  assert.equal(game.traps.length, 1, `came down at x ${ai.x.toFixed(0)}, on the trap by the wall`);
+});
+
+// A jump over a trap judged only the trap: landing in the rival's body gets the
+// jumper shoved back by pushApart, onto the trap it had just cleared.
+test('an AI does not jump a trap into the rival standing just past it', () => {
+  const R = RUG.params.radius;
+  let bitten = 0;
+  for (let seed = 1; seed <= 30; seed++) seeded(seed * 101, () => {
+    const run = rugPulled('kai', 'mogul', { aiX: 330, trapX: 470, kimX: 470 + R + 4 + 8, seed });
+    run.ai.speedBuffT = 10;                   // quick enough to clear it from the edge
+    run.ai.controller.seenTraps.add(run.game.traps[0]);
+    for (let i = 0; i < 150; i++) run.game.update(1 / 60);
+    if (run.bitten()) bitten++;
+  });
+  assert.ok(bitten <= 1, `jumped into Kim and was shoved onto the trap ${bitten} times in 30`);
 });

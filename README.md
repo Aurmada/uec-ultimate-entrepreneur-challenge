@@ -86,6 +86,26 @@ Since the first version: the rendered arenas have depth (the city outside the bo
 
 The model and the stages are built by scripts in `lab/blender/` (Blender 5, headless, a few seconds each) and committed, so nothing needs Blender to run. Where it stands, what is next and the decisions still open are in [docs/HANDOFF.md](docs/HANDOFF.md); how it works is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 7.
 
+## What's new in v3.9.4: the computer picks its moment
+
+- 🦈 **Grabs wait for an opening.** Carl's AI threw ASSET SEIZURE at anything roughly in front of him, and four times in five it caught nobody: the rival saw it and jumped, or it never reached. Now the computer only grabs what it can reach, and a Champion waits for a rival who can't jump: one holding a guard, one still finishing a swing, one standing in a counter stance. A Rookie still grabs and hopes.
+- 🔥 **Slow hits wait too.** Elo Ma's PLATFORM BURN and Jeff Bozo's UNDERCUT are slow enough to see coming, and a Champion rival parried them over and over, each one a free combo the other way. Now a Champion saves them for the end of a string or a rival's mistake, along with the slow specials (HOSTILE TAKEOVER, BURN RATE BLAST, BURN IT ALL).
+- 🛡️ **The computer drops its guard to hit back.** It kept blocking after a swing had already missed, and kept holding the guard it had just parried with, so the opening a whiff gives away and the stagger a parry earns both went to waste. Now it lets go and punishes, but not while something you threw is still in the air, and not after blocking a jab or kick you could still follow up.
+- 🪙 **Cathie Woodz's rain is read properly.** Of her three falling coins, the computer only ever noticed the first, and blocked the others mostly by accident, while guarding against her finished swing. Now it sees all three.
+
+Measured in AI-versus-AI matches across the whole roster at Champion (60 per pair, two seeds): Carl went from 24% to 51% and Elo from 17% to 29%, and the gap between the best and worst Champion closed from 54 points to 36. Kim Koindashian drops from about 60% to 40%, because her rivals used to guard against her missed swings instead of punishing them, and Lizbeth Holmez from 71% to 64%. At Contender, Carl rises from 50% to 58% and Jeff Bozo falls from 45% to 34%; at Rookie nobody moves more than about four points. Only the computer's play changed, so a live match between two players is exactly as it was.
+
+## What's new in v3.9.3: the computer watches the floor
+
+- 🪤 **The computer sees traps now.** Kim Koindashian's RUG PULL (and a built founder's POISON PILL) caught every AI at every difficulty, because the computer never looked at traps at all. Now it stops at the edge and fights from there, jumps a trap when its jump is long enough to land clear, waits out one it can't, and steps out of one laid at its feet before it arms. It also stops taking combo steps, dashes, rushes, teleports and mid-air swings that would put it on one. A Champion almost never walks onto a trap now; a Rookie still does about a third of the time.
+
+Measured in AI-versus-AI matches across the whole roster, with the throw fix in, reading traps cost Kim about twelve points at Champion (75% to 63%): she goes from the Champion to beat to one of the top group, level with Lizbeth, Cathie and Scam. Nobody else moved more than about two. Only the computer's play changed, so a live match between two players is exactly as it was.
+
+## What's new in v3.9.2: a throw goes behind you
+
+- 🦈 **A throw lands behind you from either side.** HOSTILE TAKEOVER (Carl's, and any founder who picks it, including the Closer and the Chief), Carl's ASSET SEIZURE and a built founder's DUE DILIGENCE always threw to the right. From one side that was the promised swap; from the other, the victim landed right back in front of you and you were shoved backward, sometimes onto a trap. Now the victim lands behind you whichever side they stood on, and you step forward into the space they left.
+- 🧱 **A throw gets you out of the corner.** With your back flat against the wall, whether the throw swapped sides used to depend on which player you were. Now it always does: they go into the corner and you walk out. Live play needs both players on v3.9.2.
+
 ## What's new in v3.9.1: a new address
 
 The game lives at **https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/** now; the old address stopped working when the project moved. Links you share show their preview picture again, because the page was still pointing its preview at the old address. Nothing about the fight changed.
