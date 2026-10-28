@@ -409,8 +409,19 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
    carries the model as a base64 script module and answers the renderer's fetch
    from memory; nothing in the repository changed for it. On the M2 Max in Chrome
    it reads 120 fps in every setup, the rig adding 0.42 ms a frame on average and
-   0.10 ms at the 95th percentile, the whole prototype 0.50 ms at the 95th. The
-   phone run is still to do. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
+   0.10 ms at the 95th percentile, the whole prototype 0.50 ms at the 95th.
+   **First phone run, 2026-10-28**, the owner's iPhone (iOS 18.7, in the Claude
+   app, a 402 by 874 point screen, so a recent and fast model, not the mid-range
+   phone the budget is set for): 60 fps in every setup, so nothing visibly drops,
+   but the 3D rig adds 3.97 ms a frame on average and 5 ms at the 95th
+   percentile, against a 2 ms budget. WebKit rounds `performance.now()` to 1 ms,
+   so the 95th percentiles are whole numbers; the averages over 600 frames hold.
+   One fighter in 3D cost the same as two (4.58 and 4.57 ms a frame), so the
+   cost is fixed per frame rather than per model: it points at getting the WebGL
+   image into the 2D canvas (`render3D`'s `drawImage` of the GL canvas, which
+   WebKit has to synchronise), the first lever below, not at the meshes. A
+   second version of the test adds a breakdown step (pose solve, GPU, copy) to
+   confirm it before that work starts. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
    phone (no sign-in needed), and read the modes: All 2D, Both 3D, without stage,
    without effects. The budget is about 2 ms a frame for the 3D rig over 2D. If
