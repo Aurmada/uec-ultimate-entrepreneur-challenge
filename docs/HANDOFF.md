@@ -1,4 +1,4 @@
-# UEC handoff: where things stand (October 2026)
+# UEC handoff: where things stand (late October 2026)
 
 Written so the work can continue from a fresh clone, in a cloud session or on a
 new machine, with nothing from the machine it was built on. Read `CLAUDE.md`
@@ -6,8 +6,9 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.9.1 on GitHub Pages
-(`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`). The repository
+The game is live at v3.9.3 on GitHub Pages
+(`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
+on 2026-10-26. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
 now returns 404.
@@ -27,24 +28,87 @@ branch, not pushed: `live-3d` with v3.9 merged in and the prototype's leftovers
 done (parallax for the rendered stages, hair and coats that trail, rims that stay
 on the outline, and hit bursts that follow the blow).
 
-Sessions on 2026-10-25 built two more releases, both reviewed, fixed and lined
-up on `claude/release-train` (not pushed): v3.9.2, a throw that goes behind the
-thrower from either side, and v3.9.3, an AI that reads traps.
+Sessions on 2026-10-25 built two more releases, v3.9.2 (a throw that goes
+behind the thrower from either side) and v3.9.3 (an AI that reads traps), and
+both shipped on 2026-10-26.
+
+A cloud session on 2026-10-28 built **v3.9.4** on `claude/ai-picks-its-moment`,
+from a fresh clone of `main`: the AI waits for an opening before it throws a
+grab or a slow strike, drops its guard to punish, and stops guarding swings
+that have already missed. It also kept the AI-versus-AI harness as
+`lab/balance.js`. Reviewed, not released.
 
 ## Branches
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.9.1 (`SIM_VERSION` 8) | Deployed. A push here is a release. |
+| `main` | The live game, v3.9.3 (`SIM_VERSION` 9) | Deployed. A push here is a release. 370 tests pass. |
+| `claude/ai-picks-its-moment` | `main` plus v3.9.4 (AI only) | Built in a cloud session. 382 tests pass. Ready to release. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
-| `claude/release-train` | `main` plus v3.9.2 and v3.9.3, with the review's fixes | Local, not pushed. 370 tests pass. Ready to release. |
-| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | Local, not pushed. 412 tests pass. |
+| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | **Only on the original Mac, never pushed.** 412 tests pass. |
 
-The `claude/` branches were built in a git worktree under `.claude/worktrees/`.
-The graphics branch does not have v3.9.1's address change yet; merging `main`
-into it brings it.
+The graphics branch was built in a git worktree under `.claude/worktrees/` on
+the original machine, and it exists nowhere else: a cloud session cannot reach
+it. Until it is pushed, the October review's prototype work (parallax, trailing
+hair and coats, rims on the outline, hit bursts that follow the blow) is one
+deleted folder away from gone. It does not have v3.9.1's address change or
+anything after it; merging `main` into it brings them.
 
-## v3.9.3 on `claude/release-train`: the AI reads traps
+## v3.9.4 on `claude/ai-picks-its-moment`: the computer picks its moment
+
+Measured first, with the harness this session kept (`lab/balance.js`, AI
+against AI, 60 matches per ordered pair, seeds 11 and 12): at Champion, Elo won
+17% and Carl 24%, and the move breakdowns said why. Carl's ASSET SEIZURE
+touched nobody in 78% of throws (jumped, or thrown from out of its 96 px
+reach) and Elo's PLATFORM BURN was parried 3.5 times a match (31% of throws),
+each one a free combo for the rival. Under both sat reads the AI got wrong for
+everyone. All of it is in `ai.js`, with its numbers in `config.js`; the AI is
+single-player only, so `SIM_VERSION` stays 9.
+
+- **A finished swing is not incoming.** `incoming()` ignored `hasHit` only, and
+  a whiff never sets it, so the whole recovery of a missed swing read as a blow
+  on its way and the AI guarded through it. It now stops at the end of the
+  active window.
+- **The guard comes down to punish.** A held guard presses nothing, and the AI
+  held it for all of `blockT`, so after a block or a parry it stood behind it
+  while the rival recovered or staggered. When the rival is open (below), the
+  next decision drops it, gated at `blockProb + 0.25` like noticing a trap.
+- **Grabs and slow strikes wait** (`picksMoment`). A command normal that is a
+  grab, or a strike or blast that starts no quicker than
+  `AI_MOMENT.SLOW_STARTUP` (0.09 s: Carl's ASSET SEIZURE, Elo's PLATFORM BURN,
+  Jeff's UNDERCUT), and the grab, area and BURN IT ALL specials, are thrown only
+  in real reach (`inReach`, from the hitbox and hurtbox geometry, with the
+  rival's knockback slide and the walls), and then when the rival cannot answer
+  (`rivalOpen`: grounded hitstun, recovering from a finished swing, and for a
+  grab also a held guard or a counter stance), or else on the level's new
+  `gamble` (Champion 0.18, Contender 0.8, Rookie 1.0). An open moment skips
+  the personality's aggression roll. `moveFrames` mirrors how the engine
+  builds the move's startup and reach, and a test builds every such move and
+  compares.
+- **Strings finish with the character's move** (`holdForChain`). For a fighter
+  with one of those moves on the button the chain reflex presses, it holds
+  forward when the move will reach and lets go when it will not. Nobody else's
+  strings change. The chain's special after a kick is no longer pressed when a
+  grab or blast would not reach the sliding rival.
+- **Rain is read.** The projectile threat read treated every projectile as
+  flying (a falling coin has no `vx`, so only coins to one side counted) and
+  skipped any whose `delay` had counted down past zero, so of FUNDING ROUND's
+  three coins only the first was ever seen. The guard through Cathie's
+  recovery had been blocking the rest by accident.
+- **Measured** (same harness, Champion, 60 per pair, seeds 11 and 12, `main` then
+  this branch): Elo 17% to 29%, Carl 24% to 48%, Jeff 31% to 31%, Adam 50% to
+  44%, Kim 60% to 41%, Scam 64% to 62%, Cathie 64% to 63%, Steve 68% to 67%,
+  Lizbeth 71% to 65%. Best to worst closed from 55 points to 40. Kim's fall is
+  her rivals punishing her missed swings instead of guarding them. At Contender
+  (40 per pair) Carl 50% to 57%, Jeff 45% to 35%, Kim 59% to 52%, the rest
+  within about five; at Rookie everyone is within about four points of `main`.
+  The `gamble` values were chosen by these runs: with Contender at 0.35, Jeff
+  fell to 26% there.
+- **Tests**: `test/moment.test.js`, 12 tests; each that guards a fix fails
+  without it (checked by reverting each fix).
+
+
+## v3.9.3, released 2026-10-26: the AI reads traps
 
 Built on its own branch from v3.9.1 and merged onto v3.9.2 on the train. The same blind spot the delivery had: the AI
 never looked at `game.traps`, so every rival at every difficulty walked straight
@@ -53,9 +117,8 @@ the AI is single-player only, so this branch changes nothing a live match
 computes and leaves `SIM_VERSION` at whatever `main` has (8 now, 9 once the throw
 fix is in). `VERSION` is v3.9.3 and the README has its section.
 
-The throw fix (v3.9.2, `SIM_VERSION` 9) is under it on the train, so pushing
-`claude/release-train` to `main` releases both, as v3.9.3; then the `curl` check
-in ONBOARDING section 7. To release only v3.9.2, push the train's commit `d25f4b3`.
+The throw fix (v3.9.2, `SIM_VERSION` 9) was under it on `claude/release-train`,
+and the two shipped together as v3.9.3.
 
 - **Noticing** is rolled in `decide()` the way an order is: each decision while a
   trap is close enough to step onto before the next one, at `blockProb + 0.25`,
@@ -144,7 +207,7 @@ Released as a fast-forward of `main` and checked with the `curl` check in
 ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSION`
 8); v3.9.1 changes nothing the simulation computes.
 
-## v3.9.2 on `claude/release-train`: a throw goes behind the thrower
+## v3.9.2, released with v3.9.3: a throw goes behind the thrower
 
 - **The bug**, there since v1.0. `Game.doGrab` promises "thrown behind the
   attacker, sides swap" and applied the throw's sign twice: `kb: -dir * sp.kb`
@@ -197,8 +260,9 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
   stands more than 5 px behind where he threw from after 3% of throws (was 64%),
   and he is still in a corner after 1% (was 3%). The fighter who lands the next
   hit after a throw did not change (Carl 12%, the victim 39%).
-- **With the trap AI.** Both are on `claude/release-train`, the trap AI merged on
-  top; the README has a section for each (v3.9.3 above v3.9.2).
+- **With the trap AI.** Both were on `claude/release-train`, the trap AI merged
+  on top, and shipped together; the README has a section for each (v3.9.3 above
+  v3.9.2).
 
 ## The prototype on `live-3d`
 
@@ -288,14 +352,17 @@ read it), which the determinism and effects tests check.
    scales with `build`, so a wide fighter (Adam, Carl, Jeff) visibly stands inside
    a narrow one. Widening the push box with `build` would fix the look, but it is a
    simulation change (spacing, combo step-ins, `SIM_VERSION`), so it was left.
-7. **Balance as the AI plays it.** In AI-versus-AI at Champion, Elo (about 20%)
-   and Carl (about 28%) sit at the bottom and Kim, Steve and Lizbeth near 70%.
-   That measures how well the AI plays each kit as much as the kits themselves.
-8. **Ship v3.9.2 and v3.9.3.** They are lined up on `claude/release-train`: the
-   throw fix (v3.9.2, `SIM_VERSION` 9 because 8 is live) with the AI that reads
-   traps (v3.9.3) merged on top, both reviewed and fixed. Pushing the train to
-   `main` releases both as v3.9.3; pushing its commit `d25f4b3` first releases
-   only v3.9.2.
+7. **Balance as the AI plays it.** v3.9.4 lifted Elo and Carl at Champion (see
+   its section). Jeff (31%) and Elo (29%) are now the bottom, Steve and Lizbeth
+   (about 66%) the top, and Adam still wins over 80% at Contender and Rookie.
+   `lab/balance.js` measures it; it measures how well the AI plays each kit as
+   much as the kits themselves.
+8. **Ship v3.9.4.** It is on `claude/ai-picks-its-moment`, a fast-forward of
+   `main`. Pushing it to `main` releases it; then the `curl` check in
+   ONBOARDING section 7. Nothing a live match computes changes.
+10. **Push the graphics branch from the original Mac.** `claude/game-review-enhance-29bffb`
+    is the only copy of the October prototype work (see Branches). From that
+    checkout: `git push origin claude/game-review-enhance-29bffb`.
 9. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
    sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
    recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
