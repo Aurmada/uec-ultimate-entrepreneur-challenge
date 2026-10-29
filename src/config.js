@@ -477,6 +477,12 @@ export const GL3D = {
   // (3.77, 3.88 and 3.98 ms a frame for two fighters), so the price is moving
   // the GPU's image into a 2D canvas at all, however it is handed over.
   COMPOSITE: 'canvas',
+  // Fighters drawn straight onto a WebGL canvas stacked over the 2D game canvas,
+  // between the world behind them and what is drawn in front (render.js,
+  // renderSharp), instead of being copied into it. No read back, which COMPOSITE
+  // showed is the whole cost of the copy. Render only; with it off, or with no
+  // page to stack onto, the copy path draws as before.
+  LAYER: true,
   // How far the body opens toward the camera. 0 is a pure profile; fighting
   // games turn the chest so it reads, and the lead arm and leg go to the FAR
   // side, which is why the pose's armF and legF drive the model's .L limbs.

@@ -1,11 +1,11 @@
 // Canvas compositor for the fight: arena → shadows → afterimages → fighters
 // → projectiles → particles/popups → full-screen flashes.
 
-import { STAGE } from '../config.js';
+import { STAGE, GL3D } from '../config.js';
 import { drawFighter } from './drawFighter.js';
 import { stageFor, drawStage } from './stage.js';
 import { drawBursts, drawTrail, drawAura, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
-import { setLight3D } from './gl3d/index.js';
+import { setLight3D, has3D, layerCanvas3D, beginLayer3D, endLayer3D } from './gl3d/index.js';
 import { FX_STYLE, drawParcel } from './fx.js';
 
 const { W, H, FLOOR } = STAGE;
@@ -506,6 +506,7 @@ export function renderGame(ctx, game) {
   const t = game.t;
   const c = updateCamera(game);
   if (RENDER.sharpFighters) { renderSharp(ctx, game, t, c); return; }
+  hideStack(ctx.canvas);
   const wc = worldCanvas();
   const wx = wc.getContext('2d');
   wx.setTransform(1, 0, 0, 1, 0, 0);
@@ -528,7 +529,79 @@ export function renderGame(ctx, game) {
   game.fx.drawOverlay(ctx, W, H);
 }
 
+// ---- the 3D layer (GL3D.LAYER) ----
+// Three canvases stacked where the one game canvas was: the game canvas itself
+// for everything behind the fighters, a WebGL canvas the 3D fighters are drawn
+// straight onto, and a 2D canvas on top for everything in front of them and
+// the screen-space overlays. The browser composites the three, so a 3D fighter
+// is never copied back into a 2D canvas, which on an iPhone was most of its
+// cost. Made the first time a 3D fighter is on screen, and only for a canvas on
+// the page; elsewhere (tests, a canvas off the page) the copy path draws.
+const stacks = new WeakMap();
+function stackFor(canvas) {
+  let s = stacks.get(canvas);
+  if (s && !s.gl.isConnected) s = undefined;   // its canvas was dropped (reset3D)
+  if (s === undefined) {
+    s = null;
+    const parent = canvas.parentNode;
+    const gl = parent ? layerCanvas3D() : null;
+    if (gl) {
+      const top = document.createElement('canvas');
+      for (const el of [gl, top]) {
+        el.setAttribute('aria-hidden', 'true');
+        el.style.position = 'absolute';
+        el.style.pointerEvents = 'none';
+        el.style.display = 'block';
+      }
+      canvas.after(gl, top);
+      s = { gl, top, tx: top.getContext('2d'), box: '' };
+    }
+    stacks.set(canvas, s);
+  }
+  if (!s) return null;
+  if (s.hidden) {
+    s.hidden = false;
+    s.gl.style.visibility = s.top.style.visibility = '';
+  }
+  // Over the game canvas exactly, wherever the page lays it out. Siblings
+  // share an offset parent, so its offsets place them.
+  const box = `${canvas.offsetLeft},${canvas.offsetTop},${canvas.clientWidth},${canvas.clientHeight}`;
+  if (box !== s.box) {
+    s.box = box;
+    const radius = getComputedStyle(canvas).borderRadius;
+    for (const el of [s.gl, s.top]) {
+      el.style.left = `${canvas.offsetLeft}px`;
+      el.style.top = `${canvas.offsetTop}px`;
+      el.style.width = `${canvas.clientWidth}px`;
+      el.style.height = `${canvas.clientHeight}px`;
+      el.style.borderRadius = radius;
+    }
+  }
+  if (s.top.width !== canvas.width || s.top.height !== canvas.height) {
+    s.top.width = canvas.width;
+    s.top.height = canvas.height;
+  }
+  return s;
+}
+
+// A stack the frame is not using is hidden, or its top canvas would go on
+// showing the last layered frame's foreground over the game canvas.
+function hideStack(canvas) {
+  const s = stacks.get(canvas);
+  if (s && !s.hidden) {
+    s.hidden = true;
+    s.gl.style.visibility = s.top.style.visibility = 'hidden';
+  }
+}
+
 function renderSharp(ctx, game, t, c) {
+  // Once a canvas has its stack it keeps it for as long as the layer is on,
+  // even through a frame with no 3D fighter in it (a model still loading).
+  const L = !GL3D.LAYER ? null
+    : game.fighters.some((f) => has3D(f.def)) ? stackFor(ctx.canvas)
+      : stacks.get(ctx.canvas) ? stackFor(ctx.canvas) : null;
+  if (L) { renderLayered(ctx, L, game, t, c); return; }
+  hideStack(ctx.canvas);
   const wc = worldCanvas(), wx = wc.getContext('2d');
   wx.setTransform(1, 0, 0, 1, 0, 0);
   wx.clearRect(0, 0, W, H);
@@ -570,6 +643,75 @@ function renderSharp(ctx, game, t, c) {
 
   drawCutIn(ctx, game.fx, W, H);
   game.fx.drawOverlay(ctx, W, H);
+}
+
+// renderSharp with the 3D layer: the same layers in the same order, the
+// fighters split by what they are. A 3D fighter goes on the WebGL canvas. A 2D
+// one goes behind it on the game canvas, or, once a 3D fighter has been drawn,
+// on the top canvas, so it still comes out in front as the order asks. Every
+// trail goes on top, over the fighters, and every aura on the game canvas,
+// behind them: an aura between two overlapping 3D fighters is the one thing
+// three layers cannot hold.
+function renderLayered(ctx, L, game, t, c) {
+  const base = ctx.getTransform();
+  const wc = worldCanvas(), wx = wc.getContext('2d');
+  wx.setTransform(1, 0, 0, 1, 0, 0);
+  wx.clearRect(0, 0, W, H);
+  renderBehind(wx, game, t, true);
+  const order = fighterOrder(game);
+  const fc = frontCanvas(), fx = fc.getContext('2d');
+  fx.setTransform(1, 0, 0, 1, 0, 0);
+  fx.clearRect(0, 0, W, H);
+  renderInFront(fx, game, t);
+
+  const top = L.tx;
+  top.setTransform(1, 0, 0, 1, 0, 0);
+  top.clearRect(0, 0, L.top.width, L.top.height);
+  const drawing3D = beginLayer3D(ctx.canvas.width, ctx.canvas.height);
+
+  ctx.save();
+  ctx.translate(game.fx.shakeX, game.fx.shakeY);
+  const halfW = W / (2 * c.z), halfH = H / (2 * c.z);
+  const toScreen = () => ctx.transform(c.z, 0, 0, c.z, -(c.x - halfW) * c.z, -(c.y - halfH) * c.z);
+  const stage = stageFor(game.arena);
+  if (stage) {
+    ctx.save();
+    toScreen();
+    drawStage(ctx, stage, t, c.x - W / 2);
+    ctx.restore();
+  }
+  ctx.drawImage(wc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
+  ctx.save();
+  toScreen();
+  setLight3D(stage?.arena.stage.light);
+  const world = ctx.getTransform();
+  let over = false;
+  for (const f of order) {
+    const in3D = drawing3D && has3D(f.def);
+    drawAura(ctx, f, t);
+    if (in3D) {
+      drawFighter(ctx, f, t);              // onto the layer (drawFighter asks layerActive3D)
+      over = true;
+    } else {
+      const g = over ? top : ctx;
+      if (g === top) top.setTransform(world);
+      drawFighter(g, f, t);
+    }
+    top.setTransform(world);
+    drawTrail(top, f, game.simT);
+  }
+  ctx.restore();
+  endLayer3D();
+  ctx.restore();
+
+  top.setTransform(base);
+  top.save();
+  top.translate(game.fx.shakeX, game.fx.shakeY);
+  top.drawImage(fc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
+  drawStageLight(top);
+  top.restore();
+  drawCutIn(top, game.fx, W, H);
+  game.fx.drawOverlay(top, W, H);
 }
 
 // renderWorld reads game.fighters in a fixed order (camera, then shadows, then

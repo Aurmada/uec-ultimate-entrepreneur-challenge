@@ -15,6 +15,14 @@
 //
 // Lighting happens in model space. The model is drawn unrotated with the
 // camera on +Z, so a normal's z is how directly a surface faces the viewer.
+//
+// Two ways to draw. Into the top-left corner of the renderer's own canvas, for
+// the caller to copy into a 2D canvas (portraits, and fighters with
+// GL3D.LAYER off); or, with `screen`, straight onto a canvas that is itself on
+// screen, at the fighter's place under the 2D canvas's transform, with the key
+// line and hit flash the 2D path adds drawn here too. Copying a WebGL image
+// into a 2D canvas is a read back from the GPU, which on an iPhone was most of
+// a 3D fighter's cost; a canvas on screen is composited without one.
 
 import { GL3D } from '../../config.js';
 
@@ -61,6 +69,8 @@ void main() {
 const FS = `#version 300 es
 precision mediump float;
 in vec3 vNrm;
+uniform mat2 uRimDir;     // a model-space direction in the mask's pixel axes
+uniform float uFlash;     // 1 while the fighter flashes from a hit
 uniform vec3 uColor;
 uniform vec3 uKey;
 uniform vec3 uTint;       // what shadow does to a colour
@@ -73,7 +83,7 @@ uniform vec3 uBackColor;  // its rim; black for none
 uniform float uInk;
 uniform float uMaskPass;  // 1 while drawing the silhouette mask
 uniform sampler2D uMask;  // that mask, the same size as the canvas
-uniform vec2 uMaskTexel;  // 1 / its size
+uniform highp vec2 uMaskTexel;  // 1 / its size; highp, as a screen-sized mask is up to 2048 px across
 uniform float uRimReach;  // device px out along the normal a rim looks for background
 uniform vec3 uInkColor;
 uniform sampler2D uFace;
@@ -102,14 +112,53 @@ void main() {
   float edge = 1.0 - clamp(n.z * 1.6, 0.0, 1.0);
   // Background a few px out along the normal: this is the outline. Body
   // there: an inner edge (a leg over a leg, an arm over the chest), no rim.
-  vec2 out2 = n.xy / max(length(n.xy), 1e-4);
+  vec2 out2 = uRimDir * n.xy;
+  out2 /= max(length(out2), 1e-4);
   float outer = 1.0 - texture(uMask, (gl_FragCoord.xy + out2 * uRimReach) * uMaskTexel).a;
   float rim = step(0.78, edge) * step(0.0, d + 0.25) * outer;
   c += rim * uRimColor;
   float back = step(0.62, edge) * step(0.15, dot(n, uBack)) * outer;
   c += back * uBackColor;
+  // The 2D path's hit flash, CSS brightness(2.2) then saturate(0.4).
+  if (uFlash > 0.5) {
+    c = min(c * 2.2, vec3(1.0));
+    c = mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, 0.4);
+  }
   outColor = vec4(c * uAlpha, uAlpha);      // premultiplied, as the canvas is
 }`;
+
+// The key line for a fighter drawn on screen: the pale line the 2D path draws
+// just outside the finished fighter (drawFighter's keyLine), from this
+// fighter's silhouette mask. A pixel outside the silhouette with silhouette
+// within uRadius of it is line; the ink and body passes then cover the part of
+// it under the ink outline, as the 2D line sits under the body.
+const KEY_VS = `#version 300 es
+uniform vec4 uRect;       // the quad, clip space: x0, y0, x1, y1
+void main() {
+  vec2 c = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1));
+  gl_Position = vec4(mix(uRect.xy, uRect.zw, c), 0.0, 1.0);
+}`;
+const KEY_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uMask;
+uniform vec2 uMaskTexel;
+uniform float uRadius;    // device px
+uniform vec4 uColor;      // premultiplied
+out vec4 outColor;
+void main() {
+  vec2 p = gl_FragCoord.xy;
+  if (texture(uMask, p * uMaskTexel).a > 0.5) discard;
+  float hit = 0.0;
+  for (int i = 0; i < 12; i++) {
+    vec2 o = vec2(cos(float(i) * 0.5235988), sin(float(i) * 0.5235988));
+    hit = max(hit, texture(uMask, (p + o * uRadius) * uMaskTexel).a);
+    hit = max(hit, texture(uMask, (p + o * uRadius * 0.5) * uMaskTexel).a);
+  }
+  if (hit < 0.5) discard;
+  outColor = uColor;
+}`;
+
+const IDENTITY2 = [1, 0, 0, 1];
 
 function compile(gl, type, src) {
   const s = gl.createShader(type);
@@ -125,24 +174,26 @@ export const hexToRGB = (hex) => {
 };
 
 // Returns null where WebGL2 is unavailable, so the caller falls back cleanly.
-export function createToon() {
+// `onScreen`: a canvas that is itself on the page, to draw fighters straight
+// onto (render's `screen`). It is never read back, so its buffer is not kept.
+export function createToon({ onScreen = null } = {}) {
   if (typeof document === 'undefined') return null;
   // How the render reaches the 2D canvas (GL3D.COMPOSITE). 'canvas' keeps the
   // drawing buffer, since drawImage reads it straight after drawing; the other
   // two do not need to. An OffscreenCanvas hands over an ImageBitmap instead.
-  const mode = GL3D.COMPOSITE;
+  const mode = onScreen ? 'screen' : GL3D.COMPOSITE;
   const attrs = {
     alpha: true, premultipliedAlpha: true, antialias: true, depth: true,
-    preserveDrawingBuffer: mode !== 'nopreserve' && mode !== 'bitmap',
+    preserveDrawingBuffer: mode === 'canvas',
   };
-  let canvas = null, gl = null, bitmap = false;
+  let canvas = onScreen, gl = onScreen ? onScreen.getContext('webgl2', attrs) : null, bitmap = false;
   if (mode === 'bitmap' && typeof OffscreenCanvas !== 'undefined') {
     canvas = new OffscreenCanvas(300, 150);
     gl = canvas.getContext('webgl2', attrs);
     bitmap = !!gl && typeof canvas.transferToImageBitmap === 'function';
     if (!bitmap) { canvas = null; gl = null; }
   }
-  if (!gl) {
+  if (!gl && !onScreen) {
     canvas = document.createElement('canvas');
     gl = canvas.getContext('webgl2', attrs);
   }
@@ -157,12 +208,29 @@ export function createToon() {
   for (const n of ['uBones', 'uView', 'uInflate', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
     'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
     'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
-    'uSway', 'uSwayHang', 'uSwayDir']) {
+    'uSway', 'uSwayHang', 'uSwayDir', 'uRimDir', 'uFlash']) {
     loc[n] = gl.getUniformLocation(prog, n);
   }
   gl.useProgram(prog);
   gl.uniform1i(loc.uFace, 0);
   gl.uniform1i(loc.uMask, 1);
+  gl.uniformMatrix2fv(loc.uRimDir, false, IDENTITY2);
+  gl.uniform1f(loc.uFlash, 0);
+
+  // The key line's program, only for a renderer on screen.
+  let key = null;
+  if (onScreen) {
+    const kp = gl.createProgram();
+    gl.attachShader(kp, compile(gl, gl.VERTEX_SHADER, KEY_VS));
+    gl.attachShader(kp, compile(gl, gl.FRAGMENT_SHADER, KEY_FS));
+    gl.linkProgram(kp);
+    if (!gl.getProgramParameter(kp, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(kp));
+    key = { prog: kp, vao: gl.createVertexArray() };
+    for (const n of ['uRect', 'uMask', 'uMaskTexel', 'uRadius', 'uColor']) key[n] = gl.getUniformLocation(kp, n);
+    gl.useProgram(kp);
+    gl.uniform1i(key.uMask, 1);
+    gl.useProgram(prog);
+  }
 
   // The silhouette mask: a colour texture and a depth buffer the size of the
   // canvas, so a fragment's own coordinates address it. Grown with the canvas.
@@ -194,7 +262,17 @@ export function createToon() {
     canvas,
     gl,
     lost: false,
-    composite: bitmap ? 'bitmap' : attrs.preserveDrawingBuffer ? 'canvas' : 'nopreserve',
+    composite: onScreen ? 'screen' : bitmap ? 'bitmap' : attrs.preserveDrawingBuffer ? 'canvas' : 'nopreserve',
+
+    // A fresh frame on a canvas on screen: sized to match the 2D canvas it sits
+    // over, and cleared, so a frame with no 3D fighter in it shows none.
+    beginFrame(w, h) {
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      gl.disable(gl.SCISSOR_TEST);
+      gl.viewport(0, 0, w, h);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    },
 
     // What to drawImage from once a draw is done, and what to call once the
     // drawImage has run. A bitmap takes the canvas's image with it and must be
@@ -274,31 +352,79 @@ export function createToon() {
     // lighting (see GL3D.LIGHT); null lights the fighter as with no stage.
     // `sway(p)`, when given, is a primitive's hang ({ lag, pivot, dir, reach })
     // or null for one that rides its bones rigidly.
+    //
+    // `screen`, on a renderer made with `onScreen`, draws onto that canvas
+    // instead, over what is already there: { m, flash, keyline }, where m is
+    // the 2D canvas's transform [a, b, c, d, e, f] from the fighter's local px
+    // (feet at the origin, facing +x) to the canvas's device px, flash is the
+    // hit flash, and keyline is { px, color, alpha } or null. Facing and the
+    // pose's rotation are in m, as they are in the 2D path's transform, so a
+    // fighter facing left is drawn mirrored just as the 2D buffer is.
     render(gpu, matrices, {
       colours, box, squash = { x: 1, y: 1 }, jitter = 0, ss = GL3D.SS, visible = () => true, face = null,
-      inkless = NONE, glass = NO_GLASS, light = null, sway = null,
+      inkless = NONE, glass = NO_GLASS, light = null, sway = null, screen = null,
     }) {
       const U = GL3D.UNIT;
-      const vw = Math.round(box.w * ss), vh = Math.round(box.h * ss);
-      if (canvas.width < vw || canvas.height < vh) {
-        canvas.width = Math.max(canvas.width, vw);
-        canvas.height = Math.max(canvas.height, vh);
+      let vw, vh, view, flip = false, rimDir = IDENTITY2, reach = GL3D.RIM_REACH, keyRect = null, keyRadius = 0;
+      if (screen) {
+        vw = canvas.width; vh = canvas.height;
+        const [a, b, c, d, e, f] = screen.m;
+        const kx = squash.x * U, ky = squash.y * U;
+        const ex = a * jitter + e, fy = b * jitter + f;
+        // model units -> local px (kx, ky, jitter) -> device px (m) -> clip
+        // space, with the canvas's y down turned up
+        view = [
+          (2 * a * kx) / vw, (-2 * b * kx) / vh, 0, 0,
+          (-2 * c * ky) / vw, (2 * d * ky) / vh, 0, 0,
+          0, 0, -1 / DEPTH, 0,
+          (2 * ex) / vw - 1, 1 - (2 * fy) / vh, 0, 1,
+        ];
+        const det = a * d - b * c;
+        flip = det < 0;                          // mirrored: the winding turns over
+        const px = Math.sqrt(Math.abs(det));     // device px per local px
+        rimDir = [a * kx, -b * kx, -c * ky, d * ky];
+        reach = (GL3D.RIM_REACH / GL3D.SS) * px; // the same reach in local px as in the buffer
+        if (screen.keyline) {
+          keyRadius = (GL3D.INK * U + screen.keyline.px) * px;
+          // The quad: the box's corners on screen, out by the line's reach.
+          let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+          for (const lx of [-box.ox + jitter, box.w - box.ox + jitter]) {
+            for (const ly of [-box.oy, box.h - box.oy]) {
+              const dx = a * lx + c * ly + e, dy = b * lx + d * ly + f;
+              x0 = Math.min(x0, dx); x1 = Math.max(x1, dx); y0 = Math.min(y0, dy); y1 = Math.max(y1, dy);
+            }
+          }
+          const r = keyRadius + 2;
+          keyRect = [((x0 - r) / vw) * 2 - 1, 1 - ((y1 + r) / vh) * 2, ((x1 + r) / vw) * 2 - 1, 1 - ((y0 - r) / vh) * 2];
+        }
+        gl.viewport(0, 0, vw, vh);
+        gl.clear(gl.DEPTH_BUFFER_BIT);           // each fighter is drawn whole over the last
+      } else {
+        vw = Math.round(box.w * ss); vh = Math.round(box.h * ss);
+        if (canvas.width < vw || canvas.height < vh) {
+          canvas.width = Math.max(canvas.width, vw);
+          canvas.height = Math.max(canvas.height, vh);
+        }
+        gl.viewport(0, canvas.height - vh, vw, vh);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        const l = -box.ox / U, r = (box.w - box.ox) / U;
+        const t = box.oy / U, b = -(box.h - box.oy) / U;
+        view = [
+          (2 * squash.x) / (r - l), 0, 0, 0,
+          0, (2 * squash.y) / (t - b), 0, 0,
+          0, 0, -1 / DEPTH, 0,
+          (2 * (jitter / U) - (r + l)) / (r - l), -(t + b) / (t - b), 0, 1,
+        ];
       }
-      gl.viewport(0, canvas.height - vh, vw, vh);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      const viewport = screen ? [0, 0, vw, vh] : [0, canvas.height - vh, vw, vh];
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);
+      gl.frontFace(flip ? gl.CW : gl.CCW);
       gl.useProgram(prog);
-
-      const l = -box.ox / U, r = (box.w - box.ox) / U;
-      const t = box.oy / U, b = -(box.h - box.oy) / U;
-      gl.uniformMatrix4fv(loc.uView, false, [
-        (2 * squash.x) / (r - l), 0, 0, 0,
-        0, (2 * squash.y) / (t - b), 0, 0,
-        0, 0, -1 / DEPTH, 0,
-        (2 * (jitter / U) - (r + l)) / (r - l), -(t + b) / (t - b), 0, 1,
-      ]);
+      gl.uniformMatrix4fv(loc.uView, false, view);
+      gl.uniformMatrix2fv(loc.uRimDir, false, rimDir);
+      gl.uniform1f(loc.uFlash, screen && screen.flash ? 1 : 0);
       gl.uniformMatrix4fv(loc.uBones, false, matrices);
       const L = lighting(light);
       gl.uniform3fv(loc.uKey, L.key);
@@ -334,7 +460,7 @@ export function createToon() {
       gl.bindTexture(gl.TEXTURE_2D, null);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindFramebuffer(gl.FRAMEBUFFER, mask.fbo);
-      gl.viewport(0, canvas.height - vh, vw, vh);
+      gl.viewport(...viewport);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.cullFace(gl.BACK);
       gl.uniform1f(loc.uMaskPass, 1);
@@ -358,7 +484,27 @@ export function createToon() {
       gl.bindTexture(gl.TEXTURE_2D, mask.tex);
       gl.activeTexture(gl.TEXTURE0);
       gl.uniform2f(loc.uMaskTexel, 1 / canvas.width, 1 / canvas.height);
-      gl.uniform1f(loc.uRimReach, GL3D.RIM_REACH);
+      gl.uniform1f(loc.uRimReach, reach);
+
+      // The key line, under everything else this fighter draws.
+      if (keyRect) {
+        const k = screen.keyline, col = hexToRGB(k.color);
+        gl.useProgram(key.prog);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.uniform4fv(key.uRect, keyRect);
+        gl.uniform2f(key.uMaskTexel, 1 / canvas.width, 1 / canvas.height);
+        gl.uniform1f(key.uRadius, keyRadius);
+        gl.uniform4f(key.uColor, col[0] * k.alpha, col[1] * k.alpha, col[2] * k.alpha, k.alpha);
+        gl.bindVertexArray(key.vao);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.BLEND);
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
+        gl.useProgram(prog);
+      }
 
       for (const pass of ['ink', 'body', 'glass']) {
         const ink = pass === 'ink';
@@ -388,6 +534,9 @@ export function createToon() {
       gl.depthMask(true);
       gl.disable(gl.BLEND);
       gl.uniform1f(loc.uAlpha, 1);
+      gl.uniform1f(loc.uFlash, 0);
+      gl.uniformMatrix2fv(loc.uRimDir, false, IDENTITY2);
+      gl.frontFace(gl.CCW);
       gl.bindVertexArray(null);
       // The viewport sits at the top of the canvas image, so the drawn region
       // is the source rect (0, 0, vw, vh) for drawImage.

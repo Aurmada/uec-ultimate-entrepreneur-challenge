@@ -9,7 +9,7 @@ import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
-import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D } from './gl3d/index.js';
+import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D } from './gl3d/index.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 import { FX_STYLE } from './fx.js';
 
@@ -1248,8 +1248,23 @@ export function drawFighter(ctx, f, t) {
   // rendered into the same offscreen buffer, so the key line, hit flash and
   // blit are shared with the procedural rig below. Parts are not drawn yet.
   if (has3D(def)) {
-    const B = fighterBuffer(bufferMetrics(body));
+    const metrics = bufferMetrics(body);
     const stanceEl = f.state === 'idle' ? (def.stance || null) : null;
+    // On the 3D layer (GL3D.LAYER, set up by render.js for this frame): drawn
+    // straight onto the WebGL canvas on screen at the place the buffer would
+    // go, key line and hit flash included, so nothing is copied back.
+    if (layerActive3D() && drawLayer3D(f, P, ctx.getTransform(), metrics, {
+      elbowF: stanceEl?.elbowF ?? STYLIZE.ELBOW,
+      elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,
+      jitter: f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0,
+      face: FACE_PAINTER,
+      flash: f.flashT > 0,
+      keyline: STYLIZE.KEYLINE_A > 0 ? { px: STYLIZE.KEYLINE_PX, color: STYLIZE.KEYLINE_COL, alpha: STYLIZE.KEYLINE_A } : null,
+    })) {
+      ctx.restore();
+      return;
+    }
+    const B = fighterBuffer(metrics);
     if (B && render3D(B, f, P, {
       elbowF: stanceEl?.elbowF ?? STYLIZE.ELBOW,
       elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,

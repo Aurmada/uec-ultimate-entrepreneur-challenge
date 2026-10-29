@@ -25,6 +25,9 @@ let enabled = false;
 let only = null;                          // fighter ids to render in 3D, or null for all
 let perf = null;
 let renderer = null;
+// The renderer that draws fighters straight onto a canvas on screen, its
+// canvas, and whether a frame is being drawn onto it now (beginLayer3D).
+let layerR = null, layerEl = null, layerOn = false;
 const models = new Map();                // model id -> { ready, rig, gpu, failed }
 const waiting = [];                      // callbacks for the next model to finish loading
 let stageLight = null;                   // the light of the stage being fought on, if any
@@ -54,8 +57,81 @@ export function disable3D() { enabled = false; }
 export function reset3D() {
   if (renderer?.gl) renderer.gl.getExtension('WEBGL_lose_context')?.loseContext();
   renderer = null;
+  dropLayer3D();
   models.clear();
   enabled = false;
+}
+
+// ---- fighters drawn straight onto a canvas on screen (GL3D.LAYER) ----
+// render.js stacks this canvas over the 2D game canvas, between the world
+// behind the fighters and what is drawn in front of them, and asks for it once
+// per frame. drawFighter then draws a 3D fighter here instead of rendering it
+// offscreen and copying it into its 2D buffer, which is the read back that cost
+// most of a 3D fighter's time on an iPhone. Portraits keep the copy: they are
+// drawn rarely, and into canvases of their own.
+
+// The canvas, made with its renderer on first asking, or null where there is
+// no WebGL2 for it.
+export function layerCanvas3D() {
+  if (layerEl === null && typeof document !== 'undefined') {
+    const el = document.createElement('canvas');
+    try { layerR = createToon({ onScreen: el }); } catch (e) { console.warn('[gl3d] no layer:', e); layerR = null; }
+    layerEl = layerR ? el : false;
+  }
+  return layerEl || null;
+}
+
+// The canvas goes, and with it its context: the next layerCanvas3D makes both
+// again. render.js forgets a stack whose canvas has left the page.
+export function dropLayer3D() {
+  if (layerR?.gl) layerR.gl.getExtension('WEBGL_lose_context')?.loseContext();
+  if (layerEl) layerEl.remove();
+  layerR = null; layerEl = null; layerOn = false;
+}
+
+// Starts a frame on the layer, sized to the 2D canvas under it and cleared.
+// False when there is nothing to draw onto.
+export function beginLayer3D(w, h) {
+  if (!layerR || layerR.lost) { layerOn = false; return false; }
+  layerR.beginFrame(w, h);
+  layerOn = true;
+  return true;
+}
+export function endLayer3D() { layerOn = false; }
+export const layerActive3D = () => layerOn && !!layerR && !layerR.lost;
+
+// Draws fighter f onto the layer: the same pose and look render3D draws, at
+// the place the 2D path would put its buffer. `m` is the 2D canvas's
+// transform at that moment (a DOMMatrix, or { a, b, c, d, e, f }), `box` the
+// buffer's frame ({ ox, oy, w, h }, rig px), and `keyline` the 2D key line's
+// { px, color, alpha }, or null for none. False when f has no 3D model.
+export function drawLayer3D(f, P, m, box, { elbowF, elbowB, jitter = 0, face = null, flash = false, keyline = null }) {
+  if (!layerActive3D()) return false;
+  const entry = modelFor(f.def);
+  if (!entry) return false;
+  const t0 = performance.now();
+  solvePose(entry.rig, P, { F: elbowF, B: elbowB });
+  last.id = f.def.id; last.state = f.state; last.P = P; last.matrices = entry.rig.matrices;
+  const t1 = performance.now();
+  const sq = (v) => (Number.isFinite(v) ? v : 1);
+  const lags = swayOf(f, P);
+  drawModel(entry, f.def, f.state, f.unicornT > 0, P.face, face, {
+    box, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight,
+    sway: entry.sway.size ? (p) => hangOf(entry, p, lags) : null,
+    screen: { m: [m.a, m.b, m.c, m.d, m.e, m.f], flash, keyline },
+  }, layerR);
+  if (perf) layerR.finish();
+  const t2 = performance.now();
+  if (perf) perf.add('3d', { solve: t1 - t0, gpu: t2 - t1, blit: 0 });
+  return true;
+}
+
+// A model's meshes on a renderer: each renderer has its own context, so the
+// layer uploads its own copy of a model the first time it draws it.
+function gpuFor(entry, r) {
+  if (r === renderer) return entry.gpu;
+  if (!entry.layerGpu) entry.layerGpu = r.upload(entry.model);
+  return entry.layerGpu;
 }
 
 function load(id) {
@@ -71,6 +147,7 @@ function load(id) {
       const model = extractModel(parseGLB(buf));
       if (model.jointNames.length > MAX_JOINTS) throw new Error(`${id} has more than ${MAX_JOINTS} joints`);
       entry.rig = buildRig(model, spec);
+      entry.model = model;                 // kept for a second renderer's upload (gpuFor)
       entry.gpu = renderer.upload(model);
       entry.inkless = new Set(spec.inkless || []);
       entry.glass = new Map(Object.entries(spec.glass || {}));
@@ -206,7 +283,7 @@ function hangOf(entry, p, lags) {
 
 // One posed model onto the renderer's canvas: the fighter's palette, what
 // they wear in this state and condition, and their face in this expression.
-function drawModel(entry, def, state, unicorn, expression, painter, view) {
+function drawModel(entry, def, state, unicorn, expression, painter, view, r = renderer) {
   const memo = memoFor(def);
   const palette = def.c || {};
   const colours = (p) => {
@@ -218,14 +295,14 @@ function drawModel(entry, def, state, unicorn, expression, painter, view) {
     return rgb;
   };
   const photo = def.photo && painter ? painter.photo(def) : null;
-  const face = entry.face && painter ? faceFor(entry.face, def, expression, painter, photo) : null;
+  const face = entry.face && painter ? faceFor(entry.face, def, expression, painter, photo, r) : null;
   const wkey = `${state}|${unicorn ? 'u' : ''}|${photo ? 'p' : ''}`;
   let wears = memo.wears.get(wkey);
   if (!wears) {
     wears = wearing(def, state, { unicorn, photo: !!photo });
     memo.wears.set(wkey, wears);
   }
-  return renderer.render(entry.gpu, entry.rig.matrices, {
+  return r.render(gpuFor(entry, r), entry.rig.matrices, {
     ...view, colours, visible: (p) => wears(p.name), face, inkless: entry.inkless, glass: entry.glass,
   });
 }
@@ -261,9 +338,9 @@ function faceSlot(id, F) {
 // still leaves a face. Each is its own cached texture, so neither is painted
 // more than once. Render is synchronous, so one slot per model serves every
 // fighter wearing it.
-function faceFor(slot, def, expression, painter, photo) {
+function faceFor(slot, def, expression, painter, photo, r = renderer) {
   const key = slot.key + (photo ? faceKey(def) : drawnFaceKey(def));
-  slot.texture = renderer.texture(key) || renderer.uploadTexture(key, paintFaces(slot, def, painter.paint, photo));
+  slot.texture = r.texture(key) || r.uploadTexture(key, paintFaces(slot, def, painter.paint, photo));
   slot.cell = faceCell(expression);
   return slot;
 }
@@ -331,6 +408,7 @@ export function stats3D() {
   return {
     enabled, only: only ? [...only] : null, renderer: !!renderer, lost: !!renderer?.lost,
     composite: renderer?.composite || null,
+    layer: !!layerR && !layerR.lost,
     models: Object.fromEntries([...models].map(([id, e]) => [id, e.ready ? 'ready' : e.failed ? 'failed' : 'loading'])),
     timing: perf ? perf.summary() : null,
   };
