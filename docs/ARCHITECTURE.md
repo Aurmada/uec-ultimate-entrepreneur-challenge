@@ -491,9 +491,8 @@ first nine and all worth checking before adjusting offsets:
 
 ### Live 3D fighters (prototype, `?gl`)
 
-> Status, October 2026: this lives on the `live-3d` branch and is not merged
-> into `main`, so the live site does not have it. `docs/HANDOFF.md` has where it
-> stands and what is next.
+> Status, October 2026: in `main` since v3.10, off unless the address asks for
+> it (`?gl`). `docs/HANDOFF.md` has where it stands and what is next.
 
 A second body renderer, behind a URL flag and off by default. It exists to test
 whether a 3D model can replace the procedural rig without losing what the rig

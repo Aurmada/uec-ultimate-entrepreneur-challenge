@@ -6,8 +6,8 @@ Read in this order: `docs/HANDOFF.md` (where things stand, what is next, what th
 
 ## Branches
 
-- `main`: the live game (see `VERSION` in `src/config.js`; v3.9.4 in late October 2026). `docs/HANDOFF.md` lists the other branches and which are released.
-- `live-3d`: the 3D prototype (3D fighters, Blender-rendered stages, fighting-game effects, all behind `?gl`). Built on top of `main`, pushed, **not merged**. Prototype work continues here.
+- `main`: the live game (see `VERSION` in `src/config.js`; v3.10 in late October 2026). Since v3.10 it carries the 3D prototype (3D fighters, Blender-rendered stages, fighting-game effects), dark behind `?gl`. `docs/HANDOFF.md` lists the other branches and which are released.
+- `live-3d` and `claude/game-review-enhance-29bffb`: the prototype's earlier branches, superseded by `main`. Work on the 3D path now branches from `main`.
 
 ## Run and test
 
@@ -30,7 +30,7 @@ npm test                      # Node 21+, no npm install: there are no dependenc
 6. **Privacy and safety.** Never put emails in the world-readable `profiles` table. Every user-authored string goes through `esc()` before `innerHTML`.
 7. **Push or deploy only when the owner explicitly asks.** Anything that creates or changes paid resources (Supabase) needs the owner's OK first.
 8. **Writing.** Docs and comments in Canadian English, no em dashes. Comments explain why, in the voice already in the file.
-9. **Performance.** The 3D rig should stay within about 2 ms a frame, worst case, on a mid-range phone. Not yet measured on a phone.
+9. **Performance.** The 3D rig should stay within about 2 ms a frame, worst case, on a mid-range phone. Measured so far only on the owner's iPhone, a fast one: 0.7 ms a frame with the 3D layer (`GL3D.LAYER`), against about 4 ms copying into the 2D canvas. Do not go back to the copy for on-screen fighters.
 
 ## Before calling something done
 
@@ -40,5 +40,5 @@ npm test                      # Node 21+, no npm install: there are no dependenc
 
 ## Environment
 
-- Blender 5.0 is needed only to rebuild the prototype's model and stages on `live-3d` (`assets/models/founder.glb`, `assets/stages/`, scripts in `lab/blender/`). The built files are committed.
+- Blender 5.0 is needed only to rebuild the 3D model and stages (`assets/models/founder.glb`, `assets/stages/`, scripts in `lab/blender/`). The built files are committed.
 - Keep the checkout out of iCloud-synced folders (`~/Documents`, `~/Desktop`): iCloud evicts files from `.git` and git hangs. See HANDOFF.

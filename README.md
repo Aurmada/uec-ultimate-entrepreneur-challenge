@@ -71,9 +71,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
-## In progress: the live 3D prototype (branch `live-3d`, not released)
+## What's new in v3.10: the fighters in 3D, if you ask for them
 
-Answering "can the fighters look more like a modern fighting game, without copying one": a second renderer draws every fighter as a skinned, toon-shaded 3D model in WebGL2, posed live from the same 2D animation data, so every move, stance, body knob, colour, look option and player build carries over. Alongside it: arenas rendered in Blender, fighters lit by their stage, and fighting-game hit effects. Everything is behind URL flags, off by default, and render-only, so it cannot change a match. With the flags off the game is exactly v3.8.
+- 🎮 **A 3D preview you can switch on.** Add `?gl` to the game's address and every fighter becomes a toon-shaded 3D model, posed from the same animation as the 2D fighter, so every move, stance, look and player build carries over, your photo included. The arenas become lit stages rendered in Blender, with depth as the camera pans; the fighters take their stage's light; hits land with bursts, trails and a banner for specials and Unicorn Mode; and the portraits turn 3D. It is off unless you ask for it, and it only changes how the fight looks, never what happens in it, so you can play anyone online with it on or off.
+- 📱 **Built to run on a phone.** The 3D fighters are drawn straight onto the screen in a layer of their own rather than copied into the picture, which was most of their cost. On an iPhone they add under a millisecond a frame and the game holds 60 frames a second.
+- 😠 **Fighters snarl when they attack.** The 2D attack face grinned through every punch, a curve drawn upside down. It now snarls, as it was always meant to. With 3D off, that is the only thing you will see change.
 
 | Flag | What you get |
 | --- | --- |
@@ -82,9 +84,7 @@ Answering "can the fighters look more like a modern fighting game, without copyi
 | `?stages`, `?fx`, `?sharp` | each piece on its own, with the 2D fighters |
 | `?gl=max,dex` | only those fighters in 3D; `&perf` adds a timing readout |
 
-Since the first version: the rendered arenas have depth (the city outside the boardroom and the mountains behind the summit hold still while the room slides in front of them), hair and coats trail when a fighter moves, the back light stays on the outline instead of streaking down a leg, and a hit's burst flies the way the blow went.
-
-The model and the stages are built by scripts in `lab/blender/` (Blender 5, headless, a few seconds each) and committed, so nothing needs Blender to run. Where it stands, what is next and the decisions still open are in [docs/HANDOFF.md](docs/HANDOFF.md); how it works is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 7.
+How it works is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 7; what is next, and the decisions still open, in [docs/HANDOFF.md](docs/HANDOFF.md). The model and the stages are built by scripts in `lab/blender/` (Blender 5, headless, a few seconds each) and committed, so nothing needs Blender to run.
 
 ## What's new in v3.9.4: the computer picks its moment
 
