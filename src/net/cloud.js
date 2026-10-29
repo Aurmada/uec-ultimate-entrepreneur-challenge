@@ -128,3 +128,41 @@ export async function reportOnlineMatch({ roomId, opponentUid, iWon, myRounds, o
     return 'error';
   }
 }
+
+// ---- single-player results, for tuning the difficulty levels ----
+// How a match against a roster AI went: whom, at which level, and the score.
+// Nothing about the player is sent, and the table keeps no user id
+// (report_solo on the server, which also checks every field). Only the owner
+// reads it. A ghost challenge is a player's build, not the roster, so it is
+// left out, as is anything that is not single-player.
+export function soloReport(result, { version, threeD = false } = {}) {
+  if (!result || result.mode !== 'solo' || result.isChallenge) return null;
+  const opponent = result.defs?.[1]?.id;
+  if (!opponent) return null;
+  return {
+    p_opponent: opponent,
+    p_level: result.difficulty,
+    p_won: result.winnerIdx === 0,
+    p_rounds_won: result.score[0],
+    p_rounds_lost: result.score[1],
+    p_ko_rounds: result.koRounds[0],
+    p_version: version,
+    p_three_d: !!threeD,
+  };
+}
+
+// Sends it. Fire and forget: a match that cannot be reported changes nothing
+// for the player. Returns the server's word ('recorded', 'invalid', 'busy',
+// 'not-signed-in') or 'error', for the console and the lab.
+export async function reportSoloMatch(result, opts) {
+  const payload = soloReport(result, opts);
+  if (!payload) return 'skipped';
+  if (!currentUser()) return 'not-signed-in';
+  try {
+    const sb = await getSupabase();
+    const { data, error } = await sb.rpc('report_solo', payload);
+    return error ? 'error' : data;
+  } catch (e) {
+    return 'error';
+  }
+}

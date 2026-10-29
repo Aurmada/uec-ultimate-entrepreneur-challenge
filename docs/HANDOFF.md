@@ -556,6 +556,18 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   live match.
 - Emails never go in `profiles`. A trigger on `auth.users` copies them into a
   private `user_emails` table that only its owner can read.
+- `solo_results` (since v3.10.2) records how single-player matches against the
+  roster AI end: opponent, level, win or loss, rounds, KO rounds, game version
+  and whether 3D was on. No user id and nothing personal. RLS is on with no
+  policies and no grants, so no client can read or write it; the
+  security-definer RPC `report_solo()` writes it for a signed-in player, checks
+  every field (a best of three, a known level, an id-shaped opponent), and
+  refuses more than 120 rows a minute in all. Ghost challenges, two-player and
+  online matches are not sent (`soloReport` in `src/net/cloud.js`). Only the
+  owner reads it, from the dashboard's SQL editor, for example:
+  `select opponent, level, count(*) as n, round(avg(won::int) * 100) as player_win_pct from solo_results group by 1, 2 order by 2, 4;`
+  The security advisor flags its "RLS enabled, no policy" and the RPC being
+  callable when signed in; both are intended, as for `report_match()`.
 - Live matches use Realtime broadcast channels (one per room) and a presence
   lobby. No tables. Protocol in ARCHITECTURE section 5.
 - `UEC.signInAs()` is local only: it creates no auth user and no profile row.
