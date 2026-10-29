@@ -8,8 +8,11 @@ import { audio, installAudioUnlock } from './engine/audio.js';
 import { input, HumanController, isTouchDevice } from './engine/input.js';
 import { AIController } from './engine/ai.js';
 import { Game } from './engine/game.js';
-import { renderGame } from './engine/render.js';
+import { renderGame, RENDER } from './engine/render.js';
+import { STAGES } from './engine/stage.js';
+import { FX_STYLE } from './engine/fx.js';
 import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.js';
+import { enable3D, stats3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
@@ -172,7 +175,7 @@ function reallyStartMatch(cfg) {
   // VS splash
   const vs = $('vsSplash');
   drawPortrait($('vsFace1'), cfg.p1Def);
-  drawPortrait($('vsFace2'), cfg.p2Def);
+  drawPortrait($('vsFace2'), cfg.p2Def, { mirror: true });   // a 3D bust turns to face P1
   $('vsName1').textContent = cfg.p1Def.name;
   $('vsName2').textContent = cfg.p2Def.name;
   vs.classList.remove('hidden');
@@ -609,7 +612,7 @@ function startOnlineMatch(cfg) {
 
   const vs = $('vsSplash');
   drawPortrait($('vsFace1'), hostDef);
-  drawPortrait($('vsFace2'), guestDef);
+  drawPortrait($('vsFace2'), guestDef, { mirror: true });    // a 3D bust turns to face the host
   $('vsName1').textContent = hostDef.name;
   $('vsName2').textContent = guestDef.name;
   vs.classList.remove('hidden');
@@ -1156,11 +1159,30 @@ function boot() {
   // player's own founder from their photo and look choices.
   if (new URLSearchParams(location.search).has('sprites')) enableSprites(true);
 
+  // Live 3D fighters, the prototype: ?gl renders everyone in their own look,
+  // ?gl=max,dex only those fighters, &perf adds a timing readout.
+  const glParam = new URLSearchParams(location.search);
+  if (glParam.has('gl')) {
+    const ids = (glParam.get('gl') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    enable3D({ ids, timing: glParam.has('perf') });
+  }
+  // Fighters drawn at screen resolution (see RENDER in render.js). On with the
+  // 3D prototype so it is judged at its real sharpness; ?sharp tries it on 2D.
+  if (glParam.has('gl') || glParam.has('sharp')) RENDER.sharpFighters = glParam.get('sharp') !== '0';
+  // Arenas rendered in Blender (see engine/stage.js): on with the 3D prototype,
+  // &stages=0 turns them off, ?stages tries them with 2D fighters.
+  if (glParam.has('gl') || glParam.has('stages')) STAGES.enabled = glParam.get('stages') !== '0';
+  // Fighting-game hit effects, trails and cut-ins (engine/vfx.js): on with the
+  // 3D prototype, &fx=0 turns them off, ?fx tries them with 2D fighters.
+  if (glParam.has('gl') || glParam.has('fx')) FX_STYLE.impact = glParam.get('fx') !== '0';
+
   if (DEBUG) {
     window.UEC = {
       get game() { return currentGame; },
       enableSprites,
       spritesReady,
+      enable3D,
+      stats3D,
       Save,
       input,
       startMatch,

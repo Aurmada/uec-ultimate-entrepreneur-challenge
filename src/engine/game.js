@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT, FX_ART } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -42,6 +42,16 @@ export const DROP_EFFECTS = [
   } },
 ];
 
+// Which way a landed blow travels, for the impact burst (FX_ART.IMPACT): up
+// with a launcher's knock, down along a low hit. Render-only.
+function blowTilt(a) {
+  const I = FX_ART.IMPACT;
+  if (a.kind === 'delivery') return -I.DOWN;
+  if (a.hitY > I.LOW_Y) return -I.LOW;      // before the knock: a sweep is low even if it lifts a little
+  if (a.kbUp < 0) return I.UP * Math.min(1, -a.kbUp / I.LIFT);
+  return 0;
+}
+
 // Drawn from the seeded RNG, so both peers in a live match see the same one.
 const VICTORY_CRIES = ['ACQUIRED!', 'EXIT!', 'LIQUIDATED!', 'UNICORN!', 'IPO!', 'DUE DILIGENCE!'];
 
@@ -69,6 +79,11 @@ export class Game {
     this.timescale = 1;
     this.dt = 0;
     this.t = 0;
+    // Game time that stops for hitstop and slows with the KO slow motion: the
+    // clock the fighters' poses move on. Render-only effects that follow a
+    // pose (strike trails, projectile wakes) age on it, since `t` keeps
+    // running through the freeze. Nothing in the simulation reads it.
+    this.simT = 0;
     this.paused = false;
     this.winnerIdx = -1;
     this.roundWinner = -1;
@@ -95,6 +110,7 @@ export class Game {
 
     const dt = rawDt * this.timescale;
     this.dt = dt;
+    this.simT += dt;
 
     switch (this.state) {
       case 'intro': this.updateIntro(rawDt); break;
@@ -262,6 +278,7 @@ export class Game {
       def.vx = dir * 180;
       this.audio.sfx('block');
       this.fx.ring(cx, cy, '#8fd8ff', 620, 6, 0.35);
+      this.fx.guard(cx, cy, dir);
       this.fx.popup(cx, cy - 40, 'OBJECTION!', '#8fd8ff');
       this.fx.shake(4);
       return;
@@ -276,6 +293,7 @@ export class Game {
       this.giveEnergy(def, PARRY.ENERGY);
       this.audio.sfx('parry');
       this.fx.ring(cx, cy, '#ff9df3', 720, 7, 0.34);
+      this.fx.impact(cx, cy, -dir, '#ff9df3', 0.8);     // the blow goes back the way it came
       this.fx.popup(cx, cy - 44, 'COUNTERED!', '#ff9df3');
       this.fx.hitstop(0.13);
       this.fx.shake(6);
@@ -293,6 +311,7 @@ export class Game {
       this.giveEnergy(def, PARRY.ENERGY);
       this.audio.sfx('parry');
       this.fx.ring(cx, cy, '#8fd8ff', 700, 7, 0.32);
+      this.fx.guard(cx, cy, dir, '#8fd8ff', true);
       this.fx.popup(cx, cy - 44, 'PARRIED!', '#8fd8ff');
       this.fx.hitstop(0.12);
       this.fx.shake(5);
@@ -315,6 +334,7 @@ export class Game {
       this.audio.sfx('block');
       this.fx.spark(cx, cy, '#8fd8ff', 6, 240);
       this.fx.ring(cx, cy, '#8fd8ff', 350, 3, 0.22);
+      this.fx.guard(cx, cy, dir);
       this.fx.shake(2);
       return;
     }
@@ -356,6 +376,8 @@ export class Game {
     const words = a.words || ['POW!'];
     this.fx.popup(cx, cy - 30, words[Math.floor(Math.random() * words.length)], slap ? '#ff9df3' : heavy ? '#ff3d6e' : '#ffd23f');
     this.fx.spark(cx, cy, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 7 : heavy ? 14 : 9, slap ? 280 : heavy ? 430 : 330);
+    this.fx.impact(cx, cy, dir, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 0.15 : heavy ? 0.85 : 0.45,
+      blowTilt(a));
     this.fx.shake(a.shake || 6);
     this.fx.hitstop(slap ? 0.045 : heavy ? 0.1 : 0.06);
   }
@@ -386,6 +408,7 @@ export class Game {
     if (blocked) {
       this.audio.sfx('block');
       this.fx.spark(def.x - dir * 20, def.y - 100, '#8fd8ff', 6, 240);
+      this.fx.guard(def.x - dir * 20, def.y - 100, dir);
       return;
     }
     const amt = Math.min(STEAL.AMOUNT, Math.floor(def.energy));
@@ -398,6 +421,7 @@ export class Game {
     this.audio.sfx('steal');
     this.fx.coins(def.x, def.y - 90, 7);
     this.fx.spark(att.x, att.y - 100, '#ffd23f', 6, 260);
+    this.fx.impact(def.x - dir * 20, def.y - 90, dir, '#ffd23f', 0.3);
     this.fx.popup(def.x, def.y - 150, amt > 0 ? '💸 ACQUI-HIRED!' : 'ALREADY BROKE!', '#ffd23f');
     if (amt > 0) this.fx.popup(att.x, att.y - 175, `+${amt}⚡`, '#57ff8a');
     this.fx.hitstop(0.07);
@@ -441,6 +465,7 @@ export class Game {
     this.audio.sfx('throwSlam');
     this.fx.shake(14);
     this.fx.spark(att.x, att.y - 110, '#ff3d6e', 16, 460);
+    this.fx.impact(att.x, att.y - 110, -dir, '#ff3d6e', 1);
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
   }
@@ -454,6 +479,7 @@ export class Game {
   // ---------------- specials plumbing ----------------
   onSpecialStart(f, sp) {
     this.fx.flash(f.def.c.accent, 0.12);
+    this.fx.cutIn(f, sp.name || 'SPECIAL', null, f.x <= this.other(f).x ? -1 : 1);
     if (sp.type === 'grab') this.audio.sfx('grab');
     if (sp.type === 'rush') this.audio.sfx('rush');
   }
@@ -491,6 +517,7 @@ export class Game {
       words: ['SLIDE!', 'NEXT SLIDE!'], sfx: 'paperHit', shake: 5,
     });
     this.fx.ring(owner.x + owner.facing * 48, owner.y - 112, owner.def.c.accent, 260, 3, 0.18);
+    this.fx.launch(owner.x + owner.facing * 48, owner.y - 112 + (i - 1) * 10, owner.facing, null, owner.def);
   }
 
   spawnRain(owner) {
@@ -525,6 +552,7 @@ export class Game {
     this.audio.sfx('paperHit');
     this.audio.sfx('grab');
     this.fx.ring(p.x, p.y, '#ff4757', 760, 8, 0.32);
+    this.fx.impact(p.x, p.y, Math.sign(p.vx) || 1, '#ff4757', 0.9);
     this.fx.papers(p.x, p.y, 16);
     this.fx.shake(8);
     this.fx.flash('#ff4757', 0.1);
@@ -642,6 +670,7 @@ export class Game {
     this.fx.dust(x, STAGE.FLOOR, 10);
     this.fx.ring(x, STAGE.FLOOR - 8, f.def.c.accent, 520, 6, 0.3);
     this.fx.parcel(x, STAGE.FLOOR);
+    this.fx.slam(x, STAGE.FLOOR - 4, f.def.c.accent);
     this.fx.shake(7);
     // A column from the floor to the top of the sky. It falls on you, so a
     // jump in place does not clear it; stepping out of the zone does.
@@ -729,16 +758,19 @@ export class Game {
     const dir = Math.sign(opp.x - f.x) || 1;
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);
+    this.fx.warp(f.x, f.y, null, false, f.def);
     f.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, opp.x + dir * TELEPORT.PAST));
     f.facing = Math.sign(opp.x - f.x) || -dir;
     this.fx.dust(f.x, f.y - 40, 10);
     this.fx.ring(f.x, f.y - 90, f.def.c.accent, 420, 4, 0.3);
+    this.fx.warp(f.x, f.y, null, true, f.def);
     this.audio.sfx('teleport');
   }
 
   onBurnBlast(f) {
     this.audio.sfx('burn');
     this.fx.flames(f.x + f.facing * 30, f.y, 22, f.facing);
+    this.fx.blast(f.x + f.facing * 70, f.y - 60, f.facing);
     this.fx.ring(f.x + f.facing * 70, f.y - 80, '#ff9d1a', 600, 7, 0.3);
     this.fx.flash('#ff9d1a', 0.18);
     this.fx.shake(8);
@@ -751,6 +783,7 @@ export class Game {
     this.fx.ring(f.x, f.y - 80, '#ffd23f', 900, 8, 0.5);
     this.fx.sparkles(f.x, f.y, 26);
     this.fx.popup(f.x, f.y - 190, 'UNICORN MODE!', '#ff9df3');
+    this.fx.cutIn(f, 'UNICORN MODE', '#ff9df3', f.x <= this.other(f).x ? -1 : 1, true);
     this.fx.shake(10);
     const opp = this.other(f);
     if (Math.abs(opp.x - f.x) < 160 && opp.state !== 'ko') {
@@ -845,6 +878,7 @@ export class Game {
     this.hud.announce('K.O.!', 'ko');
     this.audio.sfx('ko');
     this.fx.flash('#ffffff', 0.65);
+    this.fx.impact(loser.x - dir * 10, loser.y - 100, dir, '#ffffff', 1);
     this.fx.shake(22);
     this.fx.hitstop(0.32);
     this.timescale = 0.3;

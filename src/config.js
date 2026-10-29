@@ -21,6 +21,66 @@ export const STAGE = {
   SCRIM: 0.42,
 };
 
+// Rendered stages (src/engine/stage.js, the live 3D prototype). Render-only.
+// The glow layer is blurred by GLOW_BLUR world px once when it loads, into a
+// world-size halo (it needs no more resolution than that), then breathes
+// between LOW and HIGH opacity RATE radians a second; an arena's `stage.glow`
+// can override any of the three. A decoded stage holds about 10 MB, so only
+// the KEEP most recently used stay loaded.
+//
+// PARALLAX draws a stage from its depth layers (stage.json `layers`, built by
+// lab/blender/build_stage.py) instead of the one picture, each moved by its
+// own depth as the camera pans, so the room has depth when the fight moves.
+// Off, or for a stage built before layers, the picture draws as it always did.
+export const STAGE_ART = {
+  GLOW_BLUR: 7,
+  GLOW: { LOW: 0.35, HIGH: 0.75, RATE: 1.6 },
+  KEEP: 2,
+  PARALLAX: true,
+};
+
+// Fighting-game effects for the live 3D prototype (engine/vfx.js, ?gl).
+// Render-only: none of this can change a hit, a frame or a hitstop.
+export const FX_ART = {
+  IMPACT: {
+    R: [22, 46],          // burst radius, light hit .. heavy hit (world px)
+    DUR: [0.16, 0.26],    // burst lifetime (s, real time, so it plays through hitstop)
+    SPIKES: [7, 13],
+    STREAKS: [2, 6],      // lines thrown along the blow
+    GROW: 0.28,           // share of the lifetime spent swelling to full size
+    // Which way a blow travels, read from the move: a launch's upward knock
+    // (kbUp) turns its burst up, to at most UP radians at LIFT, and a low hit
+    // (hitY under LOW_Y) skims down by LOW radians, and a parcel that falls
+    // on you bursts DOWN radians toward the floor.
+    UP: 0.9, LIFT: 420, LOW_Y: -60, LOW: 0.28, DOWN: 1.25,
+  },
+  GUARD: { R: 38, PARRY_R: 60, DUR: 0.22, PARRY_DUR: 0.34 },
+  // A special's cut-in: a band across the upper screen with the fighter and
+  // the move's name, the stage dimmed behind the fighters while it plays.
+  CUTIN: {
+    DUR: 0.8, SUPER_DUR: 1.1,
+    IN: 0.1, OUT: 0.16,   // slide in, slide out (s)
+    Y: 172, H: 132,       // band centre and height (screen px)
+    SKEW: 0.2,            // horizontal shear across the band
+    DIM: 0.5,             // how dark the stage goes behind the fighters
+    BUST: 1.8,            // bust size, as a share of the band's height
+  },
+  // The swipe behind a strike: the striking limb's path over SPAN seconds of
+  // game time, WIDTH px at its head and nothing at its tail.
+  TRAIL: { SPAN: 0.14, WIDTH: 26, ALPHA: 0.8, MIN_TRAVEL: 14 },
+  PROJECTILE: { GLOW: 36, ECHOES: 7, SPACING: 0.018 },
+  // Signature effects, one per kind of special. Radii in world px, times in s.
+  LAUNCH: { R: 30, DUR: 0.14 },                 // a projectile leaving the hand
+  BLAST: { R: 96, DUR: 0.5, PETALS: 11 },       // BURN RATE BLAST, BURN IT ALL
+  WARP: { W: 34, H: 200, DUR: 0.32 },           // a teleport's vanish and arrival
+  SLAM: { R: 88, DUR: 0.42, RAYS: 9 },          // SAME-DAY DELIVERY landing
+  AURA: {
+    STANCE: { R: 130, ALPHA: 0.38, RATE: 2.2, SAFETY: '#29d9ff', CAPABILITIES: '#ff3d6e' },
+    COUNTER: { COLOR: '#ff9df3', RATE: 18 },   // the window a counter is live
+    RUSH: { LINES: 7, LENGTH: 150 },            // speed lines behind a rush
+  },
+};
+
 export const PHYS = {
   WALK: 250,           // px/s, scaled by fighter speed stat
   AIR_DRIFT: 0.78,     // fraction of walk speed while airborne
@@ -397,6 +457,113 @@ export const PARTS = {
   SIZE: [1, 160],      // w / h / r range, rig px
   ROT: [-Math.PI, Math.PI],
   FOLLOW: [0, 1],      // cloth lag; 0 is rigid to the anchor
+};
+
+// ---- LIVE 3D FIGHTERS (prototype, ?gl) -------------------------------------
+// RENDER-ONLY, like STYLIZE. A skinned model from lab/blender is posed from the
+// same 2D pose the procedural rig draws, so every move, stance and body knob
+// already animates; nothing here is read by the simulation.
+export const GL3D = {
+  UNIT: 100,            // rig px per model unit; build_adam.py models in these units
+  SS: 2,                // supersampling, matching the procedural buffer
+  // How a finished 3D render is handed to the 2D canvas it is drawn into, fixed
+  // when the WebGL context is made. Render only. 'canvas' is drawImage of the
+  // WebGL canvas with its buffer preserved, as built; 'nopreserve' the same
+  // without preserving it (the drawImage runs in the task that drew, which the
+  // spec allows); 'bitmap' renders into an OffscreenCanvas and hands over an
+  // ImageBitmap, falling back to a plain canvas where that is missing. On an
+  // iPhone in October 2026 the hand-over was two thirds of a 3D fighter's time
+  // (0.10 ms pose, 0.68 ms GPU, 1.52 ms copy). All three cost the same there
+  // (3.77, 3.88 and 3.98 ms a frame for two fighters), so the price is moving
+  // the GPU's image into a 2D canvas at all, however it is handed over.
+  COMPOSITE: 'canvas',
+  // Fighters drawn straight onto a WebGL canvas stacked over the 2D game canvas,
+  // between the world behind them and what is drawn in front (render.js,
+  // renderSharp), instead of being copied into it. No read back, which COMPOSITE
+  // showed is the whole cost of the copy. On the same iPhone, two 3D fighters
+  // cost 0.70 to 0.80 ms a frame over 2D this way, against 3.5 to 4 ms copied
+  // (two runs, the second with the trail and light canvases). Render only;
+  // with it off, or with no page to stack onto, the copy path draws as before.
+  LAYER: true,
+  // How far the body opens toward the camera. 0 is a pure profile; fighting
+  // games turn the chest so it reads, and the lead arm and leg go to the FAR
+  // side, which is why the pose's armF and legF drive the model's .L limbs.
+  YAW: 0.62, HIP_YAW: 0.40, HEAD_YAW: 0.30,
+  LEAN: 0.6,            // the torso turns by bodyLean * LEAN, as drawFighter does
+  PELVIS_LEAN: 0.5,     // share of that lean the pelvis takes
+  HEAD_LEAN_PX: 26,     // head offset per unit of bodyLean, as drawFighter does
+  SOCKET_DROP: 8,       // shoulder sockets sit this far below shoulderY, as drawFighter does
+  SHOULDER_HALF: 0.27,  // model units, before body.shoulders
+  HIP_HALF: 0.10,
+  HIP_DROP: 0.02,
+  HAND_DEPTH: 0.85,     // how much of its shoulder's depth a hand keeps
+  FOOT_DEPTH: 1.10,
+  ANKLE_PX: 6,          // the 2D rig aims the shin 6 px above the foot
+  ELBOW_BACK: 0.45,     // how far back an elbow points, against 1 down
+  ELBOW_FLARE: 0.35,    // outward pull on the elbow pole
+  KNEE_FLARE: 0.25,
+  // Game-size readability. A model built to heroic proportions reads thin and
+  // pin-headed at 200 px, so girth and head size are pushed at draw time.
+  HEAD_SCALE: 1.25,
+  ARM_GIRTH: 1.40, LEG_GIRTH: 1.40, TORSO_GIRTH: 1.12, FOOT_SCALE: 1.15,
+  INK: 0.011,           // outline thickness, model units
+  INK_COLOR: '#140c08',
+  KEY: [0.42, 0.58, 0.70],  // toward the key light: forward, up, toward camera
+  BANDS: [0.40, -0.12],     // lit above the first, mid above the second
+  BAND_K: [1.0, 0.80, 0.60],
+  SHADOW_TINT: [0.86, 0.88, 1.06],
+  RIM: 0.40,
+  RIM_COLOR: [0.5, 0.47, 0.42],   // the rim on the key side, scaled by RIM
+  // A rim lights only the outline against the background: a pixel is rimmed
+  // when the body's silhouette mask is empty RIM_REACH device px out along its
+  // normal. Without it, the edge of a near leg over the far one, or an arm over
+  // the chest, caught the back light as a bright streak in the middle of the body.
+  RIM_REACH: 4,
+  // Secondary motion (engine/gl3d/sway.js): what hangs trails what it hangs
+  // from on a spring, K stiffness and C damping (about 0.5 of critical, so it
+  // overshoots once and settles), at most MAX world px, stepped on real time
+  // at most MAX_DT a step. An anchor that moves SNAP px in one step (a
+  // teleport, a new round) starts the spring over.
+  SWAY: { K: 110, C: 11, MAX: 24, MAX_DT: 1 / 30, SNAP: 90 },
+  // How a fighter is lit. A rendered stage brings its own (the arena's
+  // `stage.light`): the key light's colour on lit surfaces, the shadow tint,
+  // the rim, and a back light that rims whatever faces away from the camera.
+  // Anything a stage leaves out keeps these, which are exactly the look with
+  // no stage behind the fighters: white light, the rim above, no back light.
+  // Directions (KEY above, `back` here) are in the FIGHTER's frame: +x toward
+  // the opponent, +y up, +z toward the camera. The finished fighter is
+  // mirrored with its facing, so both fighters are lit alike from their own
+  // front, as the 2D shading does: a stage light sets a mood, it is not a
+  // lamp at a fixed place in the world.
+  LIGHT: { LIT: [1, 1, 1], BACK: [0, 0.35, -1], BACK_COLOR: [0, 0, 0] },
+  // Faces. Each fighter's 2D face is painted once per expression into a
+  // texture (cells FACE_CELL texels square, each spanning FACE_SPAN 2D px
+  // either side of the face centre) and projected onto the head. Up to
+  // FACE_TEXTURES faces stay uploaded, about 0.8 MB each with mipmaps; the
+  // least recently used goes first. A character select needs a dozen.
+  FACE_CELL: 160,
+  FACE_SPAN: 24,
+  FACE_TEXTURES: 12,
+  // A photo founder's face texture. A profile photo is cropped around the
+  // detected face with room to spare (screens.js pads the face 1.9x), so the
+  // face is FACE of the crop's width and sits FACE_DROP of it below centre.
+  // That face is placed SIZE head radii wide, FACE_Y radii below the eye line,
+  // and faded out between the two FEATHER shares of its radius, so what
+  // surrounded it in the photo never reaches the sides of the head.
+  PHOTO: { FACE: 0.53, FACE_DROP: 0.06, SIZE: 1.7, FACE_Y: 0.22, FEATHER: [0.62, 1.05] },
+  // Portraits: a bust framed on the head, turned further toward the viewer
+  // than a fighter in a match. SPAN is the rig px across the portrait, set so
+  // the 3D head fills about what drawPortrait's 2D head does; HEAD_AT is where
+  // the skull centre sits, as fractions of the portrait. The hands hang by
+  // the hips (rig px forward, and down from the hip), below the frame, since
+  // an idle guard would cover the face.
+  BUST: {
+    SPAN: 64,
+    HEAD_AT: [0.5, 0.42],
+    TURN: { yaw: 0.9, hipYaw: 0.6, headYaw: 0.35 },
+    HAND_F: [14, 16],
+    HAND_B: [-8, 16],
+  },
 };
 
 // ---------------------------------------------------------------------------

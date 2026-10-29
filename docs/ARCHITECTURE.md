@@ -130,7 +130,10 @@ docs/                 this file and friends
 | `drawFighter.js` | Procedural vector fighter. Pose composition, faces, hair, cel shading, key line. The largest and most delicate file. |
 | `proportions.js` | Body clamping and the pose post pass that applies proportions. |
 | `parts.js` | Render only character parts: pure placement (`resolveParts`) and drawing (`drawParts`). See section 7. |
+| `gl3d/` | The live 3D fighter prototype behind `?gl`: glTF reader, pose-to-bones rig, WebGL2 toon renderer. See section 7. |
 | `render.js` | Frame compositor and camera. |
+| `stage.js` | Rendered stages for the 3D prototype: loads an arena's Blender render and draws it with its glow, live screens and overlay. See section 7. |
+| `vfx.js` | Fighting-game effects for the 3D prototype: impact bursts, guard flashes, strike trails, projectile wakes, special cut-ins. Draws the state `fx.js` keeps. See section 7. |
 | `ai.js` | AI opponent. Decision ticks plus a per frame reflex layer. |
 | `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesized audio, particles and juice, and a dormant sprite-atlas path behind `?sprites`. |
 
@@ -486,6 +489,470 @@ first nine and all worth checking before adjusting offsets:
 * **Occlusion.** A `behind` part narrower than the body is covered by it. A coat only
   reads when the hem flares past the silhouette.
 
+### Live 3D fighters (prototype, `?gl`)
+
+> Status, October 2026: this lives on the `live-3d` branch and is not merged
+> into `main`, so the live site does not have it. `docs/HANDOFF.md` has where it
+> stands and what is next.
+
+A second body renderer, behind a URL flag and off by default. It exists to test
+whether a 3D model can replace the procedural rig without losing what the rig
+gets for free: every authored track, stance, command normal, body knob, colour
+and look option, including a player founder's. It is render-only and falls back
+to the procedural rig wherever WebGL2 is missing, the model has not loaded, or
+the context is lost.
+
+| Flag | Effect |
+| --- | --- |
+| `?gl` | Every fighter renders in 3D, wearing their own look: roster, base characters and player founders. |
+| `?gl=max,dex` | Only the fighters with those ids do, for comparisons and benchmarks. |
+| `&perf` | On-screen timing, with `gl.finish()` per 3D fighter, so GPU time is included (worst case). |
+| `&stages=0`, `&fx=0` | Turn off the rendered stages or the fighting-game effects, which `?gl` includes. `?stages` or `?fx` alone tries either with 2D fighters. |
+
+The pipeline, end to end:
+
+```
+lab/blender/build_founder.py   Blender script: metaball body and look options, armature, weights, glTF
+assets/models/founder.glb      the only file the game loads, worn by every fighter
+data/models3d.js               model registry, and how a fighter's look picks its meshes
+engine/gl3d/glb.js             minimal .glb reader: one skin, indexed triangles, base colours
+engine/gl3d/rig.js             2D pose -> 3D joints -> two-bone IK -> skinning matrices
+engine/gl3d/toon.js            WebGL2: an ink pass (inflated back faces), then banded lighting
+engine/gl3d/index.js           flags, loading, what a fighter wears, faces, render3D() and renderBust3D()
+```
+
+`drawFighter` asks `has3D(def)` and hands `render3D()` the same proportioned
+pose it would have drawn, plus its own offscreen buffer. The model is drawn
+into that buffer, so the key line, hit flash, facing flip, KO rotation and the
+blit into the world are shared with the procedural path, and so is the camera.
+
+**One model, every fighter.** A fighter in this game is data, and a player
+founder is the same data from the profile screen, so there is no model per
+character. `founder.glb` is a base body plus one named mesh per look option, and
+`wearing(def, state)` picks which to draw:
+
+* `body` always draws: skin, legs and shoes. The head is bare; each fighter's
+  face is painted onto it (see Faces, below).
+* `<slot>:<option>` draws when the fighter's look picks it. The slots are `hair`
+  (13 styles, including the roster's backwards `cap`), `headwear`, `eyewear`,
+  `facialHair`, `outfit` (all nine) and `accessory`. `resolveLook3D` reads a look
+  exactly the way `drawFighter` does, older roster conventions included:
+  `hairStyle: 'cap'` is a cap worn instead of hair, and `accessory` doubles as
+  eyewear and as stubble.
+* `prop:<id>` draws when the fighter carries a part with that id, in that part's
+  states, so the block briefcase appears only while blocking. Every part the
+  roster carries has one: the universal briefcase and all nine signature props.
+  Hand-held props ride `grip.L` or `grip.R`; the rest hang off the torso or head.
+* `fx:<condition>` draws while the fighter is in that condition (`CONDITIONS`
+  in `models3d.js`): `fx:unicorn` is Unicorn Mode's golden horn, in matches and
+  in a bust drawn with `unicorn`.
+* A founder who fights with a photo wears no modelled eyewear or facial hair,
+  as `drawHead` draws none over a photo: the person's own are in it.
+
+Colours come from the fighter's palette by material role, as below, so the same
+bomber is green with pink trim on one player and pink with green trim on Kim.
+
+**The model contract.** Anything that follows it can replace `founder.glb`,
+which is the point: an artist can rebuild it by hand in Blender.
+
+* Units are rig units: 1.0 is 100 rig px, the scale the pose already uses.
+* Blender Z is up and the character faces +X. Its right side (`.R`) is -Y, which
+  glTF export turns into +Z, toward the renderer's camera.
+* Joints are named `hips`, `spine`, `chest`, `neck`, `head`, `upper_arm.R/L`,
+  `forearm.R/L`, `thigh.R/L`, `shin.R/L` and `foot.R/L`, plus optional
+  `grip.L` and `grip.R` for held props. The runtime reads only where each joint sits at bind
+  time (from the inverse bind matrices), never bone rolls. glTF stores joints but
+  not bone ends, so `models3d.js` records where the leaf bones end and where the
+  skull centre sits.
+* Meshes are named `body`, `<slot>:<option>`, `prop:<id>` or `fx:<condition>`, as above.
+* Each material is named for the palette role it takes its colour from (`suit`,
+  `suit2`, `skin`, `pants`, `shoe`, `hair`, `accent`); any other name keeps its
+  exported colour. `models3d.js` can mark a material `inkless` (glasses frames:
+  wire thinner than the outline, which the ink pass would swell into a black
+  bar) or `glass`, with an opacity (the visor, a tint the eyes show through, as
+  in 2D). Glass draws last, blended, with no outline.
+
+`test/gl3d.test.js` holds the model to this: every option a player can pick has a
+mesh or is painted on (never both), every roster fighter resolves to meshes that
+exist, every part has a 3D prop, and every vertex is weighted to a bone near it.
+
+**How a 2D pose drives the bones.** The procedural rig stores hand and foot
+TARGETS, not elbows and knees, and stretches a limb to reach a target, which is
+how a zoner's jab visibly out-ranges a grappler's off the same keyframes. `rig.js`
+does the same in 3D: two-bone IK toward each target, stretching past full reach
+rather than falling short, so the fist still lands where the hitbox is. Four
+choices shape the result:
+
+* The chest turns `GL3D.YAW` toward the camera, fighting-game style, which puts
+  the lead arm and leg (the pose's `armF` and `legF`) on the FAR side.
+* Elbows point down and back. The 2D rig bends toward the perpendicular of
+  shoulder-to-hand, which flips sign when a hand passes behind the body; at 2D's
+  gentle bend that reads fine, but a real upper arm folds hard and the flip
+  became a chicken wing.
+* Both bones of a limb twist about one hinge axis (`cross(u, bend)` from the IK),
+  which never degenerates. Twisting each bone from the bend vector itself did,
+  whenever a forearm swung into line with it.
+* Girth and head size are pushed at draw time (`GL3D.ARM_GIRTH` and friends). A
+  model built to heroic proportions reads thin and pin-headed at 200 px.
+
+Hazards found while building it:
+
+* **Bones belong to parts, not to object names.** The base body is several parts
+  joined under one name. The build script first stored each name's bone list,
+  so the last part's list (the soles) won and the whole body was weighted to the
+  feet; every structural check passed and every fighter rendered with its head
+  and arms flung across the screen. Parts are weighted before they are joined
+  now, and the distance-to-bone test exists because of it.
+* **A held prop must not ride the forearm.** Strapped to the forearm, the block
+  briefcase turned with the arm, and a tight guard swung it behind the arm into
+  the body. It rides `grip.L`, which follows the lead fist but keeps the body's
+  orientation, the way a 2D part is an unrotated offset from the hand.
+* **Everything on the head turns with it.** Kim's ring light, built square to the
+  bind pose, turned with the head's posed yaw and read as a sideways bead chain.
+  It is built pre-turned by `GL3D.YAW + GL3D.HEAD_YAW`, and a test fails if those
+  change without the model being rebuilt.
+* **Keep a prop's colour on the camera side.** A dark screen modelled on the
+  front of Steve's device and Cathie's tablet hid the accent colour that makes
+  them read at game size; the 2D parts are solid colour, and so are these.
+* **A NaN in the pose blanks the fighter.** `ctx.scale(NaN, NaN)` is silently
+  ignored, so the procedural rig never shows it; in a projection matrix it draws
+  nothing. A staged fighter with no `vy` produces exactly that in the jump pose,
+  which is why `render3D` guards the squash values.
+* **Model URLs resolve against the module, not the page.** A page-relative path
+  worked from `index.html` and 404'd from `lab/`.
+* **One WebGL context serves every fighter**, with `preserveDrawingBuffer` on,
+  because each fighter is read back with `drawImage` straight after it is drawn.
+
+**Faces.** A modelled face has one expression, and in 2D every character has
+their own brows, lids and mouth, changing with state (`P.face`: idle, angry,
+block, hurt, ko, happy). So the 3D head is bare, and `drawFighter`'s own
+`drawFace` paints it. The first time a fighter is drawn, `index.js` has the
+painter draw every expression into one texture, a cell each (`FACE_STATES`,
+`GL3D.FACE_CELL`), keyed by the face values so fighters with the same face
+share it. The toon shader projects the pose's cell onto the `body` skin in
+BIND space, so the face rides the head bone. `MODELS3D.founder.face` says
+where: the eye line, the model units per 2D px, how far forward a surface must
+be, and how the face fades as the surface turns away. Stubble is painted into
+the same texture rather than modelled (`PAINTED_LOOKS`), because in 2D it is a
+translucent shade over the jaw. None of this touches the 2D path: with 3D off,
+fighters and portraits hash identically before and after.
+
+A founder with a photo fights with it. Their face texture is the photo, one
+picture for every expression as in 2D, keyed by a fingerprint of the photo
+alone. Projected whole it failed: the photo is cropped around the face with
+room to spare, and what surrounded the face showed as a grey patch down the
+side of the head. So the face is cut out of the crop by where `screens.js`
+framed it (`GL3D.PHOTO`: the share of the crop the face takes, and where it
+sits) and feathered into the skin, which the profile screen samples from the
+same photo. Until the photo has decoded, and for good if it never does, the
+founder wears their drawn face, exactly as `drawHead` falls back in 2D. The
+drawn face and the photo are separate cached textures (`drawnFaceKey`,
+`faceKey`), so neither is painted more than once. Modelled eyewear and facial
+hair hide only while the photo is actually the face (`conditions.photo` in
+`wearing`); with the drawn fallback the founder keeps their whole look. (The
+first version left the head bare while a photo decoded and repainted it every
+frame, and a photo that never decoded left a blank head for the whole match.)
+Their portraits stay 2D: a flat photo reads better in a frame than one wrapped
+round a head.
+
+What it took to look right:
+
+* **The head is sculpted to the 2D face.** Projected onto the first head (a brow
+  ridge, cheekbones, a long jaw and a real nose), the same drawing read as a
+  skull: the brows sank into sockets and the mouth landed on the nose. The face
+  is now broad and flat at the front, the jaw short, the nose a small button
+  above where the mouth is drawn, and one scale serves every feature.
+* **Nothing is built over a drawn feature.** Facial hair stops short of the
+  mouth, and cap, beanie and band crowns sit on the brow line, as
+  `drawHeadwear` keeps 2D crowns clear of the eyes. A test measures every hair,
+  headwear and facial hair mesh against the eyes and mouth; it caught the afro,
+  the beard, the moustache, both caps, the beanie and the bandana.
+* **The projection turns a little toward the camera** (`turn`, 0.15 rad). The
+  camera sees the near side of the face almost square on, and a straight-ahead
+  projection spread the near brow across it. At 0.3 the near side read best in
+  a portrait, but in a match the far eye slid round to the silhouette. Judge a
+  face change at the match angle, not only in a portrait.
+
+**Portraits.** With 3D on, `drawPortrait` draws a 3D bust (`drawBust3D`) instead
+of the 2D head and shoulders, keeping the backdrop, grade and frame. The pose is
+the fighter's idle with the hands dropped below the frame, where a guard would
+cover the face; `renderBust3D` turns the body further toward the viewer
+(`GL3D.BUST.TURN`) and frames the orthographic view on the head. `opts.mirror`
+turns a bust to face left, which the VS splash and HUD use on the right-hand
+side. A portrait drawn while the model is still loading is drawn in 2D and
+again once it lands (`pending3D`, `on3DReady`), or stays 2D if the load fails.
+Only the latest thing drawn into a canvas counts: `drawPortrait` cancels any
+queued redraw of its canvas, and anything else that draws into a portrait
+canvas must call `releasePortrait` first (the select screen's RANDOM tile
+does), or the late redraw paints a fighter over it. A player with a photo keeps
+the 2D bust, since the photo is the face. A bust costs about 2 ms, drawn once per
+screen rather than per frame. Kim's ring light is pre-turned for the match head
+yaw (above), so in a bust, where the head turns further, it sits a third of a
+radian off square.
+
+Not done yet: body knobs scale bones rather than using shape keys.
+
+**Rims on the outline only.** The key-side rim and a stage's back light light a
+surface turned away from the camera, and so did any inner edge: a near leg over
+the far one, an arm over the chest, which read as bright streaks down the middle
+of a fighter under the boardroom's moonlight. The toon renderer now draws the
+body's silhouette into an offscreen mask first (pass 0 in `toon.js`), and a rim
+lands only where that mask is empty `GL3D.RIM_REACH` device px out along the
+surface's normal. A first attempt that judged "outer" by the normal against the
+hips missed these streaks, which sit near the body's centre line; the mask does
+not guess. The mask is a texture attached to a framebuffer, so it is unbound from
+its sampler while it is drawn (WebGL refuses a draw that could read what it
+writes) and bound on unit 1 so the face texture on unit 0 is never disturbed.
+
+**Secondary motion.** What hangs trails what it hangs from (`engine/gl3d/sway.js`).
+Each fighter keeps a render-only spring per anchor (the head, the hips), in a
+`WeakMap` in `index.js` rather than on the Fighter, whose own properties are all
+simulation state by test. The vertex shader adds the anchor's lag to a hanging mesh
+by how far each vertex hangs from the mesh's pivot, squared, so a ponytail bends
+from its tie. `MODELS3D.founder.sway` lists the meshes (the ponytail, long hair,
+the bob at half gain, Cathie's coat) with pivots read off `build_founder.py`, so the
+model and its contract are unchanged. At rest the lag is zero; a turn round, a
+teleport or a new round snaps the spring rather than flinging the hair
+(`GL3D.SWAY.SNAP`). It runs on real time, so it keeps settling through a hitstop.
+
+**Sharp fighters.** Both renderers shared one resolution limit: the whole world,
+fighters included, is drawn at 960x540 and the camera crop scales it up (about
+2.2x with the device pixel ratio), which throws away the fighter's own 2x
+buffer. `RENDER.sharpFighters` in `render.js` (on with `?gl`, or `?sharp` for the
+2D rig) draws the world as two native-size layers, everything behind the
+fighters and everything in front, and draws the fighters straight onto the
+screen between them under the camera transform. With it off, the default path is
+pixel-identical to before the split (checked by hashing a rendered frame from
+both versions).
+
+Measured in September 2026 on an M2 Max, in a live AI-vs-AI match at 60 fps,
+whole-frame render time: 1.73 ms with both fighters in 2D, 1.93 ms with both in
+3D; with sharp fighters, 1.98 ms and 2.07 ms. Adding faces moved neither number
+past the noise between runs (1.3 to 2.3 ms in 2D in the same session). The model
+holds 46 meshes and 42.7k triangles in 1.3 MB, and a fighter draws about 10k of
+them. Phone numbers come from `lab/gl3d-bench.html`, a match that
+needs no sign-in: serve with `python3 dev-server.py 4173` and open
+`http://<this machine's LAN address>:4173/lab/gl3d-bench.html` on a phone on the
+same network. `lab/gl3d-gallery.js` renders one fighter through every state, the
+whole roster, every look option (as bodies or as busts), every face close up in
+each expression, or every portrait, and `lab/blender/build_founder.py` rebuilds
+the model in about five seconds.
+
+**The 3D layer** (`GL3D.LAYER`, on by default with `?gl`). On an iPhone the copy
+was the cost: getting a WebGL image into a 2D canvas reads it back from the GPU,
+1.5 ms per fighter, however it is handed over (`GL3D.COMPOSITE` tried three
+ways). So with sharp fighters the game canvas is joined by canvases stacked
+over it, made by `render.js` the first time a 3D fighter is on screen, in this
+order:
+
+```
+game canvas   the stage, the world behind the fighters, auras, a 2D fighter drawn before any 3D one
+WebGL canvas  the 3D fighters, drawn straight on under the 2D canvas's own transform,
+              key line and hit flash included (toon.js, render with `screen`)
+trails        mix-blend-mode: plus-lighter, so they add light as 'lighter' did
+top           a 2D fighter drawn after a 3D one, and everything in front of the fighters
+key glow      mix-blend-mode: soft-light, at 1/8 size: drawStageLight's soft-light gradient
+vignette      at 1/8 size
+cut-in        the cut-in banner and the full-screen flash
+```
+
+A blend drawn on a canvas of its own only meets that canvas's empty pixels, so
+the two blends that need what is under them blend in the page with CSS instead,
+the same blend the copy path draws with. The first build drew the stage light
+on the top canvas, and the soft-light gradient came out as a pale haze over the
+whole frame. The glow and vignette are smooth and only move when the screen
+shakes, so they sit on small canvases redrawn only then; the trail and cut-in
+canvases are hidden while empty. The screen shake (`fx.shakeX`) is a new random
+offset on every read, so the frame reads it once and moves every canvas by it.
+The stack is placed from the game canvas's computed size and measured offset,
+not its whole-pixel `offsetTop`, so it does not sit half a pixel off. With
+`LAYER` off, without a 3D fighter, or with no page (tests), the copy path draws.
+
+What the stack cannot hold, measured against the copy path on frozen frames
+(the hosted bench's `#look-copy` and `#look-layer`): an aura drawn by the fighter
+in front no longer washes over a 3D fighter behind it (Unicorn Mode's glow,
+when both are in it and close), every trail lies over every 3D fighter, and a
+3D fighter's edges are crisper, since they are drawn at the screen's
+resolution rather than upscaled from the 2x buffer. Everything else matches to
+within a few levels. `test/layer3d.test.js` holds the projections to the buffer
+path and drives the stack on fake canvases.
+
+**Rendered stages.** The fighters were 3D and the arenas were still flat
+drawings. Every arena now also has a stage built in Blender, and with `?gl` the
+game draws that instead (`&stages=0` turns it off, `?stages` tries it with 2D
+fighters). With the flag off the procedural arenas draw exactly as before:
+game frames on all six arenas hash identically before and after.
+
+```
+lab/blender/build_stage.py       the shared part: camera, helpers, renders, stage.json
+lab/blender/stages/<arena id>.py one scene each, as build(kit)
+assets/stages/<arena id>/        back.webp, glow.webp, the depth layers, stage.json (1.8 MB for all six)
+src/engine/stage.js              loads a stage and draws it
+src/data/arenas.js               each arena's `stage`: where it lives, its live screens, its overlay
+```
+
+`Blender -b --factory-startup -P lab/blender/build_stage.py -- garage` rebuilds
+one stage in about five seconds. What it writes:
+
+* `back.webp`: the stage at twice the 960x540 world, so it stays sharp under the
+  camera's zoom. With sharp fighters it is drawn straight to the screen under the
+  camera, like the fighters; the world layer (grade, scrim, haze, shadows,
+  traps) draws over it as before.
+* `glow.webp`: only what gives off light, on transparent. It is blurred once at
+  load into a halo and breathes over the stage (`STAGE_ART.GLOW`), which is the
+  life a still picture otherwise lacks: string lights, the city's windows, the
+  rainbow neon. A dim emitter (a night window, a laptop) can stay out of it.
+* `stage.json`: the size, where the rendered floor landed, and each **screen**:
+  a flat panel whose four corners the build projects into world px. The arena
+  paints it every frame (`stage.screens`), so the sponsor boards keep cycling
+  sponsors (the sponsorship hook), the boardroom TV keeps its chart and the
+  exchange board its candles. What cannot be a panel (confetti, drifting
+  clouds, sweeping spotlights, sparkles) is the arena's `stage.overlay`, drawn
+  over the stage in world px. Both reuse the procedural arena's own drawing,
+  split out of it without changing a pixel.
+
+**Depth: the stage in layers.** A picture moves as one piece when the camera
+pans, so nothing in it read as nearer or further. The build therefore also
+renders each stage in depth layers, and with `STAGE_ART.PARALLAX` (on) the
+runtime draws those instead of `back.webp`, each moved against the fight lane by
+its own depth: `pan * (1 - p)`, where `pan` is how far the camera is from the
+centre and `p` is `DISTANCE / (DISTANCE + depth)`, 1 at the lane and 0 at the
+horizon. Nothing moves until the camera does, so a still frame is the picture
+(the layers composited at rest differ from `back.webp` by about 3 levels on
+average, at anti-aliased edges).
+
+* `far.webp`: everything whose nearest face is at least `FAR_Y` (8 units) deep,
+  over the sky. The boardroom's city and the summit's mountains hold almost
+  still while the window frames and the railing slide across them.
+* `floor.webp`: everything flat on the floor. A plane seen from a camera that
+  slides sideways shears, each row at the rate of its own depth, and that rate
+  is a straight line in the row (0 at the horizon, 1 at the floor line), so the
+  floor is one skewed `drawImage` (`floorSkew`). The fighters' feet stay put on
+  it and the rows nearer than the lane run faster than the camera, which is why
+  it is rendered `OVERSCAN` (100 px) past each side.
+* `room<n>.webp`: everything else, in bands no wider than `P_STEP` (0.03) of
+  parallax, each cropped to what it covers. Two props in one band slide against
+  each other by at most 1.5 px at the widest pan. A band is rendered with only
+  its own objects visible to the camera (the rest still light it and cast its
+  shadows) and the floor as a holdout, so a wall's foot below floor level stays
+  hidden as it is in the picture.
+* Each layer with an emitter has a `-glow.webp` at the world's own size; screens
+  move with the layer they hang in (`screenP`), and an arena can give its overlay
+  a depth (`overlayP`: the summit's clouds move with the sky).
+
+`test/stages.test.js` holds the layers to the files (sizes, draw order) and checks
+that no pan the camera can make, up to the KO shot's 1.6x, opens a gap at the
+edge of the frame; that test fails without the floor's overscan. Measured on an
+M2 Max, drawing a layered stage costs 0.05 to 0.12 ms a frame more than the
+picture (0.22 to 0.32 ms against 0.16 to 0.26 ms for the stage alone). The six
+stages went from about 0.75 MB to 1.8 MB, most of it the boardroom's lit city.
+
+**The camera is the contract.** A stage is only usable if the fighters stand on
+its floor, so the build camera is fixed by the game, not the scene: it never
+tilts (walls stay upright), it sits `DISTANCE` in front of the fight lane with a
+lens that makes one unit 100 stage px there, and its lens shift puts the lane's
+floor on `STAGE.FLOOR`. After building a scene the script projects the lane's
+floor and a unit along it, and refuses to write the stage if either is off by
+half a pixel. `test/stages.test.js` checks the written files against the game:
+image sizes, the floor, a painter for every screen and a screen for every
+painter, and that painters and overlays run.
+
+What it took:
+
+* **Emitters cast no shadows.** A bulb inside its own lamp's light threw a dark
+  blot across the garage wall; the kit turns shadows off for anything emissive.
+* **Keep emission low enough to keep its colour.** At high strength the view
+  transform washes a coloured bulb to white; the string lights read as colours
+  at about 1.
+* **A screen that is drawn whole needs no panel.** The summit banner sags and
+  waves below its own quad, so its panel is invisible and marks only the place.
+* **Stages are not free to hold.** A decoded stage is about 10 MB, so only the
+  last two used stay loaded (`STAGE_ART.KEEP`), and the glow halo is kept at
+  world size. Anything that measures a stage (`lab/contrast.js`) has to wait for
+  it to load, or it measures the procedural fallback.
+
+Measured in September 2026 with the 3D fighters and the pinned contrast cast
+(`lab/contrast.js`): the share of the fighter that nearly vanishes into the
+stage went from 33.2% to 32.0% on average, best on the Unicorn Club (33.3% to
+30.5%) and worst on the Stock Exchange (33.6% to 34.3%), so no scrim was
+retuned. In the benchmark match the garage stage costs no more frame time than
+the procedural garage it replaces. `lab/stages.js` renders each arena both ways
+in a real match for comparison.
+
+**A stage lights its fighters.** On a rendered stage the 3D fighters take the
+stage's light (`stage.light` on the arena, read by the toon shader through
+`setLight3D`): a hint of the key light's colour on lit surfaces, a shadow
+tint, a rim on the key side, and a back light that rims whatever faces away
+from the camera, which is what stands a fighter against the stage behind:
+moonlight in the boardroom, the market board's green in the exchange, the
+sunset at the summit. With no stage, or none loaded, `lighting(null)` is
+exactly the light the fighters had before. The first version tinted the
+fighters strongly toward each stage's palette, and `lab/contrast.js` showed it
+costing readability (the share of a fighter lost against its stage went from
+32.0% to 32.6%, and the boardroom from 32.6% to 34.1%). Tints at a third of
+that strength, with the rims kept, measure 31.6%: the rims buy back what the
+tint costs. `lab/stages.js` `lighting()` renders each stage with and without.
+
+**Fighting-game effects.** The last part of "like Street Fighter" is how a move
+lands. With `?gl` (`&fx=0` turns it off) the game adds, on top of the classic
+sparks, rings and comic words:
+
+* **Bursts follow the blow.** A burst turns with the move that landed it
+  (`blowTilt` in `game.js`, `FX_ART.IMPACT`): up with a launcher's knock, a little
+  up for a kick, low along a sweep such as UNDERCUT, and down for a delivered
+  parcel, which also slams the floor (`fx.slam`).
+* **Impact bursts.** A landed hit draws a white-hot core, spikes thrown hardest
+  along the blow and streaks racing away from it, bigger and longer-lived the
+  heavier the move (a slap, a punch, a kick or launcher). Blocks draw a
+  hexagonal guard flash; a parry draws a larger double one with a white core.
+  Grabs, the C&D explosion, counters and a KO burst too.
+* **Strike trails.** The swipe behind a strike follows whichever limb target
+  travelled furthest in the last 0.14 s of game time, tapered from nothing to
+  its full width at the fist or foot, in the fighter's own colour. It reads the
+  pose drawFighter just drew (`poseOf`), so it works for both renderers. Its
+  points age on `game.simT`, which stops for hitstop, so a trail holds still
+  through the freeze. (They first aged on `game.t`, which runs on through
+  hitstop, and the trail drained away during the very freeze it is for.)
+* **Projectile wakes.** A halo and a trail of fading echoes behind every slide,
+  envelope and coin, on the same clock.
+* **Cut-ins.** A special or Unicorn Mode slides a band across the upper screen
+  with the fighter's bust (`drawPortrait` with `bare`, so the 3D bust when there
+  is one) and the move's name, and dims the stage behind the fighters while it
+  plays.
+* **The KO shot.** When a round ends in a KO the camera pushes in on the fighter
+  going down, past the zoom play is allowed, and holds through the slow motion
+  (`KO_CAM` in `render.js`). Only with sharp fighters on a rendered stage, which
+  is drawn at twice the world: anywhere else a 1.6x zoom blurs the whole frame.
+* **A signature for each kind of special.** A projectile leaves the hand in a
+  flare (`fx.launch`); BURN RATE BLAST and BURN IT ALL throw fire up and forward
+  over a shock along the floor (`fx.blast`); a teleport leaves a pillar of light
+  that pinches out where the fighter was and opens where they land
+  (`fx.warp`). Three conditions are drawn behind the fighter straight from its
+  state, with nothing stored (`drawAura`): the glow and floor circle of an
+  ALIGNMENT SHIFT stance, a flickering outline while a counter is live, speed
+  lines behind a rush. A grab, the coin rain and a trap already had their own.
+
+An effect wears the fighter's accent, or their suit when the accent is too
+pale to read as a colour (`signatureColour`). The numbers are `FX_ART` in
+`config.js`.
+
+The split matters more than the drawing. `fx.js` keeps the state and the
+simulation reports to it exactly as it did (`fx.impact`, `fx.guard`,
+`fx.cutIn`, next to the existing `fx.spark` calls), and those methods return
+at once with the flag off. `vfx.js` does the drawing, and nothing in the
+simulation may import it; the structural test in `determinism.test.js` now
+forbids it along with the stage and effects state. None of it adds hitstop:
+hitstop lives in `fx.js` but it is simulation time (`game.update` returns early
+while it runs), and the flag is per client, so two peers in a live match can
+disagree about it. `test/vfx.test.js` runs a busy scripted match with the
+effects on and off and requires identical state fingerprints every ten frames,
+and requires that effects actually fired. With the flag off, game frames on all
+six arenas and every 2D portrait hash exactly as before; with it on, the
+benchmark match measured within noise of the same match without effects.
+`lab/vfx.js` stages each effect in a real match (a whiffed kick for the trail
+alone, a punch, a kick, a block, a parry, a special and a super) and captures
+it the frame it happens.
+
 ---
 
 ## 8. Where numbers live
@@ -506,10 +973,12 @@ what lets a measurement harness sweep a value without editing engine code.
 `npm test` runs the Node built in test runner. No framework, no mocks, no DOM.
 The simulation is fully headless, which is why the tests can drive real matches.
 
-Run `npm test` for the current count; it was 385 across 19 files at v3.9.4, and a
+Run `npm test` for the current count; it was 385 across 19 files at v3.9.4 on
+`main` and 442 with v3.9.4 on the prototype in October 2026, and a
 pinned number in a document is a number that rots. It needs Node 21 or newer,
-because the script passes a quoted glob to `node --test`. The files
-worth knowing:
+because the script passes a quoted glob to `node --test`. The files worth knowing:
+pinned number in a document is a number that rots. It needs Node 21 or newer,
+because the script passes a quoted glob to `node --test`. The files worth knowing:
 
 | File | What it protects |
 | --- | --- |
@@ -518,6 +987,10 @@ worth knowing:
 | `schema.test.js` | Validation and pricing, including the `params` axes. |
 | `playerBuild.test.js` | The founder creator's economics: that trades exist and that the priciest move is still reachable. |
 | `codec.test.js` | Challenge links survive a round trip and cannot be hand edited into inventing a move. |
+| `gl3d.test.js` | The 3D model honours its contract: joints, weights near their bones, a mesh for every look option and prop, the pose solver landing fists and feet, faces kept clear of hair. |
+| `stages.test.js` | Every rendered stage has its images at the right size, its floor on `STAGE.FLOOR`, a painter for every live screen, and a usable light. |
+| `vfx.test.js` | The effects never move the simulation (scripted matches on and off), their clock stops for hitstop, and each effect's state behaves. |
+| `faces.test.js` | The 2D mouths curve the way the faces mean them to: the attack snarl frowns, idle follows `MOUTH_CURVE`. |
 
 Two testing lessons this codebase keeps re-teaching:
 
@@ -647,6 +1120,21 @@ exists for the same reason: hooks for a driver that isn't committed yet.
 * **Not every move sets `attack`.** A dash changes state, a super sets a buff
   timer, and a stance switch (ALIGNMENT SHIFT) changes `stanceId` without ever
   building an attack. Watching `fighter.attack` alone misses them.
+* **Hitstop is simulation time.** It lives in `fx.js` beside the particles, but
+  `game.update` returns early while it runs, so anything that adds or stretches
+  hitstop changes the match. A render-only effect (and anything behind a URL
+  flag, which one peer can have and the other not) must never call
+  `fx.hitstop`.
+* **`game.t` runs through hitstop; `game.simT` does not.** `game.t` is advanced
+  before the hitstop early return, so it is wall time for animation that should
+  keep moving (a stage's glow, a billboard). Anything that follows a fighter's
+  pose must use `game.simT`, which stops with the poses and slows with the KO
+  slow motion, or it drifts away from the frozen frame.
+* **The 2D attack face had its mouth upside down.** The snarl's quadratic had its
+  corners above its control point, which on a canvas (y runs down) is a grin.
+  `test/faces.test.js` now reads each mouth's shape. Curves are easy to get
+  backwards here: check a mouth or a brow against that test, not by eye at
+  thumbnail size.
 * **`setState` resets `stateT`.** Calling it every frame for a state the fighter
   is already in freezes that state's clock. That is how a held block parried
   every hit from v1.4 to v3.8: the parry check reads `stateT <= PARRY.WINDOW`,

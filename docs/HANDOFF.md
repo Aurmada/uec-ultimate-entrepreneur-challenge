@@ -23,10 +23,10 @@ The open question is how it runs on a phone: that has never been measured.
 A review session on 2026-10-18 built **v3.9**, released on 2026-10-25: step 3 of
 the move system, a deferred effect, as Jeff Bozo's own signature (SAME-DAY
 DELIVERY), plus two AI fixes and a gap in the live-match fingerprint. v3.9.1
-points the page and the docs at the new address. The same session left one local
-branch, not pushed: `live-3d` with v3.9 merged in and the prototype's leftovers
-done (parallax for the rendered stages, hair and coats that trail, rims that stay
-on the outline, and hit bursts that follow the blow).
+points the page and the docs at the new address. The same session built a
+branch, `claude/game-review-enhance-29bffb`: `live-3d` with v3.9 merged in and
+the prototype's leftovers done (parallax for the rendered stages, hair and coats
+that trail, rims that stay on the outline, and hit bursts that follow the blow).
 
 Sessions on 2026-10-25 built two more releases, v3.9.2 (a throw that goes
 behind the thrower from either side) and v3.9.3 (an AI that reads traps), and
@@ -44,14 +44,14 @@ the same day.
 | --- | --- | --- |
 | `main` | The live game, v3.9.4 (`SIM_VERSION` 9) | Deployed. A push here is a release. 385 tests pass. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
-| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers | **Only on the original Mac, never pushed.** 412 tests pass. |
+| `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Pushed from the original Mac on 2026-10-28. 412 tests pass. |
+| `claude/gfx-v3.9.4` | That branch with `main` merged up to v3.9.4, plus the 3D layer | Built in a cloud session. 448 tests pass. The candidate for the new `live-3d`. |
 
 The graphics branch was built in a git worktree under `.claude/worktrees/` on
-the original machine, and it exists nowhere else: a cloud session cannot reach
-it. Until it is pushed, the October review's prototype work (parallax, trailing
-hair and coats, rims on the outline, hit bursts that follow the blow) is one
-deleted folder away from gone. It does not have v3.9.1's address change or
-anything after it; merging `main` into it brings them.
+the original machine and pushed from there on 2026-10-28, so it is safe.
+`claude/gfx-v3.9.4` merges v3.9.2, v3.9.3 and v3.9.4 into it; the only code
+conflict was the teleport in `game.js` (the prototype's warp effect, and v3.9.3's
+`TELEPORT.PAST` in place of 84), and both are kept.
 
 ## v3.9.4, released 2026-10-28: the computer picks its moment
 
@@ -310,6 +310,20 @@ branch. In short:
   at screen resolution between two world layers instead of being upscaled with
   the 960x540 world.
 
+Added on `claude/game-review-enhance-29bffb` (2026-10-18; ARCHITECTURE section 7):
+
+- **Parallax.** Each stage is also rendered in depth layers (the far distance,
+  the floor, bands of the room) and each moves by its own depth as the camera
+  pans; the floor is one skewed image. The boardroom's city and the summit's
+  mountains hold still behind the window frames and railing. `STAGE_ART.PARALLAX`.
+- **Secondary motion.** Ponytails, long hair, bobs and Cathie's coat trail their
+  anchor on a spring, bent in the vertex shader; no new bones.
+- **Rims on the outline only**, through a silhouette mask: the back light no
+  longer streaks down inner legs.
+- **Bursts follow the blow** (up for a launcher, low for a sweep, down for a
+  parcel), and SAME-DAY DELIVERY's landing slams the floor in 3D.
+- `lab/vfx.js` has scenes for those, and `lab/gl3d-bench.html` a flat-stage mode.
+
 Flags: `?gl` turns everything on; `&stages=0` and `&fx=0` take out a piece;
 `?stages`, `?fx` and `?sharp` try one piece with the 2D fighters; `?gl=max,dex`
 puts only those fighters in 3D; `&perf` shows timing.
@@ -332,11 +346,11 @@ With the flags off, one thing: the 2D attack face. It used to grin through every
 attack (a curve with its signs flipped); it now snarls, as it was always meant
 to. Everything else with the flags off renders exactly as v3.8, checked by
 hashing game frames on all six arenas and every 2D portrait in the same
-browser. It adds about 3.6 MB to the repo (the 1.3 MB model, 0.8 MB of stages
-and 1.5 MB of screenshots), and the game only downloads the model and stages
+browser. It adds about 4.6 MB to the repo (the 1.3 MB model, 1.8 MB of stages with
+their depth layers, and 1.5 MB of screenshots), and the game only downloads the model and stages
 when `?gl` is on.
 
-To merge: bump `VERSION` to v3.9, turn the README's "In progress" section into a
+To merge: bump `VERSION` past v3.9 (v3.10, or v4.0 if it is the headline), turn the README's "In progress" section into a
 release note, merge, push, and verify with the `curl` check in ONBOARDING
 section 7. `SIM_VERSION` does not change: nothing the simulation computes is
 different (`game.simT` is new, but it is not hashed and the simulation does not
@@ -344,13 +358,10 @@ read it), which the determinism and effects tests check.
 
 ## Decisions that belong to the owner
 
-0. **Check sign-in after the move.** In Supabase, Authentication → URL
-   Configuration must name `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`
-   as the Site URL and in Redirect URLs (docs/AUTH-SETUP.md section 3). If it still
-   names the old address, sign-in sends players to a page that no longer exists.
-   Then whether to push `claude/game-review-enhance-29bffb` as the new `live-3d`
-   (merge `main` into it first for v3.9.1): it is `live-3d` plus v3.9 and the
-   prototype work, and merging it into `main` later carries both.
+0. **Make `claude/gfx-v3.9.4` the new `live-3d`.** It is `live-3d` plus v3.9.4
+   and the prototype work, so merging it into `main` later carries both. (The
+   sign-in check after the move is done: the owner set Supabase's Site URL and
+   Redirect URLs to the new address on 2026-10-28.)
 1. **Merge `live-3d` now** (the prototype ships dark, behind `?gl`) **or after a
    phone check.**
 2. **Whether 3D ever becomes the default.** Not before phone numbers are in.
@@ -382,9 +393,6 @@ read it), which the determinism and effects tests check.
    slip of sign, but it may have been meant to let the victim punish a grabber
    stuck in a long recovery. Flipping it is one sign, but it changes what a live
    match computes, so it needs `SIM_VERSION` 10; left as it is.
-9. **Push the graphics branch from the original Mac.** `claude/game-review-enhance-29bffb`
-   is the only copy of the October prototype work (see Branches). From that
-   checkout: `git push origin claude/game-review-enhance-29bffb`.
 
 ## Next steps, in the order they pay off
 
@@ -392,7 +400,53 @@ Done in the 2026-10-18 session (on `claude/game-review-enhance-29bffb`): depth f
 the stages (step 3 below), secondary motion (step 4), the back-light streak and
 per-move impact variations (step 5). Their notes are kept so the history reads.
 
-1. **Phone benchmark.** On `live-3d`, serve with `python3 dev-server.py 4173`, open
+1. **Phone benchmark.** A hosted copy of the benchmark, needing no server or
+   network setup, was published on 2026-10-28 as a private Claude artifact
+   ("UEC 3D Phone Test", from `claude/gfx-v3.9.4`): it times four setups (the
+   shipped 2D game, 2D fighters on the rendered stage, one fighter in 3D, both in
+   3D) for ten seconds each, reports the 3D rig's cost against the 2 ms budget,
+   and has a Copy results button. The artifact host serves no `.glb`, so that copy
+   carries the model as a base64 script module and answers the renderer's fetch
+   from memory; nothing in the repository changed for it. On the M2 Max in Chrome
+   it reads 120 fps in every setup, the rig adding 0.42 ms a frame on average and
+   0.10 ms at the 95th percentile, the whole prototype 0.50 ms at the 95th.
+   **First phone run, 2026-10-28**, the owner's iPhone (iOS 18.7, in the Claude
+   app, a 402 by 874 point screen, so a recent and fast model, not the mid-range
+   phone the budget is set for): 60 fps in every setup, so nothing visibly drops,
+   but the 3D rig adds 3.97 ms a frame on average and 5 ms at the 95th
+   percentile, against a 2 ms budget. WebKit rounds `performance.now()` to 1 ms,
+   so the 95th percentiles are whole numbers; the averages over 600 frames hold.
+   One fighter in 3D cost the same as two (4.58 and 4.57 ms a frame), so the
+   cost is fixed per frame rather than per model: it points at getting the WebGL
+   image into the 2D canvas (`render3D`'s `drawImage` of the GL canvas, which
+   WebKit has to synchronise), the first lever below, not at the meshes.
+   **Second and third runs, same phone.** The breakdown (each step timed with
+   `gl.finish`): pose 0.10 ms, GPU 0.68 ms, copy into the 2D canvas 1.52 ms per
+   3D fighter, so the copy is two thirds of it. `GL3D.COMPOSITE` then tried three
+   ways of making that copy in one run, against the 2D fighters before and after
+   (0.59 ms both times, so no warming drift): the canvas as built 3.77 ms a frame
+   over 2D, the canvas without a preserved buffer 3.88, an ImageBitmap from an
+   OffscreenCanvas 3.98. No difference, so the price is moving the GPU's image
+   into a 2D canvas at all (in WebKit that reads it back), not the way it is
+   handed over. Lowering `DETAIL` or meshes would save part of 0.68 ms at most.
+   What is left is to stop putting the 3D image in a 2D canvas: show the WebGL
+   canvas itself, stacked between a 2D canvas for the world behind the fighters
+   and one for what is drawn in front, with the key line drawn in GL (the
+   silhouette pass is most of it already). The owner chose to build it.
+   **Fourth run, 2026-10-28: the 3D layer.** With `GL3D.LAYER` the 3D fighters
+   are drawn straight onto a WebGL canvas stacked over the game canvas, nothing
+   copied (ARCHITECTURE section 7, "The 3D layer"). Same phone, same match, both
+   fighters in 3D: copied as before, 3.49 ms a frame over 2D; on the layer,
+   0.80 ms (mean frame time 1.42 ms, 2.00 ms at the 95th percentile, 59.9 fps).
+   That is inside the 2 ms budget on this phone. A frozen-frame comparison of the
+   two paths afterwards found the first build drew the stage light's soft-light
+   gradient on its own canvas, where it came out as a pale haze, and moved the
+   layers by different shake offsets; both are fixed and pinned by
+   `test/layer3d.test.js`. **Fifth run, 2026-10-29**, after that fix, which
+   adds canvases (trails, glow, vignette, cut-in) for the browser to composite:
+   0.70 ms a frame over 2D on the layer (mean frame 1.23 ms, 2.00 ms at the 95th
+   percentile, 60.3 fps), against 3.95 ms copied, with 2D at 0.61 and 0.46 ms
+   before and after. The added canvases cost nothing measurable. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
    phone (no sign-in needed), and read the modes: All 2D, Both 3D, without stage,
    without effects. The budget is about 2 ms a frame for the 3D rig over 2D. If
@@ -415,9 +469,12 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
 
 ## Known limits
 
-- Phone performance: unmeasured, and the review session added a silhouette pass
-  to the 3D fighters and more layers to the stages, both measured only on an M2
-  Max (within noise, and 0.05 to 0.12 ms a frame).
+- Phone performance: measured only on the owner's iPhone, a recent and fast
+  model (see Next steps, step 1). A mid-range phone, which the 2 ms budget is set
+  for, is still unmeasured.
+- The 3D layer differs from the copy path in three small ways: an aura drawn by
+  the fighter in front does not wash over a 3D fighter behind it, every trail
+  lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
 - Secondary motion runs on real time, so hair keeps settling through a hitstop
   and swings at full speed in the KO slow motion.
 - Kim's ring light still sits off-square in a bust; body knobs still scale bones.

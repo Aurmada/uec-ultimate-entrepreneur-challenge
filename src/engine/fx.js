@@ -1,5 +1,15 @@
 // Juice: particles, comic-book word popups, screen shake, hitstop, rings, flashes.
 
+import { FX_ART } from '../config.js';
+
+// Fighting-game effects for the live 3D prototype (?gl): layered impact bursts,
+// guard flashes, and a cut-in when a special starts. This file only keeps their
+// state; engine/vfx.js draws them. With the flag off, impact(), guard() and
+// cutIn() return at once and store nothing, so the classic effects play exactly
+// as they always have. None of it touches hitstop: that is simulation time, and
+// a peer with the flag must stay in lockstep with one without it.
+export const FX_STYLE = { impact: false };
+
 // The SAME-DAY DELIVERY parcel: plain cardboard, a strip of tape and a
 // this-way-up arrow, sitting on (x, y) with its base on the floor. `squash`
 // above 1 flattens it, for the frame it lands. Shared by the falling parcel in
@@ -30,6 +40,8 @@ export class FXSystem {
     this.particles = [];
     this.popups = [];
     this.rings = [];
+    this.bursts = [];            // FX_STYLE.impact only
+    this.playing = null;         // the cut-in on screen
     this.shakeMag = 0;
     this.hitstopT = 0;
     this.flashCol = null;
@@ -56,6 +68,97 @@ export class FXSystem {
 
     for (const r of this.rings) { r.t += dt; r.r += r.vr * dt; }
     this.rings = this.rings.filter(r => r.t < r.dur);
+
+    if (this.bursts.length) {
+      for (const b of this.bursts) b.t += dt;
+      this.bursts = this.bursts.filter(b => b.t < b.dur);
+    }
+    if (this.playing) {
+      this.playing.t += dt;
+      if (this.playing.t >= this.playing.dur) this.playing = null;
+    }
+  }
+
+  // A landed hit: a white-hot core, spikes thrown away from the attacker and
+  // streaks along the blow. `dir` is the way the blow travels (+1 rightward);
+  // `weight` runs from 0 (a slap) to 1 (a launcher); `tilt` turns the blow
+  // up (radians, positive) or down from the horizontal, so a launcher's burst
+  // flies up with the rival and a sweep's skims the floor.
+  impact(x, y, dir, color, weight = 0.5, tilt = 0) {
+    if (!FX_STYLE.impact) return;
+    const I = FX_ART.IMPACT, mix = (range) => range[0] + (range[1] - range[0]) * weight;
+    const n = Math.round(mix(I.SPIKES));
+    const spikes = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+      const away = Math.max(0, Math.cos(a) * dir);          // 1 straight along the blow
+      spikes.push({ a, len: (0.9 + Math.random() * 0.6) * (1 + 0.8 * away), w: 0.14 + Math.random() * 0.1 });
+    }
+    const streaks = [];
+    for (let i = Math.round(mix(I.STREAKS)); i > 0; i--) {
+      streaks.push({ dy: (Math.random() - 0.5) * 2, len: 0.6 + Math.random() * 0.8, speed: 0.8 + Math.random() * 0.8 });
+    }
+    this.bursts.push({ kind: 'hit', x, y, dir, color, r: mix(I.R), t: 0, dur: mix(I.DUR), weight, spikes, streaks, tilt });
+  }
+
+  // A blocked hit (a hexagonal guard flash) or, with `parry`, a parried one.
+  guard(x, y, dir, color = '#8fd8ff', parry = false) {
+    if (!FX_STYLE.impact) return;
+    const G = FX_ART.GUARD;
+    this.bursts.push({ kind: parry ? 'parry' : 'guard', x, y, dir, color,
+      r: parry ? G.PARRY_R : G.R, t: 0, dur: parry ? G.PARRY_DUR : G.DUR, rot: Math.random() * 0.5 });
+  }
+
+  // A projectile leaving the hand: a flare pointing where it flies, in the
+  // colour of `who` (a fighter def) when no colour is given.
+  launch(x, y, dir, color, who = null) {
+    if (!FX_STYLE.impact) return;
+    const L = FX_ART.LAUNCH;
+    this.bursts.push({ kind: 'launch', x, y, dir, color, who, r: L.R, t: 0, dur: L.DUR });
+  }
+
+  // BURN RATE BLAST and BURN IT ALL: fire erupting out of the fighter's front.
+  blast(x, y, dir) {
+    if (!FX_STYLE.impact) return;
+    const B = FX_ART.BLAST;
+    const petals = [];
+    for (let i = 0; i < B.PETALS; i++) {
+      // mostly up and forward, the way the flames are thrown
+      const a = -Math.PI / 2 + (i / (B.PETALS - 1) - 0.5) * Math.PI * 1.25 + dir * 0.35;
+      petals.push({ a, len: 0.6 + Math.random() * 0.5, w: 0.18 + Math.random() * 0.1, hue: Math.random() });
+    }
+    this.bursts.push({ kind: 'blast', x, y, dir, color: '#ff9d1a', r: B.R, t: 0, dur: B.DUR, petals });
+  }
+
+  // SAME-DAY DELIVERY landing: a shock across the floor and a fan of dust
+  // thrown up around the box, hit or miss.
+  slam(x, y, color) {
+    if (!FX_STYLE.impact) return;
+    const S = FX_ART.SLAM;
+    const rays = [];
+    for (let i = 0; i < S.RAYS; i++) {
+      const a = -Math.PI / 2 + (i / (S.RAYS - 1) - 0.5) * Math.PI * 1.5;
+      rays.push({ a, len: 0.5 + Math.random() * 0.5, w: 0.08 + Math.random() * 0.06 });
+    }
+    this.bursts.push({ kind: 'slam', x, y, dir: 1, color, r: S.R, t: 0, dur: S.DUR, rays });
+  }
+
+  // A teleport: a pillar of light that pinches out where the fighter left and
+  // opens where they arrive.
+  warp(x, y, color, arriving, who = null) {
+    if (!FX_STYLE.impact) return;
+    const Wp = FX_ART.WARP;
+    this.bursts.push({ kind: arriving ? 'arrive' : 'vanish', x, y, dir: 1, color, who, r: Wp.W, t: 0, dur: Wp.DUR });
+  }
+
+  // A special or super announced. `side` is -1 when the fighter is on the
+  // left of the fight, +1 on the right; the band slides in from their side.
+  // A null `color` wears the fighter's own. One at a time: the newest
+  // replaces what is showing.
+  cutIn(fighter, name, color, side, big = false) {
+    if (!FX_STYLE.impact) return;
+    const C = FX_ART.CUTIN;
+    this.playing = { fighter, name, color, side, big, t: 0, dur: big ? C.SUPER_DUR : C.DUR, bust: null };
   }
 
   get shakeX() { return this.shakeMag ? (Math.random() * 2 - 1) * this.shakeMag : 0; }

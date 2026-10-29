@@ -3,18 +3,21 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE } from '../config.js';
+import { STYLES, STYLIZE, GL3D } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
+import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D } from './gl3d/index.js';
+import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
+import { FX_STYLE } from './fx.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
 
 const OUTLINE = '#0a0c16';
-const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
+export const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
 
 // dataURL → Image cache for photo faces
 const photoCache = new Map();
@@ -502,10 +505,54 @@ function computePose(f, t) {
 
 // ---------------------------------------------------------------- head & face
 
+// The face alone, for the 3D renderer's face textures: centred on the origin
+// of a head of radius r (a fight-size head unless the model asks otherwise),
+// exactly as drawHead would draw it there, with any look the model paints on
+// rather than models (stubble) over it in the same order. Given a decoded
+// `photo`, the face is the photo, which has no expressions.
+function paintFace3D(ctx, def, face, r = STYLIZE.HEAD_R, photo = null) {
+  if (photo) {
+    paintPhotoFace(ctx, photo, r);
+    return;
+  }
+  drawFace(ctx, 0, 0, r, face, def.c, def.face);
+  if (PAINTED_LOOKS.facialHair.includes(resolveLook3D(def).facialHair)) drawFacialHair(ctx, 0, 0, r, def);
+}
+
+// What the 3D renderer paints faces with: the painter above, and a founder's
+// photo once it has decoded (null until then, and for good if it never does,
+// when the 3D head keeps the drawn face just as drawHead does in 2D).
+const FACE_PAINTER = {
+  paint: paintFace3D,
+  photo: (def) => (def.photo ? getPhoto(def.photo) : null),
+};
+
+// The face out of a profile photo, feathered so only the face itself lands on
+// the 3D head: projected whole, the photo's background showed as a grey patch
+// down the side of the head. See GL3D.PHOTO.
+function paintPhotoFace(ctx, photo, r) {
+  const P = GL3D.PHOTO;
+  const crop = (r * P.SIZE) / P.FACE;                   // the whole photo, px
+  const n = Math.max(8, Math.ceil(crop * (ctx.getTransform().a || 1)));   // in texels
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = n;
+  const t = tmp.getContext('2d');
+  t.imageSmoothingQuality = 'high';
+  t.drawImage(photo, 0, 0, n, n);
+  const cx = n / 2, cy = n / 2 + n * P.FACE_DROP, fr = (n * P.FACE) / 2;
+  const mask = t.createRadialGradient(cx, cy, fr * P.FEATHER[0], cx, cy, fr * P.FEATHER[1]);
+  mask.addColorStop(0, '#000');
+  mask.addColorStop(1, 'rgba(0,0,0,0)');
+  t.globalCompositeOperation = 'destination-in';
+  t.fillStyle = mask;
+  t.fillRect(0, 0, n, n);
+  ctx.drawImage(tmp, -crop / 2, r * P.FACE_Y - crop * (0.5 + P.FACE_DROP), crop, crop);
+}
+
 // `look` is the character's own facial geometry, layered over STYLIZE.FACE.
 // RENDER-ONLY: it is read here and nowhere else — never by the state machine,
 // hit resolution, the budget, or the codec. A face cannot change a fight.
-function drawFace(ctx, cx, cy, r, face, c, look) {
+export function drawFace(ctx, cx, cy, r, face, c, look) {
   ctx.lineCap = 'round';
   const e = r * 0.34;                       // eye offset
   ctx.strokeStyle = OUTLINE; ctx.fillStyle = OUTLINE;
@@ -583,8 +630,11 @@ function drawFace(ctx, cx, cy, r, face, c, look) {
     if (face === 'block') {                       // gritted, teeth together
       ctx.moveTo(cx - mw, my); ctx.lineTo(cx + mw + 2, my);
     } else if (face === 'angry') {                // snarl — corners pulled down
-      ctx.moveTo(cx - mw, my - 2.4);
-      ctx.quadraticCurveTo(cx + 2, my + 2.8, cx + mw + 2, my - 2.4);
+      // Canvas y runs DOWN: corners below the control point make a frown.
+      // This had the signs the other way round, a U, so every fighter grinned
+      // through every attack while the comment promised a snarl.
+      ctx.moveTo(cx - mw, my + 2.4);
+      ctx.quadraticCurveTo(cx + 2, my - 2.8, cx + mw + 2, my + 2.4);
     } else {
       // idle: the character's own set. MOUTH_CURVE < 0 pulls the corners down
       // into a scowl, > 0 lets one or two of them look pleased with themselves.
@@ -1166,10 +1216,17 @@ function shadeBuffer(b, B) {
 }
 
 // Main world-space fighter draw. f: Fighter instance.
+// The last pose each fighter was drawn in, for effects that follow a limb
+// (engine/vfx.js). Kept only while those effects are on.
+const lastPoses = new WeakMap();
+export const poseOf = (f) => lastPoses.get(f);
+
 export function drawFighter(ctx, f, t) {
+  const tDraw = timing3D() ? performance.now() : 0;
   const def = f.def;
   const body = f.body || clampBody(def.body);
   const P = applyProportions(computePose(f, t), body);
+  if (FX_STYLE.impact) lastPoses.set(f, { P, t });
   const c = def.c;
   ctx.save();
   ctx.translate(f.x, f.y);
@@ -1186,6 +1243,42 @@ export function drawFighter(ctx, f, t) {
 
   ctx.scale(f.facing, 1);
   if (P.rot) ctx.rotate(P.rot);
+
+  // Live 3D path (?gl, prototype). The model is posed from this same P and
+  // rendered into the same offscreen buffer, so the key line, hit flash and
+  // blit are shared with the procedural rig below. Parts are not drawn yet.
+  if (has3D(def)) {
+    const metrics = bufferMetrics(body);
+    const stanceEl = f.state === 'idle' ? (def.stance || null) : null;
+    // On the 3D layer (GL3D.LAYER, set up by render.js for this frame): drawn
+    // straight onto the WebGL canvas on screen at the place the buffer would
+    // go, key line and hit flash included, so nothing is copied back.
+    if (layerActive3D() && drawLayer3D(f, P, ctx.getTransform(), metrics, {
+      elbowF: stanceEl?.elbowF ?? STYLIZE.ELBOW,
+      elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,
+      jitter: f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0,
+      face: FACE_PAINTER,
+      flash: f.flashT > 0,
+      keyline: STYLIZE.KEYLINE_A > 0 ? { px: STYLIZE.KEYLINE_PX, color: STYLIZE.KEYLINE_COL, alpha: STYLIZE.KEYLINE_A } : null,
+    })) {
+      ctx.restore();
+      return;
+    }
+    const B = fighterBuffer(metrics);
+    if (B && render3D(B, f, P, {
+      elbowF: stanceEl?.elbowF ?? STYLIZE.ELBOW,
+      elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,
+      jitter: f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0,
+      face: FACE_PAINTER,
+    })) {
+      if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);
+      if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
+      ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
+      ctx.filter = 'none';
+      ctx.restore();
+      return;
+    }
+  }
 
   // Baked sprite path. Body proportions scale the sheet rather than re-posing
   // a rig, so the P1 knobs still give a lanky zoner and a squat grappler.
@@ -1353,6 +1446,7 @@ export function drawFighter(ctx, f, t) {
 
   ctx.filter = 'none';
   ctx.restore();
+  if (tDraw) mark2D(performance.now() - tDraw);
 }
 
 // ---------------------------------------------------------------- portraits
@@ -1439,47 +1533,102 @@ function drawPortraitNeckline(ctx, def, S, k) {
   }
 }
 
+// The 3D bust, when the live 3D renderer (?gl) has this fighter: the model
+// and face they fight with, turned toward the viewer, hands down below the
+// frame where a guard would cover the face. `opts.mirror` turns them to face
+// left. A photo founder keeps the 2D bust, since the photo is the face.
+//
+// A portrait drawn while the model is still loading is drawn in 2D, and again
+// once the model lands (or fails, when it simply stays 2D). Only the latest
+// thing drawn into a canvas counts: drawPortrait cancels a queued redraw of
+// its canvas, and anything else that draws into a portrait canvas (the
+// RANDOM tile) calls releasePortrait, or the late redraw would paint over it.
+const bustRedraws = new Map();          // canvas -> [def, opts]
+let redrawArmed = false;
+export function releasePortrait(canvas) { bustRedraws.delete(canvas); }
+function drawBust3D(canvas, ctx, def, opts) {
+  if (def.photo) return false;
+  if (pending3D(def)) {
+    bustRedraws.set(canvas, [def, opts]);
+    if (!redrawArmed) {
+      redrawArmed = true;
+      on3DReady(() => {
+        redrawArmed = false;
+        const queued = [...bustRedraws];
+        bustRedraws.clear();
+        for (const [c, [d, o]] of queued) drawPortrait(c, d, o);
+      });
+    }
+    return false;
+  }
+  if (!has3D(def)) return false;
+  const body = clampBody(def.body);
+  const P = applyProportions(computePose({
+    def, body, side: 0, x: 0, y: 0, facing: 1, state: 'idle', stateT: 0, walkPhase: 0, vy: 0,
+    airborne: false, crouching: false, movingBack: false, unicornT: 0, flashT: 0, attack: null,
+  }, 0), body);
+  const { HAND_F: hf, HAND_B: hb } = GL3D.BUST;
+  P.armF = { x: hf[0], y: P.hipY + hf[1] };
+  P.armB = { x: hb[0], y: P.hipY + hb[1] };
+  return renderBust3D(ctx, { x: 0, y: 0, w: canvas.width, h: canvas.height }, def, P, {
+    expression: opts.face || 'idle', face: FACE_PAINTER, mirror: !!opts.mirror, unicorn: !!opts.unicorn,
+  });
+}
+
+// `opts.bare` draws the bust alone on a transparent canvas, with no backdrop,
+// grade or frame: for a cut-in that brings its own (engine/vfx.js).
 export function drawPortrait(canvas, def, opts = {}) {
+  releasePortrait(canvas);                 // this call supersedes any queued redraw
   const ctx = canvas.getContext('2d');
   const S = canvas.width;
   const k = S / 100;
   ctx.clearRect(0, 0, S, S);
-  // backdrop — lifted so dark suits still read against dark UI
-  const g = ctx.createLinearGradient(0, 0, S, S);
-  g.addColorStop(0, shade(def.c.suit, 34));
-  g.addColorStop(1, '#1a2138');
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.roundRect(0, 0, S, S, 12 * k); ctx.fill();
+  if (!opts.bare) {
+    // backdrop — lifted so dark suits still read against dark UI
+    const g = ctx.createLinearGradient(0, 0, S, S);
+    g.addColorStop(0, shade(def.c.suit, 34));
+    g.addColorStop(1, '#1a2138');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.roundRect(0, 0, S, S, 12 * k); ctx.fill();
+  }
   // burst rays
   ctx.save();
   ctx.beginPath(); ctx.roundRect(0, 0, S, S, 12 * k); ctx.clip();
-  ctx.globalAlpha = 0.14;
-  ctx.fillStyle = '#ffffff';
-  for (let i = 0; i < 9; i++) {
-    ctx.save();
-    ctx.translate(S / 2, S * 0.62);
-    ctx.rotate((i / 9) * Math.PI * 2 + 0.3);
-    ctx.fillRect(-4 * k, 0, 8 * k, S);
-    ctx.restore();
+  if (!opts.bare) {
+    ctx.globalAlpha = 0.14;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 9; i++) {
+      ctx.save();
+      ctx.translate(S / 2, S * 0.62);
+      ctx.rotate((i / 9) * Math.PI * 2 + 0.3);
+      ctx.fillRect(-4 * k, 0, 8 * k, S);
+      ctx.restore();
+    }
   }
   ctx.globalAlpha = 1;
-  // shoulders
-  blob(ctx, () => {
-    ctx.moveTo(S * 0.1, S * 1.05);
-    ctx.quadraticCurveTo(S * 0.12, S * 0.68, S * 0.5, S * 0.66);
-    ctx.quadraticCurveTo(S * 0.88, S * 0.68, S * 0.9, S * 1.05);
-    ctx.closePath();
-  }, def.c.suit);
-  drawPortraitNeckline(ctx, def, S, k);
-  ctx.save();
-  ctx.translate(0, 0);
-  const headR = S * 0.24;
-  const scale = headR / 22;
-  ctx.translate(S / 2, S * 0.42);
-  ctx.scale(scale, scale);
-  ctx.translate(0, 0);
-  drawHead(ctx, def, 0, 0, 22, opts.face || 'idle', opts.t || 1, !!opts.unicorn);
-  ctx.restore();
+  if (!drawBust3D(canvas, ctx, def, opts)) {
+    // shoulders
+    blob(ctx, () => {
+      ctx.moveTo(S * 0.1, S * 1.05);
+      ctx.quadraticCurveTo(S * 0.12, S * 0.68, S * 0.5, S * 0.66);
+      ctx.quadraticCurveTo(S * 0.88, S * 0.68, S * 0.9, S * 1.05);
+      ctx.closePath();
+    }, def.c.suit);
+    drawPortraitNeckline(ctx, def, S, k);
+    ctx.save();
+    ctx.translate(0, 0);
+    const headR = S * 0.24;
+    const scale = headR / 22;
+    ctx.translate(S / 2, S * 0.42);
+    ctx.scale(scale, scale);
+    ctx.translate(0, 0);
+    drawHead(ctx, def, 0, 0, 22, opts.face || 'idle', opts.t || 1, !!opts.unicorn);
+    ctx.restore();
+  }
+  if (opts.bare) {
+    ctx.restore();                // release the clip; no grade, no frame
+    return;
+  }
 
   // ---- cinematic light, matching the in-fight fighter shading (v2.0) ----
   // Still inside the rounded-rect clip, so it lights the whole bust + backdrop

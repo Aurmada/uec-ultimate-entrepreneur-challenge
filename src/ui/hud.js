@@ -44,7 +44,7 @@ class HUD {
       const def = game.fighters[i].def;
       this.el.name[i].textContent = def.name;
       this.el.co[i].textContent = def.company;
-      drawPortrait(this.el.face[i], def);
+      drawPortrait(this.el.face[i], def, { mirror: i === 1 });   // a 3D bust on the right faces left
       this.el.pips[i].innerHTML = '';
       for (let p = 0; p < ROUND.WINS_NEEDED; p++) {
         const pip = document.createElement('i');

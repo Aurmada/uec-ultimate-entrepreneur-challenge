@@ -71,6 +71,21 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## In progress: the live 3D prototype (branch `live-3d`, not released)
+
+Answering "can the fighters look more like a modern fighting game, without copying one": a second renderer draws every fighter as a skinned, toon-shaded 3D model in WebGL2, posed live from the same 2D animation data, so every move, stance, body knob, colour, look option and player build carries over. Alongside it: arenas rendered in Blender, fighters lit by their stage, and fighting-game hit effects. Everything is behind URL flags, off by default, and render-only, so it cannot change a match. With the flags off the game is exactly v3.8.
+
+| Flag | What you get |
+| --- | --- |
+| `?gl` | 3D fighters and 3D portraits, the rendered stages, the hit effects, sharp fighters |
+| `&stages=0` / `&fx=0` | the same without the rendered stages, or without the effects |
+| `?stages`, `?fx`, `?sharp` | each piece on its own, with the 2D fighters |
+| `?gl=max,dex` | only those fighters in 3D; `&perf` adds a timing readout |
+
+Since the first version: the rendered arenas have depth (the city outside the boardroom and the mountains behind the summit hold still while the room slides in front of them), hair and coats trail when a fighter moves, the back light stays on the outline instead of streaking down a leg, and a hit's burst flies the way the blow went.
+
+The model and the stages are built by scripts in `lab/blender/` (Blender 5, headless, a few seconds each) and committed, so nothing needs Blender to run. Where it stands, what is next and the decisions still open are in [docs/HANDOFF.md](docs/HANDOFF.md); how it works is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) section 7.
+
 ## What's new in v3.9.4: the computer picks its moment
 
 - 🦈 **Grabs wait for an opening.** Carl's AI threw ASSET SEIZURE at anything roughly in front of him, and four times in five it caught nobody: the rival saw it and jumped, or it never reached. Now the computer only grabs what it can reach, and a Champion waits for a rival who can't jump: one holding a guard, one still finishing a swing, one standing in a counter stance. A Rookie still grabs and hopes.
@@ -383,6 +398,7 @@ index.html            all screens & modals (DOM shell)
 styles.css            visual system (arcade gold/pink/cyan on deep navy)
 dev-server.py         no-cache static server for development
 assets/               facefinder.bin (face-detection cascade) + dormant sprite atlases (only with ?sprites)
+                      + models/founder.glb and stages/<arena>/ for the 3D prototype (only with ?gl)
 src/
   config.js           every gameplay number: physics, frame data, styles, meter, stance, runway, points, ranks, budget
   state.js            localStorage save: profile, stats, settings + challenge-link codec
@@ -394,7 +410,8 @@ src/
   data/seed.js        seeded local leaderboard (nine roster founders, four NPCs)
   data/authored.js    Incubator export file; validated by the tests, not loaded by the game
   data/tracks.js      stock keyframe animation tracks (render-only)
-  data/arenas.js      six procedural animated arenas + sponsor billboard slots
+  data/arenas.js      six procedural animated arenas + sponsor billboard slots (+ each one's rendered stage)
+  data/models3d.js    3D model registry: look options, faces, materials (render-only, ?gl)
   engine/game.js      match controller: rounds, timer, hit resolution, KO cinematics
   engine/fighter.js   fighter entity: state machine, physics, attacks, specials
   engine/fighterState.js  registry of per-fighter simulation state (defaults, round reset, hashing)
@@ -406,8 +423,11 @@ src/
   engine/parts.js     render-only props and garments
   engine/drawFighter.js  procedural character rig, outfits, faces, photo heads, portraits
   engine/sprites.js   sprite-atlas renderer, dormant behind ?sprites
-  engine/render.js    frame compositor (arena → shadows → fighters → projectiles → FX)
+  engine/render.js    frame compositor (arena → shadows → fighters → projectiles → FX) and camera
   engine/fx.js        particles, comic word popups, shake, hitstop, rings, flashes
+  engine/gl3d/        3D prototype: glTF reader, pose-to-bones rig, WebGL2 toon renderer (?gl)
+  engine/stage.js     rendered stages: the Blender backdrops with live screens (?gl / ?stages)
+  engine/vfx.js       fighting-game effects: bursts, trails, cut-ins (?gl / ?fx)
   engine/audio.js     Web Audio SFX recipes + generative per-arena music loop
   ui/hud.js           health/energy/runway bars, timer, pips, announcements, combos, hints
   ui/screens.js       select / profile / challenges / leaderboard / help / modals
@@ -418,9 +438,11 @@ src/
   net/cloud.js        profile sync, global leaderboard, report_match result reporting
   vendor/pico.js      vendored picojs face detector (MIT)
 incubator/            character authoring tool (unlisted admin page)
-lab/                  measurement and art harnesses (contrast, silhouettes, marketing shots)
+lab/                  measurement and art harnesses (contrast, silhouettes, marketing shots, 3D galleries)
+lab/blender/          Blender scripts that build the 3D model and the rendered stages
 test/                 node --test suites (npm test) + browser golden-image checks in test/golden/
-docs/                 architecture, onboarding, auth setup, game math, design specs and plans
+docs/                 architecture, onboarding, handoff, auth setup, game math, design specs and plans
+CLAUDE.md             working rules and pointers for AI coding sessions
 ```
 
 **Seed data** lives in [src/data/seed.js](src/data/seed.js) (leaderboard) and [src/data/fighters.js](src/data/fighters.js) (roster). Adding a fighter = one object in `FIGHTERS` (identity, palette `c`, `style`, `body`, `special` id and AI personality `ai`, plus optional `commandNormals` and render-only face, stance, motion and parts). The simulation reads `style`, not the legacy `stats` block, and `npm test` fails any roster entry that does not validate or is over the power budget. Adding an arena = one draw function + one entry in [src/data/arenas.js](src/data/arenas.js).
