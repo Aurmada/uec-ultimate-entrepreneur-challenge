@@ -503,8 +503,6 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
 - The 3D layer differs from the copy path in three small ways: an aura drawn by
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
-- Secondary motion runs on real time, so hair keeps settling through a hitstop
-  and swings at full speed in the KO slow motion.
 - Kim's ring light still sits off-square in a bust; body knobs still scale bones.
 - The debug sign-in (`UEC.signInAs()`) uses the id `test-uid`, which is not a
   UUID, so one profile fetch to Supabase returns a harmless 400 in the console.

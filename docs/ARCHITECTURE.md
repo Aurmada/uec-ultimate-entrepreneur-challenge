@@ -717,7 +717,9 @@ from its tie. `MODELS3D.founder.sway` lists the meshes (the ponytail, long hair,
 the bob at half gain, Cathie's coat) with pivots read off `build_founder.py`, so the
 model and its contract are unchanged. At rest the lag is zero; a turn round, a
 teleport or a new round snaps the spring rather than flinging the hair
-(`GL3D.SWAY.SNAP`). It runs on real time, so it keeps settling through a hitstop.
+(`GL3D.SWAY.SNAP`). In a match it runs on `game.simT` (render.js hands it over
+with `setClock3D`), so it holds still through a hitstop or the pause and swings
+slowly in the KO slow motion, with the pose it hangs from.
 
 **Sharp fighters.** Both renderers shared one resolution limit: the whole world,
 fighters included, is drawn at 960x540 and the camera crop scales it up (about
