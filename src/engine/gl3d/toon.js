@@ -364,39 +364,10 @@ export function createToon({ onScreen = null } = {}) {
       colours, box, squash = { x: 1, y: 1 }, jitter = 0, ss = GL3D.SS, visible = () => true, face = null,
       inkless = NONE, glass = NO_GLASS, light = null, sway = null, screen = null,
     }) {
-      const U = GL3D.UNIT;
       let vw, vh, view, flip = false, rimDir = IDENTITY2, reach = GL3D.RIM_REACH, keyRect = null, keyRadius = 0;
       if (screen) {
         vw = canvas.width; vh = canvas.height;
-        const [a, b, c, d, e, f] = screen.m;
-        const kx = squash.x * U, ky = squash.y * U;
-        const ex = a * jitter + e, fy = b * jitter + f;
-        // model units -> local px (kx, ky, jitter) -> device px (m) -> clip
-        // space, with the canvas's y down turned up
-        view = [
-          (2 * a * kx) / vw, (-2 * b * kx) / vh, 0, 0,
-          (-2 * c * ky) / vw, (2 * d * ky) / vh, 0, 0,
-          0, 0, -1 / DEPTH, 0,
-          (2 * ex) / vw - 1, 1 - (2 * fy) / vh, 0, 1,
-        ];
-        const det = a * d - b * c;
-        flip = det < 0;                          // mirrored: the winding turns over
-        const px = Math.sqrt(Math.abs(det));     // device px per local px
-        rimDir = [a * kx, -b * kx, -c * ky, d * ky];
-        reach = (GL3D.RIM_REACH / GL3D.SS) * px; // the same reach in local px as in the buffer
-        if (screen.keyline) {
-          keyRadius = (GL3D.INK * U + screen.keyline.px) * px;
-          // The quad: the box's corners on screen, out by the line's reach.
-          let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-          for (const lx of [-box.ox + jitter, box.w - box.ox + jitter]) {
-            for (const ly of [-box.oy, box.h - box.oy]) {
-              const dx = a * lx + c * ly + e, dy = b * lx + d * ly + f;
-              x0 = Math.min(x0, dx); x1 = Math.max(x1, dx); y0 = Math.min(y0, dy); y1 = Math.max(y1, dy);
-            }
-          }
-          const r = keyRadius + 2;
-          keyRect = [((x0 - r) / vw) * 2 - 1, 1 - ((y1 + r) / vh) * 2, ((x1 + r) / vw) * 2 - 1, 1 - ((y0 - r) / vh) * 2];
-        }
+        ({ view, flip, rimDir, reach, keyRect, keyRadius } = screenProjection(screen, box, squash, jitter, vw, vh));
         gl.viewport(0, 0, vw, vh);
         gl.clear(gl.DEPTH_BUFFER_BIT);           // each fighter is drawn whole over the last
       } else {
@@ -408,14 +379,7 @@ export function createToon({ onScreen = null } = {}) {
         gl.viewport(0, canvas.height - vh, vw, vh);
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        const l = -box.ox / U, r = (box.w - box.ox) / U;
-        const t = box.oy / U, b = -(box.h - box.oy) / U;
-        view = [
-          (2 * squash.x) / (r - l), 0, 0, 0,
-          0, (2 * squash.y) / (t - b), 0, 0,
-          0, 0, -1 / DEPTH, 0,
-          (2 * (jitter / U) - (r + l)) / (r - l), -(t + b) / (t - b), 0, 1,
-        ];
+        view = bufferProjection(box, squash, jitter);
       }
       const viewport = screen ? [0, 0, vw, vh] : [0, canvas.height - vh, vw, vh];
       gl.enable(gl.DEPTH_TEST);
@@ -551,6 +515,66 @@ export function createToon({ onScreen = null } = {}) {
 }
 
 const NO_OP = () => {};
+
+// Where a fighter drawn on screen lands (render's `screen`), worked out on the
+// CPU: the clip-space view matrix, whether it mirrors (and so turns the
+// winding over), the map from a model-space direction to the mask's pixel axes
+// for the rim, the rim's reach and the key line's radius in device px, and the
+// key line's quad in clip space (null without a key line). Pure, so a test can
+// hold it to the buffer path: a model point must land on the same device pixel
+// either way. `screen.m` is [a, b, c, d, e, f], local px -> device px.
+export function screenProjection(screen, box, squash, jitter, vw, vh) {
+  const U = GL3D.UNIT;
+  const [a, b, c, d, e, f] = screen.m;
+  const kx = squash.x * U, ky = squash.y * U;
+  const ex = a * jitter + e, fy = b * jitter + f;
+  // model units -> local px (kx, ky, jitter) -> device px (m) -> clip space,
+  // with the canvas's y down turned up
+  const view = [
+    (2 * a * kx) / vw, (-2 * b * kx) / vh, 0, 0,
+    (-2 * c * ky) / vw, (2 * d * ky) / vh, 0, 0,
+    0, 0, -1 / DEPTH, 0,
+    (2 * ex) / vw - 1, 1 - (2 * fy) / vh, 0, 1,
+  ];
+  const det = a * d - b * c;
+  const px = Math.sqrt(Math.abs(det));      // device px per local px
+  const out = {
+    view,
+    flip: det < 0,                          // mirrored: the winding turns over
+    rimDir: [a * kx, -b * kx, -c * ky, d * ky],
+    reach: (GL3D.RIM_REACH / GL3D.SS) * px, // the same reach in local px as in the buffer
+    keyRect: null,
+    keyRadius: 0,
+  };
+  if (screen.keyline) {
+    out.keyRadius = (GL3D.INK * U + screen.keyline.px) * px;
+    // The quad: the box's corners on screen, out by the line's reach.
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const lx of [-box.ox + jitter, box.w - box.ox + jitter]) {
+      for (const ly of [-box.oy, box.h - box.oy]) {
+        const dx = a * lx + c * ly + e, dy = b * lx + d * ly + f;
+        x0 = Math.min(x0, dx); x1 = Math.max(x1, dx); y0 = Math.min(y0, dy); y1 = Math.max(y1, dy);
+      }
+    }
+    const r = out.keyRadius + 2;
+    out.keyRect = [((x0 - r) / vw) * 2 - 1, 1 - ((y1 + r) / vh) * 2, ((x1 + r) / vw) * 2 - 1, 1 - ((y0 - r) / vh) * 2];
+  }
+  return out;
+}
+
+// The buffer path's view matrix (render without `screen`): the box framed
+// in the top-left vw x vh pixels of the renderer's own canvas.
+export function bufferProjection(box, squash, jitter) {
+  const U = GL3D.UNIT;
+  const l = -box.ox / U, r = (box.w - box.ox) / U;
+  const t = box.oy / U, b = -(box.h - box.oy) / U;
+  return [
+    (2 * squash.x) / (r - l), 0, 0, 0,
+    0, (2 * squash.y) / (t - b), 0, 0,
+    0, 0, -1 / DEPTH, 0,
+    (2 * (jitter / U) - (r + l)) / (r - l), -(t + b) / (t - b), 0, 1,
+  ];
+}
 
 function normalizeKey(k) {
   const l = Math.hypot(k[0], k[1], k[2]) || 1;
