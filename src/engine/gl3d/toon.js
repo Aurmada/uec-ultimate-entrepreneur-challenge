@@ -127,12 +127,25 @@ export const hexToRGB = (hex) => {
 // Returns null where WebGL2 is unavailable, so the caller falls back cleanly.
 export function createToon() {
   if (typeof document === 'undefined') return null;
-  const canvas = document.createElement('canvas');
-  const gl = canvas.getContext('webgl2', {
+  // How the render reaches the 2D canvas (GL3D.COMPOSITE). 'canvas' keeps the
+  // drawing buffer, since drawImage reads it straight after drawing; the other
+  // two do not need to. An OffscreenCanvas hands over an ImageBitmap instead.
+  const mode = GL3D.COMPOSITE;
+  const attrs = {
     alpha: true, premultipliedAlpha: true, antialias: true, depth: true,
-    // drawImage reads this canvas straight after drawing; keep the buffer.
-    preserveDrawingBuffer: true,
-  });
+    preserveDrawingBuffer: mode !== 'nopreserve' && mode !== 'bitmap',
+  };
+  let canvas = null, gl = null, bitmap = false;
+  if (mode === 'bitmap' && typeof OffscreenCanvas !== 'undefined') {
+    canvas = new OffscreenCanvas(300, 150);
+    gl = canvas.getContext('webgl2', attrs);
+    bitmap = !!gl && typeof canvas.transferToImageBitmap === 'function';
+    if (!bitmap) { canvas = null; gl = null; }
+  }
+  if (!gl) {
+    canvas = document.createElement('canvas');
+    gl = canvas.getContext('webgl2', attrs);
+  }
   if (!gl) return null;
 
   const prog = gl.createProgram();
@@ -179,7 +192,18 @@ export function createToon() {
 
   const renderer = {
     canvas,
+    gl,
     lost: false,
+    composite: bitmap ? 'bitmap' : attrs.preserveDrawingBuffer ? 'canvas' : 'nopreserve',
+
+    // What to drawImage from once a draw is done, and what to call once the
+    // drawImage has run. A bitmap takes the canvas's image with it and must be
+    // closed; the canvas itself is simply read.
+    image() {
+      if (!bitmap) return { src: canvas, done: NO_OP };
+      const bmp = canvas.transferToImageBitmap();
+      return { src: bmp, done: () => bmp.close() };
+    },
 
     upload(model) {
       return model.primitives.map((p) => {
@@ -376,6 +400,8 @@ export function createToon() {
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); renderer.lost = true; });
   return renderer;
 }
+
+const NO_OP = () => {};
 
 function normalizeKey(k) {
   const l = Math.hypot(k[0], k[1], k[2]) || 1;

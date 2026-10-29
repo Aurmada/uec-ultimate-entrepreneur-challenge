@@ -47,6 +47,17 @@ export function enable3D({ ids = null, timing = false } = {}) {
 
 export function disable3D() { enabled = false; }
 
+// Drops the renderer and every loaded model, so the next enable3D builds them
+// again under the GL3D settings of that moment. For the lab's comparisons of
+// GL3D.COMPOSITE, which is fixed when a WebGL context is made; the game never
+// calls it.
+export function reset3D() {
+  if (renderer?.gl) renderer.gl.getExtension('WEBGL_lose_context')?.loseContext();
+  renderer = null;
+  models.clear();
+  enabled = false;
+}
+
 function load(id) {
   if (models.has(id)) return models.get(id);
   const entry = { ready: false, failed: false };
@@ -132,7 +143,9 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, face = null }) {
   const g = B.buf.getContext('2d');
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, B.buf.width, B.buf.height);
-  g.drawImage(renderer.canvas, 0, 0, vw, vh, 0, 0, B.buf.width, B.buf.height);
+  const img = renderer.image();
+  g.drawImage(img.src, 0, 0, vw, vh, 0, 0, B.buf.width, B.buf.height);
+  img.done();
   const t3 = performance.now();
   if (perf) perf.add('3d', { solve: t1 - t0, gpu: t2 - t1, blit: t3 - t2 });
   return true;
@@ -156,7 +169,9 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
     ctx.translate(2 * rect.x + rect.w, 0);
     ctx.scale(-1, 1);
   }
-  ctx.drawImage(renderer.canvas, 0, 0, vw, vh, rect.x, rect.y, rect.w, rect.h);
+  const img = renderer.image();
+  ctx.drawImage(img.src, 0, 0, vw, vh, rect.x, rect.y, rect.w, rect.h);
+  img.done();
   ctx.restore();
   return true;
 }
@@ -315,6 +330,7 @@ export function wearing(def, state, conditions = {}) {
 export function stats3D() {
   return {
     enabled, only: only ? [...only] : null, renderer: !!renderer, lost: !!renderer?.lost,
+    composite: renderer?.composite || null,
     models: Object.fromEntries([...models].map(([id, e]) => [id, e.ready ? 'ready' : e.failed ? 'failed' : 'loading'])),
     timing: perf ? perf.summary() : null,
   };

@@ -466,6 +466,15 @@ export const PARTS = {
 export const GL3D = {
   UNIT: 100,            // rig px per model unit; build_adam.py models in these units
   SS: 2,                // supersampling, matching the procedural buffer
+  // How a finished 3D render is handed to the 2D canvas it is drawn into, fixed
+  // when the WebGL context is made. Render only. 'canvas' is drawImage of the
+  // WebGL canvas with its buffer preserved, as built; 'nopreserve' the same
+  // without preserving it (the drawImage runs in the task that drew, which the
+  // spec allows); 'bitmap' renders into an OffscreenCanvas and hands over an
+  // ImageBitmap, falling back to a plain canvas where that is missing. On an
+  // iPhone in October 2026 the hand-over was two thirds of a 3D fighter's time
+  // (0.10 ms pose, 0.68 ms GPU, 1.52 ms copy), so this is the lever to measure.
+  COMPOSITE: 'canvas',
   // How far the body opens toward the camera. 0 is a pure profile; fighting
   // games turn the chest so it reads, and the lead arm and leg go to the FAR
   // side, which is why the pose's armF and legF drive the model's .L limbs.
