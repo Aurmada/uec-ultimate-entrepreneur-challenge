@@ -16,6 +16,10 @@
 //   node lab/balance.js --json out.json          # the raw tallies as well
 //   node lab/balance.js --level intern --against b-neo:intern
 //                                                # each roster AI against one opponent
+//   node lab/balance.js --level intern --patch '{"intern":{"cmd":0.3}}'
+//                                                # AI_LEVELS overridden, to try values
+//   node lab/balance.js --level intern --ease '{"max":0.3,"ava":-0.2}'
+//                                                # roster ai.ease at --level, to try values
 //
 // --against is the closer measure of what a player feels at a difficulty: every
 // roster fighter, at --level, plays the same opponent (a base founder, on the
@@ -178,7 +182,7 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
 // --------------------------------------------------------------- reporting
 
 function parseArgs(argv) {
-  const o = { level: 'mogul', n: 20, seed: 1, focus: [], only: [], json: null, against: null, workers: availableParallelism() };
+  const o = { level: 'mogul', n: 20, seed: 1, focus: [], only: [], json: null, against: null, patch: null, ease: null, workers: availableParallelism() };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === '--level') { o.level = v; i++; }
@@ -188,6 +192,8 @@ function parseArgs(argv) {
     else if (k === '--only') { o.only = v.split(','); i++; }
     else if (k === '--json') { o.json = v; i++; }
     else if (k === '--workers') { o.workers = +v; i++; }
+    else if (k === '--patch') { o.patch = JSON.parse(v); i++; }
+    else if (k === '--ease') { o.ease = JSON.parse(v); i++; }
     else if (k === '--against') {
       const [id, level] = v.split(':');
       o.against = { id, level: level || o.level };
@@ -323,7 +329,7 @@ async function main() {
   const chunks = Array.from({ length: nw }, (_, i) => all.filter((_, j) => j % nw === i));
   const t0 = Date.now();
   const parts = await Promise.all(chunks.map(chunk => new Promise((resolve, reject) => {
-    const w = new Worker(fileURLToPath(import.meta.url), { workerData: { chunk, level: o.level } });
+    const w = new Worker(fileURLToPath(import.meta.url), { workerData: { chunk, level: o.level, patch: o.patch, ease: o.ease } });
     w.on('message', resolve);
     w.on('error', reject);
   })));
@@ -336,7 +342,20 @@ async function main() {
 if (isMainThread) {
   if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();
 } else {
-  const { chunk, level } = workerData;
+  const { chunk, level, patch, ease } = workerData;
+  if (ease) {
+    // Each named roster character's ai.ease at this level, replaced.
+    const { FIGHTERS } = await import('../src/data/fighters.js');
+    for (const [id, v] of Object.entries(ease)) {
+      const f = FIGHTERS.find((x) => x.id === id);
+      if (f) f.ai = { ...f.ai, ease: { ...(f.ai.ease || {}), [level]: v } };
+    }
+  }
+  if (patch) {
+    // Only the AI's own numbers, for trying values before they go in config.
+    const { AI_LEVELS } = await import('../src/config.js');
+    for (const [k, v] of Object.entries(patch)) Object.assign(AI_LEVELS[k], v);
+  }
   const out = [];
   for (const [a, b, seed, levels] of chunk) out.push(await runMatch(a, b, levels || level, seed));
   parentPort.postMessage(out);

@@ -57,6 +57,28 @@ and v3.9.3's `TELEPORT.PAST` in place of 84), and both are kept. The three
 superseded branches can be deleted whenever the owner likes; nothing on them is
 missing from `main`.
 
+## v3.11: Rookie and Contender play alike whoever you fight
+
+Measured with `lab/balance.js` (AI against AI, 20 per pair, seeds 11 and 12):
+at Rookie Adam won 96% of matches and Lizbeth 4%, a 92 point spread; at
+Contender, 50 (Adam 82%); at Champion, 37. Neither of the global knobs tried
+narrowed it: a level-wide appetite for a character's own move (Adam still
+93% at a quarter of it), or how much a character's preferred range counts.
+The easier levels cannot answer some kits at all (Adam's three-hit rush,
+Carl's grab, Elo's burn: with every signature move off, Carl, Adam and Elo
+still beat a base founder 80 to 90% at Rookie) and cannot play others (a
+counter, a rain from range).
+
+So each roster character now has its own hesitation at Rookie and Contender
+(`ai.ease` in `fighters.js`, added to the level's `mistake`, capped at
+`AI_EASE.MAX`, checked by the schema), and Champion has none. The values were
+found by `lab/balance.js` iterated toward a 38 to 62% band (its new `--ease`
+and `--patch` options try values without editing files) and checked on seeds
+13 and 14. Spreads now: Rookie 27 to 31 points (Lizbeth 30%, the rest 47 to
+62%), Contender 21 to 25, Champion 37 exactly as before. AI only and
+single-player only, so `SIM_VERSION` stays 9; a player's ghost has no ease.
+`test/ease.test.js` pins the mechanism, Champion and the schema.
+
 ## v3.10.2, released 2026-10-29: single-player results are noted
 
 After a single-player match against the roster, the client reports how it
@@ -421,32 +443,19 @@ not read it), which the determinism and effects tests check.
    scales with `build`, so a wide fighter (Adam, Carl, Jeff) visibly stands inside
    a narrow one. Widening the push box with `build` would fix the look, but it is a
    simulation change (spacing, combo step-ins, `SIM_VERSION`), so it was left.
-7. **Balance as the AI plays it.** v3.9.4 lifted Elo and Carl at Champion (see
-   its section). Jeff (31%) and Elo (29%) are now the bottom, Steve and Lizbeth
-   (about 66%) the top, and Adam still wins over 80% at Contender and Rookie.
-   `lab/balance.js` measures it; it measures how well the AI plays each kit as
-   much as the kits themselves.
-   **Measured again on 2026-10-29, as a player would meet it.** AI against AI
-   mixes how well a kit attacks with how badly its rival defends, so
-   `lab/balance.js --against b-neo:<level>` now pits every roster AI against
-   one base founder on player stats at the same level, 80 matches each (seed
-   11). At Champion the roster wins 21% (Elo) to 64% (Cathie), a fair spread.
-   At Contender, 69% to 96% (Adam). At Rookie, 86% to 100% for everyone but
-   Lizbeth (34%), so Rookie is not easy against anyone, and Adam is the
-   hardest at every level below Champion: BLITZSCALE (three hits, 32 damage,
-   0.075 s to start) comes out about ten times a match at every level, and a
-   Rookie, which reconsiders every 0.3 to 0.6 s and blocks 16% of what it
-   sees, almost never answers it. Two causes, both in the AI or the roster's
-   numbers, neither in the simulation: a fighter's appetite for its own move
-   ignores the difficulty (`tryCommand` reads the personality only), and the
-   roster's own stats (power up to 1.25, HP up to 110) apply at every level.
-   Scaling the appetite by level alone was tried: at a quarter for Rookie the
-   roster still won 34% to 100%, so it is not enough on its own. No single
-   player results are stored (only live matches are reported), so these are
-   AI stand-ins for players. The choice: tune Rookie and Contender down (the
-   appetite, and the roster's stat edge below Champion), record single-player
-   results first (a new Supabase table, so the owner's call), or leave it.
-
+7. **Balance as the AI plays it.** Champion: Jeff (29%) and Elo (28%) are the
+   bottom, Lizbeth, Steve, Scam and Cathie (62 to 65%) the top, a 37 point
+   spread; untouched by v3.11. Rookie and Contender were evened out in v3.11
+   (its section): a 92 point spread at Rookie and 50 at Contender, now about 30
+   and 25. Lizbeth is still the weakest at Rookie (about 30%) at the floor of
+   the mechanism, since her counter needs timing a Rookie does not have; a kit
+   change (a Rookie Lizbeth that fights with basics more) is the next lever if
+   that matters. How hard the levels are for a person, as opposed to how alike
+   they are, is what `solo_results` (v3.10.2) is for: the AI stand-in for a
+   player (`--against b-neo:<level>`) still loses to almost the whole roster,
+   but a base founder has no signature move, so it says little about people.
+   `lab/balance.js` measures it all; it measures how well the AI plays each kit
+   as much as the kits themselves.
 8. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
    sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
    recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:

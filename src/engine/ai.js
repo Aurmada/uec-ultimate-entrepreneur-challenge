@@ -1,7 +1,7 @@
 // AI opponent: periodic decision ticks (rate = difficulty reaction speed),
 // personality-flavored per fighter (aggression / jumpiness / preferred range).
 
-import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS, DASH, COMBO, TELEPORT, ATTACKS, AI_MOMENT, AI_READ } from '../config.js';
+import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS, DASH, COMBO, TELEPORT, ATTACKS, AI_MOMENT, AI_READ, AI_EASE } from '../config.js';
 import { slotButton } from '../data/schema.js';
 
 // How far outside a trap's radius the AI stops. The bite is measured from the
@@ -73,6 +73,14 @@ export class AIController {
     this.pulse = {};           // one-frame button presses
     this.isHuman = false;
     this.cmds = (def.commandNormals || []).filter(cn => cn && cn.slot);
+    // How often a decision is passed up: the level's hesitation, plus this
+    // character's own below Champion (ai.ease, by level). A kit that wins on
+    // raw offence, which nobody at the easier levels can answer, holds back
+    // more there, and one that needs timing those levels do not have holds
+    // back less, so a level plays alike whoever is in front of you. Champion
+    // has none, so it plays as authored.
+    const ease = levelKey === 'mogul' ? 0 : (this.persona.ease?.[levelKey] ?? 0);
+    this.hesitation = Math.min(AI_EASE.MAX, Math.max(0, this.level.mistake + ease));
   }
 
   // Pulses a command normal if one fits the range, and holds forward so it
@@ -529,8 +537,8 @@ export class AIController {
     const dist = Math.abs(opp.x - f.x);
     const toward = Math.sign(opp.x - f.x) || 1;
 
-    // random hesitation (harder AIs hesitate less)
-    if (Math.random() < L.mistake) { this.dir = 0; return; }
+    // random hesitation (harder AIs hesitate less; see the constructor)
+    if (Math.random() < this.hesitation) { this.dir = 0; return; }
 
     // A slide or a bomb flies at you; a coin from FUNDING ROUND falls on you.
     // The old test read every projectile as flying, and a falling coin has no
