@@ -410,6 +410,27 @@ not read it), which the determinism and effects tests check.
    (about 66%) the top, and Adam still wins over 80% at Contender and Rookie.
    `lab/balance.js` measures it; it measures how well the AI plays each kit as
    much as the kits themselves.
+   **Measured again on 2026-10-29, as a player would meet it.** AI against AI
+   mixes how well a kit attacks with how badly its rival defends, so
+   `lab/balance.js --against b-neo:<level>` now pits every roster AI against
+   one base founder on player stats at the same level, 80 matches each (seed
+   11). At Champion the roster wins 21% (Elo) to 64% (Cathie), a fair spread.
+   At Contender, 69% to 96% (Adam). At Rookie, 86% to 100% for everyone but
+   Lizbeth (34%), so Rookie is not easy against anyone, and Adam is the
+   hardest at every level below Champion: BLITZSCALE (three hits, 32 damage,
+   0.075 s to start) comes out about ten times a match at every level, and a
+   Rookie, which reconsiders every 0.3 to 0.6 s and blocks 16% of what it
+   sees, almost never answers it. Two causes, both in the AI or the roster's
+   numbers, neither in the simulation: a fighter's appetite for its own move
+   ignores the difficulty (`tryCommand` reads the personality only), and the
+   roster's own stats (power up to 1.25, HP up to 110) apply at every level.
+   Scaling the appetite by level alone was tried: at a quarter for Rookie the
+   roster still won 34% to 100%, so it is not enough on its own. No single
+   player results are stored (only live matches are reported), so these are
+   AI stand-ins for players. The choice: tune Rookie and Contender down (the
+   appetite, and the roster's stat edge below Champion), record single-player
+   results first (a new Supabase table, so the owner's call), or leave it.
+
 8. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
    sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
    recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:

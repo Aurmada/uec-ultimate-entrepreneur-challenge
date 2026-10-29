@@ -14,6 +14,14 @@
 //   node lab/balance.js --focus elo,dex          # move breakdowns for two fighters
 //   node lab/balance.js --only elo               # only pairs with Elo in them
 //   node lab/balance.js --json out.json          # the raw tallies as well
+//   node lab/balance.js --level intern --against b-neo:intern
+//                                                # each roster AI against one opponent
+//
+// --against is the closer measure of what a player feels at a difficulty: every
+// roster fighter, at --level, plays the same opponent (a base founder, on the
+// stats every player fights with, at the level given after the colon) n times
+// from each side, so the table reads as how hard each opponent is, rather than
+// how each kit does against eight others all defending at the same level.
 //
 // It measures how well the AI plays each kit as much as the kits themselves:
 // both sides are the same AI at the same level, on roster stats. Read it that
@@ -64,12 +72,14 @@ function projLabel(a) {
 // counts throws only; "touched nobody" means nothing for them.
 const THROWS = new Set(['projectile', 'rain', 'bomb', 'trap', 'counter', 'deferred']);
 
+// `level` is one AI level for both sides, or [p1's, p2's].
 export async function runMatch(p1id, p2id, level, seed, mods = {}) {
   const { Game } = await import('../src/engine/game.js');
   const { AIController } = await import('../src/engine/ai.js');
-  const { FIGHTERS } = await import('../src/data/fighters.js');
+  const { getFighter } = await import('../src/data/fighters.js');
   const { PARRY } = await import('../src/config.js');
-  const defs = [p1id, p2id].map(id => FIGHTERS.find(f => f.id === id));
+  const defs = [p1id, p2id].map(id => getFighter(id));   // the roster, or a base founder
+  const levels = Array.isArray(level) ? level : [level, level];
   const hud = new Proxy({}, { get: () => () => {} });
   const arena = { id: 'test', name: 'TEST', draw() {}, mood: 'none' };
   let result = null;
@@ -77,9 +87,9 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
   Math.random = rng(seed ^ 0x9E3779B9);
   try {
     const game = new Game({
-      p1: { def: defs[0], controller: new AIController(level, defs[0]) },
-      p2: { def: defs[1], controller: new AIController(level, defs[1]) },
-      arena, mode: 'versus', difficulty: level, hud,
+      p1: { def: defs[0], controller: new AIController(levels[0], defs[0]) },
+      p2: { def: defs[1], controller: new AIController(levels[1], defs[1]) },
+      arena, mode: 'versus', difficulty: levels[0], hud,
       onEnd: (r) => { result = r; }, seed,
     });
     if (mods.setup) mods.setup(game);
@@ -168,7 +178,7 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
 // --------------------------------------------------------------- reporting
 
 function parseArgs(argv) {
-  const o = { level: 'mogul', n: 20, seed: 1, focus: [], only: [], json: null, workers: availableParallelism() };
+  const o = { level: 'mogul', n: 20, seed: 1, focus: [], only: [], json: null, against: null, workers: availableParallelism() };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === '--level') { o.level = v; i++; }
@@ -178,12 +188,29 @@ function parseArgs(argv) {
     else if (k === '--only') { o.only = v.split(','); i++; }
     else if (k === '--json') { o.json = v; i++; }
     else if (k === '--workers') { o.workers = +v; i++; }
+    else if (k === '--against') {
+      const [id, level] = v.split(':');
+      o.against = { id, level: level || o.level };
+      i++;
+    }
   }
   return o;
 }
 
 function jobs(o) {
   const out = [];
+  if (o.against) {
+    const ref = o.against;
+    for (const a of ROSTER_IDS) {
+      if (o.only.length && !o.only.includes(a)) continue;
+      for (let k = 0; k < 2 * o.n; k++) {
+        const seed = (o.seed * 1000003 + ROSTER_IDS.indexOf(a) * 7919 + k * 15485863) >>> 0;
+        // from each side in turn
+        out.push(k % 2 ? [ref.id, a, seed, [ref.level, o.level]] : [a, ref.id, seed, [o.level, ref.level]]);
+      }
+    }
+    return out;
+  }
   for (const a of ROSTER_IDS) for (const b of ROSTER_IDS) {
     if (a === b) continue;
     if (o.only.length && !o.only.includes(a) && !o.only.includes(b)) continue;
@@ -197,7 +224,28 @@ function jobs(o) {
   return out;
 }
 
+// Each roster fighter's record against the one opponent of --against.
+function reportAgainst(results, o) {
+  const win = {}, play = {}, dmg = {};
+  let unfinished = 0;
+  for (const r of results) {
+    if (r.winner === -2) unfinished++;
+    const i = r.p1 === o.against.id ? 1 : 0, id = i ? r.p2 : r.p1;
+    play[id] = (play[id] || 0) + 1;
+    if (r.winner === i) win[id] = (win[id] || 0) + 1;
+    dmg[id] = (dmg[id] || 0) + r.tally[i].dmg;
+  }
+  console.log(`\n${o.level} against ${o.against.id} at ${o.against.level}, ${2 * o.n} matches each, seed ${o.seed}`
+    + (unfinished ? `, ${unfinished} unfinished` : ''));
+  const ids = ROSTER_IDS.filter(id => play[id]);
+  for (const id of ids.sort((a, b) => (win[b] || 0) / play[b] - (win[a] || 0) / play[a])) {
+    console.log(`  ${id.padEnd(8)} ${(100 * (win[id] || 0) / play[id]).toFixed(1).padStart(5)}%`
+      + `  ${(dmg[id] / play[id]).toFixed(0).padStart(4)} damage a match`);
+  }
+}
+
 function report(results, o) {
+  if (o.against) { reportAgainst(results, o); return; }
   const win = {}, play = {}, pair = {};
   let unfinished = 0;
   for (const r of results) {
@@ -283,6 +331,6 @@ if (isMainThread) {
 } else {
   const { chunk, level } = workerData;
   const out = [];
-  for (const [a, b, seed] of chunk) out.push(await runMatch(a, b, level, seed));
+  for (const [a, b, seed, levels] of chunk) out.push(await runMatch(a, b, levels || level, seed));
   parentPort.postMessage(out);
 }
