@@ -71,6 +71,12 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.11: Rookie means Rookie, whoever you draw
+
+- 🎚️ **Every opponent plays to the level you picked.** At Rookie, Adam Weumann used to win almost every computer-against-computer match with BLITZSCALE, while Lizbeth Holmez stood around waiting to counter and won almost none. Each founder now holds back by their own amount at Rookie and Contender, so those levels feel alike whoever you face: Adam and Elo Ma ease off the most, and Lizbeth and Cathie Woodz stop hesitating. Champion is exactly as it was.
+
+The anonymous match notes from v3.10.2 will tell us how it plays with real people.
+
 ## What's new in v3.10.2: helping us set the difficulty
 
 - 📊 **Rookie should feel like Rookie.** Our measurements say Rookie and Contender are harder than they should be against some opponents, Adam Weumann above all. Before we retune them, the game now keeps an anonymous note of how each single-player match against the roster ends: who you fought, at which level, and the score. Nothing about you is kept, not even which account played.

@@ -6,7 +6,7 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.10.2 on GitHub Pages
+The game is live at v3.11 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
 on 2026-10-29. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
@@ -46,7 +46,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.10.2 (`SIM_VERSION` 9), with the 3D prototype behind `?gl` | Deployed. A push here is a release. 452 tests pass. |
+| `main` | The live game, v3.11 (`SIM_VERSION` 9), with the 3D prototype behind `?gl` | Deployed. A push here is a release. 456 tests pass. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -57,7 +57,7 @@ and v3.9.3's `TELEPORT.PAST` in place of 84), and both are kept. The three
 superseded branches can be deleted whenever the owner likes; nothing on them is
 missing from `main`.
 
-## v3.11: Rookie and Contender play alike whoever you fight
+## v3.11, released 2026-10-29: Rookie and Contender play alike whoever you fight
 
 Measured with `lab/balance.js` (AI against AI, 20 per pair, seeds 11 and 12):
 at Rookie Adam won 96% of matches and Lizbeth 4%, a 92 point spread; at
