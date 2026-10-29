@@ -6,7 +6,7 @@ Read in this order: `docs/HANDOFF.md` (where things stand, what is next, what th
 
 ## Branches
 
-- `main`: the live game (see `VERSION` in `src/config.js`; v3.10 in late October 2026). Since v3.10 it carries the 3D prototype (3D fighters, Blender-rendered stages, fighting-game effects), dark behind `?gl`. `docs/HANDOFF.md` lists the other branches and which are released.
+- `main`: the live game (see `VERSION` in `src/config.js`; v3.10.1 in late October 2026). Since v3.10 it carries the 3D prototype (3D fighters, Blender-rendered stages, fighting-game effects), dark behind `?gl`. `docs/HANDOFF.md` lists the other branches and which are released.
 - `live-3d` and `claude/game-review-enhance-29bffb`: the prototype's earlier branches, superseded by `main`. Work on the 3D path now branches from `main`.
 
 ## Run and test

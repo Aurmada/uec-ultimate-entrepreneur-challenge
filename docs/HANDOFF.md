@@ -6,7 +6,7 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.10 on GitHub Pages
+The game is live at v3.10.1 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
 on 2026-10-29. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
@@ -46,7 +46,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.10 (`SIM_VERSION` 9), with the 3D prototype behind `?gl` | Deployed. A push here is a release. 448 tests pass. |
+| `main` | The live game, v3.10.1 (`SIM_VERSION` 9), with the 3D prototype behind `?gl` | Deployed. A push here is a release. 450 tests pass. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -56,6 +56,15 @@ only code conflict was the teleport in `game.js` (the prototype's warp effect,
 and v3.9.3's `TELEPORT.PAST` in place of 84), and both are kept. The three
 superseded branches can be deleted whenever the owner likes; nothing on them is
 missing from `main`.
+
+## v3.10.1, released 2026-10-29: 3D that stays 3D
+
+Two fixes to the 3D path, both render-only. A lost WebGL context (a phone
+taking the GPU back) is now rebuilt when the browser restores it, where it
+used to leave the fighters 2D for the rest of the session; and hair and coats
+sway on the match's clock, so a hitstop freezes them and the KO slow motion
+slows them. ARCHITECTURE section 7 has both. Also `lab/balance.js --against`,
+which measures each roster AI against one opponent (decision 7).
 
 ## v3.10, released 2026-10-29: the 3D prototype ships dark
 

@@ -36,7 +36,7 @@ npm test
 ```
 
 328 tests on `main` at v3.8 and 374 on `live-3d` (October 2026); 370 at v3.9.3,
-385 at v3.9.4, and 448 at v3.10, which carries the prototype. About a second, no framework. They should all pass on a clean checkout. If they do not,
+385 at v3.9.4, 448 at v3.10, which carries the prototype, and 450 at v3.10.1. About a second, no framework. They should all pass on a clean checkout. If they do not,
 stop and find out why before changing anything.
 
 ---
@@ -57,7 +57,7 @@ deployed artifact.** There is no build step. The browser loads `src/*.js` as
 native ES modules, so the file you edit is literally the file that runs, and
 deploying is `git push`. This is a deliberate constraint, not an oversight.
 
-One branch matters. `main` is the live game (v3.10): a push to it deploys.
+One branch matters. `main` is the live game (v3.10.1): a push to it deploys.
 Since v3.10 it also carries the 3D prototype (3D fighters, rendered stages, hit
 effects, all behind `?gl`). Read `docs/HANDOFF.md` before working on it: it
 says where things stand, what is next, and which decisions belong to the owner.

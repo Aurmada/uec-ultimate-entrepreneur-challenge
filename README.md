@@ -71,6 +71,13 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.10.1: 3D that stays 3D
+
+- 📱 **3D comes back after your phone takes a break.** A phone can take the graphics chip away from a page, when you switch apps or it runs short of memory. The 3D fighters used to stay flat for the rest of your visit after that; now they come back as soon as the phone hands the chip back.
+- 💇 **Hair and coats move with the fight.** A ponytail or a coat kept swinging through the freeze when a hit lands, and at full speed through the KO slow motion. Now it freezes and slows with everything else.
+
+Both are in the 3D preview (`?gl`); with 3D off nothing changes.
+
 ## What's new in v3.10: the fighters in 3D, if you ask for them
 
 - 🎮 **A 3D preview you can switch on.** Add `?gl` to the game's address and every fighter becomes a toon-shaded 3D model, posed from the same animation as the 2D fighter, so every move, stance, look and player build carries over, your photo included. The arenas become lit stages rendered in Blender, with depth as the camera pans; the fighters take their stage's light; hits land with bursts, trails and a banner for specials and Unicorn Mode; and the portraits turn 3D. It is off unless you ask for it, and it only changes how the fight looks, never what happens in it, so you can play anyone online with it on or off.
