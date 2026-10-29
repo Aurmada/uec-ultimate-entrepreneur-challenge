@@ -477,6 +477,17 @@ export function validateCharacter(ch) {
     const v = ai[key];
     if (typeof v !== 'number' || v < 0 || v > 1) errors.push(`ai.${key} must be between 0 and 1`);
   }
+  // A roster character's own hesitation below Champion (ai.js). Champion is
+  // never eased, so it has no key here.
+  if (ai.ease !== undefined) {
+    if (!ai.ease || typeof ai.ease !== 'object') errors.push('ai.ease must be an object');
+    else {
+      for (const [level, v] of Object.entries(ai.ease)) {
+        if (level !== 'intern' && level !== 'founder') errors.push(`ai.ease.${level}: only intern and founder are eased`);
+        else if (typeof v !== 'number' || v < -0.5 || v > 0.75) errors.push(`ai.ease.${level} must be between -0.5 and 0.75`);
+      }
+    }
+  }
 
   // Budget only means something once the numbers it reads are well-formed.
   let cost = 0, band = 'clean';

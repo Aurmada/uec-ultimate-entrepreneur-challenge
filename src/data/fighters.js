@@ -160,6 +160,15 @@ export const UNICORN_META = {
 //   bozo     the warehouse build: low, square, barrel-chested
 //   dex      squat and short-armed, gets under you and stays there
 //   zara     smallest and quickest, the hardest thing on stage to hit
+// ai.ease: a roster character's own hesitation at Rookie and Contender, on
+// top of the level's (ai.js, AIController). Measured with lab/balance.js
+// (2026-10-29, AI against AI, 20 per pair, seeds 11 and 12, checked on 13 and
+// 14): without it Adam won 96% at Rookie and Lizbeth 4%, and the best to worst
+// spread was 92 points at Rookie and 50 at Contender, against 37 at Champion.
+// A kit that wins on raw offence the easier levels cannot answer (Adam's rush,
+// Elo's burn) holds back more; one that needs timing they do not have
+// (Lizbeth's counter, Cathie's rain) holds back less. Now 27 and 24. Champion
+// has none, so it plays as authored.
 export const FIGHTERS = [
   {
     id: 'ava', name: 'LIZBETH HOLMEZ', title: 'THE FRAUDSTER', company: 'THERAMOS',
@@ -183,7 +192,7 @@ export const FIGHTERS = [
     // to hit is what pays for the speed, and it drops her out of the blocked band.
     body: { height: 1.04, build: 1.06, reach: 0.96, stride: 1.02, shoulders: 0.88, head: 1.02 },
     stats: { speed: 1.0, power: 1.0, hp: 100 },
-    ai: { aggr: 0.55, jump: 0.3, prefRange: 'far' },
+    ai: { aggr: 0.55, jump: 0.3, prefRange: 'far', ease: { intern: -0.30 } },
     c: { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#e8dcc0', pants: '#23294f', shoe: '#eef1ff' },
     hairStyle: 'ponytail', outfit: 'blazer', accessory: 'visor',
     // The demo that was never real. She presents; swing at her during it and
@@ -230,7 +239,7 @@ export const FIGHTERS = [
     // Wide as a doorway and built low. Reads as the biggest thing on stage.
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
     stats: { speed: 0.95, power: 1.2, hp: 95 },
-    ai: { aggr: 0.85, jump: 0.35, prefRange: 'close' },
+    ai: { aggr: 0.85, jump: 0.35, prefRange: 'close', ease: { intern: 0.32, founder: 0.22 } },
     c: { skin: '#c68a5a', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#3b2a1c', pants: '#33241d', shoe: '#f5f5f5' },
     hairStyle: 'cap', outfit: 'hoodie', accessory: 'stubble',
     // Growth at any cost, in one direction, until the money runs out. A
@@ -280,7 +289,7 @@ export const FIGHTERS = [
     // right up until it isn't.
     body: { height: 1.06, build: 0.98, reach: 1.00, stride: 1.06, shoulders: 0.92, head: 0.96 },
     stats: { speed: 1.15, power: 0.9, hp: 95 },
-    ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid' },
+    ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid', ease: { intern: 0.11 } },
     // The keynote drift: the presenting hand rises like he is about to say
     // "one more thing", then settles.
     animOverrides: {
@@ -332,7 +341,7 @@ export const FIGHTERS = [
     // the smaller hurtbox is what her budget pays for.
     body: { height: 0.90, build: 0.92, reach: 0.96, stride: 0.88, shoulders: 0.90, head: 1.11 },
     stats: { speed: 1.1, power: 0.95, hp: 95 },
-    ai: { aggr: 0.75, jump: 0.5, prefRange: 'mid' },
+    ai: { aggr: 0.75, jump: 0.5, prefRange: 'mid', ease: { intern: 0.02 } },
     // Pump it, then pull the floor out. PUMP launches so she can juggle;
     // RUG PULL denies the ground she just knocked you onto. Both pay for
     // themselves with slower startup than her neutral buttons.
@@ -393,7 +402,7 @@ export const FIGHTERS = [
     // the zoning — you can see the range before she uses it.
     body: { height: 1.2, build: 0.89, reach: 1.06, stride: 1.18, shoulders: 0.88, head: 0.94 },
     stats: { speed: 0.9, power: 1.05, hp: 105 },
-    ai: { aggr: 0.65, jump: 0.2, prefRange: 'far' },
+    ai: { aggr: 0.65, jump: 0.2, prefRange: 'far', ease: { intern: -0.09, founder: -0.13 } },
     // Almost motionless. The stillness is the threat — she is waiting for you
     // to walk into the range she already has.
     animOverrides: {
@@ -459,7 +468,7 @@ export const FIGHTERS = [
     // nothing about him says he can reach you, which is the honest advert.
     body: { height: 0.94, build: 1.08, reach: 0.98, stride: 0.9, shoulders: 1.25, head: 1.06 },
     stats: { speed: 0.85, power: 1.25, hp: 110 },
-    ai: { aggr: 0.8, jump: 0.15, prefRange: 'close' },
+    ai: { aggr: 0.8, jump: 0.15, prefRange: 'close', ease: { intern: 0.11 } },
     // A raider takes what he can reach. ASSET SEIZURE is unblockable and hits
     // hard, and buys that with a short grasp and a slow, punishable wind-up —
     // walk into him and you lose the asset; keep him out and he has nothing.
@@ -513,7 +522,7 @@ export const FIGHTERS = [
     // over-budget style shipped, so the frame has to be a real target.
     body: { height: 1.18, build: 0.96, reach: 1.00, stride: 1.18, shoulders: 0.86, head: 0.90 },
     stats: { speed: 1.05, power: 1.15, hp: 100 },
-    ai: { aggr: 0.82, jump: 0.4, prefRange: 'close' },
+    ai: { aggr: 0.82, jump: 0.4, prefRange: 'close', ease: { intern: 0.19 } },
     c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#5a3a22', pants: '#1a1c24', shoe: '#c9ced9' },
     hairStyle: 'buzz', outfit: 'tee', accessory: null, cameo: true,
     // The rocket that does not make it to orbit. A point-blank blast from a
@@ -556,7 +565,7 @@ export const FIGHTERS = [
     // Compact and barrel-chested with short arms — the warehouse build.
     body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
     stats: { speed: 0.9, power: 1.2, hp: 108 },
-    ai: { aggr: 0.75, jump: 0.2, prefRange: 'close' },
+    ai: { aggr: 0.75, jump: 0.2, prefRange: 'close', ease: { intern: 0.11, founder: -0.11 } },
     c: { skin: '#e2ab84', suit: '#1f4a56', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
     hairStyle: 'bald', outfit: 'vest', accessory: 'shades', cameo: true,
     // Undercutting, in both senses: a low sweep from the man whose whole
@@ -599,7 +608,7 @@ export const FIGHTERS = [
     // is also what pays for it.
     body: { height: 0.98, build: 1.14, reach: 0.96, stride: 0.94, shoulders: 1.08, head: 1.08 },
     stats: { speed: 1.1, power: 0.9, hp: 96 },
-    ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid' },
+    ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid', ease: { intern: 0.09 } },
     c: { skin: '#ecc39e', suit: '#6d7382', suit2: '#4a4f5c', accent: '#29d9ff', hair: '#7a5230', pants: '#2c3040', shoe: '#f0f0f0' },
     hairStyle: 'curly', outfit: 'henley', accessory: null, cameo: true,
     // Safety memos, thrown at speed. He spaces at ~210px, which is why this is

@@ -279,6 +279,13 @@ export const AI_MOMENT = {
   REACH_MARGIN: 6,     // px inside a move's furthest connect, for the steps taken during startup
 };
 
+// A roster character's own hesitation below Champion (fighters.js, ai.ease):
+// added to the level's `mistake`, and never past MAX, so even the most held
+// back character still acts on most decisions. AI only, single-player only.
+export const AI_EASE = {
+  MAX: 0.75,
+};
+
 // What the AI reads off the screen to defend itself. Also AI only.
 export const AI_READ = {
   // px from the body's centre within which a falling FUNDING ROUND coin is on
