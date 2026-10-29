@@ -22,7 +22,7 @@ import {
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
-import { syncProfileUp, syncProfileDown, reportOnlineMatch, fetchProfile } from './net/cloud.js';
+import { syncProfileUp, syncProfileDown, reportOnlineMatch, reportSoloMatch, fetchProfile } from './net/cloud.js';
 import {
   NetSession, LobbySession, pairFromRoster, MaskController, makeRoomId, padToMask,
   STEP as NET_STEP, CHARACTER_WIRE_VERSION, SIM_VERSION, validatePeerCharacter,
@@ -205,6 +205,8 @@ function onMatchEnd(result) {
       isChallenge: result.isChallenge,
     });
     updateTitleChip();
+    // How it went against this opponent at this level, for tuning the levels.
+    reportSoloMatch(result, { version: VERSION, threeD: stats3D().enabled });
   }
   renderResults();
   showScreen('scr-results');

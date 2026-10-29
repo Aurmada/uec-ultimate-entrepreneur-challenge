@@ -4,7 +4,7 @@
 
 **Founders fight. Valuations fall.** A launch-ready browser arcade fighter where entrepreneurs battle 1-v-1 with Pitch Deck Strikes, Hostile Takeovers and full-meter **UNICORN MODE** — inspired by the pacing of 1990s arcade fighters, built with a fully original cast, art, and sound.
 
-No install and no build step. You do need an account: sign in with Google, Microsoft or an email link, build your founder, and fight. **Vanilla JavaScript + Canvas + Web Audio, with no npm packages.** Fighters and arenas are drawn in code and every sound is synthesized live. Beyond the page itself, the game loads the Supabase client from a CDN (sign-in, live matches and the global leaderboard) and fetches the face-detection cascade `assets/facefinder.bin` when you upload a photo.
+No install and no build step. You do need an account: sign in with Google, Microsoft or an email link, build your founder, and fight. **Vanilla JavaScript + Canvas + Web Audio, with no npm packages.** Fighters and arenas are drawn in code and every sound is synthesized live. Beyond the page itself, the game loads the Supabase client from a CDN (sign-in, live matches, the global leaderboard, and an anonymous note of how each single-player match ended, for tuning the difficulty levels) and fetches the face-detection cascade `assets/facefinder.bin` when you upload a photo.
 
 ---
 
