@@ -117,3 +117,120 @@ test('the key line\'s quad covers the whole fighter box on screen', () => {
   assert.equal(screenProjection({ m: transform() }, BOX, { x: 1, y: 1 }, 0, CW, CH).keyRect, null,
     'a fighter drawn with no key line got a key line quad');
 });
+
+// ---- the stack, on fake canvases ----
+// render.js's layered path, driven for real, but onto canvases that only
+// record what is done to them: there is no page or WebGL here. Each fake 2D
+// context keeps its transform, so a test can see where things were drawn.
+
+function fakeCanvas(log) {
+  const el = {
+    width: 300, height: 150, style: {}, attrs: {}, after: [], parentNode: {},
+    setAttribute(k, v) { this.attrs[k] = v; },
+    after(...els) { this.afterEls = els; },
+    getContext(kind) {
+      if (kind !== '2d') return null;
+      return this.ctx || (this.ctx = fakeContext(this, log));
+    },
+  };
+  return el;
+}
+
+function fakeContext(canvas, log) {
+  let m = [1, 0, 0, 1, 0, 0];
+  const saved = [];
+  const mul = (n) => {
+    const [a, b, c, d, e, f] = m;
+    m = [a * n[0] + c * n[1], b * n[0] + d * n[1], a * n[2] + c * n[3], b * n[2] + d * n[3],
+      a * n[4] + c * n[5] + e, b * n[4] + d * n[5] + f];
+  };
+  const own = {
+    canvas,
+    globalCompositeOperation: 'source-over',
+    getTransform: () => ({ a: m[0], b: m[1], c: m[2], d: m[3], e: m[4], f: m[5] }),
+    setTransform(a, b, c, d, e, f) {
+      m = typeof a === 'object' ? [a.a, a.b, a.c, a.d, a.e, a.f] : [a, b, c, d, e, f];
+    },
+    transform(a, b, c, d, e, f) { mul([a, b, c, d, e, f]); },
+    translate(x, y) { log.push({ canvas, op: 'translate', x, y, at: [...m] }); mul([1, 0, 0, 1, x, y]); },
+    scale(x, y) { mul([x, 0, 0, y, 0, 0]); },
+    rotate(r) { mul([Math.cos(r), Math.sin(r), -Math.sin(r), Math.cos(r), 0, 0]); },
+    save() { saved.push({ m: [...m], op: own.globalCompositeOperation }); },
+    restore() { const s = saved.pop(); if (s) { m = s.m; own.globalCompositeOperation = s.op; } },
+    fillRect(x, y, w, h) { log.push({ canvas, op: 'fill', blend: own.globalCompositeOperation, at: [...m] }); },
+    createLinearGradient: () => ({ addColorStop() {} }),
+    createRadialGradient: () => ({ addColorStop() {} }),
+    createPattern: () => ({}),
+    measureText: () => ({ width: 10 }),
+    getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
+  };
+  return new Proxy(own, {
+    get: (t, k) => (k in t ? t[k] : () => {}),     // any other drawing call does nothing
+    set: (t, k, v) => {
+      if (k === 'globalCompositeOperation') log.push({ canvas, op: 'blend', blend: v });
+      t[k] = v;
+      return true;
+    },
+  });
+}
+
+async function layeredFrame({ shake = 0 } = {}) {
+  const log = [];
+  globalThis.document = { createElement: () => fakeCanvas(log) };
+  globalThis.CSS = { supports: (p, v) => p === 'mix-blend-mode' && v === 'plus-lighter' };
+  const { LAYER_STACK } = await import('../src/engine/render.js');
+  const { Game } = await import('../src/engine/game.js');
+  const { FIGHTERS } = await import('../src/data/fighters.js');
+  const idle = { isHuman: false, update(f) { f.pad = {}; } };
+  const game = new Game({
+    p1: { def: FIGHTERS[0], controller: idle }, p2: { def: FIGHTERS[1], controller: idle },
+    arena: { id: 'test', name: 'TEST', draw() {}, mood: 'none' }, mode: 'versus',
+    hud: new Proxy({}, { get: () => () => {} }), onEnd: () => {}, seed: 7,
+  });
+  for (let i = 0; i < 30; i++) game.update(1 / 60);
+  game.fx.shakeMag = shake;
+  const canvas = fakeCanvas(log);
+  canvas.width = CW; canvas.height = CH;
+  const L = LAYER_STACK.makeStack(canvas, fakeCanvas(log));
+  LAYER_STACK.sizeStack(canvas, L);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  log.length = 0;
+  LAYER_STACK.renderLayered(ctx, L, game, game.t, { x: 480, y: 270, z: 1 });
+  return { log, L, canvas };
+}
+
+test('every canvas in the 3D stack shakes by the same offset in a frame', async () => {
+  // The shake is a fresh random offset each time it is read. Read once per
+  // canvas, the layers of one frame would jitter apart from each other.
+  const { log, L, canvas } = await layeredFrame({ shake: 8 });
+  const first = (el) => log.find((e) => e.canvas === el && e.op === 'translate');
+  const offsets = [canvas, L.top, L.glow, L.vig].map((el) => first(el));
+  for (const o of offsets) assert.ok(o, 'a canvas in the stack was never moved by the shake');
+  for (const o of offsets.slice(1)) {
+    assert.deepEqual([o.x, o.y], [offsets[0].x, offsets[0].y], 'two canvases of one frame shook by different offsets');
+  }
+  assert.ok(offsets[0].x !== 0 || offsets[0].y !== 0, 'the frame did not shake at all');
+});
+
+test('the stage light blends in the page, not on a canvas of its own', async () => {
+  // A blend drawn onto one canvas of the stack only meets that canvas's own
+  // pixels, never the canvases under it: the soft-light key glow came out as
+  // a pale haze over the whole frame. So no canvas above the game canvas may
+  // draw with a blend that needs what is under it; those canvases blend in
+  // the page, with the CSS blend the 2D path draws with.
+  const { log, L, canvas } = await layeredFrame();
+  const stack = [L.top, L.trail, L.glow, L.vig, L.over];
+  for (const e of log) {
+    if (!stack.includes(e.canvas) || e.op !== 'blend') continue;
+    assert.ok(!['soft-light', 'multiply', 'screen', 'overlay'].includes(e.blend),
+      `a canvas in the stack drew with ${e.blend}, which cannot reach the canvases under it`);
+  }
+  assert.equal(L.glow.style.mixBlendMode, 'soft-light');
+  assert.equal(L.trail.style.mixBlendMode, 'plus-lighter');
+  assert.ok(log.some((e) => e.canvas === L.glow && e.op === 'fill'), 'the key glow was not drawn');
+  assert.ok(log.some((e) => e.canvas === L.vig && e.op === 'fill'), 'the vignette was not drawn');
+  // In the page's order: the game canvas, the 3D fighters, the trails, the
+  // front, the glow over all of those, then the vignette and the cut-in.
+  assert.deepEqual(canvas.afterEls, [L.gl, L.trail, L.top, L.glow, L.vig, L.over]);
+});

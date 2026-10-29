@@ -738,6 +738,45 @@ whole roster, every look option (as bodies or as busts), every face close up in
 each expression, or every portrait, and `lab/blender/build_founder.py` rebuilds
 the model in about five seconds.
 
+**The 3D layer** (`GL3D.LAYER`, on by default with `?gl`). On an iPhone the copy
+was the cost: getting a WebGL image into a 2D canvas reads it back from the GPU,
+1.5 ms per fighter, however it is handed over (`GL3D.COMPOSITE` tried three
+ways). So with sharp fighters the game canvas is joined by canvases stacked
+over it, made by `render.js` the first time a 3D fighter is on screen, in this
+order:
+
+```
+game canvas   the stage, the world behind the fighters, auras, a 2D fighter drawn before any 3D one
+WebGL canvas  the 3D fighters, drawn straight on under the 2D canvas's own transform,
+              key line and hit flash included (toon.js, render with `screen`)
+trails        mix-blend-mode: plus-lighter, so they add light as 'lighter' did
+top           a 2D fighter drawn after a 3D one, and everything in front of the fighters
+key glow      mix-blend-mode: soft-light, at 1/8 size: drawStageLight's soft-light gradient
+vignette      at 1/8 size
+cut-in        the cut-in banner and the full-screen flash
+```
+
+A blend drawn on a canvas of its own only meets that canvas's empty pixels, so
+the two blends that need what is under them blend in the page with CSS instead,
+the same blend the copy path draws with. The first build drew the stage light
+on the top canvas, and the soft-light gradient came out as a pale haze over the
+whole frame. The glow and vignette are smooth and only move when the screen
+shakes, so they sit on small canvases redrawn only then; the trail and cut-in
+canvases are hidden while empty. The screen shake (`fx.shakeX`) is a new random
+offset on every read, so the frame reads it once and moves every canvas by it.
+The stack is placed from the game canvas's computed size and measured offset,
+not its whole-pixel `offsetTop`, so it does not sit half a pixel off. With
+`LAYER` off, without a 3D fighter, or with no page (tests), the copy path draws.
+
+What the stack cannot hold, measured against the copy path on frozen frames
+(the hosted bench's `#look-copy` and `#look-layer`): an aura drawn by the fighter
+in front no longer washes over a 3D fighter behind it (Unicorn Mode's glow,
+when both are in it and close), every trail lies over every 3D fighter, and a
+3D fighter's edges are crisper, since they are drawn at the screen's
+resolution rather than upscaled from the 2x buffer. Everything else matches to
+within a few levels. `test/layer3d.test.js` holds the projections to the buffer
+path and drives the stack on fake canvases.
+
 **Rendered stages.** The fighters were 3D and the arenas were still flat
 drawings. Every arena now also has a stage built in Blender, and with `?gl` the
 game draws that instead (`&stages=0` turns it off, `?stages` tries it with 2D

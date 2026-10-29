@@ -131,7 +131,10 @@ void main() {
 // just outside the finished fighter (drawFighter's keyLine), from this
 // fighter's silhouette mask. A pixel outside the silhouette with silhouette
 // within uRadius of it is line; the ink and body passes then cover the part of
-// it under the ink outline, as the 2D line sits under the body.
+// it under the ink outline, as the 2D line sits under the body. The mask is
+// read through a linear sampler here, so a tap that lands across its edge
+// comes back partly covered and the line's outer edge is antialiased; without
+// it the edge was a hard step, where the 2D line's is soft.
 const KEY_VS = `#version 300 es
 uniform vec4 uRect;       // the quad, clip space: x0, y0, x1, y1
 void main() {
@@ -154,8 +157,8 @@ void main() {
     hit = max(hit, texture(uMask, (p + o * uRadius) * uMaskTexel).a);
     hit = max(hit, texture(uMask, (p + o * uRadius * 0.5) * uMaskTexel).a);
   }
-  if (hit < 0.5) discard;
-  outColor = uColor;
+  if (hit <= 0.0) discard;
+  outColor = uColor * hit;
 }`;
 
 const IDENTITY2 = [1, 0, 0, 1];
@@ -225,7 +228,11 @@ export function createToon({ onScreen = null } = {}) {
     gl.attachShader(kp, compile(gl, gl.FRAGMENT_SHADER, KEY_FS));
     gl.linkProgram(kp);
     if (!gl.getProgramParameter(kp, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(kp));
-    key = { prog: kp, vao: gl.createVertexArray() };
+    key = { prog: kp, vao: gl.createVertexArray(), sampler: gl.createSampler() };
+    gl.samplerParameteri(key.sampler, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.samplerParameteri(key.sampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.samplerParameteri(key.sampler, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.samplerParameteri(key.sampler, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     for (const n of ['uRect', 'uMask', 'uMaskTexel', 'uRadius', 'uColor']) key[n] = gl.getUniformLocation(kp, n);
     gl.useProgram(kp);
     gl.uniform1i(key.uMask, 1);
@@ -463,7 +470,9 @@ export function createToon({ onScreen = null } = {}) {
         gl.uniform1f(key.uRadius, keyRadius);
         gl.uniform4f(key.uColor, col[0] * k.alpha, col[1] * k.alpha, col[2] * k.alpha, k.alpha);
         gl.bindVertexArray(key.vao);
+        gl.bindSampler(1, key.sampler);       // the mask, read linear for this pass only
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.bindSampler(1, null);
         gl.disable(gl.BLEND);
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.CULL_FACE);

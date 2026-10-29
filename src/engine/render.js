@@ -148,14 +148,24 @@ function drawStageLight(ctx) {
   // subtle top key glow
   ctx.save();
   ctx.globalCompositeOperation = 'soft-light';
+  drawKeyGlow(ctx);
+  ctx.restore();
+  drawVignette(ctx);
+}
+
+// The two halves of the stage light, apart so the 3D layer can put each on a
+// canvas of its own: a blend drawn on one canvas never reaches the ones under it.
+function drawKeyGlow(ctx) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, 'rgba(255,238,205,0.5)');
   g.addColorStop(0.5, 'rgba(255,255,255,0)');
   g.addColorStop(1, 'rgba(6,8,22,0.6)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  ctx.restore();
-  // vignette frames the action
+}
+
+// vignette frames the action
+function drawVignette(ctx) {
   ctx.save();
   const v = ctx.createRadialGradient(W / 2, H * 0.46, H * 0.32, W / 2, H * 0.5, H * 0.92);
   v.addColorStop(0, 'rgba(0,0,0,0)');
@@ -530,67 +540,153 @@ export function renderGame(ctx, game) {
 }
 
 // ---- the 3D layer (GL3D.LAYER) ----
-// Three canvases stacked where the one game canvas was: the game canvas itself
-// for everything behind the fighters, a WebGL canvas the 3D fighters are drawn
-// straight onto, and a 2D canvas on top for everything in front of them and
-// the screen-space overlays. The browser composites the three, so a 3D fighter
-// is never copied back into a 2D canvas, which on an iPhone was most of its
-// cost. Made the first time a 3D fighter is on screen, and only for a canvas on
-// the page; elsewhere (tests, a canvas off the page) the copy path draws.
+// Canvases stacked where the one game canvas was. The game canvas itself keeps
+// everything behind the fighters. Over it, in order: a WebGL canvas the 3D
+// fighters are drawn straight onto, the strike trails, a 2D canvas for
+// everything in front of the fighters, the stage light's key glow and then its
+// vignette, and last the cut-in and the full-screen flash. The browser
+// composites them, so a 3D fighter is never copied back into a 2D canvas, which
+// on an iPhone was most of its cost. Made the first time a 3D fighter is on
+// screen, and only for a canvas on the page; elsewhere (tests, a canvas off the
+// page) the copy path draws.
+//
+// The trails add light and the key glow is a soft-light blend. A blend drawn
+// on a canvas of its own only meets that canvas's empty pixels: the glow came
+// out as a pale haze over the whole frame. So those two canvases blend in the
+// page instead (CSS mix-blend-mode), with everything stacked under them, which
+// is what they did on the one canvas. A browser without plus-lighter keeps the
+// trails on the 2D canvas, a little flatter.
+//
+// The glow and the vignette are smooth gradients that only move when the
+// screen shakes, so they sit on small canvases the page scales up, redrawn
+// when the shake moves. The trail and cut-in canvases are hidden while there
+// is nothing on them, so the browser has nothing there to composite.
 const stacks = new WeakMap();
+const LIGHT_SCALE = 8;     // the glow and vignette canvases, at 1/8 of the game canvas each way
+const ALWAYS = ['gl', 'top', 'glow', 'vig'];
+
+// `gl` is the 3D layer's canvas (layerCanvas3D), passed in so a test can
+// build a stack without WebGL.
+function makeStack(canvas, gl) {
+  if (!gl) return null;
+  const made = (blend = '') => {
+    const el = document.createElement('canvas');
+    el.style.mixBlendMode = blend;
+    return el;
+  };
+  const adds = typeof CSS !== 'undefined' && CSS.supports('mix-blend-mode', 'plus-lighter');
+  const s = {
+    gl, trail: adds ? made('plus-lighter') : null, top: made(),
+    glow: made('soft-light'), vig: made(), over: made(),
+    on: {}, box: '', lit: '', trailDirty: false, overDirty: false, hidden: false,
+  };
+  s.els = [s.gl, s.trail, s.top, s.glow, s.vig, s.over].filter(Boolean);
+  for (const el of s.els) {
+    el.setAttribute('aria-hidden', 'true');
+    el.style.position = 'absolute';
+    el.style.pointerEvents = 'none';
+    el.style.display = 'block';
+  }
+  canvas.after(...s.els);
+  s.tx = s.top.getContext('2d');
+  s.rx = s.trail?.getContext('2d') ?? null;
+  s.gx = s.glow.getContext('2d');
+  s.vx = s.vig.getContext('2d');
+  s.ox = s.over.getContext('2d');
+  for (const k of ALWAYS) s.on[k] = true;
+  showLayer(s, 'trail', false);
+  showLayer(s, 'over', false);
+  return s;
+}
+
+function showLayer(s, key, on) {
+  if (s[key] && s.on[key] !== on) {
+    s.on[key] = on;
+    s[key].style.visibility = on ? '' : 'hidden';
+  }
+}
+
+// Over the game canvas exactly, wherever the page lays it out. Siblings share
+// an offset parent, so its offsets place them, but offsets are whole pixels
+// and the canvas can sit between two (a centred stage often does), and so can
+// its size. So the size comes from the computed style, and the stack is
+// measured where it landed and moved the rest of the way.
+function placeStack(canvas, s) {
+  const cs = s.cs || (s.cs = getComputedStyle(canvas));
+  const box = `${canvas.offsetLeft},${canvas.offsetTop},${cs.width},${cs.height},${cs.borderRadius}`;
+  if (box === s.box) return;
+  s.box = box;
+  const put = (dx, dy) => {
+    for (const el of s.els) {
+      el.style.left = `${canvas.offsetLeft + dx}px`;
+      el.style.top = `${canvas.offsetTop + dy}px`;
+      el.style.width = cs.width;
+      el.style.height = cs.height;
+      el.style.borderRadius = cs.borderRadius;
+    }
+  };
+  put(0, 0);
+  const a = canvas.getBoundingClientRect(), b = s.top.getBoundingClientRect();
+  const k = a.width / parseFloat(cs.width) || 1;     // a scale an ancestor puts on both
+  const dx = (a.left - b.left) / k, dy = (a.top - b.top) / k;
+  if (Math.abs(dx) > 1e-3 || Math.abs(dy) > 1e-3) put(dx, dy);
+}
+
 function stackFor(canvas) {
   let s = stacks.get(canvas);
   if (s && !s.gl.isConnected) s = undefined;   // its canvas was dropped (reset3D)
   if (s === undefined) {
-    s = null;
-    const parent = canvas.parentNode;
-    const gl = parent ? layerCanvas3D() : null;
-    if (gl) {
-      const top = document.createElement('canvas');
-      for (const el of [gl, top]) {
-        el.setAttribute('aria-hidden', 'true');
-        el.style.position = 'absolute';
-        el.style.pointerEvents = 'none';
-        el.style.display = 'block';
-      }
-      canvas.after(gl, top);
-      s = { gl, top, tx: top.getContext('2d'), box: '' };
-    }
+    s = canvas.parentNode ? makeStack(canvas, layerCanvas3D()) : null;
     stacks.set(canvas, s);
   }
   if (!s) return null;
   if (s.hidden) {
     s.hidden = false;
-    s.gl.style.visibility = s.top.style.visibility = '';
+    for (const k of ALWAYS) showLayer(s, k, true);
   }
-  // Over the game canvas exactly, wherever the page lays it out. Siblings
-  // share an offset parent, so its offsets place them.
-  const box = `${canvas.offsetLeft},${canvas.offsetTop},${canvas.clientWidth},${canvas.clientHeight}`;
-  if (box !== s.box) {
-    s.box = box;
-    const radius = getComputedStyle(canvas).borderRadius;
-    for (const el of [s.gl, s.top]) {
-      el.style.left = `${canvas.offsetLeft}px`;
-      el.style.top = `${canvas.offsetTop}px`;
-      el.style.width = `${canvas.clientWidth}px`;
-      el.style.height = `${canvas.clientHeight}px`;
-      el.style.borderRadius = radius;
-    }
-  }
-  if (s.top.width !== canvas.width || s.top.height !== canvas.height) {
-    s.top.width = canvas.width;
-    s.top.height = canvas.height;
-  }
+  placeStack(canvas, s);
+  sizeStack(canvas, s);
   return s;
 }
 
-// A stack the frame is not using is hidden, or its top canvas would go on
-// showing the last layered frame's foreground over the game canvas.
+function sizeStack(canvas, s) {
+  if (s.top.width === canvas.width && s.top.height === canvas.height) return;
+  for (const el of [s.trail, s.top, s.over]) {
+    if (!el) continue;
+    el.width = canvas.width;
+    el.height = canvas.height;
+  }
+  for (const el of [s.glow, s.vig]) {
+    el.width = Math.ceil(canvas.width / LIGHT_SCALE);
+    el.height = Math.ceil(canvas.height / LIGHT_SCALE);
+  }
+  s.lit = '';
+  s.trailDirty = s.overDirty = false;     // resizing a canvas clears it
+}
+
+// A stack the frame is not using is hidden, or its canvases would go on
+// showing the last layered frame over the game canvas.
 function hideStack(canvas) {
   const s = stacks.get(canvas);
   if (s && !s.hidden) {
     s.hidden = true;
-    s.gl.style.visibility = s.top.style.visibility = 'hidden';
+    for (const k of ['gl', 'trail', 'top', 'glow', 'vig', 'over']) showLayer(s, k, false);
+  }
+}
+
+// The glow and vignette, drawn as drawStageLight draws them, onto their small
+// canvases: the same transform, scaled down to their size.
+function lightStack(L, base, shake) {
+  const key = `${shake.x},${shake.y},${base.a},${base.d},${base.e},${base.f}`;
+  if (key === L.lit) return;
+  L.lit = key;
+  const kx = L.glow.width / L.top.width, ky = L.glow.height / L.top.height;
+  for (const [g, draw] of [[L.gx, drawKeyGlow], [L.vx, drawVignette]]) {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, g.canvas.width, g.canvas.height);
+    g.setTransform(base.a * kx, base.b * ky, base.c * kx, base.d * ky, base.e * kx, base.f * ky);
+    g.translate(shake.x, shake.y);
+    draw(g);
   }
 }
 
@@ -649,9 +745,9 @@ function renderSharp(ctx, game, t, c) {
 // fighters split by what they are. A 3D fighter goes on the WebGL canvas. A 2D
 // one goes behind it on the game canvas, or, once a 3D fighter has been drawn,
 // on the top canvas, so it still comes out in front as the order asks. Every
-// trail goes on top, over the fighters, and every aura on the game canvas,
-// behind them: an aura between two overlapping 3D fighters is the one thing
-// three layers cannot hold.
+// trail goes on the trail canvas, over the 3D fighters, and every aura on the
+// game canvas, behind them: an aura between two overlapping 3D fighters is the
+// one thing the stack cannot hold.
 function renderLayered(ctx, L, game, t, c) {
   const base = ctx.getTransform();
   const wc = worldCanvas(), wx = wc.getContext('2d');
@@ -667,10 +763,18 @@ function renderLayered(ctx, L, game, t, c) {
   const top = L.tx;
   top.setTransform(1, 0, 0, 1, 0, 0);
   top.clearRect(0, 0, L.top.width, L.top.height);
+  const trail = L.rx || top;
+  if (L.rx && L.trailDirty) {
+    trail.setTransform(1, 0, 0, 1, 0, 0);
+    trail.clearRect(0, 0, L.trail.width, L.trail.height);
+  }
   const drawing3D = beginLayer3D(ctx.canvas.width, ctx.canvas.height);
 
+  // The shake is a fresh random offset each time it is read, and every canvas
+  // in the stack has to move by the same one, so it is read once.
+  const shake = { x: game.fx.shakeX, y: game.fx.shakeY };
   ctx.save();
-  ctx.translate(game.fx.shakeX, game.fx.shakeY);
+  ctx.translate(shake.x, shake.y);
   const halfW = W / (2 * c.z), halfH = H / (2 * c.z);
   const toScreen = () => ctx.transform(c.z, 0, 0, c.z, -(c.x - halfW) * c.z, -(c.y - halfH) * c.z);
   const stage = stageFor(game.arena);
@@ -685,7 +789,7 @@ function renderLayered(ctx, L, game, t, c) {
   toScreen();
   setLight3D(stage?.arena.stage.light);
   const world = ctx.getTransform();
-  let over = false;
+  let over = false, trails = false;
   for (const f of order) {
     const in3D = drawing3D && has3D(f.def);
     drawAura(ctx, f, t);
@@ -697,22 +801,43 @@ function renderLayered(ctx, L, game, t, c) {
       if (g === top) top.setTransform(world);
       drawFighter(g, f, t);
     }
-    top.setTransform(world);
-    drawTrail(top, f, game.simT);
+    trail.setTransform(world);
+    if (drawTrail(trail, f, game.simT)) trails = true;
   }
   ctx.restore();
   endLayer3D();
   ctx.restore();
+  if (L.rx) {
+    L.trailDirty = trails;
+    showLayer(L, 'trail', trails);
+  }
 
   top.setTransform(base);
   top.save();
-  top.translate(game.fx.shakeX, game.fx.shakeY);
+  top.translate(shake.x, shake.y);
   top.drawImage(fc, c.x - halfW, c.y - halfH, halfW * 2, halfH * 2, 0, 0, W, H);
-  drawStageLight(top);
   top.restore();
-  drawCutIn(top, game.fx, W, H);
-  game.fx.drawOverlay(top, W, H);
+  lightStack(L, base, shake);
+
+  // The cut-in and the flash, on a canvas that is only shown while one plays.
+  const o = L.ox;
+  if (L.overDirty) {
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    o.clearRect(0, 0, L.over.width, L.over.height);
+  }
+  const cut = !!game.fx.playing || (game.fx.flashA > 0 && !!game.fx.flashCol);
+  if (cut) {
+    o.setTransform(base);
+    drawCutIn(o, game.fx, W, H);
+    game.fx.drawOverlay(o, W, H);
+  }
+  L.overDirty = cut;
+  showLayer(L, 'over', cut);
 }
+
+// For test/layer3d.test.js, which drives the stack on fake canvases: WebGL and
+// a page are not there to make a real one.
+export const LAYER_STACK = { makeStack, sizeStack, renderLayered };
 
 // renderWorld reads game.fighters in a fixed order (camera, then shadows, then
 // bodies, then icons) that lab/contrast.js and lab/roster.js count on, so the

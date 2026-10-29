@@ -45,7 +45,7 @@ the same day.
 | `main` | The live game, v3.9.4 (`SIM_VERSION` 9) | Deployed. A push here is a release. 385 tests pass. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Pushed, not merged. 374 tests pass. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Pushed from the original Mac on 2026-10-28. 412 tests pass. |
-| `claude/gfx-v3.9.4` | That branch with `main` merged up to v3.9.4 | Built in a cloud session. 442 tests pass. The candidate for the new `live-3d`. |
+| `claude/gfx-v3.9.4` | That branch with `main` merged up to v3.9.4, plus the 3D layer | Built in a cloud session. 448 tests pass. The candidate for the new `live-3d`. |
 
 The graphics branch was built in a git worktree under `.claude/worktrees/` on
 the original machine and pushed from there on 2026-10-28, so it is safe.
@@ -432,8 +432,19 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
    What is left is to stop putting the 3D image in a 2D canvas: show the WebGL
    canvas itself, stacked between a 2D canvas for the world behind the fighters
    and one for what is drawn in front, with the key line drawn in GL (the
-   silhouette pass is most of it already). That is an architecture change to
-   `render.js` and the page's canvases, so it was taken to the owner first. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
+   silhouette pass is most of it already). The owner chose to build it.
+   **Fourth run, 2026-10-28: the 3D layer.** With `GL3D.LAYER` the 3D fighters
+   are drawn straight onto a WebGL canvas stacked over the game canvas, nothing
+   copied (ARCHITECTURE section 7, "The 3D layer"). Same phone, same match, both
+   fighters in 3D: copied as before, 3.49 ms a frame over 2D; on the layer,
+   0.80 ms (mean frame time 1.42 ms, 2.00 ms at the 95th percentile, 59.9 fps).
+   That is inside the 2 ms budget on this phone. A frozen-frame comparison of the
+   two paths afterwards found the first build drew the stage light's soft-light
+   gradient on its own canvas, where it came out as a pale haze, and moved the
+   layers by different shake offsets; both are fixed and pinned by
+   `test/layer3d.test.js`. The fix adds canvases (trails, glow, vignette,
+   cut-in), so the phone number should be taken again with the hosted bench
+   before 3D goes anywhere near the default. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
    phone (no sign-in needed), and read the modes: All 2D, Both 3D, without stage,
    without effects. The budget is about 2 ms a frame for the 3D rig over 2D. If
@@ -456,9 +467,12 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
 
 ## Known limits
 
-- Phone performance: unmeasured, and the review session added a silhouette pass
-  to the 3D fighters and more layers to the stages, both measured only on an M2
-  Max (within noise, and 0.05 to 0.12 ms a frame).
+- Phone performance: measured only on the owner's iPhone, a recent and fast
+  model (see Next steps, step 1). A mid-range phone, which the 2 ms budget is set
+  for, is still unmeasured, and so is the 3D layer with its added canvases.
+- The 3D layer differs from the copy path in three small ways: an aura drawn by
+  the fighter in front does not wash over a 3D fighter behind it, every trail
+  lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
 - Secondary motion runs on real time, so hair keeps settling through a hitstop
   and swings at full speed in the KO slow motion.
 - Kim's ring light still sits off-square in a bust; body knobs still scale bones.

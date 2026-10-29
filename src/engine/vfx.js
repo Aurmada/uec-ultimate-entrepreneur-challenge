@@ -343,8 +343,9 @@ const trails = new WeakMap();                 // fighter -> { limbs: [[{x, y, t}
 // time the poses move on: it stops for hitstop, so the trail holds still
 // through the freeze instead of draining away, and clears once the strike is
 // over. (game.t keeps running during hitstop, which is why it is not used.)
+// True when it drew, so a canvas kept for trails alone can stay hidden.
 export function drawTrail(ctx, f, clock) {
-  if (!FX_STYLE.impact) return;
+  if (!FX_STYLE.impact) return false;
   const T = FX_ART.TRAIL;
   let tr = trails.get(f);
   if (!tr) {
@@ -360,13 +361,13 @@ export function drawTrail(ctx, f, clock) {
     while (pts.length && pts[0].t < clock - T.SPAN) pts.shift();
   }
   const { limb, travel } = strikingLimb(tr.limbs);
-  if (limb < 0 || travel < T.MIN_TRAVEL) return;
-  ribbon(ctx, tr.limbs[limb], signatureColour(f.def), T);
+  if (limb < 0 || travel < T.MIN_TRAVEL) return false;
+  return ribbon(ctx, tr.limbs[limb], signatureColour(f.def), T);
 }
 
 function ribbon(ctx, pts, color, T) {
   const n = pts.length;
-  if (n < 2) return;
+  if (n < 2) return false;
   const left = [], right = [];
   for (let i = 0; i < n; i++) {
     const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
@@ -397,6 +398,7 @@ function ribbon(ctx, pts, color, T) {
   pts.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](p.x, p.y));
   ctx.stroke();
   ctx.restore();
+  return true;
 }
 
 // ------------------------------------------------------------ projectiles
