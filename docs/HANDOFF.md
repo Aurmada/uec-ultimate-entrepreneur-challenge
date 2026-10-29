@@ -419,9 +419,21 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
    One fighter in 3D cost the same as two (4.58 and 4.57 ms a frame), so the
    cost is fixed per frame rather than per model: it points at getting the WebGL
    image into the 2D canvas (`render3D`'s `drawImage` of the GL canvas, which
-   WebKit has to synchronise), the first lever below, not at the meshes. A
-   second version of the test adds a breakdown step (pose solve, GPU, copy) to
-   confirm it before that work starts. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
+   WebKit has to synchronise), the first lever below, not at the meshes.
+   **Second and third runs, same phone.** The breakdown (each step timed with
+   `gl.finish`): pose 0.10 ms, GPU 0.68 ms, copy into the 2D canvas 1.52 ms per
+   3D fighter, so the copy is two thirds of it. `GL3D.COMPOSITE` then tried three
+   ways of making that copy in one run, against the 2D fighters before and after
+   (0.59 ms both times, so no warming drift): the canvas as built 3.77 ms a frame
+   over 2D, the canvas without a preserved buffer 3.88, an ImageBitmap from an
+   OffscreenCanvas 3.98. No difference, so the price is moving the GPU's image
+   into a 2D canvas at all (in WebKit that reads it back), not the way it is
+   handed over. Lowering `DETAIL` or meshes would save part of 0.68 ms at most.
+   What is left is to stop putting the 3D image in a 2D canvas: show the WebGL
+   canvas itself, stacked between a 2D canvas for the world behind the fighters
+   and one for what is drawn in front, with the key line drawn in GL (the
+   silhouette pass is most of it already). That is an architecture change to
+   `render.js` and the page's canvases, so it was taken to the owner first. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
    phone (no sign-in needed), and read the modes: All 2D, Both 3D, without stage,
    without effects. The budget is about 2 ms a frame for the 3D rig over 2D. If

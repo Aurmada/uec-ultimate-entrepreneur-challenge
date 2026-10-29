@@ -473,7 +473,9 @@ export const GL3D = {
   // spec allows); 'bitmap' renders into an OffscreenCanvas and hands over an
   // ImageBitmap, falling back to a plain canvas where that is missing. On an
   // iPhone in October 2026 the hand-over was two thirds of a 3D fighter's time
-  // (0.10 ms pose, 0.68 ms GPU, 1.52 ms copy), so this is the lever to measure.
+  // (0.10 ms pose, 0.68 ms GPU, 1.52 ms copy). All three cost the same there
+  // (3.77, 3.88 and 3.98 ms a frame for two fighters), so the price is moving
+  // the GPU's image into a 2D canvas at all, however it is handed over.
   COMPOSITE: 'canvas',
   // How far the body opens toward the camera. 0 is a pure profile; fighting
   // games turn the chest so it reads, and the lead arm and leg go to the FAR
