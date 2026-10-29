@@ -197,7 +197,7 @@ async function layeredFrame({ shake = 0 } = {}) {
   ctx.setTransform(2, 0, 0, 2, 0, 0);
   log.length = 0;
   LAYER_STACK.renderLayered(ctx, L, game, game.t, { x: 480, y: 270, z: 1 });
-  return { log, L, canvas };
+  return { log, L, canvas, ctx, game };
 }
 
 test('every canvas in the 3D stack shakes by the same offset in a frame', async () => {
@@ -233,4 +233,29 @@ test('the stage light blends in the page, not on a canvas of its own', async () 
   // In the page's order: the game canvas, the 3D fighters, the trails, the
   // front, the glow over all of those, then the vignette and the cut-in.
   assert.deepEqual(canvas.afterEls, [L.gl, L.trail, L.top, L.glow, L.vig, L.over]);
+});
+
+test('hair and coats sway on the match clock, which a hitstop stops', async () => {
+  // The springs used to run on real time, so hair kept settling through every
+  // hitstop freeze and swung at full speed in the KO slow motion.
+  const { L, ctx, game } = await layeredFrame();
+  const { swayClock3D } = await import('../src/engine/gl3d/index.js');
+  const { renderGame, RENDER, LAYER_STACK } = await import('../src/engine/render.js');
+  assert.equal(swayClock3D(), game.simT, 'the layered frame left the sway on another clock');
+
+  game.fx.hitstop(0.2);
+  const frozen = game.simT;
+  for (let i = 0; i < 6; i++) {
+    game.update(1 / 60);
+    LAYER_STACK.renderLayered(ctx, L, game, game.t, { x: 480, y: 270, z: 1 });
+    assert.equal(swayClock3D(), frozen, 'the sway clock ran on through a hitstop');
+  }
+
+  // The 2D paths set it too, so a 3D fighter drawn there sways the same way.
+  for (const sharp of [false, true]) {
+    RENDER.sharpFighters = sharp;
+    game.simT += 1;
+    renderGame(ctx, game);
+    assert.equal(swayClock3D(), game.simT, `the ${sharp ? 'sharp' : 'default'} path left the sway on another clock`);
+  }
 });

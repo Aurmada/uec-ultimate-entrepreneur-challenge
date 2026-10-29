@@ -8,7 +8,8 @@
 // fighter standing still looks exactly as the model was built.
 //
 // Like the 2D cloth lag (parts.js applyFollow) this is per-fighter state the
-// simulation never sees, so it may run on real time and differ between peers.
+// simulation never sees, so it may differ between peers. In a match it runs on
+// the match's simT (index.js setClock3D), so a hitstop freezes it too.
 
 import { GL3D } from '../../config.js';
 

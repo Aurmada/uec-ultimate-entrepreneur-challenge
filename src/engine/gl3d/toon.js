@@ -202,46 +202,58 @@ export function createToon({ onScreen = null } = {}) {
   }
   if (!gl) return null;
 
-  const prog = gl.createProgram();
-  gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VS));
-  gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FS));
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-  const loc = {};
-  for (const n of ['uBones', 'uView', 'uInflate', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
-    'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
-    'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
-    'uSway', 'uSwayHang', 'uSwayDir', 'uRimDir', 'uFlash']) {
-    loc[n] = gl.getUniformLocation(prog, n);
-  }
-  gl.useProgram(prog);
-  gl.uniform1i(loc.uFace, 0);
-  gl.uniform1i(loc.uMask, 1);
-  gl.uniformMatrix2fv(loc.uRimDir, false, IDENTITY2);
-  gl.uniform1f(loc.uFlash, 0);
-
-  // The key line's program, only for a renderer on screen.
-  let key = null;
-  if (onScreen) {
-    const kp = gl.createProgram();
-    gl.attachShader(kp, compile(gl, gl.VERTEX_SHADER, KEY_VS));
-    gl.attachShader(kp, compile(gl, gl.FRAGMENT_SHADER, KEY_FS));
-    gl.linkProgram(kp);
-    if (!gl.getProgramParameter(kp, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(kp));
-    key = { prog: kp, vao: gl.createVertexArray(), sampler: gl.createSampler() };
-    gl.samplerParameteri(key.sampler, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.samplerParameteri(key.sampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.samplerParameteri(key.sampler, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.samplerParameteri(key.sampler, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    for (const n of ['uRect', 'uMask', 'uMaskTexel', 'uRadius', 'uColor']) key[n] = gl.getUniformLocation(kp, n);
-    gl.useProgram(kp);
-    gl.uniform1i(key.uMask, 1);
+  // Everything the context holds: the programs, the key line's sampler, the
+  // silhouette mask, face textures and each model's buffers. Made here, and
+  // made again when a lost context comes back (webglcontextrestored): the
+  // canvas and its context object survive a loss, but nothing on it does.
+  let prog, loc, key, mask;
+  const textures = new Map();            // key -> texture, least recently used first
+  const uploads = new WeakMap();         // model -> { gen, prims }: its buffers on this context
+  function build() {
+    prog = gl.createProgram();
+    gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VS));
+    gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    loc = {};
+    for (const n of ['uBones', 'uView', 'uInflate', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
+      'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
+      'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
+      'uSway', 'uSwayHang', 'uSwayDir', 'uRimDir', 'uFlash']) {
+      loc[n] = gl.getUniformLocation(prog, n);
+    }
     gl.useProgram(prog);
-  }
+    gl.uniform1i(loc.uFace, 0);
+    gl.uniform1i(loc.uMask, 1);
+    gl.uniformMatrix2fv(loc.uRimDir, false, IDENTITY2);
+    gl.uniform1f(loc.uFlash, 0);
 
-  // The silhouette mask: a colour texture and a depth buffer the size of the
-  // canvas, so a fragment's own coordinates address it. Grown with the canvas.
-  const mask = { fbo: gl.createFramebuffer(), tex: gl.createTexture(), depth: gl.createRenderbuffer(), w: 0, h: 0 };
+    // The key line's program, only for a renderer on screen.
+    key = null;
+    if (onScreen) {
+      const kp = gl.createProgram();
+      gl.attachShader(kp, compile(gl, gl.VERTEX_SHADER, KEY_VS));
+      gl.attachShader(kp, compile(gl, gl.FRAGMENT_SHADER, KEY_FS));
+      gl.linkProgram(kp);
+      if (!gl.getProgramParameter(kp, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(kp));
+      key = { prog: kp, vao: gl.createVertexArray(), sampler: gl.createSampler() };
+      gl.samplerParameteri(key.sampler, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.samplerParameteri(key.sampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.samplerParameteri(key.sampler, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.samplerParameteri(key.sampler, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      for (const n of ['uRect', 'uMask', 'uMaskTexel', 'uRadius', 'uColor']) key[n] = gl.getUniformLocation(kp, n);
+      gl.useProgram(kp);
+      gl.uniform1i(key.uMask, 1);
+      gl.useProgram(prog);
+    }
+
+    // The silhouette mask: a colour texture and a depth buffer the size of the
+    // canvas, so a fragment's own coordinates address it. Grown with the canvas.
+    mask = { fbo: gl.createFramebuffer(), tex: gl.createTexture(), depth: gl.createRenderbuffer(), w: 0, h: 0 };
+    textures.clear();
+  }
+  build();
+
   const sizeMask = (w, h) => {
     if (mask.w === w && mask.h === h) return;
     mask.w = w; mask.h = h;
@@ -263,12 +275,12 @@ export function createToon({ onScreen = null } = {}) {
   const NO_FACE = [0, 0, 0, 0];
   const NO_SWAY = [0, 0];
   const NONE = new Set(), NO_GLASS = new Map();
-  const textures = new Map();            // key -> texture, least recently used first
 
   const renderer = {
     canvas,
     gl,
     lost: false,
+    generation: 0,                         // goes up each time a lost context is restored
     composite: onScreen ? 'screen' : bitmap ? 'bitmap' : attrs.preserveDrawingBuffer ? 'canvas' : 'nopreserve',
 
     // A fresh frame on a canvas on screen: sized to match the 2D canvas it sits
@@ -288,6 +300,17 @@ export function createToon({ onScreen = null } = {}) {
       if (!bitmap) return { src: canvas, done: NO_OP };
       const bmp = canvas.transferToImageBitmap();
       return { src: bmp, done: () => bmp.close() };
+    },
+
+    // A model's meshes on this context: uploaded the first time they are
+    // asked for, and again after the context has been lost and restored.
+    gpu(model) {
+      let u = uploads.get(model);
+      if (!u || u.gen !== renderer.generation) {
+        u = { gen: renderer.generation, prims: renderer.upload(model) };
+        uploads.set(model, u);
+      }
+      return u.prims;
     },
 
     upload(model) {
@@ -519,7 +542,20 @@ export function createToon({ onScreen = null } = {}) {
     finish() { gl.finish(); },
   };
 
+  // A phone can take the GPU away (the app sent to the background, memory
+  // pressure). preventDefault asks the browser to give the context back; when
+  // it does, everything on it is made again and the next frame draws in 3D. In
+  // between, `lost` sends every fighter to the 2D rig.
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); renderer.lost = true; });
+  canvas.addEventListener('webglcontextrestored', () => {
+    try {
+      build();
+      renderer.generation += 1;
+      renderer.lost = false;
+    } catch (e) {
+      console.warn('[gl3d] could not restore:', e);     // stays lost: the 2D rig draws
+    }
+  });
   return renderer;
 }
 

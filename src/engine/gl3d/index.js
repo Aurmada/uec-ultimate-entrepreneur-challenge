@@ -36,6 +36,15 @@ let stageLight = null;                   // the light of the stage being fought 
 // clears it (null) otherwise; portraits always take the default light.
 export function setLight3D(light) { stageLight = light || null; }
 
+// The clock hair and coats sway on. render.js sets it to the match's simT
+// before drawing fighters: it stops for hitstop and the pause and slows with
+// the KO slow motion, so what hangs holds still in a freeze and swings slowly
+// in slow motion, with the pose it hangs from. Left null (the lab, a staged
+// fighter), it is real time.
+let clock = null;
+export function setClock3D(t) { clock = Number.isFinite(t) ? t : null; }
+export const swayClock3D = () => clock ?? performance.now() / 1000;
+
 export function enable3D({ ids = null, timing = false } = {}) {
   enabled = true;
   only = ids && ids.length ? new Set(ids) : null;
@@ -126,13 +135,10 @@ export function drawLayer3D(f, P, m, box, { elbowF, elbowB, jitter = 0, face = n
   return true;
 }
 
-// A model's meshes on a renderer: each renderer has its own context, so the
-// layer uploads its own copy of a model the first time it draws it.
-function gpuFor(entry, r) {
-  if (r === renderer) return entry.gpu;
-  if (!entry.layerGpu) entry.layerGpu = r.upload(entry.model);
-  return entry.layerGpu;
-}
+// A model's meshes on a renderer: each renderer has its own context, and
+// uploads its own copy of a model the first time it draws it, and again after
+// its context has been lost and restored.
+const gpuFor = (entry, r) => r.gpu(entry.model);
 
 function load(id) {
   if (models.has(id)) return models.get(id);
@@ -147,8 +153,8 @@ function load(id) {
       const model = extractModel(parseGLB(buf));
       if (model.jointNames.length > MAX_JOINTS) throw new Error(`${id} has more than ${MAX_JOINTS} joints`);
       entry.rig = buildRig(model, spec);
-      entry.model = model;                 // kept for a second renderer's upload (gpuFor)
-      entry.gpu = renderer.upload(model);
+      entry.model = model;                 // kept for each renderer's upload (gpuFor)
+      if (!renderer.lost) gpuFor(entry, renderer);   // now, not on the first frame
       entry.inkless = new Set(spec.inkless || []);
       entry.glass = new Map(Object.entries(spec.glass || {}));
       entry.sway = new Map(Object.entries(spec.sway || {}));
@@ -259,7 +265,7 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
 // starts at rest and so does not sway at all.
 const sways = new WeakMap();
 function swayOf(f, P) {
-  const t = performance.now() / 1000;
+  const t = swayClock3D();
   const facing = f.facing || 1;
   const world = {};
   for (const k of SWAY_ANCHORS) {
