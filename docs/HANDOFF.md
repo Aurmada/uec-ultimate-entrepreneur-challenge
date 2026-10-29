@@ -442,9 +442,11 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
    two paths afterwards found the first build drew the stage light's soft-light
    gradient on its own canvas, where it came out as a pale haze, and moved the
    layers by different shake offsets; both are fixed and pinned by
-   `test/layer3d.test.js`. The fix adds canvases (trails, glow, vignette,
-   cut-in), so the phone number should be taken again with the hosted bench
-   before 3D goes anywhere near the default. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
+   `test/layer3d.test.js`. **Fifth run, 2026-10-29**, after that fix, which
+   adds canvases (trails, glow, vignette, cut-in) for the browser to composite:
+   0.70 ms a frame over 2D on the layer (mean frame 1.23 ms, 2.00 ms at the 95th
+   percentile, 60.3 fps), against 3.95 ms copied, with 2D at 0.61 and 0.46 ms
+   before and after. The added canvases cost nothing measurable. Or, as before: on `live-3d`, serve with `python3 dev-server.py 4173`, open
    `http://<the machine's LAN address>:4173/lab/gl3d-bench.html` on a mid-range
    phone (no sign-in needed), and read the modes: All 2D, Both 3D, without stage,
    without effects. The budget is about 2 ms a frame for the 3D rig over 2D. If
@@ -469,7 +471,7 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
 
 - Phone performance: measured only on the owner's iPhone, a recent and fast
   model (see Next steps, step 1). A mid-range phone, which the 2 ms budget is set
-  for, is still unmeasured, and so is the 3D layer with its added canvases.
+  for, is still unmeasured.
 - The 3D layer differs from the copy path in three small ways: an aura drawn by
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).

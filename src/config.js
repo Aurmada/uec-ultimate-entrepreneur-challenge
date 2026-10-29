@@ -481,7 +481,8 @@ export const GL3D = {
   // between the world behind them and what is drawn in front (render.js,
   // renderSharp), instead of being copied into it. No read back, which COMPOSITE
   // showed is the whole cost of the copy. On the same iPhone, two 3D fighters
-  // cost 0.80 ms a frame over 2D this way, against 3.49 ms copied. Render only;
+  // cost 0.70 to 0.80 ms a frame over 2D this way, against 3.5 to 4 ms copied
+  // (two runs, the second with the trail and light canvases). Render only;
   // with it off, or with no page to stack onto, the copy path draws as before.
   LAYER: true,
   // How far the body opens toward the camera. 0 is a pure profile; fighting
