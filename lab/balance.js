@@ -242,6 +242,7 @@ function reportAgainst(results, o) {
     console.log(`  ${id.padEnd(8)} ${(100 * (win[id] || 0) / play[id]).toFixed(1).padStart(5)}%`
       + `  ${(dmg[id] / play[id]).toFixed(0).padStart(4)} damage a match`);
   }
+  focusReport(results, o);
 }
 
 function report(results, o) {
@@ -278,6 +279,12 @@ function report(results, o) {
     });
     console.log(`  ${a.padEnd(7)}${cells.join('')}`);
   }
+  focusReport(results, o);
+}
+
+// For each fighter named with --focus: how often each move came out and how
+// each one ended.
+function focusReport(results, o) {
   for (const id of o.focus) {
     const starts = {}, out = {}, touched = {}, throws = new Set();
     let dmg = 0, n = 0, specials = 0;
