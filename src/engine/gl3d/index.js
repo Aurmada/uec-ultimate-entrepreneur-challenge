@@ -126,13 +126,10 @@ export function drawLayer3D(f, P, m, box, { elbowF, elbowB, jitter = 0, face = n
   return true;
 }
 
-// A model's meshes on a renderer: each renderer has its own context, so the
-// layer uploads its own copy of a model the first time it draws it.
-function gpuFor(entry, r) {
-  if (r === renderer) return entry.gpu;
-  if (!entry.layerGpu) entry.layerGpu = r.upload(entry.model);
-  return entry.layerGpu;
-}
+// A model's meshes on a renderer: each renderer has its own context, and
+// uploads its own copy of a model the first time it draws it, and again after
+// its context has been lost and restored.
+const gpuFor = (entry, r) => r.gpu(entry.model);
 
 function load(id) {
   if (models.has(id)) return models.get(id);
@@ -147,8 +144,8 @@ function load(id) {
       const model = extractModel(parseGLB(buf));
       if (model.jointNames.length > MAX_JOINTS) throw new Error(`${id} has more than ${MAX_JOINTS} joints`);
       entry.rig = buildRig(model, spec);
-      entry.model = model;                 // kept for a second renderer's upload (gpuFor)
-      entry.gpu = renderer.upload(model);
+      entry.model = model;                 // kept for each renderer's upload (gpuFor)
+      if (!renderer.lost) gpuFor(entry, renderer);   // now, not on the first frame
       entry.inkless = new Set(spec.inkless || []);
       entry.glass = new Map(Object.entries(spec.glass || {}));
       entry.sway = new Map(Object.entries(spec.sway || {}));

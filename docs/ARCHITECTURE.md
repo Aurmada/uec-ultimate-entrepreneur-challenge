@@ -499,7 +499,12 @@ whether a 3D model can replace the procedural rig without losing what the rig
 gets for free: every authored track, stance, command normal, body knob, colour
 and look option, including a player founder's. It is render-only and falls back
 to the procedural rig wherever WebGL2 is missing, the model has not loaded, or
-the context is lost.
+the context is lost. A lost context (a phone taking the GPU back, say) is asked
+for again; when the browser restores it, `toon.js` makes its programs, mask,
+face textures and model buffers again (`build`, and `gpu(model)` per context
+generation), and the next frame is 3D. Checked in a browser by losing and
+restoring every context mid-match: the frame after matches the frame before.
+`test/restore3d.test.js` holds the renderer to it on a fake context.
 
 | Flag | Effect |
 | --- | --- |

@@ -506,8 +506,6 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
 - Secondary motion runs on real time, so hair keeps settling through a hitstop
   and swings at full speed in the KO slow motion.
 - Kim's ring light still sits off-square in a bust; body knobs still scale bones.
-- WebGL context loss: the 3D path falls back to 2D for the rest of the session
-  and does not try to restore.
 - The debug sign-in (`UEC.signInAs()`) uses the id `test-uid`, which is not a
   UUID, so one profile fetch to Supabase returns a harmless 400 in the console.
 - Full-frame pixel hashes changed between September and October with no code
