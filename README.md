@@ -71,6 +71,10 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.10.2: helping us set the difficulty
+
+- 📊 **Rookie should feel like Rookie.** Our measurements say Rookie and Contender are harder than they should be against some opponents, Adam Weumann above all. Before we retune them, the game now keeps an anonymous note of how each single-player match against the roster ends: who you fought, at which level, and the score. Nothing about you is kept, not even which account played.
+
 ## What's new in v3.10.1: 3D that stays 3D
 
 - 📱 **3D comes back after your phone takes a break.** A phone can take the graphics chip away from a page, when you switch apps or it runs short of memory. The 3D fighters used to stay flat for the rest of your visit after that; now they come back as soon as the phone hands the chip back.
