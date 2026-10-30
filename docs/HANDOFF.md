@@ -48,6 +48,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | --- | --- | --- |
 | `main` | The live game, v3.12 (`SIM_VERSION` 9), with the 3D preview behind `?gl` or Settings | Deployed. A push here is a release. 462 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Built on 2026-10-30, not released. 471 tests pass. |
+| `claude/figure-pass` | `claude/guard-pass` plus the figure below, behind `?figure`: fighters drawn as anatomy | In progress on 2026-10-30, not released. 477 tests pass. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -99,6 +100,55 @@ With the flags off this deliberately changes how every fighter looks, so
 `lab/pixels.js` reports every frame different from v3.12. It needs the owner's
 eye, then a `VERSION` bump, before release. Next in the same direction, as the
 owner set it out: animations, then fighting styles, then controls.
+
+## The figure (2026-10-30, on `claude/figure-pass`, behind `?figure`, not released)
+
+The owner's next note, with the guard pass in hand: the characters still did
+not look fully formed next to the arcade fighters' character sheets. The poses
+were not the problem any more; the drawing was. The 2D rig drew a limb as two
+round strokes with no fixed length and a guessed elbow, a torso narrower than
+the head, no neck, a ball for a fist, a slab for a foot, and a front-on face
+painted on a ball over a body seen from the side.
+
+`src/engine/figure.js` draws the same pose as a body instead, with every
+number in `FIGURE` (`config.js`):
+
+- **A skeleton with bones.** Arms and legs have a length and bend at an elbow
+  and a knee solved by two-bone IK (elbows hang down, knees point at the
+  opponent). An arm reaching out locks straight, so a punch lands on a
+  straight arm whatever the fighter's shoulders and lean do to the distance,
+  and the guard keeps its bend.
+- **Proportions.** The hip rides 12% higher (`FIGURE.LEGS`), so the legs are
+  about half the fighter instead of 42%, and the head sits on a neck instead of
+  sinking into the collar. Head-anchored parts (Kim's ring light) follow it.
+- **Forms.** A 3/4 torso with chest, waist and hips; deltoids; muscle-shaped
+  arm and leg segments; trousers that hang straight below the knee; squared
+  fists with knuckles and a thumb, an open hand for the slap; shoes with a
+  heel, a sole and laces.
+- **A 3/4 head**: brow, nose, lips and chin standing proud of the skull, an ear,
+  the near eye full and the far one foreshortened. Every face knob each
+  fighter already has is used. Hair and hats are the tube rig's own, kept off
+  the face; glasses, shades, the visor and facial hair are redrawn for 3/4.
+  Photo founders keep the photo face.
+- **Light.** Every form has a lit side and a shadow side, cut hard and
+  multiplied so detail survives, violet on cloth and red on skin.
+- **Builds.** Each roster fighter has a render-only `figure` entry in
+  `fighters.js`: Jeff the gym rat, Carl's paunch and bull neck, Scam soft all
+  over, Kim narrow-waisted, Steve rake thin, and so on.
+
+It is 2D only (the 3D path draws its model as before) and off by default:
+`?figure` turns it on, and `lab/pixels.js` reports the flags-off game
+identical to `claude/guard-pass`. Lab sheets: `lab/figure-sheet.js` (`sheet`,
+`looks` for every profile look, `bench`). In headless Chromium, which draws in
+software, the figure's shapes cost about 3 ms a fighter against the tube's
+0.8 ms, and about 14% more once the shading buffer is counted; it needs the
+owner's phone before it could be the default. `test/figure.test.js` pins bone
+lengths, the straight punch and bent guard, legs at half the height, the neck,
+and builds that show; each fails without its part.
+
+Open for the owner: the head size (as now, or smaller and more heroic, which
+`sheet({ tweak: { HEAD: 0.8 } })` shows), and whether this becomes the default
+renderer.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

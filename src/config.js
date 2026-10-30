@@ -449,6 +449,84 @@ export const STYLIZE = {
   SHADE_FLOOR: 0.30,    // crush at the feet — do not soften, see above
 };
 
+// ---- THE FIGURE (render-only, behind ?figure) -------------------------------
+// Bodies drawn as anatomy instead of tubes: a 3/4 torso with a chest, a waist
+// and hips, a neck, limbs with a fixed bone length and a real elbow and knee,
+// muscle-shaped segments, fists and shoes, and a light that gives every form a
+// lit side and a shadow side. Fighting games draw people this way; the tube
+// rig drew mannequins. Same pose data in, so nothing about a fight changes.
+// Lengths and widths are rig px at body 1.
+export const FIGURE = {
+  ARM: [46, 44],          // upper arm, forearm
+  // An arm reaching past the first of these fractions of its length starts
+  // to lock out, and is straight by the second: a punch lands on a straight
+  // arm whatever the fighter's shoulders and lean do to the distance, and a
+  // guard keeps its full bend.
+  ARM_LOCK: [0.66, 0.84],
+  LEG: [45, 44],          // thigh, shin to the ankle: a ready stance stays bent
+  // The hip rides this much higher than the tube rig's, so the legs are half
+  // the fighter's height (the tube rig's were 42%, which read as squat).
+  LEGS: 1.12,
+  ANKLE: 9,               // ankle height above the sole
+  // Which way a bent joint goes. Elbows hang down and a touch forward, so a
+  // guard tucks them by the ribs and an uppercut leads with the elbow under
+  // the fist. Knees point at the opponent.
+  ELBOW_POLE: [0.32, 1],
+  KNEE_POLE: [1, -0.12],
+  // Shoulder sockets: x, then y below the shoulder line. Wider than the tube
+  // rig's +-10, which socketed both arms into a torso narrower than the head.
+  SOCKET_F: [13, 9],
+  SOCKET_B: [-15, 7],
+  HIP_F: 8, HIP_B: -8,
+  // Half-widths at body 1, before build and muscle.
+  W: { UPPER: 9.4, FORE: 8.8, THIGH: 14, SHIN: 10.2, NECK: 8.2, DELTOID: 12.5 },
+  // [t, k] along each segment, proximal to distal, for the outer side (the
+  // elbow or knee side) and the inner side. Deltoid into biceps and triceps,
+  // a forearm heavy below the elbow, quads and hamstrings into a calf that
+  // swells high and pinches at the ankle.
+  PROFILE: {
+    UPPER_OUT: [[0, 1.08], [0.3, 1.02], [0.65, 0.86], [1, 0.74]],
+    UPPER_IN: [[0, 0.92], [0.38, 1.10], [0.72, 0.9], [1, 0.72]],
+    FORE_OUT: [[0, 0.78], [0.28, 1.0], [0.7, 0.72], [1, 0.56]],
+    FORE_IN: [[0, 0.82], [0.24, 1.04], [0.66, 0.74], [1, 0.56]],
+    THIGH_OUT: [[0, 1.0], [0.34, 1.06], [0.76, 0.86], [1, 0.72]],
+    THIGH_IN: [[0, 1.1], [0.3, 1.02], [0.72, 0.82], [1, 0.72]],
+    SHIN_OUT: [[0, 0.72], [0.3, 0.74], [0.72, 0.6], [1, 0.52]],
+    SHIN_IN: [[0, 0.8], [0.26, 1.12], [0.62, 0.8], [1, 0.52]],
+    // a trouser leg below the knee: straight, breaking a little at the hem
+    TROUSER: [[0, 0.8], [0.45, 0.76], [1, 0.82]],
+  },
+  // Trousers and sleeves hang rather than cling: how much of the muscle
+  // profile a garment lets through, and how much it adds to the width.
+  CLOTH: { CLING: 0.45, LOOSE: 1.12 },
+  // Torso half-widths, front (+x) and back, at the shoulder, chest, waist and
+  // hip, and the levels as fractions of shoulder-to-hip.
+  TORSO: {
+    SH: [23, -27], CH: [25, -26], WA: [15, -15], HI: [17, -18],
+    Y_CH: 0.27, Y_RIB: 0.47, Y_WA: 0.70,
+  },
+  // How far each top hangs below the hip line.
+  HEM: { suit: 13, blazer: 13, pinstripe: 13, hoodie: 7, bomber: 3, turtleneck: 5, tee: 5, vest: 5, henley: 5 },
+  NECK: 6,                // visible neck between the chin and the shoulder line
+  HEAD: 0.94,             // head size against the tube rig's
+  // Hands and feet big, the way the genre draws them: a fist is what hits.
+  HAND: { LEN: 20, H: 18.5, BACK: 0.9 },
+  FOOT: { SCALE: 1.3, BACK: 0.9 },
+  // The light: from above and in front, in local space (+x is facing). Two
+  // tones and a highlight, cut hard, the way the genre paints cels.
+  LIGHT: [0.42, -0.91],
+  // Shadows multiply, so a lapel or a pocket in shadow stays a lapel or a
+  // pocket, and lean toward violet on cloth and toward red on skin, which is
+  // the warm-key, cool-fill split the arcade palettes are built on.
+  SHADE: '#9c8cb6', SKIN_SHADE: '#cf9488',
+  SHADOW: '#2a1a46',      // what the far limbs lean toward
+  CUT: 0.44,              // shadow covers this much of a limb's width
+  HILITE: '#fff4dc', HILITE_AMT: 0.24,
+  BACK_DIM: 0.16,         // the far arm and leg sit a little back in shade
+  INK: 2.4,               // outline half-width before the buffer's INK
+  CREASE: 1.5,            // fold and crease lines
+};
+
 // ---- CHARACTER PARTS -------------------------------------------------------
 // Render-only geometry a character carries outside its body outline: a held
 // prop, a coat, a cape. Limits live here rather than in the engine so a part

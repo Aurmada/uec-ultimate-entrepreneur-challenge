@@ -69,6 +69,8 @@ export function applyProportions(P, body) {
   // The 3D legs are one model's length, so a short-legged fighter's lower hip
   // folded them into a squat. The 3D rig scales its leg bones by this instead.
   P.stride = body.stride;
+  // And the figure (engine/figure.js) gives a long-reach fighter long arms.
+  P.reach = body.reach;
   P.build = body.build;
   return P;
 }

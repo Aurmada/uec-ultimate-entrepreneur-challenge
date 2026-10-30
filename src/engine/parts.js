@@ -34,6 +34,7 @@ export function anchorPoint(anchor, P) {
     case 'legF': return { x: P.legF.x, y: P.legF.y };
     case 'legB': return { x: P.legB.x, y: P.legB.y };
     case 'head': {
+      if (P.headAt) return { x: P.headAt.x, y: P.headAt.y };   // the figure's head, on its neck
       const headR = P.headR ?? STYLIZE.HEAD_R;
       const headTop = P.shoulderY - (headR - STYLIZE.NECK_OVERLAP);
       return { x: P.headX + (P.bodyLean || 0) * 26, y: Math.max(P.headY, headTop) };

@@ -455,6 +455,19 @@ and no rear hand at the body's centre, where the back arm is drawn behind the
 torso and the hand simply disappears. `test/guard.test.js` pins both, and
 that walking feet never cross.
 
+**The figure is a second painter over the same pose.** `engine/figure.js`
+(behind `?figure`) takes the pose computePose and applyProportions produced
+and draws it as anatomy: bones of fixed length with IK elbows and knees, a
+3/4 torso and head, fists and shoes, and per-form light. It changes the pose
+in one place only, `figureFrame`, which raises the hip so the legs are half the
+fighter, and it does that before the parts resolve, so a coat on the hip or a
+ring light on the head follows. Everything it reads is render-only (`FIGURE`,
+each fighter's `figure` build), and `test/determinism.test.js` keeps the
+simulation modules from reaching for any of it. Two things to keep when tuning
+it: the arm must lock straight at a punch's reach (`FIGURE.ARM_LOCK`), or the
+fist looks short of the hitbox it lands in, and the shading multiplies rather
+than paints, or it covers the lapels, ties and zips it falls across.
+
 **One skeleton only.** `REST` in `anim.js` is the single definition of the rig.
 There was once a second copy written inline in `computePose`, and when the
 proportions were retuned only one moved. Fighters stood at the old skeleton and

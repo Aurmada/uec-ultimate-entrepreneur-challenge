@@ -12,6 +12,7 @@ import { resolveParts, drawParts, partLagState } from './parts.js';
 import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D } from './gl3d/index.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 import { FX_STYLE } from './fx.js';
+import { drawFigure, figureHead, figureFrame } from './figure.js';
 
 // How many idle loops per second. The stock track is one breath.
 const IDLE_RATE = 0.62;
@@ -1043,16 +1044,18 @@ function drawHead(ctx, def, cx, cy, r, face, t, unicorn) {
     drawHeadwear(ctx, cx, cy, r, def);
     if (def.accessory === 'earrings' || def.accessory === 'brooch') drawAccessory(ctx, cx, cy, r, def);
   }
-  if (unicorn) {
-    // golden horn
-    ctx.save();
-    ctx.translate(cx + r * 0.15, cy - r * 0.92);
-    ctx.rotate(0.18);
-    blob(ctx, () => {
-      ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.lineTo(0, -r * 1.05); ctx.closePath();
-    }, '#ffd23f');
-    ctx.restore();
-  }
+  if (unicorn) drawHorn(ctx, cx, cy, r);
+}
+
+// The golden horn a unicorn-state fighter wears.
+function drawHorn(ctx, cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx + r * 0.15, cy - r * 0.92);
+  ctx.rotate(0.18);
+  blob(ctx, () => {
+    ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.lineTo(0, -r * 1.05); ctx.closePath();
+  }, '#ffd23f');
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- body
@@ -1161,7 +1164,9 @@ function drawTorso(ctx, def, P) {
 // it as a post-pass (not per-shape) means it's pose-independent: every current
 // and future animation frame gets the same lit-from-above, warm-key/cool-fill
 // look for free. Toggle with STYLE.shaded so we can A/B the old flat look.
-export const STYLE = { shaded: true, sprites: false };
+// `figure` draws the body as anatomy (engine/figure.js) instead of the tube
+// rig: ?figure, off by default while it is reviewed.
+export const STYLE = { shaded: true, sprites: false, figure: false };
 
 // Baked sprite atlases. Opt-in: the procedural renderer stays the default and
 // the fallback, because a player's own founder is drawn from their photo and
@@ -1319,6 +1324,34 @@ function shadeBuffer(b, B) {
   b.restore();
 }
 
+// Motion smear behind the striking limb: the arc it swept through, drawn as
+// a wedge. Which frames smear is now ANIMATION DATA (`smear` on a keyframe)
+// rather than a hardcoded list of attack kinds, so an authored track decides
+// it, and a command normal or a signature special can smear without the
+// renderer knowing anything about them.
+function drawSmear(g, P, f, c, shFx, shFy, hipFx, hipFy) {
+  if (!(P.smear && f.state === 'attack' && f.attack)) return;
+  const isLeg = (f.attack.button || f.attack.kind) === 'kick';
+  const ox = isLeg ? hipFx : shFx;
+  const oy = isLeg ? hipFy : shFy;
+  const tx = isLeg ? P.legF.x : P.armF.x;
+  const ty = isLeg ? P.legF.y - 6 : P.armF.y;
+  const rad = Math.hypot(tx - ox, ty - oy);
+  const ang = Math.atan2(ty - oy, tx - ox);
+  g.save();
+  // two wedges: a wide faint one for the sweep, a tight bright one at the tip
+  for (const [span, alpha, inner] of [[1.15, 0.20, 0.34], [0.5, 0.34, 0.62]]) {
+    g.globalAlpha = alpha;
+    g.fillStyle = c.accent;
+    g.beginPath();
+    g.arc(ox, oy, rad, ang - span, ang + 0.06);
+    g.arc(ox, oy, rad * inner, ang + 0.06, ang - span, true);
+    g.closePath();
+    g.fill();
+  }
+  g.restore();
+}
+
 // Main world-space fighter draw. f: Fighter instance.
 // The last pose each fighter was drawn in, for effects that follow a limb
 // (engine/vfx.js). Kept only while those effects are on.
@@ -1454,8 +1487,23 @@ export function drawFighter(ctx, f, t) {
   // palette, so a part with a role fill recolours with the fighter — including
   // a player founder whose colours were sampled from their photo.
   P.partState = f.state;
+  // The figure has its own proportions and sits the head on a neck; parts
+  // anchored to the hip or the head follow both.
+  if (STYLE.figure) { figureFrame(P); P.headAt = figureHead(P); }
   f._partLag ||= partLagState();
   const parts = resolveParts(def.parts, P, c, f._partLag);
+
+  if (STYLE.figure) {
+    drawFigure(g, def, P, f, t, INK, {
+      behind: () => { if (parts.length) drawParts(g, parts, 'behind', blob); },
+      front: () => { if (parts.length) drawParts(g, parts, 'front', blob); },
+      hair: (gg, x, y, r, d) => drawHair(gg, x, y, r, d, t),
+      headwear: (gg, x, y, r, d) => drawHeadwear(gg, x, y, r, d),
+      photoHead: (gg, x, y, r) => drawHead(gg, def, x, y, r, P.face, t, f.unicornT > 0),
+      horn: (gg, x, y, r) => { if (f.unicornT > 0 && !def.photo) drawHorn(gg, x, y, r); },
+      smear: (sx, sy, hx, hy) => drawSmear(g, P, f, c, sx, sy, hx, hy),
+    });
+  } else {
 
   // Elbow bow, per character. One global ELBOW meant both arms bent the same
   // way, so an arm folded close to the body just fused into the torso and the
@@ -1495,32 +1543,7 @@ export function drawFighter(ctx, f, t) {
   drawHead(g, def, P.headX + (P.bodyLean * 26), Math.max(P.headY, headTop), headR, P.face, t, f.unicornT > 0);
   g.restore();
 
-  // Motion smear behind the striking limb — the arc it swept through, drawn as
-  // a wedge. Which frames smear is now ANIMATION DATA (`smear` on a keyframe)
-  // rather than a hardcoded list of attack kinds, so an authored track decides
-  // it, and a command normal or a signature special can smear without the
-  // renderer knowing anything about them.
-  if (P.smear && f.state === 'attack' && f.attack) {
-    const isLeg = (f.attack.button || f.attack.kind) === 'kick';
-    const ox = isLeg ? hipFx : shFx;
-    const oy = isLeg ? hipFy : shFy;
-    const tx = isLeg ? P.legF.x : P.armF.x;
-    const ty = isLeg ? P.legF.y - 6 : P.armF.y;
-    const rad = Math.hypot(tx - ox, ty - oy);
-    const ang = Math.atan2(ty - oy, tx - ox);
-    g.save();
-    // two wedges: a wide faint one for the sweep, a tight bright one at the tip
-    for (const [span, alpha, inner] of [[1.15, 0.20, 0.34], [0.5, 0.34, 0.62]]) {
-      g.globalAlpha = alpha;
-      g.fillStyle = c.accent;
-      g.beginPath();
-      g.arc(ox, oy, rad, ang - span, ang + 0.06);
-      g.arc(ox, oy, rad * inner, ang + 0.06, ang - span, true);
-      g.closePath();
-      g.fill();
-    }
-    g.restore();
-  }
+  drawSmear(g, P, f, c, shFx, shFy, hipFx, hipFy);
 
   // front leg, front arm — the striking limbs, so the heaviest gauge
   jointed(g, hipFx, hipFy, P.legF.x, P.legF.y - 6, thigh, shin,
@@ -1536,6 +1559,7 @@ export function drawFighter(ctx, f, t) {
   // IN FRONT of the body: held props. Still inside the buffer, so the shading
   // pass and key line treat them as part of the silhouette.
   if (parts.length) drawParts(g, parts, 'front', blob);
+  }
 
   if (B) {
     INK = 1;                   // reset before shading/blit

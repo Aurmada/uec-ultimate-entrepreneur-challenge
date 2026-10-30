@@ -12,7 +12,7 @@ import { Game } from './engine/game.js';
 import { renderGame, RENDER } from './engine/render.js';
 import { STAGES } from './engine/stage.js';
 import { FX_STYLE } from './engine/fx.js';
-import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.js';
+import { drawPortrait, enableSprites, spritesReady, STYLE } from './engine/drawFighter.js';
 import { enable3D, stats3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
 import {
@@ -1161,6 +1161,9 @@ function boot() {
   // progress. Off by default: the procedural renderer is still what draws a
   // player's own founder from their photo and look choices.
   if (new URLSearchParams(location.search).has('sprites')) enableSprites(true);
+  // The figure: bodies drawn as anatomy rather than the tube rig (engine/
+  // figure.js), opt-in via ?figure while it is reviewed. Render-only.
+  if (new URLSearchParams(location.search).has('figure')) STYLE.figure = true;
 
   // The 3D preview, from the address (?gl and its pieces) or the player's
   // choice in Settings (graphics.js has which flag does what). Live 3D
