@@ -513,6 +513,13 @@ restoring every context mid-match: the frame after matches the frame before.
 | `&perf` | On-screen timing, with `gl.finish()` per 3D fighter, so GPU time is included (worst case). |
 | `&stages=0`, `&fx=0` | Turn off the rendered stages or the fighting-game effects, which `?gl` includes. `?stages` or `?fx` alone tries either with 2D fighters. |
 
+Players turn on what `?gl` does from Settings ("Graphics: 3D preview",
+`Save.settings.graphics`). `src/graphics.js` decides each flag from the address
+and that choice (the address wins where it names a piece), and a change
+reloads the page, since the renderers are set up once at load and a reload is
+the sure way to leave Classic with nothing of the 3D path running. With
+neither, every flag is off: the classic game. `test/graphics.test.js`.
+
 The pipeline, end to end:
 
 ```
