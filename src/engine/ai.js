@@ -81,6 +81,10 @@ export class AIController {
     // has none, so it plays as authored.
     const ease = levelKey === 'mogul' ? 0 : (this.persona.ease?.[levelKey] ?? 0);
     this.hesitation = Math.min(AI_EASE.MAX, Math.max(0, this.level.mistake + ease));
+    // The range this character keeps, which may differ below Champion
+    // (ai.rangeAt, by level): a kit that waits at range to counter has nothing
+    // to wait for against a level that seldom swings, so there it closes in.
+    this.prefRange = (levelKey !== 'mogul' && this.persona.rangeAt?.[levelKey]) || this.persona.prefRange;
   }
 
   // Pulses a command normal if one fits the range, and holds forward so it
@@ -768,7 +772,7 @@ export class AIController {
     // --- neutral: approach, space, or jump in ---
     // Ranged and area-denial normals belong out here, not in the scramble.
     if (this.tryCommand(dist, toward, f, opp, game)) return;
-    const wantRange = P.prefRange === 'far' ? 330 : P.prefRange === 'mid' ? 210 : 110;
+    const wantRange = this.prefRange === 'far' ? 330 : this.prefRange === 'mid' ? 210 : 110;
     if (dist > wantRange + 60) {
       this.dir = toward;
       if (f.dashCD <= 0 && dist > 280 && Math.random() < L.aggr * 0.3) this.pulse.dash = true;

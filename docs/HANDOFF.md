@@ -447,10 +447,9 @@ not read it), which the determinism and effects tests check.
    bottom, Lizbeth, Steve, Scam and Cathie (62 to 65%) the top, a 37 point
    spread; untouched by v3.11. Rookie and Contender were evened out in v3.11
    (its section): a 92 point spread at Rookie and 50 at Contender, now about 30
-   and 25. Lizbeth is still the weakest at Rookie (about 30%) at the floor of
-   the mechanism, since her counter needs timing a Rookie does not have; a kit
-   change (a Rookie Lizbeth that fights with basics more) is the next lever if
-   that matters. How hard the levels are for a person, as opposed to how alike
+   and 25. Lizbeth, the weakest at Rookie (about 30%, at the floor of the
+   mechanism), now closes to mid range there (`ai.rangeAt`, v3.12): about 40%,
+   and the Rookie spread 20 to 23. How hard the levels are for a person, as opposed to how alike
    they are, is what `solo_results` (v3.10.2) is for: the AI stand-in for a
    player (`--against b-neo:<level>`) still loses to almost the whole roster,
    but a base founder has no signature move, so it says little about people.
