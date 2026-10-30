@@ -6,7 +6,7 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.11 on GitHub Pages
+The game is live at v3.12 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
 on 2026-10-29. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
@@ -46,7 +46,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.11 (`SIM_VERSION` 9), with the 3D prototype behind `?gl` | Deployed. A push here is a release. 456 tests pass. |
+| `main` | The live game, v3.12 (`SIM_VERSION` 9), with the 3D preview behind `?gl` or Settings | Deployed. A push here is a release. 462 tests pass. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -56,6 +56,20 @@ only code conflict was the teleport in `game.js` (the prototype's warp effect,
 and v3.9.3's `TELEPORT.PAST` in place of 84), and both are kept. The three
 superseded branches can be deleted whenever the owner likes; nothing on them is
 missing from `main`.
+
+## v3.12, released 2026-10-30: the 3D preview in Settings
+
+- **A Settings switch for the 3D preview** ("Graphics: Classic / 3D preview").
+  Players no longer need `?gl` to try it, so real usage can inform whether 3D
+  becomes the default; `solo_results.three_d` records which look each
+  single-player match was played in. `src/graphics.js` decides each renderer
+  flag from the address and the choice; a change reloads the page.
+  ARCHITECTURE section 7.
+- **A Rookie Lizbeth closes in** (`ai.rangeAt`): about 40% at Rookie, from 30%,
+  and the Rookie spread 20 to 23 points. Contender and Champion unchanged.
+- **`lab/pixels.js`**: the before-and-after pixel check CLAUDE.md asks for, two
+  commits in one headless browser (ARCHITECTURE section 10). Identical against
+  v3.11 for this release, flags off and with `--flags gl`.
 
 ## v3.11, released 2026-10-29: Rookie and Contender play alike whoever you fight
 

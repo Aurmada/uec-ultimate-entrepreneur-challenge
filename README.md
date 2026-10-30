@@ -71,6 +71,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.12: try the 3D preview from Settings
+
+- 🕹️ **The 3D preview is a button now.** Open Settings and switch GRAPHICS to 3D PREVIEW: the founders as 3D figures on stages rendered in Blender, with the new hit effects. The game reloads once to switch, and you can switch back to Classic any time. It needs a browser with WebGL2; without it you stay on Classic. It only changes how the fight looks, so you can still play anyone online.
+- 🥼 **A Rookie Lizbeth Holmez comes to you.** At Rookie she stood back waiting to counter blows that rarely came. Now she closes in and fights.
+
 ## What's new in v3.11: Rookie means Rookie, whoever you draw
 
 - 🎚️ **Every opponent plays to the level you picked.** At Rookie, Adam Weumann used to win almost every computer-against-computer match with BLITZSCALE, while Lizbeth Holmez stood around waiting to counter and won almost none. Each founder now holds back by their own amount at Rookie and Contender, so those levels feel alike whoever you face: Adam and Elo Ma ease off the most, and Lizbeth and Cathie Woodz stop hesitating. Champion is exactly as it was.
@@ -96,6 +101,7 @@ Both are in the 3D preview (`?gl`); with 3D off nothing changes.
 
 | Flag | What you get |
 | --- | --- |
+| Settings, GRAPHICS: 3D PREVIEW | the same as `?gl`, remembered on this device |
 | `?gl` | 3D fighters and 3D portraits, the rendered stages, the hit effects, sharp fighters |
 | `&stages=0` / `&fx=0` | the same without the rendered stages, or without the effects |
 | `?stages`, `?fx`, `?sharp` | each piece on its own, with the 2D fighters |
