@@ -508,7 +508,7 @@ export const FIGURE = {
   // How far each top hangs below the hip line.
   HEM: { suit: 13, blazer: 13, pinstripe: 13, hoodie: 7, bomber: 3, turtleneck: 5, tee: 5, vest: 5, henley: 5 },
   NECK: 6,                // visible neck between the chin and the shoulder line
-  HEAD: 0.94,             // head size against the tube rig's
+  HEAD: 0.94,             // head size against the tube rig's: the owner's pick over a smaller 0.8
   // Hands and feet big, the way the genre draws them: a fist is what hits.
   HAND: { LEN: 20, H: 18.5, BACK: 0.9 },
   FOOT: { SCALE: 1.3, BACK: 0.9 },

@@ -146,9 +146,10 @@ owner's phone before it could be the default. `test/figure.test.js` pins bone
 lengths, the straight punch and bent guard, legs at half the height, the neck,
 and builds that show; each fails without its part.
 
-Open for the owner: the head size (as now, or smaller and more heroic, which
-`sheet({ tweak: { HEAD: 0.8 } })` shows), and whether this becomes the default
-renderer.
+Decided on 2026-10-30, after watching both side by side in a live match: the
+head stays the size it is (`FIGURE.HEAD` 0.94, "head A"). The smaller, more
+heroic head was tried (`sheet({ tweak: { HEAD: 0.8 } })` still shows it) and
+not taken. Still open for the owner: whether this becomes the default renderer.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 
