@@ -11,6 +11,9 @@ import { computePose, FACE_PAINTER } from '/src/engine/drawFighter.js';
 import { applyProportions, clampBody } from '/src/engine/proportions.js';
 import { enable3D, has3D, preload3D, renderFull3D } from '/src/engine/gl3d/index.js';
 import { FIGHTER_MODELS, athleteFor } from '/src/data/models3d.js';
+// `models` entries: 'founder' (today's), 'athlete' (the shared new body), 'own' (each fighter's own).
+const modelId = (model, def) => (model === 'athlete' ? athleteFor(def) : model === 'own' ? def.id : model);
+const LABEL = { founder: 'today', athlete: 'shared new body', own: 'own body' };
 import { getFighter } from '/src/data/fighters.js';
 import { ATTACKS } from '/src/config.js';
 import { CASES } from '/lab/figure-sheet.js';
@@ -36,7 +39,7 @@ export async function sheet(path, { ids = ['bozo'], cases = ['idle', 'punch', 'k
     for (const id of ids) {
       const def = getFighter(id);
       for (const model of models) {
-        FIGHTER_MODELS[id] = model === 'athlete' ? athleteFor(def) : model;
+        FIGHTER_MODELS[id] = modelId(model, def);
         for (let i = 0; i < 200 && !has3D(def); i++) await wait(50);
         cases.forEach((name, i) => {
           const c = CASES[name];
@@ -87,7 +90,7 @@ export async function cast(path, { ids, pose = 'idle', models = ['founder', 'ath
     for (const [row, model] of models.entries()) {
       for (const [i, id] of ids.entries()) {
         const def = getFighter(id);
-        FIGHTER_MODELS[id] = model === 'athlete' ? athleteFor(def) : model;
+        FIGHTER_MODELS[id] = modelId(model, def);
         for (let k = 0; k < 200 && !has3D(def); k++) await wait(50);
         const c = CASES[pose];
         const f = {
@@ -96,12 +99,12 @@ export async function cast(path, { ids, pose = 'idle', models = ['founder', 'ath
           attack: c.kind ? { ...ATTACKS[c.kind], kind: c.kind, button: c.kind, hasHit: false } : null,
         };
         const P = applyProportions(computePose(f, c.t), clampBody(def.body));
-        if (frame && model === 'athlete') figureFrame(P);
+        if (frame && model !== 'founder') figureFrame(P);
         const y = row * (CH + LAB);
         renderFull3D(oc, { x: i * CW, y: y + LAB, w: CW, h: CH }, def, P, { state: c.state, face: FACE_PAINTER, span });
-        oc.fillStyle = model === 'athlete' ? '#ffd23f' : '#9fb0d9';
+        oc.fillStyle = model === 'founder' ? '#9fb0d9' : '#ffd23f';
         oc.font = '600 14px system-ui';
-        oc.fillText(`${def.name.split(' ')[0]}  ${model === 'athlete' ? 'new body' : 'today'}`, i * CW + 10, y + 15);
+        oc.fillText(`${def.name.split(' ')[0]}  ${LABEL[model] || model}`, i * CW + 10, y + 15);
       }
     }
   } finally {

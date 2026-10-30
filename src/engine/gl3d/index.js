@@ -17,7 +17,7 @@ import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import {
-  MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D, athleteFor,
+  MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D, athleteFor, newBodyFor,
   FACE_STATES, FACE_GRID, faceCell, faceKey, drawnFaceKey,
 } from '../../data/models3d.js';
 
@@ -54,7 +54,6 @@ export function enable3D({ ids = null, timing = false } = {}) {
   }
   if (!renderer) { enabled = false; return false; }
   for (const id of new Set([DEFAULT_MODEL, ...Object.values(FIGHTER_MODELS)])) load(id);
-  if (athletes) { load('athlete'); load('athlete-f'); }
   return true;
 }
 
@@ -179,24 +178,26 @@ function load(id) {
   return entry;
 }
 
-// The athlete bodies (MODELS3D.athlete), on test: with this on, everyone not
-// given a model of their own wears the athlete body for their frame. ?athlete
-// with ?gl, and the review page's switch.
+// The new bodies, on test: with this on, a roster fighter wears their own
+// model (MODELS3D[id], their build and their pieces) and anyone else the
+// athlete body for their frame. ?athlete with ?gl, and the review page's switch.
 let athletes = false;
 export function athletes3D(on = true) {
-  athletes = !!on;
-  if (athletes && renderer) { load('athlete'); load('athlete-f'); }
+  athletes = !!on;      // each body is fetched the first time someone wears it (modelFor)
 }
-const modelIdFor = (def) => FIGHTER_MODELS[def.id] || (athletes ? athleteFor(def) : DEFAULT_MODEL);
-// Whether a fighter is drawn in an athlete body, which takes the 2D figure's
-// proportions too (engine/figure.js figureFrame): the hip higher, so the legs
-// are half the fighter.
-export const athlete3D = (def) => !!def && modelIdFor(def).startsWith('athlete');
+const modelIdFor = (def) => FIGHTER_MODELS[def.id] || (athletes ? newBodyFor(def) : DEFAULT_MODEL);
+// Whether a fighter is drawn in one of the new bodies, which take the 2D
+// figure's proportions too (engine/figure.js figureFrame): the hip higher, so
+// the legs are half the fighter.
+const NEW_BODY = (id) => id !== DEFAULT_MODEL && !!MODELS3D[id] && id !== 'founder';
+export const athlete3D = (def) => !!def && modelIdFor(def) !== DEFAULT_MODEL && NEW_BODY(modelIdFor(def));
 
 function modelFor(def) {
   if (!enabled || !renderer || renderer.lost || !def) return null;
   if (only && !only.has(def.id)) return null;
-  const entry = models.get(modelIdFor(def));
+  const id = modelIdFor(def);
+  // a fighter's own model is fetched the first time they are drawn
+  const entry = models.get(id) || (MODELS3D[id] ? load(id) : null);
   return entry && entry.ready ? entry : null;
 }
 

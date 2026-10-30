@@ -15,6 +15,11 @@
 #   ... -P lab/blender/build_founder.py -- assets/models/athlete.glb athlete
 #   ... -P lab/blender/build_founder.py -- assets/models/athlete-f.glb athlete-f
 #
+# And one model per roster fighter, their own body from their build (the
+# `figure` numbers in fighters.js) carrying only the pieces they wear, so no
+# two of them share a silhouette. lab/blender/build_cast.mjs drives it:
+#   ... -- assets/models/cast/<id>.glb character <json or path to json>
+#
 # Without Blender installed, the Python module works the same way:
 #   pip install bpy && python lab/blender/build_founder.py -- <out.glb> [athlete]
 #
@@ -54,10 +59,32 @@ from mathutils import Vector as V, Matrix
 
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 OUT = os.path.abspath(ARGS[0] if ARGS else 'assets/models/founder.glb')
-ATHLETE = len(ARGS) > 1 and ARGS[1] in ('athlete', 'athlete-f')
+# A roster fighter's own model: { id, frame, figure: {muscle, chest, waist,
+# belly, hips, neck}, meshes: [names] } (see build_cast.mjs).
+CHAR = None
+if len(ARGS) > 2 and ARGS[1] == 'character':
+    import json
+    CHAR = json.loads(open(ARGS[2]).read() if os.path.exists(ARGS[2]) else ARGS[2])
+ATHLETE = len(ARGS) > 1 and ARGS[1] in ('athlete', 'athlete-f') or CHAR is not None
 # The women's frame: narrower shoulders and lighter arms, a bust instead of
 # pectorals, a narrower waist over wider hips.
-FEM = len(ARGS) > 1 and ARGS[1] == 'athlete-f'
+FEM = len(ARGS) > 1 and ARGS[1] == 'athlete-f' or bool(CHAR and CHAR.get('frame') == 'f')
+# The build: how much muscle shows, how deep the chest is, how wide the waist
+# and hips, how big a belly, how thick a neck. 1 (and no belly) is the athlete.
+SHAPE = dict(muscle=1.0, chest=1.0, waist=1.0, belly=0.0, hips=1.0, neck=1.0)
+if CHAR:
+    SHAPE.update({k: float(v) for k, v in (CHAR.get('figure') or {}).items() if k in SHAPE})
+# What muscle does to a muscle's cross-section. Pushed wide on purpose: the
+# arcade fighters are told apart by silhouette before anything else, and a
+# subtle difference is no difference at game size.
+MUSCLE = 0.62 + 0.38 * SHAPE['muscle']
+# The cut of their clothes (fighters.js `figure.costume`): how close the top
+# and the sleeves sit (tight, regular, oversized), how far the top hangs past
+# the hips, and the trousers (skinny, suit, baggy, flared).
+COSTUME = dict(fit='regular', sleeves=None, hem=0.0, legs='suit')
+if CHAR:
+    COSTUME.update(CHAR.get('costume') or {})
+FIT = dict(tight=0.45, regular=1.0, oversized=2.3)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -193,7 +220,7 @@ H = lambda x, y, z: headc + V((x, y, z))
 # ================================================================ BODY
 BODY_BONES = ['chest', 'neck', 'head', 'upper_arm.R', 'upper_arm.L', 'forearm.R', 'forearm.L']
 skin = part('body', 'skin', BODY_BONES + ['spine'], 4200 if not ATHLETE else 9000, res=0.008 if not ATHLETE else 0.006)
-skin.capsule(neck, H(-0.01, 0, -0.07), 0.066)
+skin.capsule(neck, H(-0.01, 0, -0.07), 0.066 * SHAPE['neck'])
 skin.ellip(neck + V((0.05, 0, -0.05)), (0.10, 0.15, 0.08))           # fills any neckline
 
 
@@ -214,20 +241,21 @@ def arm_muscles(f, s, pad=0.0, upto='wrist'):
     sy = -1 if s == 'R' else 1
     out = V((0, 0.012 * sy, 0))
     k = 0.86 if FEM else 1.0                 # lighter arms on the women's frame
-    def limb(a, b, t, off, size, f, pad=0.0):
-        along(a, b, t, off, (size[0], size[1] * k, size[2] * k), f, pad)
+    def limb(a, b, t, off, size, f, pad=0.0, m=MUSCLE):
+        along(a, b, t, off, (size[0], size[1] * k * m, size[2] * k * m), f, pad)
+    core = 0.92 + 0.08 * SHAPE['muscle']
     # the deltoid caps the shoulder and runs a third of the way down the arm
     limb(sh, el, 0.10, V((0.0, 0.035 * sy, 0.0)), (0.115, 0.095, 0.09), f, pad)
-    limb(sh, el, 0.5, V((0, 0, 0)), (0.20, 0.054, 0.052), f, pad)            # humerus core
+    limb(sh, el, 0.5, V((0, 0, 0)), (0.20, 0.054, 0.052), f, pad, core)      # humerus core
     if upto == 'short':
         return
-    limb(sh, el, 0.56, V((0.032, 0, 0)) + out, (0.13, 0.054, 0.056), f, pad)  # biceps, in front
-    limb(sh, el, 0.42, V((-0.034, 0, 0)), (0.16, 0.058, 0.054), f, pad)       # triceps, behind
-    f.ball(el, 0.046 + pad)
+    limb(sh, el, 0.56, V((0.032, 0, 0)) * MUSCLE + out, (0.13, 0.054, 0.056), f, pad)  # biceps, in front
+    limb(sh, el, 0.42, V((-0.034, 0, 0)) * MUSCLE, (0.16, 0.058, 0.054), f, pad)       # triceps, behind
+    f.ball(el, 0.046 * core + pad)
     if upto == 'elbow':
         return
     limb(el, wr, 0.24, V((0.014, 0, 0)) + out * 1.6, (0.13, 0.064, 0.058), f, pad)  # the forearm's swell
-    limb(el, wr, 0.55, V((0, 0, 0)), (0.17, 0.044, 0.040), f, pad)                  # tapering to the wrist
+    limb(el, wr, 0.55, V((0, 0, 0)), (0.17, 0.044, 0.040), f, pad, core)            # tapering to the wrist
     f.ball(wr, 0.034 + pad)
 
 
@@ -245,44 +273,59 @@ def torso_muscles(f, pad=0.0, girth=1.0):
     g = girth
     gp = lambda size: (size[0] * g, size[1] * g, size[2])
     P_ = lambda size: tuple(x + pad for x in gp(size))
+    ch, wa, hi, mu = SHAPE['chest'], SHAPE['waist'], SHAPE['hips'], MUSCLE
+    cs = lambda size, kx, ky: P_((size[0] * kx, size[1] * ky, size[2]))
+    belly = SHAPE['belly']
+    if belly > 0:
+        # a paunch: out in front and down, over the belt
+        f.ellip(V((0.05 + 0.09 * belly, 0, 1.02)), P_((0.06 + 0.12 * belly, 0.10 + 0.08 * belly, 0.09 + 0.06 * belly)))
     if FEM:
-        f.ellip(V((0.0, 0, 1.27)), P_((0.12, 0.165, 0.16)))                                     # ribcage
+        f.ellip(V((0.0, 0, 1.27)), cs((0.12, 0.165, 0.16), ch, ch))                              # ribcage
         for sy in (1, -1):
-            f.ellip(V((0.07, 0.075 * sy, 1.29)), P_((0.066, 0.074, 0.068)))                     # bust
-            f.ellip(V((-0.035, 0.095 * sy, 1.46)), P_((0.055, 0.095, 0.042)), Rx(22 * sy).to_quaternion())   # traps
-            f.ellip(V((-0.045, 0.115 * sy, 1.23)), P_((0.06, 0.07, 0.15)), Rx(-10 * sy).to_quaternion())   # back
+            f.ellip(V((0.07, 0.075 * sy, 1.29)), cs((0.066, 0.074, 0.068), ch, ch))              # bust
+            f.ellip(V((-0.035, 0.095 * sy, 1.46)), cs((0.055, 0.095, 0.042), mu, mu), Rx(22 * sy).to_quaternion())   # traps
+            f.ellip(V((-0.045, 0.115 * sy, 1.23)), cs((0.06, 0.07, 0.15), mu, mu), Rx(-10 * sy).to_quaternion())   # back
         f.capsule(V((0.03, -0.17, 1.43)), V((0.03, 0.17, 1.43)), 0.034 + pad)                   # the collarbones
-        f.ellip(V((0.03, 0, 1.07)), P_((0.075, 0.095, 0.115)))                                  # the waist, narrow
-        f.ellip(V((0.0, 0, 0.92)), P_((0.115, 0.172, 0.095)))                                   # wider hips
+        f.ellip(V((0.03, 0, 1.07)), cs((0.075, 0.095, 0.115), wa, wa))                           # the waist, narrow
+        f.ellip(V((0.0, 0, 0.92)), cs((0.115, 0.172, 0.095), hi, hi))                            # wider hips
         return
-    f.ellip(V((0.0, 0, 1.27)), P_((0.13, 0.185, 0.165)))                # ribcage
+    f.ellip(V((0.0, 0, 1.27)), cs((0.13, 0.185, 0.165), ch, ch))         # ribcage
     for sy in (1, -1):
-        f.ellip(V((0.075, 0.09 * sy, 1.33)), P_((0.07, 0.10, 0.066)),    # pectorals
+        f.ellip(V((0.075 * ch, 0.09 * sy, 1.33)), cs((0.07, 0.10, 0.066), ch * mu, ch * mu),    # pectorals
                 Rx(-10 * sy).to_quaternion())
-        f.ellip(V((-0.035, 0.105 * sy, 1.46)), P_((0.065, 0.115, 0.052)), # traps, sloping
+        f.ellip(V((-0.035, 0.105 * sy, 1.46)), cs((0.065, 0.115, 0.052), mu, mu * SHAPE['neck'] ** 0.5),   # traps, sloping
                 Rx(24 * sy).to_quaternion())
-        f.ellip(V((-0.05, 0.135 * sy, 1.23)), P_((0.07, 0.085, 0.17)),   # lats, tapering in
+        f.ellip(V((-0.05, 0.135 * sy * (0.8 + 0.2 * mu), 1.23)), cs((0.07, 0.085, 0.17), mu, mu),   # lats, tapering in
                 Rx(-12 * sy).to_quaternion())
-        f.ellip(V((0.0, 0.095 * sy, 1.03)), P_((0.06, 0.045, 0.085)))    # obliques
+        f.ellip(V((0.0, 0.095 * sy * wa, 1.03)), cs((0.06, 0.045, 0.085), wa, wa))   # obliques
     f.capsule(V((0.03, -0.19, 1.43)), V((0.03, 0.19, 1.43)), 0.038 + pad)        # the collarbones
-    f.ellip(V((0.035, 0, 1.07)), P_((0.08, 0.105, 0.115)))              # the waist, narrow
-    f.ellip(V((0.0, 0, 0.92)), P_((0.11, 0.155, 0.09)))                 # pelvis
+    f.ellip(V((0.035, 0, 1.07)), cs((0.08, 0.105, 0.115), wa, wa))       # the waist, narrow
+    f.ellip(V((0.0, 0, 0.92)), cs((0.11, 0.155, 0.09), hi, hi))          # pelvis
 
 
-def leg_muscles(f, s, pad=0.0, trouser=True):
+def leg_muscles(f, s, pad=0.0, trouser=True, style='suit'):
     hj, kn, an = J['hipj.' + s], J['knee.' + s], J['ankle.' + s]
     sy = -1 if s == 'R' else 1
-    g = 1.12 if FEM else 1.0
+    g = (1.12 if FEM else 1.0) * SHAPE['hips']
+    lm = 0.9 + 0.1 * SHAPE['muscle']
+    L = lambda size: (size[0], size[1] * lm, size[2] * lm)
     f.ellip(V((-0.06, 0.08 * sy, 0.84)), (0.07 * g + pad, 0.075 * g + pad, 0.085 * g + pad))   # glute
-    along(hj, kn, 0.45, V((0.03, 0, 0)), (0.21, 0.064, 0.066), f, pad)                         # quads
-    along(hj, kn, 0.80, V((0.02, -0.03 * sy, 0)), (0.07, 0.046, 0.046), f, pad)               # the teardrop over the knee
-    along(hj, kn, 0.45, V((-0.03, 0, 0)), (0.20, 0.058, 0.06), f, pad)                        # hamstrings
-    along(hj, kn, 0.25, V((0, -0.03 * sy, 0)), (0.12, 0.05, 0.05), f, pad)                    # adductors, inside
+    along(hj, kn, 0.45, V((0.03, 0, 0)), L((0.21, 0.064, 0.066)), f, pad)                      # quads
+    along(hj, kn, 0.80, V((0.02, -0.03 * sy, 0)), L((0.07, 0.046, 0.046)), f, pad)            # the teardrop over the knee
+    along(hj, kn, 0.45, V((-0.03, 0, 0)), L((0.20, 0.058, 0.06)), f, pad)                     # hamstrings
+    along(hj, kn, 0.25, V((0, -0.03 * sy, 0)), L((0.12, 0.05, 0.05)), f, pad)                 # adductors, inside
     f.ball(kn, 0.052 + pad)
-    if trouser:
+    if trouser and style == 'flared':
+        # close at the knee, then out to a wide hem over the shoe
+        along(kn, an, 0.3, V((-0.005, 0, 0)), (0.14, 0.06 + pad, 0.058 + pad), f)
+        along(kn, an, 0.72, V((0.0, 0, 0)), (0.12, 0.088 + pad, 0.086 + pad), f)
+        f.ball(an + V((0, 0, 0.07)), 0.08 + pad)
+    elif trouser:
         # a trouser leg hangs straight from the knee rather than following the calf
-        along(kn, an, 0.45, V((-0.005, 0, 0)), (0.22, 0.066 + pad, 0.064 + pad), f)
-        f.ball(an + V((0, 0, 0.045)), 0.06 + pad)
+        wide = 0.012 if style == 'baggy' else 0.0
+        lift = 0.03 if style == 'baggy' else 0.0     # a baggy leg is cut short enough to show the shoe
+        along(kn, an + V((0, 0, lift)), 0.45, V((-0.005, 0, 0)), (0.22, 0.066 + pad + wide, 0.064 + pad + wide), f)
+        f.ball(an + V((0, 0, 0.045 + lift)), 0.06 + pad + wide)
     else:
         along(kn, an, 0.30, V((-0.035, 0, 0)), (0.12, 0.055, 0.055), f, pad)                 # calf
         along(kn, an, 0.6, V((0, 0, 0)), (0.2, 0.04, 0.036), f, pad)
@@ -320,11 +363,13 @@ pants = part('body', 'pants', ['hips', 'thigh.R', 'thigh.L', 'shin.R', 'shin.L']
 shoe = part('body', 'shoe', ['shin.R', 'shin.L', 'foot.R', 'foot.L'], 1400)
 sole = part('body', 'sole', ['foot.R', 'foot.L'], 500, res=0.009)
 if ATHLETE:
-    pants.ellip(hip + V((0, 0, -0.01)), (0.12, 0.165, 0.11))
+    pants.ellip(hip + V((0, 0, -0.01)), (0.12 * SHAPE['hips'], 0.165 * SHAPE['hips'], 0.11))
 for s, sy in (('R', -1), ('L', 1)):
     hj, kn, an = J['hipj.' + s], J['knee.' + s], J['ankle.' + s]
     if ATHLETE:
-        leg_muscles(pants, s, pad=0.02)
+        style = COSTUME['legs']
+        leg_muscles(pants, s, pad=dict(skinny=0.006, suit=0.02, baggy=0.036, flared=0.016)[style],
+                    trouser=style != 'skinny', style=style)
     else:
         if s == 'R':
             pants.ellip(hip + V((0, 0, -0.03)), (0.14, 0.18, 0.13))
@@ -349,7 +394,13 @@ PAD = dict(tee=0.012, henley=0.014, turtleneck=0.014, suit=0.024, pinstripe=0.02
 
 def torso(f, girth=1.0):
     if ATHLETE:
-        torso_muscles(f, PAD[CURRENT[0]], 1 + (girth - 1) * 0.5)
+        pad = PAD[CURRENT[0]] * FIT[COSTUME['fit']]
+        torso_muscles(f, pad, 1 + (girth - 1) * 0.5)
+        hem = float(COSTUME['hem'] or 0)
+        if hem > 0:
+            # a top that hangs past the hips, over the seat and the tops of the legs
+            hi = SHAPE['hips']
+            f.ellip(V((0.0, 0, 0.90 - hem * 0.5)), (0.12 * hi + pad, 0.17 * hi + pad, 0.05 + hem * 0.5))
         return
     g = girth
     f.ellip(chest + V((0.01, 0, 0.10)), (0.17 * g, 0.28 * g, 0.20 * g))
@@ -362,8 +413,9 @@ def torso(f, girth=1.0):
 def sleeves(f, reach, radius=0.088):
     # reach: 'short' ends mid upper arm, 'pushed' just past the elbow, 'long' at the wrist
     if ATHLETE:
+        fit = FIT[COSTUME['sleeves'] or COSTUME['fit']]
         for s in ('R', 'L'):
-            arm_muscles(f, s, PAD[CURRENT[0]] + (radius - 0.088), {'short': 'short', 'pushed': 'elbow'}.get(reach, 'wrist'))
+            arm_muscles(f, s, PAD[CURRENT[0]] * fit + (radius - 0.088), {'short': 'short', 'pushed': 'elbow'}.get(reach, 'wrist'))
         return
     for s in ('R', 'L'):
         sh, el, wr = J['shoulder.' + s], J['elbow.' + s], J['wrist.' + s]
@@ -729,7 +781,11 @@ def weigh(ob, allowed):
 bpy.context.view_layer.update()
 dg = bpy.context.evaluated_depsgraph_get()
 by_object = {}
+# A fighter's own model carries only what they wear.
+WANTED = set(CHAR['meshes']) | {'body'} if CHAR else None
 for fam, faces, bones in FAMILIES:
+    if WANTED is not None and fam.obj not in WANTED:
+        continue
     me = bpy.data.meshes.new_from_object(fam.ob.evaluated_get(dg))
     ob = bpy.data.objects.new(fam.ob.name, me)
     scene.collection.objects.link(ob)

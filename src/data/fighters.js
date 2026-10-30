@@ -196,7 +196,8 @@ export const FIGHTERS = [
     // compounding pattern the budget exists to catch — giving her a real body
     // to hit is what pays for the speed, and it drops her out of the blocked band.
     // FIGURE (render-only, engine/figure.js): Slight and upright, a runner's frame inside a blazer that does the posing for her.
-    figure: { frame: 'f', muscle: 0.5, chest: 0.9, waist: 0.86, hips: 1.04, jaw: 0.95 },
+    figure: { frame: 'f', muscle: 0.5, chest: 0.9, waist: 0.86, hips: 1.04, jaw: 0.95,
+      costume: { fit: 'tight', legs: 'skinny' } },
     body: { height: 1.04, build: 1.06, reach: 0.96, stride: 1.02, shoulders: 0.88, head: 1.02 },
     stats: { speed: 1.0, power: 1.0, hp: 100 },
     ai: { aggr: 0.55, jump: 0.3, prefRange: 'far', ease: { intern: -0.30 }, rangeAt: { intern: 'mid' } },
@@ -246,7 +247,8 @@ export const FIGHTERS = [
     usesRunway: true,
     // Wide as a doorway and built low. Reads as the biggest thing on stage.
     // FIGURE (render-only, engine/figure.js): Big, loose and broad through the chest, a heavy jaw, a little soft at the middle.
-    figure: { muscle: 1.0, chest: 1.12, belly: 0.15, jaw: 1.08, neck: 1.1 },
+    figure: { muscle: 1.0, chest: 1.12, belly: 0.15, jaw: 1.08, neck: 1.1,
+      costume: { fit: 'oversized', hem: 0.1, legs: 'baggy' } },
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
     stats: { speed: 0.95, power: 1.2, hp: 95 },
     ai: { aggr: 0.85, jump: 0.35, prefRange: 'close', ease: { intern: 0.32, founder: 0.22 } },
@@ -299,7 +301,8 @@ export const FIGHTERS = [
     // All leg and no shoulder — the keynote posture, tall and unthreatening
     // right up until it isn't.
     // FIGURE (render-only, engine/figure.js): Rake thin: narrow chest, no waist to speak of, a long neck in a roll collar.
-    figure: { muscle: 0.45, chest: 0.84, waist: 0.9, jaw: 1.0, neck: 0.9 },
+    figure: { muscle: 0.45, chest: 0.84, waist: 0.9, jaw: 1.0, neck: 0.9,
+      costume: { fit: 'tight', legs: 'skinny' } },
     body: { height: 1.06, build: 0.98, reach: 1.00, stride: 1.06, shoulders: 0.92, head: 0.96 },
     stats: { speed: 1.15, power: 0.9, hp: 95 },
     ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid', ease: { intern: 0.11 } },
@@ -354,7 +357,8 @@ export const FIGHTERS = [
     // Small and light with an oversized head — reads young and quick, and
     // the smaller hurtbox is what her budget pays for.
     // FIGURE (render-only, engine/figure.js): Small and curvy, narrow at the waist and wide through the hips.
-    figure: { frame: 'f', muscle: 0.6, chest: 0.96, waist: 0.8, hips: 1.18, jaw: 0.94 },
+    figure: { frame: 'f', muscle: 0.6, chest: 0.96, waist: 0.8, hips: 1.18, jaw: 0.94,
+      costume: { fit: 'regular', legs: 'flared' } },
     body: { height: 0.90, build: 0.92, reach: 0.96, stride: 0.88, shoulders: 0.90, head: 1.11 },
     stats: { speed: 1.1, power: 0.95, hp: 95 },
     ai: { aggr: 0.75, jump: 0.5, prefRange: 'mid', ease: { intern: 0.02 } },
@@ -419,7 +423,8 @@ export const FIGHTERS = [
     // Tall, narrow, and longer in the arm than anyone. The silhouette IS
     // the zoning — you can see the range before she uses it.
     // FIGURE (render-only, engine/figure.js): Tall, slim and straight-backed, with no hard edges anywhere.
-    figure: { frame: 'f', muscle: 0.35, chest: 0.92, waist: 0.96, hips: 1.04, jaw: 0.96 },
+    figure: { frame: 'f', muscle: 0.35, chest: 0.92, waist: 0.96, hips: 1.04, jaw: 0.96,
+      costume: { fit: 'regular', legs: 'suit' } },
     body: { height: 1.2, build: 0.89, reach: 1.06, stride: 1.18, shoulders: 0.88, head: 0.94 },
     stats: { speed: 0.9, power: 1.05, hp: 105 },
     ai: { aggr: 0.65, jump: 0.2, prefRange: 'far', ease: { intern: -0.09, founder: -0.13 } },
@@ -488,7 +493,8 @@ export const FIGHTERS = [
     // Squat, enormous across the shoulders, short in the leg. A fireplug —
     // nothing about him says he can reach you, which is the honest advert.
     // FIGURE (render-only, engine/figure.js): Barrel-chested and gone to seed: a paunch under the waistcoat, a bull neck, jowls.
-    figure: { muscle: 0.6, chest: 1.04, waist: 1.18, belly: 0.65, jaw: 1.08, neck: 1.2 },
+    figure: { muscle: 0.6, chest: 1.04, waist: 1.18, belly: 0.65, jaw: 1.08, neck: 1.2,
+      costume: { fit: 'regular', legs: 'suit' } },
     body: { height: 0.94, build: 1.08, reach: 0.98, stride: 0.9, shoulders: 1.25, head: 1.06 },
     stats: { speed: 0.85, power: 1.25, hp: 110 },
     ai: { aggr: 0.8, jump: 0.15, prefRange: 'close', ease: { intern: 0.11 } },
@@ -546,7 +552,8 @@ export const FIGHTERS = [
     // Tall and ordinary through the middle. GLASS CANNON is already the most
     // over-budget style shipped, so the frame has to be a real target.
     // FIGURE (render-only, engine/figure.js): Tall and heavy-set rather than built, the tee stretched at the middle.
-    figure: { muscle: 0.7, chest: 1.06, waist: 1.06, belly: 0.3, jaw: 1.04 },
+    figure: { muscle: 0.7, chest: 1.06, waist: 1.06, belly: 0.3, jaw: 1.04,
+      costume: { fit: 'regular', legs: 'baggy' } },
     body: { height: 1.18, build: 0.96, reach: 1.00, stride: 1.18, shoulders: 0.86, head: 0.90 },
     stats: { speed: 1.05, power: 1.15, hp: 100 },
     ai: { aggr: 0.82, jump: 0.4, prefRange: 'close', ease: { intern: 0.19 } },
@@ -593,7 +600,8 @@ export const FIGHTERS = [
     special: 'sameday', style: 'technical',
     // Compact and barrel-chested with short arms — the warehouse build.
     // FIGURE (render-only, engine/figure.js): The gym-rat cameo: a chest like a crate, arms that strain the sleeves, a thick neck.
-    figure: { muscle: 1.6, chest: 1.3, waist: 0.92, jaw: 1.1, neck: 1.35 },
+    figure: { muscle: 1.6, chest: 1.3, waist: 0.92, jaw: 1.1, neck: 1.35,
+      costume: { fit: 'regular', sleeves: 'tight', legs: 'suit' } },
     body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
     stats: { speed: 0.9, power: 1.2, hp: 108 },
     ai: { aggr: 0.75, jump: 0.2, prefRange: 'close', ease: { intern: 0.11, founder: -0.11 } },
@@ -639,7 +647,8 @@ export const FIGHTERS = [
     // Wednesday does not look worried. TRICKSTER is expensive, so the comfort
     // is also what pays for it.
     // FIGURE (render-only, engine/figure.js): Soft all over: round shoulders, a belly, and nothing in the arms.
-    figure: { muscle: 0.25, chest: 0.86, waist: 1.12, belly: 0.55, jaw: 0.94, neck: 0.9 },
+    figure: { muscle: 0.25, chest: 0.86, waist: 1.12, belly: 0.55, jaw: 0.94, neck: 0.9,
+      costume: { fit: 'oversized', hem: 0.06, legs: 'baggy' } },
     body: { height: 0.98, build: 1.14, reach: 0.96, stride: 0.94, shoulders: 1.08, head: 1.08 },
     stats: { speed: 1.1, power: 0.9, hp: 96 },
     ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid', ease: { intern: 0.09 } },

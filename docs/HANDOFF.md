@@ -48,7 +48,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | --- | --- | --- |
 | `main` | The live game, v3.12 (`SIM_VERSION` 9), with the 3D preview behind `?gl` or Settings | Deployed. A push here is a release. 462 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Built on 2026-10-30, not released. 471 tests pass. |
-| `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the athlete bodies (`?gl&athlete`) | In progress on 2026-10-30, not released. 480 tests pass. |
+| `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | In progress on 2026-10-30, not released. 482 tests pass. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -184,9 +184,33 @@ Blender is not needed as an app: `pip install bpy` (5.1.2 was used) runs the
 script as `python lab/blender/build_founder.py -- <out.glb> [athlete]`, and it
 rebuilds `founder.glb` identically apart from the exporter's version string.
 
-Next, by the owner's call: the head (a modelled jaw, cheekbones and nose; the
-face is still projected onto today's round head), hands with fingers, and the
-cost on his phone.
+**A body of their own** (same day). The owner liked the athlete body and
+asked for what the arcade fighters have: every character unique in many ways.
+The first of those ways is the silhouette, so each roster fighter now has
+their own model, `assets/models/cast/<id>.glb`, built by
+`lab/blender/build_cast.mjs` (it runs `build_founder.py` once per fighter):
+
+- their build from the same `figure` numbers the 2D figure draws (`muscle`,
+  `chest`, `waist`, `belly`, `hips`, `neck`, `frame`), pushed wide on purpose,
+  since a subtle difference is no difference at game size;
+- the cut of their clothes, `figure.costume`: how close the top and sleeves
+  sit (`tight`, `regular`, `oversized`), how far the top hangs past the hips,
+  and the trousers (`skinny`, `suit`, `baggy`, `flared`);
+- only the pieces they wear (`piecesFor` in `models3d.js`), about 1 MB each.
+
+Jeff is huge through the chest and arms with tight sleeves, Carl short and
+barrel-chested with a paunch and a bull neck, Adam big in an oversized hoodie
+and baggy trousers, Steve rake thin in fitted clothes, Scam soft with a belly
+in a baggy henley, Kim small with a narrow waist and flared trousers. With
+`?gl&athlete` a roster fighter wears their own model and a player's founder the
+athlete body for their frame; each is fetched the first time it is worn, so a
+fighter can show in 2D for a moment at the start of a match until theirs
+arrives. `test/athlete.test.js` checks each model carries exactly what its
+fighter wears and that no two share a build; both fail with one shared body.
+
+Next for uniqueness, as the owner set the direction: their own heads and faces
+(the face is still projected onto today's round head), signature costume
+pieces, then how each one moves.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

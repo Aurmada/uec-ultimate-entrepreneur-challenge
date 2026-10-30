@@ -71,6 +71,13 @@ MODELS3D['athlete-f'] = { ...MODELS3D.founder, url: 'assets/models/athlete-f.glb
 // 2D figure is drawn on it (fighters.js `figure.frame`).
 export const athleteFor = (def) => (def?.figure?.frame === 'f' ? 'athlete-f' : 'athlete');
 
+// Each roster fighter's own model (lab/blender/build_cast.mjs): their own body
+// from their build, carrying only what they wear. With the new bodies on, a
+// roster fighter wears theirs and a player's founder wears the athlete body.
+export const CAST_MODELS = ['ava', 'max', 'kai', 'zara', 'eleanor', 'dex', 'elo', 'bozo', 'scam'];
+for (const id of CAST_MODELS) MODELS3D[id] = { ...MODELS3D.founder, url: `assets/models/cast/${id}.glb` };
+export const newBodyFor = (def) => (CAST_MODELS.includes(def?.id) ? def.id : athleteFor(def));
+
 export const DEFAULT_MODEL = 'founder';
 
 // A roster fighter may wear a model of their own; none does yet, and anyone
@@ -151,4 +158,16 @@ function fingerprint(text) {
     for (let i = n - END; i < n; i++) mix(i);
   }
   return `${n}:${h.toString(16)}`;
+}
+
+// Every piece a fighter can be seen wearing: their look (one piece a slot),
+// their parts, and what every fighter carries (the block briefcase, Unicorn
+// Mode's horn). A roster fighter's own model is built with exactly these
+// (lab/blender/build_cast.mjs) and tested against them.
+export function piecesFor(def) {
+  const look = resolveLook3D(def);
+  const out = ['body', ...LOOK_SLOTS.filter((slot) => look[slot] && look[slot] !== 'none').map((slot) => `${slot}:${look[slot]}`)];
+  for (const part of def.parts || []) out.push(`prop:${part.id}`);
+  out.push('prop:guard-case', 'fx:unicorn');
+  return [...new Set(out)];
 }
