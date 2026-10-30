@@ -539,6 +539,8 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
    browser that wrote it, and it already did not match the Claude desktop app's
    browser in September. Its attack cases also changed with the snarl fix.
    Re-capture it on whatever machine will run it (ARCHITECTURE section 10).
+   For the everyday check, that the classic game is unchanged, `lab/pixels.js`
+   (2026-10-30) compares two commits in one browser and needs no baseline.
 
 ## Known limits
 

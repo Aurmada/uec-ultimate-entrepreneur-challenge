@@ -1117,6 +1117,19 @@ to read the result from:
   `FAIL baseline 3/126 mismatched`), for anything that can only read a page
   title.
 
+**Comparing two commits: `lab/pixels.js`.** The check CLAUDE.md asks for
+before calling a change done, that the default game look exactly as it did,
+does not need a baseline at all: `node lab/pixels.js [commit]` checks the
+commit (default `main`) out into a temporary worktree, serves it and the
+working tree, renders the same 30 seeded frames of a Champion match (five
+moments on each arena, through the real `Game` and `renderGame`) from both in
+one headless browser, and lists any frame that differs, with both saved.
+Same browser, same moment, so the machine never matters. `--flags gl` turns on
+the 3D path's 2D renderers (sharp fighters, rendered stages, effects) on both
+sides. It needs Playwright, which cloud sessions have and the game never
+loads. Checked when written: identical against `main` for a render-neutral
+branch, and against v3.9.4 it finds the attack face, which v3.10 changed.
+
 **This is not CI.** There is no `.github`, no workflow file, and nothing in
 this repo opens a browser on its own. `?run=` only makes the page itself
 drivable once something (a screenshot tool, a scripted browser session, a
