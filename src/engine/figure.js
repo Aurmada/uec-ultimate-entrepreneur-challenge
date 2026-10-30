@@ -172,52 +172,58 @@ function inkFill(ctx, shapes) {
   for (const s of shapes) { ctx.beginPath(); s.path(ctx); ctx.fillStyle = s.fill; ctx.fill(); }
 }
 
-// Shadow and highlight on one segment, clipped to it: the side facing away
-// from the light gets a hard-edged band of shadow, the lit side a thin glint.
-function shadeSegment(ctx, seg, fill, skin, glint = 0.6) {
-  const lit = seg.onx * LX + seg.ony * LY > 0;   // is the outer side lit?
-  const dark = lit ? seg.inner : seg.outer;
-  const light = lit ? seg.outer : seg.inner;
-  ctx.save();
-  ctx.beginPath(); seg.path(ctx); ctx.clip();
-  const band = [];
-  for (let k = 0; k < dark.length; k++) {
-    const [x, y] = dark[k], [lx, ly] = light[k];
-    // pushed past the edge so the clip, not the polygon, makes the silhouette
-    band.push([x + (x - lx) * 0.4, y + (y - ly) * 0.4]);
+// Shadow and highlight on one segment: the side facing away from the light
+// gets a hard-edged band of shadow, the lit side a thin glint. Both are built
+// on the segment's own edge points, so they stay inside it without a clip (a
+// clip per segment was a third of the figure's cost). Where the outline's
+// curve bows past the straight run between two points, the band falls on the
+// ink, which multiplying cannot change.
+// Several segments of one limb (one colour) shade in one pass: each mode
+// switch to multiply is a break in the browser's batching, and a limb is two.
+function shadeSegment(ctx, segs, fill, skin, glint = 0.6) {
+  if (!Array.isArray(segs)) segs = [segs];
+  const sides = segs.map((seg) => {
+    const lit = seg.onx * LX + seg.ony * LY > 0;   // is the outer side lit?
+    return lit ? [seg.inner, seg.outer] : [seg.outer, seg.inner];
+  });
+  ctx.beginPath();
+  for (const [dark, light] of sides) {
+    for (let k = 0; k < dark.length; k++) (k ? ctx.lineTo : ctx.moveTo).call(ctx, dark[k][0], dark[k][1]);
+    for (let k = dark.length - 1; k >= 0; k--) {
+      const [x, y] = dark[k], [lx, ly] = light[k];
+      ctx.lineTo(x + (lx - x) * F.CUT, y + (ly - y) * F.CUT);
+    }
+    ctx.closePath();
   }
-  for (let k = dark.length - 1; k >= 0; k--) {
-    const [x, y] = dark[k], [lx, ly] = light[k];
-    band.push([x + (lx - x) * F.CUT, y + (ly - y) * F.CUT]);
-  }
-  ctx.beginPath(); band.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
   darken(ctx, skin);
   if (glint > 0) {
-    const g = [];
-    for (let k = 1; k < light.length - 2; k++) {
-      const [x, y] = light[k], [dx, dy] = dark[k];
-      g.push([x + (dx - x) * 0.12, y + (dy - y) * 0.12]);
-    }
-    for (let k = light.length - 3; k >= 1; k--) {
-      const [x, y] = light[k], [dx, dy] = dark[k];
-      g.push([x + (dx - x) * 0.26, y + (dy - y) * 0.26]);
+    ctx.beginPath();
+    for (const [dark, light] of sides) {
+      const g = [];
+      for (let k = 1; k < light.length - 2; k++) {
+        const [x, y] = light[k], [dx, dy] = dark[k];
+        g.push([x + (dx - x) * 0.12, y + (dy - y) * 0.12]);
+      }
+      for (let k = light.length - 3; k >= 1; k--) {
+        const [x, y] = light[k], [dx, dy] = dark[k];
+        g.push([x + (dx - x) * 0.26, y + (dy - y) * 0.26]);
+      }
+      spline(ctx, g);
     }
     ctx.globalAlpha = glint;
-    ctx.beginPath(); spline(ctx, g);
     ctx.fillStyle = hiliteOf(fill);
     ctx.fill();
+    ctx.globalAlpha = 1;
   }
-  ctx.restore();
 }
 
 function crease(ctx, pts, alpha = 0.7, w = F.CREASE) {
-  ctx.save();
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = OUTLINE;
   ctx.lineWidth = w * INK;
   ctx.lineCap = 'round';
   ctx.beginPath(); curve(ctx, pts); ctx.stroke();
-  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 // A point on a segment: t along it, s across (in half-widths of `w`, toward
@@ -228,6 +234,14 @@ const on = (seg, t, s, w) => [
 ];
 
 // ---- hands and feet -------------------------------------------------------
+
+// Which side of the hand each outline point lies on: -1 the back, +1 the
+// palm, 0 the knuckle tip shared by both. Indices into the outlines below.
+function half3(i, n, open) {
+  const back = open ? [0, 1, 2] : [0, 1, 2, 3];
+  const palm = open ? [4, 5, 6, 7, 8] : [4, 5, 6, 7];
+  return back.includes(i) ? -1 : palm.includes(i) ? 1 : 0;
+}
 
 // A fist at the wrist, knuckles along the forearm, palm toward `in`. In
 // profile: the back of the hand, the knuckle ridge, the curled fingers under
@@ -257,14 +271,16 @@ function fist(ctx, wx, wy, ux, uy, nx, ny, s, skin, open) {
   }
   const shape = { path: (c) => spline(c, outline), fill: skin };
   inkFill(ctx, [shape]);
-  // shade the palm side when it faces down, the back when it faces down
-  ctx.save();
-  ctx.beginPath(); shape.path(ctx); ctx.clip();
+  // the half of the hand turned from the light: the outline's own points on
+  // that side, closed across the middle, so no clip is needed
   const darkSide = nx * LX + ny * LY > 0 ? -1 : 1;
+  const half = outline.filter((_, i) => (half3(i, outline.length, open) === darkSide));
   ctx.beginPath();
-  spline(ctx, [P(-2, darkSide * H * 0.1), P(L * 0.6, darkSide * H * 0.16), P(L * 1.7, darkSide * H * 0.1), P(L * 1.7, darkSide * H), P(-2, darkSide * H)]);
+  ctx.moveTo(...P(-1, darkSide * H * 0.1));
+  ctx.lineTo(...P(L * (open ? 1.5 : 1.04), darkSide * H * 0.1));
+  for (const p of (darkSide > 0 ? half : [...half].reverse())) ctx.lineTo(p[0], p[1]);
+  ctx.closePath();
   darken(ctx, true);
-  ctx.restore();
   extra(ctx);
 }
 
@@ -401,8 +417,7 @@ function arm(ctx, def, P, fig, J, back, open) {
     ctx.fillStyle = sleeve; ctx.fill();
     ctx.restore();
   }
-  shadeSegment(ctx, upper, upper.fill, G.short, back ? 0 : 0.5);
-  shadeSegment(ctx, fore, fore.fill, G.short, back ? 0 : 0.5);
+  shadeSegment(ctx, [upper, fore], upper.fill, G.short, back ? 0 : 0.5);
   if (G.short) {
     crease(ctx, [on(upper, 0.5, 1.15, wu), on(upper, 0.56, -1.15, wu)], 0.9, 1.6);
   } else {
@@ -441,8 +456,7 @@ function leg(ctx, def, P, fig, J, back) {
   const shinAng = Math.atan2(ay - ky, ax - kx) - Math.PI / 2;
   thigh.fill = shin.fill = dim(c.pants);
   inkFill(ctx, [thigh, shin]);
-  shadeSegment(ctx, thigh, thigh.fill, false, back ? 0 : 0.35);
-  shadeSegment(ctx, shin, shin.fill, false, back ? 0 : 0.35);
+  shadeSegment(ctx, [thigh, shin], thigh.fill, false, back ? 0 : 0.35);
   // the shoe over the trouser hem, so the whole of it reads
   shoe(ctx, ax, ay, shinAng * lift, b * F.FOOT.SCALE * (back ? F.FOOT.BACK : 1), dim(c.shoe), back);
   // the knee, and the trousers breaking over the shoe

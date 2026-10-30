@@ -59,6 +59,10 @@ export function enable3D({ ids = null, timing = false } = {}) {
 
 export function disable3D() { enabled = false; }
 
+// The timing readout alone, without the 3D fighters: for ?figure&perf, which
+// times the 2D figure (mark2D) on the device in hand.
+export function startTiming() { if (!perf) perf = startPerf(); }
+
 // Drops the renderer and every loaded model, so the next enable3D builds them
 // again under the GL3D settings of that moment. For the lab's comparisons of
 // GL3D.COMPOSITE, which is fixed when a WebGL context is made; the game never

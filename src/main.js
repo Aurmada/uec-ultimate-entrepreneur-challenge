@@ -13,7 +13,7 @@ import { renderGame, RENDER } from './engine/render.js';
 import { STAGES } from './engine/stage.js';
 import { FX_STYLE } from './engine/fx.js';
 import { drawPortrait, enableSprites, spritesReady, STYLE } from './engine/drawFighter.js';
-import { enable3D, stats3D } from './engine/gl3d/index.js';
+import { enable3D, stats3D, startTiming } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
@@ -1174,6 +1174,7 @@ function boot() {
   // (engine/vfx.js). Each defaults to off, which is the classic game.
   const gfx = graphicsFlags(location.search, Save.settings);
   if (gfx.gl) enable3D({ ids: gfx.ids, timing: gfx.perf });
+  else if (gfx.perf && STYLE.figure) startTiming();   // ?figure&perf: what the figure costs here
   RENDER.sharpFighters = gfx.sharp;
   STAGES.enabled = gfx.stages;
   FX_STYLE.impact = gfx.fx;

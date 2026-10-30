@@ -140,9 +140,11 @@ It is 2D only (the 3D path draws its model as before) and off by default:
 `?figure` turns it on, and `lab/pixels.js` reports the flags-off game
 identical to `claude/guard-pass`. Lab sheets: `lab/figure-sheet.js` (`sheet`,
 `looks` for every profile look, `bench`). In headless Chromium, which draws in
-software, the figure's shapes cost about 3 ms a fighter against the tube's
-0.8 ms, and about 14% more once the shading buffer is counted; it needs the
-owner's phone before it could be the default. `test/figure.test.js` pins bone
+software, the figure's shapes cost about 2.2 ms a fighter against the tube's
+0.7 ms (2.8 before the shading stopped clipping each segment), and a whole
+frame, stage included, about 8% more. It needs a real phone before it could be
+the default: `?figure&perf` shows the 2D draw time in the game, and the review
+page shows each renderer's frame time on whatever device opens it. `test/figure.test.js` pins bone
 lengths, the straight punch and bent guard, legs at half the height, the neck,
 and builds that show; each fails without its part.
 
