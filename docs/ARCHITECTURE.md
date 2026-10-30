@@ -412,15 +412,19 @@ dependent.
 
 ```
 computePose(f, t)
-  ├─ restPose()                      the ONE canonical skeleton (anim.js REST)
-  ├─ stance branch by style          coiled / heavy / poised / loose / flair
-  ├─ def.stance                      the character's own posture, layered on
+  ├─ restPose()                      the ONE canonical skeleton (anim.js REST), a guard
+  ├─ STANCES[style]                  coiled / heavy / poised / loose / flair
+  ├─ def.stance                      the character's own guard, layered on
   ├─ authored idle track             breathing, added as a DELTA
-  └─ state branches                  walk, crouch, block, jump, hitstun, KO
+  └─ state branches                  walk, crouch, block, jump, dash carry the
+                                     fighter's guard (guardOf, carryGuard);
+                                     hitstun, KO and victory are their own
 trackedAttackPose(f, atk)            when attacking, replaces the above
-  ├─ sample the authored track
-  ├─ re-scale to the move's real reach
-  └─ applyMotion(pose, def, t)       the character's own swing shaping
+  ├─ sample the authored track       (keys carry forward what earlier keys set)
+  ├─ re-scale to the move's real reach, about PHYS.HITBOX_LEAD
+  ├─ ease out of and back into the fighter's own guard; the rear hand stays in it
+  ├─ applyMotion(pose, def, t)       the character's own swing shaping
+  └─ the rear fist follows the chin  as the strike drives the head forward
 proportions post pass                height, build, reach, stride, shoulders, head
 draw into an offscreen buffer
 shadeBuffer()
@@ -439,6 +443,17 @@ light uses `overlay` (a flat alpha wash converges every colour toward the light
 and destroys the palette), so it must be followed by a `destination-in` re-clip.
 Without it the buffer gets a grey slab, and worse, the contrast harness then
 measures the slab and reports a large improvement.
+
+**Everyone stands in a guard.** Since October 2026 every pose follows the
+genre's rule: knees bent, feet staggered, both hands where they can strike or
+cover. A fighter's personality lives in where the hands sit inside that rule
+(Kim's peek-a-boo, Elo's dropped lead hand, Jeff's chambered fist, Scam's hand
+in his pocket), and that guard goes with them into walk, crouch, jump, dash,
+block and every swing, so a held prop stays where its owner holds it. Two
+things to keep when retuning one: no fist (or what it holds) over the face,
+and no rear hand at the body's centre, where the back arm is drawn behind the
+torso and the hand simply disappears. `test/guard.test.js` pins both, and
+that walking feet never cross.
 
 **One skeleton only.** `REST` in `anim.js` is the single definition of the rig.
 There was once a second copy written inline in `computePose`, and when the

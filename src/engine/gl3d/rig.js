@@ -77,8 +77,10 @@ export function buildRig(model, spec) {
     chestOff: at('chest')[1] - hip[1],
     neckOff: at('neck')[1] - hip[1],
     skull: spec.skull,
-    // The rest foot's angle from its shin, so a posed foot keeps the same set.
+    // The rest foot's angle from its shin, so a lifted foot keeps the same set,
+    // and the rest foot itself, which is how a planted one lies on the floor.
     footAngle: Math.atan2(shin[0] * foot[1] - shin[1] * foot[0], shin[0] * foot[0] + shin[1] * foot[1]),
+    footRest: [foot[0], foot[1], 0],
     matrices: new Float32Array(model.jointNames.length * 16),
   };
 }
@@ -196,18 +198,34 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
 
   // ---- legs: knees forward and a little out, feet set like the rest pose
   const hipBase = sub(hip, scale(pelUp, GL3D.HIP_DROP));
+  // A body's stride sets its hip height in 2D, where the legs are drawn to fit.
+  // The model's legs are fixed, so without this a short stride (Kim, Carl)
+  // bent them into a squat at rest and a long one (Cathie, Elo) stood them
+  // straight and stretched them. Scaled bones keep every fighter's knees at
+  // the same bend.
+  // LEG_SLACK makes them a little longer than the hip height needs, so the
+  // knees always carry some bend: legs locked straight read as standing about.
+  const stride = (P.stride ?? 1) * GL3D.LEG_SLACK;
   const leg = (side, hipJ, foot, flare) => {
     const target = pt(foot.x, foot.y - GL3D.ANKLE_PX, hipJ[2] * GL3D.FOOT_DEPTH);
     const pole = normalize(add([1, 0, 0], scale(pelLat, flare * GL3D.KNEE_FLARE)));
     const th = rig.rest[`thigh.${side}`], sn = rig.rest[`shin.${side}`], ft = rig.rest[`foot.${side}`];
-    const s = ik(hipJ, target, th.len, sn.len, pole);
+    const s = ik(hipJ, target, th.len * stride, sn.len * stride, pole);
     const girth = build * GL3D.LEG_GIRTH;
     set(`thigh.${side}`, hipJ, s.mid, onHinge(s.hinge, hipJ, s.mid), dist(hipJ, s.mid) / th.len, girth, girth);
     set(`shin.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / sn.len, girth, girth);
     const shinDir = normalize(sub(s.end, s.mid));
-    const toe = normalize(rotZ(shinDir, rig.footAngle));
+    // A foot on the floor lies flat on it, as the rest foot does, whatever
+    // the shin is doing. It used to keep its rest angle to the shin, so a bent
+    // knee (any crouched stance) tipped the toes down and the fighter seemed
+    // to be on tiptoe, mid-jump, standing still. Lifted, it hangs off the shin
+    // as before, and in between it rolls from one to the other.
+    const lift = Math.min(1, Math.max(0, -foot.y / GL3D.FOOT_LIFT));
+    const hang = normalize(rotZ(shinDir, rig.footAngle));
+    const toe = normalize(add(scale(rig.footRest, 1 - lift), scale(hang, lift)));
+    const up = normalize(add(scale([0, 1, 0], 1 - lift), scale(shinDir, -lift)), [0, 1, 0]);
     const fs = build * GL3D.FOOT_SCALE;
-    set(`foot.${side}`, s.end, add(s.end, scale(toe, ft.len * fs)), scale(shinDir, -1), fs, fs, fs);
+    set(`foot.${side}`, s.end, add(s.end, scale(toe, ft.len * fs)), up, fs, fs, fs);
   };
   leg('L', sub(hipBase, scale(pelLat, GL3D.HIP_HALF)), P.legF, -1);
   leg('R', add(hipBase, scale(pelLat, GL3D.HIP_HALF)), P.legB, 1);

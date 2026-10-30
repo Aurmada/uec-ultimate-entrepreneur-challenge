@@ -506,6 +506,8 @@ export const GL3D = {
   HAND_DEPTH: 0.85,     // how much of its shoulder's depth a hand keeps
   FOOT_DEPTH: 1.10,
   ANKLE_PX: 6,          // the 2D rig aims the shin 6 px above the foot
+  FOOT_LIFT: 12,        // px of lift over which a foot rolls from flat on the floor to hanging off the shin
+  LEG_SLACK: 1.06,      // 3D legs this much longer than the hip height needs, so the knees stay bent
   ELBOW_BACK: 0.45,     // how far back an elbow points, against 1 down
   ELBOW_FLARE: 0.35,    // outward pull on the elbow pole
   KNEE_FLARE: 0.25,

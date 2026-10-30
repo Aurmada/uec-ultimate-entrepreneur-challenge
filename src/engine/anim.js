@@ -38,11 +38,19 @@
 //
 // Attack tracks mostly do not key the legs, so they inherit this width and get
 // stancier for free. Render-only: hurtboxes come from ATTACKS, never the pose.
+//
+// The guard (October 2026): both fists up where they protect the face, the
+// lead one forward of the chin and the rear one by the cheek, elbows down. The
+// rear fist used to sit at x 13, which is inside the torso, and the back arm
+// is drawn behind the torso, so a fighter's second hand simply never showed.
+// It now sits in front of the face, clear of the head, where it reads. Chin
+// tucked a little forward over a slightly deeper lean, and the whole body set
+// 4px lower, so the knees bend instead of standing on straight legs.
 export const REST = {
-  hipY: -88, shoulderY: -156, headX: 0, headY: -182, rot: 0, crouch: 0,
-  armF: { x: 34, y: -146 }, armB: { x: 13, y: -144 },
+  hipY: -84, shoulderY: -152, headX: 2, headY: -178, rot: 0, crouch: 0,
+  armF: { x: 58, y: -152 }, armB: { x: 41, y: -158 },
   legF: { x: 26, y: 0 }, legB: { x: -25, y: 0 },
-  bodyLean: 0.05, sx: 1, sy: 1,
+  bodyLean: 0.08, sx: 1, sy: 1,
 };
 
 const VEC_KEYS = ['armF', 'armB', 'legF', 'legB'];

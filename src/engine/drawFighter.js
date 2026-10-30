@@ -3,7 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE, GL3D } from '../config.js';
+import { STYLES, STYLIZE, GL3D, PHYS } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
@@ -149,6 +149,7 @@ const ease = {
   outBack: (k) => 1 + 2.7 * Math.pow(k - 1, 3) + 1.7 * Math.pow(k - 1, 2),
   outQuad: (k) => 1 - (1 - k) * (1 - k),
   inQuad: (k) => k * k,
+  smooth: (k) => k * k * (3 - 2 * k),
 };
 
 // ---------------------------------------------------------------- pose
@@ -159,6 +160,17 @@ const ease = {
 // the move's real reach — a zoner visibly out-ranges a grappler off the same
 // keyframes, and a command normal with its own reach extends to match. Only
 // the forward limbs scale; the back arm and planted foot are posture, not range.
+// They scale about where the hitbox starts (PHYS.HITBOX_LEAD), which is where
+// a move of no reach at all would put the fist, so the fist and the hitbox's
+// far edge move together. They used to scale about the rest pose's hand, and
+// once the guard brought that hand forward to the chin, half the reach
+// difference between a zoner and a grappler vanished from the screen.
+//
+// Tracks start and end in the stock guard (REST). A fighter whose own guard is
+// elsewhere (Elo's dropped lead hand, Lizbeth's narrow feet) eases out of it
+// through the wind-up and back into it through the recovery, so a swing leaves
+// from the hands you were looking at and returns to them, instead of popping
+// to the stock guard on the first frame and back on the last.
 function trackedAttackPose(f, atk) {
   const name = ATTACK_TRACK[atk.kind];
   if (!name) return null;
@@ -171,13 +183,36 @@ function trackedAttackPose(f, atk) {
   const nominal = NOMINAL_REACH[name];
   const k = nominal && atk.reach ? atk.reach / nominal : 1;
   if (Math.abs(k - 1) > 0.01) {
+    const A = PHYS.HITBOX_LEAD;
     for (const limb of ['armF', 'legF']) {
-      pose[limb].x = REST[limb].x + (pose[limb].x - REST[limb].x) * k;
+      pose[limb].x = A + (pose[limb].x - A) * k;
+    }
+  }
+  if (f.def?.stance) {
+    const G = guardOf(f.def, (STYLES[f.def.style] || STYLES.balanced).stance);
+    const dy = REST.shoulderY - G.shoulder;
+    const own = t < 1 ? 1 - ease.smooth(Math.min(1, t / 0.9)) : t > 2.2 ? ease.smooth(Math.min(1, (t - 2.2) / 0.8)) : 0;
+    // The rear hand is home for the whole swing: the tracks keep it at the
+    // stock chin, so here it stays at the fighter's own, which is where any
+    // prop they carry lives. Faded like the rest, the tablet and the parcel
+    // rode up over their owners' faces on every strike.
+    for (const limb of ['armF', 'armB', 'legF', 'legB']) {
+      const w = limb === 'armB' ? 1 : own;
+      if (!w) continue;
+      pose[limb].x += (G[limb].x - REST[limb].x) * w;
+      if (limb[0] === 'a') pose[limb].y += (G[limb].y + dy - REST[limb].y) * w;
     }
   }
   // An airborne attack tucks the planted leg — there is no floor to push off.
   if (f.airborne) { pose.legF.y -= 18; pose.legB.y -= 12; }
-  return applyMotion(pose, f.def, t);
+  applyMotion(pose, f.def, t);
+  // The rear fist guards the chin, so it goes where the chin goes: a strike
+  // drives the head forward through the shot, and a hand left behind ended up
+  // on the face instead of beside it. (GL3D.HEAD_LEAN_PX is drawFighter's own
+  // head lean, which the 3D rig copies.)
+  const head = (P) => P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX;
+  pose.armB.x += head(pose) - head(REST);
+  return pose;
 }
 
 // How this character throws a punch, as opposed to which punch they throw.
@@ -223,15 +258,80 @@ function applyMotion(pose, def, t) {
       // what you see and what hits you that the reach re-scale exists to stop.
       // Vertical compression plus the hip drop already read as weight.
       if (M.squash) pose.sy *= 1 - M.squash * 0.8 * w;
-      if (M.brace) pose.armB.x -= M.brace * w;   // back arm counter-swings
+      // The back arm braces: the rear fist stays at the chin now, so it
+      // tucks down tight to the chest as the hips turn, where it used to swing
+      // back, which once the guard brought it to the chin meant into the face.
+      if (M.brace) pose.armB.y += M.brace * 0.6 * w;
       if (M.thrust) pose.headX += M.thrust * w;  // head drives through the shot
     }
   }
   return pose;
 }
 
+// Each fighting style's stance, as changes to REST: hip, shoulder and head
+// heights are deltas (down is positive), the rest absolute. Every one of them
+// is a guard (October 2026). They were personality poses, arms hanging or
+// folded or out to the side, and a fighter standing like that reads as
+// someone waiting for a bus. The genre's rule is that everyone is READY: knees
+// bent, feet staggered, both hands where they can strike or cover. The
+// personality lives in where the hands sit inside that rule, not in breaking
+// it. Both fists stay forward of the chest, too: the back arm is drawn behind
+// the torso, so a rear hand at the body's centre simply disappears, and no
+// fist rises past the eyes, where it would hide the face.
+const STANCES = {
+  ready: {},
+  coiled: {                                    // rushdown: low, hands high and tight, leaning in
+    hip: 8, shoulder: 6, head: 7, lean: 0.16,
+    armF: { x: 48, y: -152 }, armB: { x: 37, y: -156 }, legF: { x: 24, y: 0 }, legB: { x: -23, y: 0 },
+  },
+  heavy: {                                     // brawler: wide and low, fists at the chest, chin down
+    hip: 6, shoulder: 4, head: 6, lean: 0.12, sx: 1.05, sy: 0.98,
+    armF: { x: 56, y: -138 }, armB: { x: 40, y: -144 }, legF: { x: 30, y: 0 }, legB: { x: -29, y: 0 },
+  },
+  poised: {                                    // zoner: tall, the lead hand long to hold the range
+    hip: -2, head: -2, lean: 0.02, sy: 1.02,
+    armF: { x: 68, y: -146 }, armB: { x: 40, y: -160 }, legF: { x: 22, y: 0 }, legB: { x: -24, y: 0 },
+  },
+  loose: {                                     // trickster: lead hand dropped, rear fist home, swaying
+    lean: 0.04, sway: true,
+    armF: { x: 50, y: -126 }, armB: { x: 38, y: -156 }, legF: { x: 22, y: 0 }, legB: { x: -22, y: 0 },
+  },
+  flair: {                                     // showman: chest up, the lead hand open and presenting
+    head: -2, lean: -0.04,
+    armF: { x: 64, y: -168 }, armB: { x: 38, y: -158 }, legF: { x: 22, y: 0 }, legB: { x: -21, y: 0 },
+  },
+};
+
+// A fighter's own guard: where the style, then the character, put the hands
+// and feet at rest, and the shoulder height the hands were placed against.
+// Idle shows it as it is. Walking, crouching, jumping and dashing carry it
+// with them, so a fighter keeps their own hands (and whatever they hold)
+// rather than every state snapping to one shared guard. Kim stays in her
+// peek-a-boo on the move, and Cathie's tablet stays at her waist in a crouch
+// instead of rising over her face.
+function guardOf(def, stance) {
+  const st = STANCES[stance] || STANCES.ready;
+  const S = def?.stance || {};
+  return {
+    shoulder: REST.shoulderY + (st.shoulder || 0) + (S.shoulder || 0),
+    armF: { ...REST.armF, ...st.armF, ...S.armF },
+    armB: { ...REST.armB, ...st.armB, ...S.armB },
+    legF: { ...REST.legF, ...st.legF, ...S.legF },
+    legB: { ...REST.legB, ...st.legB, ...S.legB },
+  };
+}
+
+// The guard's hands, moved with the shoulders to wherever this state put them.
+function carryGuard(P, G, lift = 0) {
+  const dy = P.shoulderY - G.shoulder - lift;
+  P.armF = { x: G.armF.x, y: G.armF.y + dy };
+  P.armB = { x: G.armB.x, y: G.armB.y + dy };
+}
+
 // Returns limb targets in local space (+x = facing direction, y up = negative, origin at feet).
-function computePose(f, t) {
+// Exported for the tests and the lab, which check what a pose means (a guard,
+// a punch) without a canvas; the game only ever reaches it through drawFighter.
+export function computePose(f, t) {
   // sx/sy = squash & stretch, applied around the feet in drawFighter. Purely
   // visual weight — hitboxes come from ATTACKS timing, never from the pose.
   // The rig comes from REST — the ONE place the stance is defined. This used to
@@ -252,30 +352,17 @@ function computePose(f, t) {
   if (st === 'idle') {
     // Stance first — this is the per-character silhouette, and it is the whole
     // reason you can tell who someone picked before they throw a button.
-    if (stance === 'coiled') {                 // rushdown: low, hands up, leaning in
-      P.hipY += 8; P.shoulderY += 5; P.headY += 6; P.bodyLean = 0.14;
-      P.armF = { x: 26, y: -160 }; P.armB = { x: 12, y: -158 };
-      P.legF = { x: 19, y: 0 }; P.legB = { x: -17, y: 0 };
-    } else if (stance === 'heavy') {           // brawler: wide, arms hanging, chin down
-      P.hipY += 4; P.bodyLean = 0.05;
-      P.armF = { x: 34, y: -132 }; P.armB = { x: 24, y: -132 };
-      P.legF = { x: 24, y: 0 }; P.legB = { x: -24, y: 0 };
-      P.sx = 1.05; P.sy = 0.98;
-    } else if (stance === 'poised') {          // zoner: tall, upright, arm extended out
-      P.hipY -= 3; P.headY -= 3; P.bodyLean = -0.05;
-      P.armF = { x: 40, y: -152 }; P.armB = { x: 8, y: -146 };
-      P.legF = { x: 12, y: 0 }; P.legB = { x: -11, y: 0 };
-      P.sy = 1.03;
-    } else if (stance === 'loose') {           // trickster: off-balance, hands low, swaying
+    const st = STANCES[stance] || STANCES.ready;
+    P.hipY += st.hip || 0; P.shoulderY += st.shoulder || 0; P.headY += st.head || 0;
+    if (st.lean !== undefined) P.bodyLean = st.lean;
+    if (st.sx !== undefined) P.sx = st.sx;
+    if (st.sy !== undefined) P.sy = st.sy;
+    for (const k of ['armF', 'armB', 'legF', 'legB']) if (st[k]) P[k] = { ...st[k] };
+    if (st.sway) {
       const sway = Math.sin(t * 2.6) * 4;
-      P.bodyLean = 0.10 + Math.sin(t * 2.2) * 0.05;
-      P.headX = sway * 0.5;
-      P.armF = { x: 30 + sway, y: -128 }; P.armB = { x: -22 - sway, y: -140 };
-      P.legF = { x: 17, y: 0 }; P.legB = { x: -13, y: 0 };
-    } else if (stance === 'flair') {           // showman: one arm out presenting, chest up
-      P.bodyLean = -0.08;
-      P.armF = { x: 38, y: -176 }; P.armB = { x: -16, y: -142 };
-      P.headY -= 2; P.legF = { x: 16, y: 0 }; P.legB = { x: -15, y: 0 };
+      P.bodyLean += Math.sin(t * 2.2) * 0.04;
+      P.headX += sway * 0.5;
+      P.armF.x += sway; P.armB.x -= sway * 0.5;
     }
 
     // The character's OWN stance, layered over the style's. Five stances were
@@ -333,16 +420,27 @@ function computePose(f, t) {
       addDelta(P, samplePose(idle, (phase + 1) % 1, poseFrom(base)), base);
     }
   } else if (st === 'walk') {
+    // A fighter's walk is a shuffle, not a stroll: the feet stay staggered
+    // where the stance put them and never cross, the lead foot reaching and
+    // the rear one following, and the guard stays up. It used to swing the
+    // feet past each other like someone crossing a car park, arms pumping.
     const ph = f.walkPhase;
-    P.legF = { x: 15 + Math.sin(ph) * 17, y: -Math.max(0, Math.sin(ph + 1.5)) * 9 };
-    P.legB = { x: -14 + Math.sin(ph + Math.PI) * 17, y: -Math.max(0, Math.sin(ph + Math.PI + 1.5)) * 9 };
-    P.armF.x += Math.sin(ph + Math.PI) * 8;
-    P.armB.x += Math.sin(ph) * 8;
+    const G = guardOf(f.def, stance);
+    // A narrow stance takes shorter steps, so the feet still never meet.
+    const step = Math.min(11, (G.legF.x - G.legB.x - 20) / 2);
+    P.legF = { x: G.legF.x + Math.sin(ph) * step, y: -Math.max(0, Math.sin(ph + 1.5)) * 7 };
+    P.legB = { x: G.legB.x + Math.sin(ph + Math.PI) * step, y: -Math.max(0, Math.sin(ph + Math.PI + 1.5)) * 7 };
+    carryGuard(P, G);
+    P.armF.x += Math.sin(ph + Math.PI) * 3;
+    P.armB.x += Math.sin(ph) * 3;
+    P.hipY += Math.abs(Math.sin(ph)) * 2;
     P.headY += Math.abs(Math.sin(ph)) * 2;
-    P.bodyLean = 0.06 * (f.movingBack ? -1 : 1);
+    P.bodyLean = f.movingBack ? 0 : 0.1;
   } else if (st === 'jump') {
-    P.legF = { x: 18, y: -26 }; P.legB = { x: -6, y: -16 };
-    P.armF = { x: 36, y: -168 }; P.armB = { x: -20, y: -166 };
+    // Knees tucked under, guard kept. The arms used to fly up and out, a
+    // two-fisted flex in the air, which left the face open on every jump.
+    P.legF = { x: 20, y: -30 }; P.legB = { x: -8, y: -20 };
+    carryGuard(P, guardOf(f.def, stance), 4);
     P.bodyLean = 0.1;
     // stretch on the way up, squash as gravity takes over — reads as real air time
     const rise = Math.max(-1, Math.min(1, -f.vy / 700));
@@ -384,7 +482,7 @@ function computePose(f, t) {
       const reach = (atk.reach || 100) * 0.92;
       P.legF = { x: 6 + reach * hitK, y: -70 * hitK - (f.airborne ? 20 : 0) };
       P.legB = { x: -12, y: 0 };
-      P.armF = { x: -6, y: -152 }; P.armB = { x: -22, y: -142 };
+      P.armF = { x: 44, y: -148 }; P.armB = { x: 36, y: -160 };
       P.bodyLean = -0.22 * hitK;
       P.hipY += 4 * hitK;
     } else if (atk.kind === 'grab') {
@@ -411,8 +509,8 @@ function computePose(f, t) {
       // rising uppercut: fist punches skyward, body lifts off the back foot
       const rise = Math.max(0, hitK);
       P.armF = { x: 16 + 26 * rise, y: -168 - 74 * rise };
-      P.armB = { x: -20, y: -132 };
-      P.legF = { x: 14, y: -26 * rise };
+      P.armB = { x: 40, y: -160 - 30 * rise };
+      P.legF = { x: 22, y: -18 * rise };
       P.legB = { x: -16, y: 0 };
       P.hipY -= 30 * rise; P.shoulderY -= 22 * rise; P.headY -= 30 * rise;
       P.bodyLean = -0.16 * rise;
@@ -422,60 +520,64 @@ function computePose(f, t) {
       const reach = (atk.reach || 78) * 0.95;
       const swing = hitK;                                    // 0→1 across the swing
       P.armF = { x: 8 + reach * swing, y: -176 + 30 * swing };  // starts cocked high, whips down-across
-      P.armB = { x: -18 - 10 * swing, y: -138 };
+      P.armB = { x: 38, y: -158 };
       P.bodyLean = 0.26 * swing;
       P.headX = 3 * swing;
     } else { // punch / projectile / teleport strike
       const reach = (atk.kind === 'punch' ? (atk.reach || 82) : 88) * 0.95;
       P.armF = { x: 22 + reach * hitK, y: -152 };
-      P.armB = { x: 10 - 14 * hitK, y: -142 };
+      P.armB = { x: 40, y: -160 };
       P.bodyLean = 0.2 * hitK;
     }
   } else if (st === 'dash') {
-    P.bodyLean = 0.42;
-    P.legF = { x: 34, y: -6 };
-    P.legB = { x: -26, y: -2 };
-    P.armF = { x: 40, y: -140 };
-    P.armB = { x: -34, y: -132 };
+    // Low and driving forward behind the guard, the rear leg pushing off.
+    P.bodyLean = 0.36;
+    P.hipY += 6; P.shoulderY += 6; P.headY += 6;
+    P.legF = { x: 36, y: -6 };
+    P.legB = { x: -30, y: -2 };
+    carryGuard(P, guardOf(f.def, stance));
     P.face = 'angry';
   } else if (st === 'crouch') {
-    // low stance you can still attack from — knees bent, guard up, head down
+    // low stance you can still attack from: knees bent, guard up, head down.
+    // The body is the style's; the hands are the fighter's own guard, carried
+    // down with the shoulders, so the fists stay at the chin and a held prop
+    // stays where it was instead of rising over the face.
     P.hipY += 26; P.shoulderY += 22; P.headY += 26; P.headX = 3;
-    P.armF = { x: 24, y: -124 }; P.armB = { x: 6, y: -120 };
-    P.legF = { x: 24, y: 0 }; P.legB = { x: -20, y: 0 };
-    P.sx = 1.10; P.sy = 0.90;
+    P.legF = { x: 28, y: 0 }; P.legB = { x: -24, y: 0 };
+    P.sx = 1.08; P.sy = 0.92;
     P.bodyLean = 0.12;
     // …and each style crouches in character, too
     if (stance === 'coiled') {                 // sprinter's crouch, ready to burst
-      P.hipY += 4; P.bodyLean = 0.26; P.headX = 6;
-      P.armF = { x: 30, y: -132 }; P.armB = { x: -14, y: -114 };
-      P.legF = { x: 28, y: 0 }; P.legB = { x: -14, y: 0 };
+      P.hipY += 4; P.bodyLean = 0.22; P.headX = 6;
+      P.legF = { x: 30, y: 0 }; P.legB = { x: -18, y: 0 };
       P.sx = 1.06; P.sy = 0.92;
-    } else if (stance === 'heavy') {           // sumo-wide, arms braced on knees
-      P.hipY += 6; P.bodyLean = 0.06;
-      P.armF = { x: 30, y: -106 }; P.armB = { x: -24, y: -110 };
-      P.legF = { x: 32, y: 0 }; P.legB = { x: -30, y: 0 };
-      P.sx = 1.20; P.sy = 0.86;
-    } else if (stance === 'poised') {          // low but tall-backed, one arm still out
-      P.hipY -= 2; P.bodyLean = -0.06;
-      P.armF = { x: 38, y: -128 }; P.armB = { x: 4, y: -116 };
-      P.legF = { x: 20, y: 0 }; P.legB = { x: -22, y: 0 };
+    } else if (stance === 'heavy') {           // sumo-wide
+      P.hipY += 6; P.bodyLean = 0.10;
+      P.legF = { x: 34, y: 0 }; P.legB = { x: -32, y: 0 };
+      P.sx = 1.16; P.sy = 0.88;
+    } else if (stance === 'poised') {          // low but tall-backed
+      P.hipY -= 2; P.bodyLean = 0.02;
+      P.legF = { x: 24, y: 0 }; P.legB = { x: -26, y: 0 };
       P.sx = 1.06; P.sy = 0.94;
-    } else if (stance === 'loose') {           // slouched, weight on the back foot
-      P.bodyLean = -0.14; P.headX = -4;
-      P.armF = { x: 18, y: -118 }; P.armB = { x: -26, y: -112 };
-      P.legF = { x: 26, y: 0 }; P.legB = { x: -18, y: 0 };
-      P.sx = 1.12; P.sy = 0.89;
-    } else if (stance === 'flair') {           // theatrical kneel, arm flourished out
+    } else if (stance === 'loose') {           // weight on the back foot
+      P.bodyLean = 0.0; P.headX = 0;
+      P.legF = { x: 30, y: 0 }; P.legB = { x: -20, y: 0 };
+      P.sx = 1.10; P.sy = 0.90;
+    } else if (stance === 'flair') {           // a low, theatrical set
       P.bodyLean = 0.04;
-      P.armF = { x: 36, y: -144 }; P.armB = { x: -20, y: -112 };
-      P.legF = { x: 22, y: 0 }; P.legB = { x: -24, y: 0 };
+      P.legF = { x: 26, y: 0 }; P.legB = { x: -26, y: 0 };
       P.sx = 1.08; P.sy = 0.91;
     }
+    carryGuard(P, guardOf(f.def, stance));
   } else if (st === 'block') {
+    // Shell up: both forearms pulled tight in front of the face, chin down,
+    // weight rocked onto the back foot. The rear fist used to sit inside the
+    // torso, where the back arm is drawn behind it and never showed.
+    // The rear hand stays in the fighter's own guard, with whatever it holds.
     P.crouch = 8; P.hipY += 8; P.headY += 10; P.shoulderY += 8;
-    P.armF = { x: 26, y: -144 }; P.armB = { x: 24, y: -138 };
-    P.legF = { x: 20, y: 0 }; P.legB = { x: -10, y: 0 };
+    carryGuard(P, guardOf(f.def, stance));
+    P.armF = { x: 44, y: P.shoulderY - 6 };
+    P.legF = { x: 22, y: 0 }; P.legB = { x: -24, y: 0 };
     P.face = 'block'; P.bodyLean = -0.06;
   } else if (st === 'hitstun') {
     const k = Math.min(1, f.stateT * 10);
@@ -483,8 +585,10 @@ function computePose(f, t) {
     const impact = Math.max(0, 1 - f.stateT * 14);
     P.bodyLean = -0.3 * k - 0.22 * impact;
     P.headX = -6 * k - 7 * impact; P.headY += 4 * k;
-    P.armF = { x: 4, y: -114 }; P.armB = { x: -26, y: -156 };
-    P.legF = { x: 22, y: 0 }; P.legB = { x: -20, y: 0 };
+    // The arms go limp and fly forward as the head snaps back. The rear one
+    // used to be flung up behind the head, which in 3D was a wave.
+    P.armF = { x: 32, y: -122 }; P.armB = { x: 26, y: -134 };
+    P.legF = { x: 24, y: 0 }; P.legB = { x: -24, y: 0 };
     P.sx = 1 + 0.13 * impact; P.sy = 1 - 0.13 * impact;   // squash on contact
     P.face = 'hurt';
   } else if (st === 'ko') {

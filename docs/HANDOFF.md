@@ -47,6 +47,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.12 (`SIM_VERSION` 9), with the 3D preview behind `?gl` or Settings | Deployed. A push here is a release. 462 tests pass. |
+| `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Built on 2026-10-30, not released. 471 tests pass. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -56,6 +57,48 @@ only code conflict was the teleport in `game.js` (the prototype's warp effect,
 and v3.9.3's `TELEPORT.PAST` in place of 84), and both are kept. The three
 superseded branches can be deleted whenever the owner likes; nothing on them is
 missing from `main`.
+
+## The guard pass (2026-10-30, on `claude/guard-pass`, not released)
+
+The owner's priority after v3.12: the fighters' limbs looked awkwardly placed,
+and the genre (the big arcade fighters, as inspiration only) should be the
+model. The poses had been authored across several rig eras and were
+personality poses rather than fighting stances: arms hanging or folded or on
+the hips, a rear hand hidden inside the torso, Kim's fists over her face, feet
+that crossed on every step, and in 3D a two-fisted flex on every jump and punch.
+Render-only throughout: no simulation, hitbox or `SIM_VERSION` change.
+
+- **Everyone stands in a guard**, and keeps their personality inside it: a
+  fencer's guard (Lizbeth), a brawler's low fists (Adam), a presenting hand
+  (Steve), a peek-a-boo (Kim), a tai chi ready stance (Cathie), a wrestler's
+  reach (Carl), a shoulder roll (Elo), a karate chamber (Jeff), and the open
+  palm with a hand in the pocket (Scam). `REST` is a guard too, for the base
+  characters. The five style stances are one table, `STANCES` in
+  `drawFighter.js`.
+- **The guard goes everywhere**: walk (now a shuffle that never crosses the
+  feet), crouch, jump (knees tucked), dash and block carry the fighter's own
+  hands, so a held prop (Cathie's tablet, Jeff's parcel) stays where its owner
+  holds it instead of rising over the face.
+- **Attacks thrown from it**: the four basic tracks are rebuilt from the guard.
+  The punch cocks at the chest and turns out from the hips, the kick chambers
+  the knee, the uppercut rises from a crouch, and the rear fist stays at the
+  chin through every swing. A swing eases out of the fighter's own guard and
+  back into it. Keys now carry forward what earlier keys set (a hold used to
+  snap the squash and the guard hand home on the first frame of the recovery),
+  and reach scales about where the hitbox starts, so a zoner's jab still looks
+  longer than a grappler's with the hand at the chin.
+- **3D**: planted feet lie flat instead of tipping onto the toes when the knee
+  bends (crouched fighters looked mid-jump), and the legs scale with `stride`
+  and carry a little slack (`GL3D.LEG_SLACK`), so every fighter's knees bend
+  alike.
+- `test/guard.test.js` pins the intent (no fist or held prop over a face, the
+  guard carried into walk and crouch, feet never crossing, the rear fist home,
+  no pops between keys, flat feet, even knees); each test fails on `main`.
+
+With the flags off this deliberately changes how every fighter looks, so
+`lab/pixels.js` reports every frame different from v3.12. It needs the owner's
+eye, then a `VERSION` bump, before release. Next in the same direction, as the
+owner set it out: animations, then fighting styles, then controls.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

@@ -66,6 +66,9 @@ export function applyProportions(P, body) {
   const vert = oldHead ? Math.abs(P.headY / oldHead) : 1;
   P.headR = STYLIZE.HEAD_R * body.head * Math.pow(vert, STYLIZE.HEAD_FOLLOW);
   P.shoulderW = body.shoulders;
+  // The 3D legs are one model's length, so a short-legged fighter's lower hip
+  // folded them into a squat. The 3D rig scales its leg bones by this instead.
+  P.stride = body.stride;
   P.build = body.build;
   return P;
 }
