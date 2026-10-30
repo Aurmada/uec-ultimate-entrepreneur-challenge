@@ -58,6 +58,19 @@ export const MODELS3D = {
     },
   },
 };
+// The athlete (October 2026, on test): the founder's skeleton, head, looks and
+// props over an anatomical body, a chest, deltoids and lats over a narrower
+// waist, muscled arms, fists with knuckles, and clothes that follow the body
+// (lab/blender/build_founder.py, `athlete`). Nobody wears it by default; the
+// lab and the review page put fighters in it through FIGHTER_MODELS.
+MODELS3D.athlete = { ...MODELS3D.founder, url: 'assets/models/athlete.glb' };
+// The same, on the women's frame: lighter shoulders and arms, a bust, a
+// narrower waist over wider hips (`athlete-f`).
+MODELS3D['athlete-f'] = { ...MODELS3D.founder, url: 'assets/models/athlete-f.glb' };
+// Which athlete body a fighter takes: the women's frame for a fighter whose
+// 2D figure is drawn on it (fighters.js `figure.frame`).
+export const athleteFor = (def) => (def?.figure?.frame === 'f' ? 'athlete-f' : 'athlete');
+
 export const DEFAULT_MODEL = 'founder';
 
 // A roster fighter may wear a model of their own; none does yet, and anyone

@@ -9,7 +9,7 @@ import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
-import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D } from './gl3d/index.js';
+import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D, athlete3D } from './gl3d/index.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 import { FX_STYLE } from './fx.js';
 import { drawFigure, figureHead, figureFrame } from './figure.js';
@@ -627,7 +627,7 @@ function paintFace3D(ctx, def, face, r = STYLIZE.HEAD_R, photo = null) {
 // What the 3D renderer paints faces with: the painter above, and a founder's
 // photo once it has decoded (null until then, and for good if it never does,
 // when the 3D head keeps the drawn face just as drawHead does in 2D).
-const FACE_PAINTER = {
+export const FACE_PAINTER = {
   paint: paintFace3D,
   photo: (def) => (def.photo ? getPhoto(def.photo) : null),
 };
@@ -1385,6 +1385,7 @@ export function drawFighter(ctx, f, t) {
   // rendered into the same offscreen buffer, so the key line, hit flash and
   // blit are shared with the procedural rig below. Parts are not drawn yet.
   if (has3D(def)) {
+    if (athlete3D(def)) figureFrame(P);    // the athlete body stands on the figure's longer legs
     const metrics = bufferMetrics(body);
     const stanceEl = f.state === 'idle' ? (def.stance || null) : null;
     // On the 3D layer (GL3D.LAYER, set up by render.js for this frame): drawn

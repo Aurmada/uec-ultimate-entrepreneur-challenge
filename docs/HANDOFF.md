@@ -48,7 +48,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | --- | --- | --- |
 | `main` | The live game, v3.12 (`SIM_VERSION` 9), with the 3D preview behind `?gl` or Settings | Deployed. A push here is a release. 462 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Built on 2026-10-30, not released. 471 tests pass. |
-| `claude/figure-pass` | `claude/guard-pass` plus the figure below, behind `?figure`: fighters drawn as anatomy | In progress on 2026-10-30, not released. 477 tests pass. |
+| `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the athlete bodies (`?gl&athlete`) | In progress on 2026-10-30, not released. 480 tests pass. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -152,6 +152,41 @@ Decided on 2026-10-30, after watching both side by side in a live match: the
 head stays the size it is (`FIGURE.HEAD` 0.94, "head A"). The smaller, more
 heroic head was tried (`sheet({ tweak: { HEAD: 0.8 } })` still shows it) and
 not taken. Still open for the owner: whether this becomes the default renderer.
+
+## The athlete bodies (2026-10-30, on `claude/figure-pass`, behind `?gl&athlete`)
+
+The owner asked why the bodies could not be more complicated and realistic,
+and picked the 3D route of three (push the 2D drawing further; better 3D
+bodies; sprites pre-rendered from 3D): a 3D body bends at its joints instead of
+being redrawn, so anatomy stays right in every pose, and the 3D layer is
+already cheap on his iPhone.
+
+`lab/blender/build_founder.py` now also builds `assets/models/athlete.glb`
+(`-- <out> athlete`) and `athlete-f.glb` (`-- <out> athlete-f`, the women's
+frame). Same skeleton, same head and face, same named meshes and palette roles
+as `founder.glb`, so every look, outfit and prop still fits (`test/athlete.test.js`
+holds that). What changes is the body: metaball muscles (pectorals, deltoids,
+traps, lats over a narrower waist, biceps, triceps and a forearm that swells
+below the elbow, glutes, quads and hamstrings), bigger fists with knuckles,
+and clothes built from the same muscles grown by a pad per outfit, so a tee
+shows the chest and arms, tailoring softens them and a puffer hides them.
+About 3.5 times the founder's triangles (a fighter in a tee: about 32,000
+against 9,000) and 3.3 MB a model against 1.3 MB.
+
+`?gl&athlete` puts every fighter without a model of their own in the athlete
+body for their frame (`athleteFor` in `models3d.js`: the women's frame for a
+fighter whose 2D figure uses it), and an athlete stands on the 2D figure's
+longer legs (`figureFrame`). Off by default; `lab/pixels.js` reports both the
+flags-off game and `--flags gl` identical to `claude/guard-pass`. Lab sheets:
+`lab/figure3d.js` (`sheet` and `cast`, through the match renderer at any size).
+
+Blender is not needed as an app: `pip install bpy` (5.1.2 was used) runs the
+script as `python lab/blender/build_founder.py -- <out.glb> [athlete]`, and it
+rebuilds `founder.glb` identically apart from the exporter's version string.
+
+Next, by the owner's call: the head (a modelled jaw, cheekbones and nose; the
+face is still projected onto today's round head), hands with fingers, and the
+cost on his phone.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

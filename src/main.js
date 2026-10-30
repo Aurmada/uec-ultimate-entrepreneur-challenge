@@ -13,7 +13,7 @@ import { renderGame, RENDER } from './engine/render.js';
 import { STAGES } from './engine/stage.js';
 import { FX_STYLE } from './engine/fx.js';
 import { drawPortrait, enableSprites, spritesReady, STYLE } from './engine/drawFighter.js';
-import { enable3D, stats3D, startTiming } from './engine/gl3d/index.js';
+import { enable3D, stats3D, startTiming, athletes3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
@@ -1173,6 +1173,8 @@ function boot() {
   // in Blender (engine/stage.js); and the fighting-game hit effects
   // (engine/vfx.js). Each defaults to off, which is the classic game.
   const gfx = graphicsFlags(location.search, Save.settings);
+  // ?gl&athlete: the 3D fighters in the athlete bodies, on test (models3d.js).
+  if (gfx.gl && new URLSearchParams(location.search).has('athlete')) athletes3D(true);
   if (gfx.gl) enable3D({ ids: gfx.ids, timing: gfx.perf });
   else if (gfx.perf && STYLE.figure) startTiming();   // ?figure&perf: what the figure costs here
   RENDER.sharpFighters = gfx.sharp;

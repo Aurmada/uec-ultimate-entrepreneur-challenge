@@ -17,7 +17,7 @@ import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import {
-  MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D,
+  MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D, athleteFor,
   FACE_STATES, FACE_GRID, faceCell, faceKey, drawnFaceKey,
 } from '../../data/models3d.js';
 
@@ -54,6 +54,7 @@ export function enable3D({ ids = null, timing = false } = {}) {
   }
   if (!renderer) { enabled = false; return false; }
   for (const id of new Set([DEFAULT_MODEL, ...Object.values(FIGHTER_MODELS)])) load(id);
+  if (athletes) { load('athlete'); load('athlete-f'); }
   return true;
 }
 
@@ -178,14 +179,48 @@ function load(id) {
   return entry;
 }
 
+// The athlete bodies (MODELS3D.athlete), on test: with this on, everyone not
+// given a model of their own wears the athlete body for their frame. ?athlete
+// with ?gl, and the review page's switch.
+let athletes = false;
+export function athletes3D(on = true) {
+  athletes = !!on;
+  if (athletes && renderer) { load('athlete'); load('athlete-f'); }
+}
+const modelIdFor = (def) => FIGHTER_MODELS[def.id] || (athletes ? athleteFor(def) : DEFAULT_MODEL);
+// Whether a fighter is drawn in an athlete body, which takes the 2D figure's
+// proportions too (engine/figure.js figureFrame): the hip higher, so the legs
+// are half the fighter.
+export const athlete3D = (def) => !!def && modelIdFor(def).startsWith('athlete');
+
 function modelFor(def) {
   if (!enabled || !renderer || renderer.lost || !def) return null;
   if (only && !only.has(def.id)) return null;
-  const entry = models.get(FIGHTER_MODELS[def.id] || DEFAULT_MODEL);
+  const entry = models.get(modelIdFor(def));
   return entry && entry.ready ? entry : null;
 }
 
 export function has3D(def) { return !!modelFor(def); }
+
+// Start loading a model nobody wears by default (the lab, the review page),
+// so it is ready when a fighter is moved into it through FIGHTER_MODELS.
+export function preload3D(id) { if (renderer && MODELS3D[id]) load(id); }
+
+// The whole fighter at any size, through the same renderer a match uses, for
+// lab sheets that judge a model itself (lab/figure3d.js). The view is `span`
+// rig px across with the feet near the bottom, drawn into `rect` on ctx.
+export function renderFull3D(ctx, rect, def, P, { state = 'idle', face = null, span = 250 } = {}) {
+  const entry = modelFor(def);
+  if (!entry) return false;
+  solvePose(entry.rig, P);
+  const w = span, h = (span * rect.h) / rect.w;
+  const box = { ox: w * 0.42, oy: h - 12, w, h };
+  const { vw, vh } = drawModel(entry, def, state, false, P.face || 'idle', face, { box, ss: rect.w / w, light: stageLight });
+  const img = renderer.image();
+  ctx.drawImage(img.src, 0, 0, vw, vh, rect.x, rect.y, rect.w, rect.h);
+  img.done();
+  return true;
+}
 
 // True while def would render in 3D but its model is still on the way.
 // Screens drawn in that window can ask to be drawn again (on3DReady).
