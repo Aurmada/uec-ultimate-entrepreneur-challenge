@@ -35,7 +35,7 @@ npm test                      # Node 21+, no npm install: there are no dependenc
 ## Before calling something done
 
 - `npm test` passes, and a regression test you add fails without your fix (revert the fix and watch it fail).
-- With the flags off, the default game must look exactly as it did. Pixel baselines are machine-specific, so compare before and after in the same browser (ARCHITECTURE section 10).
+- With the flags off, the default game must look exactly as it did. Pixel baselines are machine-specific, so compare before and after in the same browser (ARCHITECTURE section 10): `node lab/pixels.js` does that, rendering 30 seeded match frames from `main` and from your tree in one headless browser (Playwright, preinstalled in cloud sessions; `--flags gl` for the 3D path's renderers).
 - Markdown in this repo is published by GitHub Pages' Jekyll build, which reads Liquid tags first: two opening curly braces in a row, or an opening curly brace followed by a percent sign, anywhere in a `.md` file (code spans included) can fail the deploy. Write them some other way.
 
 ## Environment

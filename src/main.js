@@ -2,6 +2,7 @@
 
 import { STAGE, DEBUG, VERSION } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
+import { graphicsFlags } from './graphics.js';
 import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter, toCharacter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
 import { audio, installAudioUnlock } from './engine/audio.js';
@@ -1161,22 +1162,18 @@ function boot() {
   // player's own founder from their photo and look choices.
   if (new URLSearchParams(location.search).has('sprites')) enableSprites(true);
 
-  // Live 3D fighters, the prototype: ?gl renders everyone in their own look,
-  // ?gl=max,dex only those fighters, &perf adds a timing readout.
-  const glParam = new URLSearchParams(location.search);
-  if (glParam.has('gl')) {
-    const ids = (glParam.get('gl') || '').split(',').map((s) => s.trim()).filter(Boolean);
-    enable3D({ ids, timing: glParam.has('perf') });
-  }
-  // Fighters drawn at screen resolution (see RENDER in render.js). On with the
-  // 3D prototype so it is judged at its real sharpness; ?sharp tries it on 2D.
-  if (glParam.has('gl') || glParam.has('sharp')) RENDER.sharpFighters = glParam.get('sharp') !== '0';
-  // Arenas rendered in Blender (see engine/stage.js): on with the 3D prototype,
-  // &stages=0 turns them off, ?stages tries them with 2D fighters.
-  if (glParam.has('gl') || glParam.has('stages')) STAGES.enabled = glParam.get('stages') !== '0';
-  // Fighting-game hit effects, trails and cut-ins (engine/vfx.js): on with the
-  // 3D prototype, &fx=0 turns them off, ?fx tries them with 2D fighters.
-  if (glParam.has('gl') || glParam.has('fx')) FX_STYLE.impact = glParam.get('fx') !== '0';
+  // The 3D preview, from the address (?gl and its pieces) or the player's
+  // choice in Settings (graphics.js has which flag does what). Live 3D
+  // fighters in their own look (?gl=max,dex for only those, &perf for a
+  // timing readout); fighters drawn at screen resolution (RENDER in
+  // render.js), so the 3D is judged at its real sharpness; the arenas rendered
+  // in Blender (engine/stage.js); and the fighting-game hit effects
+  // (engine/vfx.js). Each defaults to off, which is the classic game.
+  const gfx = graphicsFlags(location.search, Save.settings);
+  if (gfx.gl) enable3D({ ids: gfx.ids, timing: gfx.perf });
+  RENDER.sharpFighters = gfx.sharp;
+  STAGES.enabled = gfx.stages;
+  FX_STYLE.impact = gfx.fx;
 
   if (DEBUG) {
     window.UEC = {

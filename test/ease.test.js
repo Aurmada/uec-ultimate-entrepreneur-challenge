@@ -77,3 +77,39 @@ test('the schema takes an ease for Rookie and Contender only, and in range', () 
   assert.equal(withEase({ founder: 'a lot' }).ok, false, 'a word passed for a number');
   assert.equal(withEase({ intern: -0.2, founder: 0.1 }).ok, true);
 });
+
+test('Lizbeth closes to mid range at Rookie and keeps her distance at Champion', () => {
+  const ava = byId('ava');
+  assert.equal(new AIController('intern', ava).prefRange, 'mid');
+  assert.equal(new AIController('founder', ava).prefRange, ava.ai.prefRange);
+  assert.equal(new AIController('mogul', ava).prefRange, ava.ai.prefRange);
+  // And it is what decide() walks to: 300 px off, inside a far fighter's
+  // comfort but outside a mid one's, she walks in at Rookie and holds at
+  // Champion. Math.random is pinned high, so no roll fires on its own.
+  const game = new Game({
+    p1: { def: ava, controller: idler() }, p2: { def: byId('dex'), controller: idler() },
+    arena: ARENA, mode: 'solo', difficulty: 'intern', hud: HUD, onEnd: () => {}, seed: 4,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  const [f, opp] = game.fighters;
+  f.x = 400; opp.x = 700; f.energy = 0; opp.energy = 0;
+  const walks = (level) => {
+    const real = Math.random;
+    Math.random = () => 0.99;
+    try {
+      const c = new AIController(level, ava);
+      c.decide(f, opp, game);
+      return c.dir;
+    } finally { Math.random = real; }
+  };
+  assert.equal(walks('intern'), 1, 'a Rookie Lizbeth did not close in');
+  assert.equal(walks('mogul'), 0, 'a Champion Lizbeth gave up her range');
+});
+
+test('the schema takes a kept range for Rookie and Contender only', () => {
+  const ch = toCharacter(byId('ava'));
+  const withRange = (rangeAt) => validateCharacter({ ...ch, ai: { ...ch.ai, rangeAt } });
+  assert.equal(withRange({ intern: 'mid' }).ok, true);
+  assert.equal(withRange({ mogul: 'close' }).ok, false, 'Champion took a kept range');
+  assert.equal(withRange({ founder: 'point blank' }).ok, false, 'a range that is not one passed');
+});

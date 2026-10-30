@@ -4,6 +4,8 @@
 import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, PLAYER_SPECIALS, playerSpecialId, UNICORN_META, LOOKS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
+import { graphicsFlags, withoutGraphicsParams } from '../graphics.js';
+import { stats3D } from '../engine/gl3d/index.js';
 import { STYLES, rankFor, AI_LEVELS, BODY } from '../config.js';
 import { SLOT_GLYPH, commandCost } from '../data/schema.js';
 import { PLAYER_MOVES, PLAYER_BUDGET, toCommandNormal } from '../data/playerMoves.js';
@@ -1106,7 +1108,39 @@ function wireSound() {
     syncSoundUI();
     audio.sfx('click');
   };
-  $('btn-settings').onclick = () => { audio.sfx('click'); openModal('modal-settings'); };
+  $('btn-settings').onclick = () => { audio.sfx('click'); syncGraphicsUI(); openModal('modal-settings'); };
+  wireGraphics();
+}
+
+// ---------------------------------------------------------------- graphics
+
+// The 3D preview, the player's choice (graphics.js). A change reloads the
+// page: the renderers are set up once, at load, and a reload is the one way
+// to be sure Classic is the classic game with nothing of the 3D path left
+// running. Any graphics flags in the address go too, or they would outvote it.
+// What is on screen, which an address with ?gl can make 3D whatever was
+// chosen: the button shows that, and pressing it changes that.
+const showing3D = () => graphicsFlags(location.search, Save.settings).gl;
+
+function syncGraphicsUI() {
+  const on = showing3D();
+  $('setGfx').textContent = `GRAPHICS: ${on ? '3D PREVIEW' : 'CLASSIC'}`;
+  const s3 = stats3D();
+  $('setGfxHint').textContent = on && s3.enabled === false && !s3.renderer
+    ? '3D needs WebGL2, which this browser does not have, so you are seeing Classic.'
+    : on ? 'The new 3D look. Still being tested: switch back any time.'
+      : 'Try the 3D preview: the founders as 3D figures on rendered stages.';
+}
+
+function wireGraphics() {
+  $('setGfx').onclick = () => {
+    audio.sfx('click');
+    Save.setSetting('graphics', showing3D() ? 'classic' : '3d');
+    // replaceState then reload: assigning a URL that differs only by its hash
+    // would not reload at all.
+    history.replaceState(null, '', location.pathname + withoutGraphicsParams(location.search) + location.hash);
+    location.reload();
+  };
 }
 
 // ---------------------------------------------------------------- misc

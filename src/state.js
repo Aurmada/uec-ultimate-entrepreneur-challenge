@@ -13,7 +13,7 @@ import { currentUser } from './auth.js';
 const DEFAULTS = () => ({
   profile: null,           // { name, company, photo, baseId, c1, c2, special }
   stats: { wins: 0, losses: 0, kos: 0, streak: 0, bestStreak: 0, points: 0, matches: 0 },
-  settings: { volume: 80, music: true, sfx: true },
+  settings: { volume: 80, music: true, sfx: true, graphics: 'classic' },   // graphics: 'classic' or '3d'
   tutorialSeen: false,
   storySeen: false,        // the intro plays once, then lives under THE STORY
   lastSelf: 'custom',      // who you play AS (your founder, or a roster character)

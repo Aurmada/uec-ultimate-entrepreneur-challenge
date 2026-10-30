@@ -488,6 +488,16 @@ export function validateCharacter(ch) {
       }
     }
   }
+  // The range kept below Champion, where it differs (ai.js).
+  if (ai.rangeAt !== undefined) {
+    if (!ai.rangeAt || typeof ai.rangeAt !== 'object') errors.push('ai.rangeAt must be an object');
+    else {
+      for (const [level, v] of Object.entries(ai.rangeAt)) {
+        if (level !== 'intern' && level !== 'founder') errors.push(`ai.rangeAt.${level}: only intern and founder can differ`);
+        else if (!PREF_RANGES.includes(v)) errors.push(`ai.rangeAt.${level} must be close, mid or far`);
+      }
+    }
+  }
 
   // Budget only means something once the numbers it reads are well-formed.
   let cost = 0, band = 'clean';

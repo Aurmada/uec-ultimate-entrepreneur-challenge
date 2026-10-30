@@ -169,6 +169,10 @@ export const UNICORN_META = {
 // Elo's burn) holds back more; one that needs timing they do not have
 // (Lizbeth's counter, Cathie's rain) holds back less. Now 27 and 24. Champion
 // has none, so it plays as authored.
+//
+// ai.rangeAt: the range a character keeps at a level below Champion, where it
+// differs. Lizbeth waits at range to counter, and a Rookie seldom swings, so
+// at Rookie she closes to mid range: 30% to 40% there (v3.12).
 export const FIGHTERS = [
   {
     id: 'ava', name: 'LIZBETH HOLMEZ', title: 'THE FRAUDSTER', company: 'THERAMOS',
@@ -192,7 +196,7 @@ export const FIGHTERS = [
     // to hit is what pays for the speed, and it drops her out of the blocked band.
     body: { height: 1.04, build: 1.06, reach: 0.96, stride: 1.02, shoulders: 0.88, head: 1.02 },
     stats: { speed: 1.0, power: 1.0, hp: 100 },
-    ai: { aggr: 0.55, jump: 0.3, prefRange: 'far', ease: { intern: -0.30 } },
+    ai: { aggr: 0.55, jump: 0.3, prefRange: 'far', ease: { intern: -0.30 }, rangeAt: { intern: 'mid' } },
     c: { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#e8dcc0', pants: '#23294f', shoe: '#eef1ff' },
     hairStyle: 'ponytail', outfit: 'blazer', accessory: 'visor',
     // The demo that was never real. She presents; swing at her during it and
