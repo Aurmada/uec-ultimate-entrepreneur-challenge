@@ -5,6 +5,8 @@ his build made general, so the others follow without starting over.
 
     python lab/blender/fighter3d.py -- bozo --rig             # assets/models/sculpt/bozo.glb (or --out <path>)
     python lab/blender/fighter3d.py -- bozo --views <dir>     # the body in clay, four views
+    python lab/blender/fighter3d.py -- --cast <dir> max kai bozo   # several, at their game heights
+                                                    # (--engine CYCLES to light them for review)
 
 A fighter is:
 
@@ -71,8 +73,9 @@ def game_data(fid):
     return json.loads(out.stdout)
 
 
-# Jeff's knobs, the reference every factor is measured from.
-REF = {'muscle': 1.6, 'chest': 1.3, 'waist': 0.92, 'neck': 1.35, 'jaw': 1.1, 'shoulders': 1.2}
+# Jeff's knobs, the reference every factor is measured from. He is built
+# 1.955 tall at his game height; the game draws each fighter at their own.
+REF = {'muscle': 1.6, 'chest': 1.3, 'waist': 0.92, 'neck': 1.35, 'jaw': 1.1, 'shoulders': 1.2, 'height': 0.92}
 
 
 class Build:
@@ -90,12 +93,40 @@ class Build:
         self.jaw = r('jaw', f.get('jaw', 1), 0.6)
         self.shoulders = r('shoulders', b.get('shoulders', 1), 0.5)
         self.belly = f.get('belly', 0)
-        # how deep definition is carved: a soft body shows less of it
+        # how deep definition is carved: a soft body shows less of it, and a
+        # belly hides the abs altogether
         self.definition = min(1.0, max(0.25, f.get('muscle', 1) / REF['muscle']))
+        self.abs = self.definition * max(0.0, 1 - 2 * self.belly)
+
+    def girth(self, z):
+        """How much wider (y) and deeper (x) than Jeff's the trunk is at height
+        z: the hips as his, the waist's factor over the belly, the chest's over
+        the ribcage, eased between them. Deeper only half as far: a broad chest
+        is mostly broad."""
+        ease = lambda a, b: (lambda t: t * t * (3 - 2 * t))(min(1.0, max(0.0, (z - a) / (b - a))))
+        gy = 1 + (self.waist - 1) * ease(0.98, 1.12)
+        gy = gy + (self.chest - gy) * ease(1.24, 1.38)
+        return 1 + (gy - 1) * 0.5, gy
 
 
 def scaled(r, *k):
     return tuple(a * b for a, b in zip(r, k))
+
+
+def warped(c, r=None):
+    """A trunk mass moved and sized to the fighter's girth where it sits."""
+    gx, gy = B.girth(c[2])
+    c = V(c[0] * gx, c[1] * gy, c[2])
+    return c if r is None else (c, (r[0] * gx, r[1] * gy, r[2]))
+
+
+def TE(c, r, axes=None, k=CREASE):
+    E(*warped(c, r), axes, k=k)
+
+
+def TC(a, b, r1, r2, k=SEAT, flat=None):
+    g = lambda p: sum(B.girth(p[2])) / 2
+    C(warped(a), warped(b), r1 * g(a), r2 * g(b), k=k, flat=flat)
 
 
 def E(c, r, axes=None, k=CREASE):
@@ -114,11 +145,42 @@ def limb(a, b, s):
     return u, v, lat, np.stack([u, v, lat], axis=1)
 
 
+class Placeholder:
+    """A plain head for a fighter whose own is not designed yet: skull, jaw,
+    ears and a nose to show which way it faces, and no face. Only so their
+    body can be looked at; --rig refuses it."""
+
+    @staticmethod
+    def head(fx):
+        E, V = fx.E, fx.V
+        E(V(0.02, 0, 1.738), (0.075, 0.058 * fx.B.jaw, 0.046), k=0.012)
+        E(V(-0.01, 0, 1.86), (0.1, 0.082, 0.097), k=0.02)
+        E(V(0.042, 0, 1.8), (0.055, 0.064, 0.08), k=0.03)
+        fx.C(V(0.09, 0, 1.835), V(0.1, 0, 1.795), 0.007, 0.009, k=0.016)
+        for s in (1, -1):
+            E(V(-0.006, s * 0.084, 1.825), (0.022, 0.011, 0.03), fx.sc.rot(ry=-10), k=0.01)
+
+    @staticmethod
+    def head_definition(fx):
+        pass
+
+
+def design(fid):
+    """The fighter's own module (lab/blender/fighters/<id>.py), or the
+    placeholder head while they have none."""
+    try:
+        return importlib.import_module(f'fighters.{fid}')
+    except ModuleNotFoundError as e:
+        if e.name != f'fighters.{fid}':
+            raise
+        return Placeholder
+
+
 def sculpt(fid, h=0.003):
     """The fighter's body and head into the field F."""
     global F, B
     data = game_data(fid)
-    spec = importlib.import_module(f'fighters.{fid}')
+    spec = design(fid)
     B = Build(data)
     F = sc.Field(lo=(-0.22, -0.74, -0.01), hi=(0.30, 0.74, 1.985), h=h)
     trunk()
@@ -136,35 +198,41 @@ def sculpt(fid, h=0.003):
 # under the lats, round shoulders, limbs that taper. Definition comes after,
 # carved in (see "definition").
 def trunk():
-    m, c, w, sh = B.muscle, B.chest, B.waist, B.shoulders
-    E(V(-0.006, 0, 1.425), scaled((0.132, 0.162, 0.18), c, c, 1), k=0.04)
-    E(V(0.0, 0, 1.54), scaled((0.095, 0.145, 0.075), c, c, 1), k=0.04)
-    E(V(0.012, 0, 1.2), scaled((0.096, 0.122, 0.15), 1, w, 1), k=0.05)
-    E(V(0.0, 0, 1.0), (0.104, 0.155, 0.1), k=0.05)
-    E(V(-0.08, 0, 1.47), (0.032, 0.078, 0.1), k=0.03)
+    # The ribcage, belly and hips, and the muscles over them, sized and placed
+    # by the fighter's girth at their height (TE, TC): a narrower chest brings
+    # its pecs, armpits and lats in with it. Sized alone, they stood out from
+    # it in ridges. What runs out to the shoulders is placed by the shoulders.
+    m, sh = B.muscle, B.shoulders
+    TE(V(-0.006, 0, 1.425), (0.132, 0.162, 0.18), k=0.04)
+    TE(V(0.0, 0, 1.54), (0.095, 0.145, 0.075), k=0.04)
+    TE(V(0.012, 0, 1.2), (0.096, 0.122, 0.15), k=0.05)
+    TE(V(0.0, 0, 1.0), (0.104, 0.155, 0.1), k=0.05)
+    TE(V(-0.08, 0, 1.47), (0.032, 0.078, 0.1), k=0.03)
     for s in (1, -1):
-        E(V(0.076, s * 0.078, 1.47), scaled((0.06, 0.098, 0.072), m, m, m), sc.rot(rx=s * 12), k=0.03)    # pectoral
-        E(V(0.03, s * 0.158, 1.49), (0.045, 0.055, 0.055), k=0.03)                      # into the armpit
+        TE(V(0.076, s * 0.078, 1.47), scaled((0.06, 0.098, 0.072), m, m, m), sc.rot(rx=s * 12), k=0.03)    # pectoral
+        TE(V(0.03, s * 0.158, 1.49), (0.045, 0.055, 0.055), k=0.03)                      # into the armpit
         # The pec's outer edge runs on into the arm as the fold at the front of the
         # armpit: a pec that just ended rounded into a hanging lobe as the arm moved.
-        C(V(0.055, s * 0.15, 1.46), V(0.025, s * 0.205 * sh, 1.5), 0.028, 0.022, k=0.03)
-        E(V(0.01, s * 0.103 * w, 1.13), scaled((0.07, 0.04, 0.085), 1, w, 1), k=0.04)  # obliques
-        C(V(-0.035, s * 0.15, 1.47), V(-0.05, s * 0.095, 1.18), 0.065 * m, 0.035 * m, k=0.04)   # lats
+        C(warped(V(0.055, s * 0.15, 1.46)), V(0.025, s * 0.205 * sh, 1.5), 0.028, 0.022, k=0.03)
+        TE(V(0.01, s * 0.103, 1.13), scaled((0.07, 0.04, 0.085), m, m, 1), k=0.04)      # obliques
+        TC(V(-0.035, s * 0.15, 1.47), V(-0.05, s * 0.095, 1.18), 0.065 * m, 0.035 * m, k=0.04)   # lats
         # The traps run from the neck right out to the point of the shoulder, over a
         # solid shoulder girdle, and taper there onto the top of the deltoid. Short
         # and stopping above the shoulder, as they were, they left a notch and the
         # deltoid stood up beyond it as a ball.
         C(V(-0.03, s * 0.08, 1.58), V(-0.02, s * 0.19 * sh, 1.56), 0.05, 0.04, k=0.04)
         C(V(-0.03, s * 0.064, 1.636), V(-0.015, s * 0.205 * sh, 1.598), 0.046 * m, 0.028 * m, k=0.045)  # traps
-        E(V(-0.088, s * 0.08, 1.44), scaled((0.04, 0.075, 0.09), m, 1, 1), k=0.035)    # shoulder blade
-        E(V(-0.1, s * 0.115, 1.43), scaled((0.03, 0.055, 0.06), m, m, m), k=0.025)      # infraspinatus, on the blade
-        E(V(-0.07, s * 0.16, 1.4), scaled((0.03, 0.04, 0.032), m, m, m), k=0.025)       # teres, from the blade to the armpit
-        E(V(-0.08, s * 0.03, 1.2), scaled((0.03, 0.032, 0.16), m, m, 1), k=0.03)        # erectors
-        E(V(-0.05, s * 0.07, 0.955), scaled((0.066, 0.076, 0.088), m, m, m), sc.rot(rx=s * 8), k=0.04)   # glutes
+        TE(V(-0.088, s * 0.08, 1.44), scaled((0.04, 0.075, 0.09), m, 1, 1), k=0.035)    # shoulder blade
+        TE(V(-0.1, s * 0.115, 1.43), scaled((0.03, 0.055, 0.06), m, m, m), k=0.025)      # infraspinatus, on the blade
+        TE(V(-0.07, s * 0.16, 1.4), scaled((0.03, 0.04, 0.032), m, m, m), k=0.025)       # teres, from the blade to the armpit
+        TE(V(-0.08, s * 0.03, 1.2), scaled((0.03, 0.032, 0.16), m, m, 1), k=0.03)        # erectors
+        TE(V(-0.05, s * 0.07, 0.955), scaled((0.066, 0.076, 0.088), m, m, m), sc.rot(rx=s * 8), k=0.04)   # glutes
     if B.belly > 0:
-        # a belly over the abs, hanging forward of them: Jeff has none
+        # a belly over the abs, hanging forward of them: Jeff has none. Blended
+        # broadly up into the chest and round into the flanks: met tightly, it
+        # stood off the body as a ball.
         b = B.belly
-        E(V(0.04 + 0.03 * b, 0, 1.13), (0.08 + 0.045 * b, (0.105 + 0.03 * b) * w, 0.12 + 0.02 * b), k=0.05)
+        E(V(0.035 + 0.03 * b, 0, 1.11), (0.075 + 0.04 * b, (0.105 + 0.03 * b) * B.waist, 0.13 + 0.02 * b), k=0.09)
 
 
 def neck():
@@ -179,7 +247,9 @@ def neck():
 
 
 def arms():
+    # the limbs' cores thin a little with less muscle, as well as the muscle on them
     m = B.muscle
+    mc = 1 + 0.4 * (m - 1)
     for s in (1, -1):
         S = V(0.0, s * 0.2 * B.shoulders, 1.555)
         d = V(0, s * D45, -D45)
@@ -189,13 +259,13 @@ def arms():
         u, v, lat, ax = limb(S, El, s)
         E(S, (0.055, 0.055, 0.055), k=0.03)
         E(S + u * 0.062 + lat * 0.03, scaled((0.11, 0.08, 0.068), 1, m, m), ax, k=0.03)    # deltoid, its top under the traps' end
-        C(S, El, 0.062, 0.044, k=0.025)
+        C(S, El, 0.062 * mc, 0.044 * mc, k=0.025)
         E(S + u * 0.18 + v * 0.032, scaled((0.115, 0.052, 0.05), 1, m, m), ax, k=0.025)    # biceps
         E(S + u * 0.13 - v * 0.038, scaled((0.135, 0.056, 0.054), 1, m, m), ax, k=0.025)   # triceps
         E(El, (0.042, 0.04, 0.042), ax, k=0.02)
         E(El - v * 0.032, (0.018, 0.018, 0.018), k=0.012)
         u, v, lat, ax = limb(El, W, s)
-        C(El, W, 0.056, 0.034, k=0.02, flat=(lat, 0.8))
+        C(El, W, 0.056 * mc, 0.034 * mc, k=0.02, flat=(lat, 0.8))
         E(El + u * 0.08 + v * 0.008, scaled((0.13, 0.06, 0.058), 1, m, m), ax, k=0.03)     # forearm muscles
         E(El + u * 0.07 + v * 0.022 + lat * 0.018, scaled((0.1, 0.034, 0.034), 1, m, m), ax, k=0.025)  # brachioradialis, the thumb side
         E(W, (0.022, 0.032, 0.024), ax, k=0.015)
@@ -210,6 +280,7 @@ def arms():
 
 def legs():
     m = B.muscle
+    mc = 1 + 0.4 * (m - 1)
     for s in (1, -1):
         Hj = V(0.0, s * 0.095, 0.955)
         K = V(0.012, s * 0.1, 0.52)
@@ -218,7 +289,7 @@ def legs():
         u, v, lat, ax = limb(Hj, K, s)
         # the core a little oval and set out from the middle, so the thighs part
         # below the crotch: fused down to mid-thigh, they tore when the legs moved
-        C(Hj + lat * 0.01, K + lat * 0.004, 0.105, 0.06, k=0.045, flat=(lat, 0.85))
+        C(Hj + lat * 0.01, K + lat * 0.004, 0.105 * mc, 0.06 * mc, k=0.045, flat=(lat, 0.85))
         E(lerp(Hj, K, 0.45) + v * 0.036 + lat * 0.028, scaled((0.22, 0.08, 0.078), 1, m, m), ax, k=0.035)  # quadriceps
         E(lerp(Hj, K, 0.48) + v * 0.008 + lat * 0.062, scaled((0.2, 0.05, 0.056), 1, m, m), ax, k=0.035)  # the outer sweep
         E(lerp(Hj, K, 0.25) - lat * 0.036, (0.17, 0.062, 0.045), ax, k=0.035)          # adductors
@@ -227,7 +298,7 @@ def legs():
         E(K, (0.046, 0.048, 0.05), ax, k=0.025)
         E(K + v * 0.043 + V(0, 0, 0.012), (0.022, 0.02, 0.026), ax, k=0.012)          # kneecap
         u, v, lat, ax = limb(K, A, s)
-        C(K, A, 0.056, 0.043, k=0.025)
+        C(K, A, 0.056 * mc, 0.043 * mc, k=0.025)
         E(lerp(K, A, 0.3) - v * 0.04, scaled((0.15, 0.064, 0.07), 1, m, m), ax, k=0.03)                 # calf
         E(lerp(K, A, 0.3) - v * 0.03 - lat * 0.032, scaled((0.13, 0.052, 0.052), 1, m, m), ax, k=0.025)  # its inner head
         E(lerp(K, A, 0.26) - v * 0.03 + lat * 0.03, scaled((0.12, 0.048, 0.048), 1, m, m), ax, k=0.025)  # and outer
@@ -251,8 +322,12 @@ LINE = dict(depth=0.003, width=0.01, k=0.008)
 SOFT = dict(depth=0.002, width=0.011, k=0.008)
 
 
-def G(points, depth, width, k):
-    F.groove(points, depth=depth * B.definition, width=width, k=k)
+def G(points, depth, width, k, f=None):
+    """A groove at the fighter's definition (or `f`): shallower, and blended
+    tighter, so a faint line stays a faint line and not a soft trench."""
+    f = B.definition if f is None else f
+    if f > 0:
+        F.groove(points, depth=depth * f, width=width, k=k * f)
 
 
 def definition(spec):
@@ -260,15 +335,15 @@ def definition(spec):
 
     # chest and belly
     G([(0.13, 0, 1.55), (0.13, 0, 1.47), (0.125, 0, 1.405)], **STRONG)
-    G([(0.122, 0, 1.385), (0.12, 0, 1.25), (0.115, 0, 1.08)], **LINE)
+    G([(0.122, 0, 1.385), (0.12, 0, 1.25), (0.115, 0, 1.08)], **LINE, f=B.abs)
     # The abs' rows and the lines down either side of them are soft: carved as
     # deep as the midline, they broke into scattered dark chips through the game's
     # flat light bands instead of reading as a six-pack.
     for z in (1.3, 1.235, 1.17):
-        G([(0.11, -0.058, z + 0.006), (0.118, -0.03, z), (0.12, 0, z - 0.004), (0.118, 0.03, z), (0.11, 0.058, z + 0.006)], **SOFT)
+        G([(0.11, -0.058, z + 0.006), (0.118, -0.03, z), (0.12, 0, z - 0.004), (0.118, 0.03, z), (0.11, 0.058, z + 0.006)], **SOFT, f=B.abs)
     for s in (1, -1):
         G([(0.12, s * 0.008, 1.4), (0.118, s * 0.05, 1.388), (0.105, s * 0.1, 1.395), (0.075, s * 0.145, 1.42), (0.045, s * 0.17, 1.46)], **STRONG)
-        G([(0.11, s * 0.066, 1.385), (0.112, s * 0.064, 1.25), (0.105, s * 0.058, 1.12), (0.095, s * 0.045, 1.04)], **SOFT)
+        G([(0.11, s * 0.066, 1.385), (0.112, s * 0.064, 1.25), (0.105, s * 0.058, 1.12), (0.095, s * 0.045, 1.04)], **SOFT, f=B.abs)
         G([(0.07, s * 0.122, 1.08), (0.09, s * 0.09, 1.02), (0.1, s * 0.055, 0.96)], **SOFT)
 
     # back: the spine, faint between the shoulder blades and deep between the
@@ -612,6 +687,10 @@ def export_rigged(data, spec, path, tris=44000):
     """The fighter as a game model: dressed, decimated, weighted to the
     skeleton, with his eyewear riding his head."""
     import bpy
+    if spec is Placeholder:
+        sys.exit(f'{data["id"]} has no head of their own yet (lab/blender/fighters/{data["id"]}.py)')
+    if data['outfit'] not in OUTFITS:
+        sys.exit(f'{data["id"]} wears a {data["outfit"]}, which the pipeline cannot dress yet (OUTFITS)')
     obj, clothes = dressed(data)
     parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
     budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'pants': 0.17, 'shoe': 0.07}
@@ -674,10 +753,25 @@ def export_rigged(data, spec, path, tris=44000):
     print(f'[{data["id"]}] rigged: {len(me.polygons)} faces, {os.path.getsize(path)} bytes -> {path}', flush=True)
 
 
+def cast(ids, out, engine='WORKBENCH'):
+    """Clay views of each fighter's body, all at one scale, so the cast can
+    be judged side by side. Each is built at Jeff's height: building to a
+    fighter's own (`body.height`, with the head kept to `body.head`) is still
+    to come, and scaling the whole figure would swell the head with it."""
+    import clay
+    for fid in ids:
+        sculpt(fid)
+        clay.views([build()], out, fid, engine=engine, size=(640, 1000), span=2.3)
+
+
 if __name__ == '__main__':
     ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    fid = ARGS[0]
     opt = lambda name, default: ARGS[ARGS.index(name) + 1] if name in ARGS else default
+    if '--cast' in ARGS:
+        cast([a for a in ARGS if not a.startswith('--') and a != opt('--cast', None) and a != opt('--engine', None)],
+             opt('--cast', '.'), opt('--engine', 'WORKBENCH'))
+        sys.exit()
+    fid = ARGS[0]
     data, spec = sculpt(fid, float(opt('--h', '0.003')))
     if '--rig' in ARGS:
         export_rigged(data, spec, os.path.abspath(opt('--out', os.path.join(ROOT, 'assets', 'models', 'sculpt', f'{fid}.glb'))))

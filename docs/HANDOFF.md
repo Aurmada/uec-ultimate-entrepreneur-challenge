@@ -339,6 +339,55 @@ same model file, the same painted face, call for call):
   `MOUTH_CURVE`) say how they are drawn, pinned on Jeff's (`FACE_REF`), so
   another fighter's narrowed eyes, scowl or stare carry over from 2D.
 
+The men of the cast in clay through it, each from his own knobs
+(`fighter3d.py -- --cast <dir> max kai dex elo scam`; a fighter with no
+design yet gets a plain placeholder head): Jeff the gym rat, Max broad and
+athletic, Kai slim, Dex and Scam with a gut, Elo with a little one. The
+trunk is sized by a girth map over its height (`Build.girth`: the hips as
+Jeff's, the waist's factor over the belly, the chest's over the ribcage), so
+a narrower chest brings its pecs, armpits and lats in with it: sized one mass
+at a time, they stood off it in ridges. Less muscle thins the limbs' cores as
+well as the muscle on them, carves the definition shallower and tighter, and
+a belly hides the abs. All of it is exactly 1 for Jeff, whose field is checked
+bit for bit after every change.
+
+**Remodelling the next fighter, the recipe:**
+
+1. Read their entry in `data/fighters.js`: build knobs, face values, outfit,
+   look, palette and the character notes.
+2. Clay their body (`--cast <dir> <id>`) beside Jeff's. If it is wrong, fix
+   the knob's mapping for the whole cast (`Build`), never one fighter by hand.
+3. Design their head in `lab/blender/fighters/<id>.py`: an original face to
+   their notes, never a likeness, and eyewear if they wear it.
+4. Dress them: their outfit in `OUTFITS`, if it is not there yet.
+5. Register them in `SCULPTED` (`models3d.js`): leaf bones and joints' width
+   from their build, their face centre and `layout` measured on their head,
+   and their form.
+6. Build (`-- <id> --rig`), look at them in the game's renderer
+   (`lab/figure3d.js` with `models: ['sculpted']`, and `faces()`), and show
+   the owner before the next stage.
+
+**Gaps, before the rest of the cast can be built:**
+
+- Height. Everyone is built at Jeff's 1.955. A sculpt keeps its own torso
+  (`fit`) while the 2D pose sets the hips by `body.height`, so each fighter
+  must be built to their own height (legs and torso by `body.height`, the
+  head kept to `body.head`, arms by `reach`). Scaling the whole figure swells
+  the head with it. `body.build` (overall girth) is not read yet either.
+- The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
+  as the 2D figure and the athlete bodies have, with `figure.hips`.
+- Outfits. Only Jeff's vest. The rest: hoodie (Max), turtleneck (Kai),
+  pinstripe suit (Dex), tee (Elo), henley (Scam), blazer (Ava), bomber
+  (Zara), suit (Eleanor). Most are the same shells with other edges; the 2D
+  `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)
+  says how far each stands off the body and how the trousers fall.
+- Hair and headwear. Jeff is bald; nobody else is. Every style needs a maker
+  (ponytail, cap, quiff, puffs, bob, slick, buzz, curly).
+- Eyewear beyond shades (Kai's glasses, Ava's visor), the earrings and
+  brooch, and Max's stubble (painted, as in 2D).
+- Forms: only boxing exists. Each fighter's own fighting style is its own
+  stage, after their model.
+
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 
 - **A Settings switch for the 3D preview** ("Graphics: Classic / 3D preview").
