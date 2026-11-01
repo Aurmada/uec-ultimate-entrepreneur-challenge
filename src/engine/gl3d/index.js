@@ -17,7 +17,7 @@ import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import { FORMS } from '../../data/forms.js';
-import { SCULPTED_FACES } from './faces3d.js';
+import { paintSculpted } from './faces3d.js';
 import {
   MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D, athleteFor, newBodyFor,
   FACE_STATES, FACE_GRID, faceCell, faceKey, drawnFaceKey,
@@ -383,8 +383,9 @@ function faceSlot(id, F) {
     map: [F.at[0], F.at[1], 2 * S * F.px[0], 2 * S * F.px[1]],
     axis: [Math.cos(F.turn || 0), Math.sin(F.turn || 0)],
     front: F.front, fade: F.fade, mesh: F.mesh, role: F.role,
-    // a sculpted head's own painter (faces3d.js), else the 2D one
-    paint: F.painter ? SCULPTED_FACES[F.painter] : null,
+    // a sculpted head is painted to its own layout (faces3d.js), any other
+    // with the 2D painter
+    paint: F.layout ? (g, def, expression) => paintSculpted(g, def, expression, F.layout) : null,
   };
 }
 

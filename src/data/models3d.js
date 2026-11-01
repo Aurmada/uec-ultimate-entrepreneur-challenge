@@ -78,37 +78,67 @@ export const CAST_MODELS = ['ava', 'max', 'kai', 'zara', 'eleanor', 'dex', 'elo'
 for (const id of CAST_MODELS) MODELS3D[id] = { ...MODELS3D.founder, url: `assets/models/cast/${id}.glb` };
 export const newBodyFor = (def) => (CAST_MODELS.includes(def?.id) ? def.id : athleteFor(def));
 
-// Jeff sculpted from scratch (lab/blender/sculpt_jeff.py, November 2026), the
-// first fighter of the remodel, on test: nobody wears it unless a lab page or
-// the review page puts him in it. Built to heroic proportions at his own size,
-// so `fit` draws him as built (engine/gl3d/rig.js): his own torso, neck and
-// head (the 2D pose only leans the torso and nods the head, at most `nod`
-// radians: the 2D head throws itself forward on a punch, and a real neck
-// following it pushed the head out ahead of the chest), a straight back leaned `lean` further over his bent knees with
-// the pelvis taking `pelvis` of it, no girth or head pushed for game size, and
-// his own shoulder and hip width. He boxes (`form`, data/forms.js): his
-// guard, punch and block are a boxer's wherever this model draws him. No face
-// yet: that is the remodel's next stage.
-MODELS3D['jeff-sculpt'] = {
-  url: 'assets/models/sculpt/jeff.glb',
-  leaf: { forearm: 0.367, head: 0.255, foot: [0.18, -0.065, 0] },
-  skull: 0.16,
-  fit: { girth: 1, head: 1, nod: 0.2, lean: 0.14, pelvis: 0.85, shoulderHalf: 0.2, hipHalf: 0.095 },
-  form: 'boxing',
-  // His face is sculpted, and its eyes, brows and mouth are painted on by a
-  // painter made for this head (engine/gl3d/faces3d.js), projected straight
-  // along his forward axis: the 2D face's layout cannot sit on a real brow
-  // and mouth. 0.0035 model units a px, centred on the face at 1.79.
-  face: {
-    mesh: 'body', role: 'skin', painter: 'jeff',
-    turn: 0, at: [0, 1.79], px: [0.0035, 0.0035],
-    front: 0.045, fade: [0.25, 0.0],
-  },
-  // His shades are a mesh of their own ('eyewear:shades', worn because his
-  // accessory is shades), the lenses dark glass his painted eyes show faintly
-  // through, as the 2D shades let them.
+// The sculpted fighters (November 2026), the remodel, one at a time: each
+// built from scratch from their own game data by one pipeline
+// (lab/blender/fighter3d.py, their own head and design in
+// lab/blender/fighters/<id>.py) and registered here as `sculpt:<id>`. On test:
+// nobody wears one unless a lab page or the review page puts them in it.
+//
+// What every sculpted model shares. They are built to heroic proportions at
+// their own size, so `fit` draws them as built (engine/gl3d/rig.js): their own
+// torso, neck and head (the 2D pose only leans the torso and nods the head,
+// at most `nod` radians: the 2D head throws itself forward on a punch, and a
+// real neck following it pushed the head out ahead of the chest), a straight
+// back leaned `lean` further over bent knees with the pelvis taking `pelvis`
+// of it, and no girth or head pushed for game size. Their faces are sculpted,
+// and the eyes, brows and mouth painted on (engine/gl3d/faces3d.js, from the
+// head's `layout` and the fighter's own 2D face values), projected straight
+// along the forward axis at 0.0035 model units a px: the 2D face's layout
+// cannot sit on a real brow and mouth. Eyewear is a mesh of its own (as
+// 'eyewear:shades'), its lenses dark glass the painted eyes show faintly
+// through, as the 2D shades let them.
+const SCULPTED_BASE = {
+  fit: { girth: 1, head: 1, nod: 0.2, lean: 0.14, pelvis: 0.85 },
+  face: { mesh: 'body', role: 'skin', turn: 0, px: [0.0035, 0.0035], front: 0.045, fade: [0.25, 0.0] },
   glass: { lens: 0.84 },
 };
+
+// Each fighter's own: where their leaf bones end and their skull sits, their
+// shoulder and hip width (the joints of their sculpt), where their face is
+// centred and where its features are on their head (`layout`, in the
+// painter's px from that centre, y down: the eyes' centre and half-width,
+// the lower edge of the brow ridge and how far it runs from the middle, the
+// lips' line and half-width, and stroke widths), and how they fight (`form`,
+// data/forms.js), which their guard, punch and block follow wherever the
+// model draws them.
+export const SCULPTED = {
+  // Jeff, the first. The eyes 0.033 out and at 1.825, the lower edge of the
+  // brow at 1.842, the lips meeting at 1.7395. Strokes are bold: a fight-size
+  // head is about 26 px tall, and at the texture's 0.35 screen px a stroke px,
+  // finer lines vanish in a match. He boxes.
+  bozo: {
+    leaf: { forearm: 0.367, head: 0.255, foot: [0.18, -0.065, 0] },
+    skull: 0.16,
+    fit: { shoulderHalf: 0.2, hipHalf: 0.095 },
+    face: {
+      at: [0, 1.79],
+      layout: {
+        eye: { x: 9.4, y: -10, w: 3.7 },
+        brow: { y: -14.9, inner: 3.0, outer: 17.2 },
+        mouth: { y: 14.4, w: 6.2 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+    form: 'boxing',
+  },
+};
+for (const [id, own] of Object.entries(SCULPTED)) {
+  MODELS3D[`sculpt:${id}`] = {
+    url: `assets/models/sculpt/${id}.glb`, ...SCULPTED_BASE, ...own,
+    fit: { ...SCULPTED_BASE.fit, ...own.fit },
+    face: { ...SCULPTED_BASE.face, ...own.face },
+  };
+}
 
 export const DEFAULT_MODEL = 'founder';
 

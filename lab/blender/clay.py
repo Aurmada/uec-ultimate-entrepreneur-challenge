@@ -1,6 +1,6 @@
 """Clay renders of a model: front, three quarters, side and back, orthographic,
 in grey clay so the forms are judged and not the colours. For sculpting
-(lab/blender/sculpt_jeff.py) and for setting a new body beside an old one.
+(lab/blender/fighter3d.py) and for setting a new body beside an old one.
 
     import clay
     clay.views([obj], 'out/dir', 'jeff')                   # quick, Workbench

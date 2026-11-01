@@ -4,93 +4,116 @@
 // (drawFighter.js drawFace) serves it. A sculpted head has a real brow, eyes
 // set in sockets and a mouth where a mouth goes, and the 2D layout cannot sit
 // on it: its eyes are mid-head, its mouth just under them, and no one scale
-// puts both the brows and the mouth in place. So a sculpted model names its
-// own painter (MODELS3D face `painter`), drawn to that sculpt.
+// puts both the brows and the mouth in place. So a sculpted model records
+// where its features are (MODELS3D face `layout`), and this painter draws to
+// that.
 //
-// A painter is called once per expression, as the 2D one is (gl3d/index.js
+// It is called once per expression, as the 2D one is (gl3d/index.js
 // paintFaces): the canvas centred on the cell, in the 2D px the model's
 // `face.px` turns into model units, y down, the drawn face as seen head-on
 // (so the character's right is on the left). It paints only what the sculpt
 // cannot hold: the eyes, the brow hair and the mouth, which are what change
 // from one expression to the next. The forms under them are sculpted.
+//
+// Two things decide a face. The layout is the head's: where its eyes, brow
+// ridge and lips are, measured from the sculpt. The character is the
+// fighter's own 2D face values (data/fighters.js `face`), the same knobs that
+// tell nine 2D faces apart: how narrowed the eyes are, how big the irises,
+// how heavy the brows and how hard they drop, how the mouth sets. The painter
+// was drawn on Jeff, the first sculpted fighter, so his values are where each
+// of those is pinned (FACE_REF) and another fighter's move it from there.
 import { shade } from '../../data/fighters.js';
+import { STYLIZE } from '../../config.js';
 
 const INK = '#140c08';
+const IRIS = '#47342a', WHITE = '#eee5d6';
 
-// Jeff (lab/blender/sculpt_jeff.py), at 0.0035 model units a px, centred on
-// the face at 1.79: the eyes 0.033 out and at 1.825, the lower edge of the brow
-// at 1.842, the lips meeting at 1.7395.
-const JEFF = {
-  eye: { x: 9.4, y: -10, w: 3.7, h: 1.1 },      // centre, half-width, half-height of the open eye
-  brow: { y: -14.9, inner: 3.0, outer: 17.2, w: 3.6 },
-  mouth: { y: 14.4, w: 6.2 },
-  // Strokes are bold: a fight-size head is about 26 px tall, and at the
-  // texture's 0.35 screen px a stroke px, finer lines vanish in a match.
-  lid: 1.7, line: 1.4,
-  iris: '#47342a', white: '#eee5d6',
-};
+// Jeff's 2D face values, where the painter's mappings are pinned.
+export const FACE_REF = { LID_Y: 2.8, PUPIL_R: 2.1, BROW_TILT: 2.8, MOUTH_CURVE: 1.2 };
 
-function paintJeff(g, def, expression) {
-  const J = JEFF, c = def.c || {};
+// The character, from the fighter's face values (the 2D defaults under any
+// they leave out, as drawFace reads them), in this painter's px. Each moves
+// only part of the way the 2D value does: the 2D face is drawn bold on a
+// small head, and this one sits on sculpted forms that already carry a look.
+export function character(def) {
+  const F = { ...STYLIZE.FACE, ...(def.face || {}) };
+  const d = (k) => F[k] - FACE_REF[k];
+  return {
+    open: 1.1 + d('LID_Y') * 0.25,              // half-height of the open eye: a heavy lid narrows it
+    iris: 1.9 + d('PUPIL_R') * 0.5,
+    pupil: 0.9 + d('PUPIL_R') * 0.24,
+    brow: F.BROW_W,                             // stroke width, as in 2D
+    tilt: d('BROW_TILT') * 0.5,                 // the inner ends drop by this more than Jeff's
+    curve: d('MOUTH_CURVE'),                    // the set mouth, from Jeff's smirk
+    // a fighter pleased with himself narrows his eyes at rest, as the
+    // squint of a smile does
+    smug: F.MOUTH_CURVE > 0,
+  };
+}
+
+export function paintSculpted(g, def, expression, layout) {
+  const J = layout, K = character(def), c = def.c || {};
   const hair = c.hair || INK;
   const lips = shade(c.skin || '#e2ab84', -38);
   g.lineCap = 'round';
   g.lineJoin = 'round';
 
-  // How each expression sets the features: how open the eyes are (1 his
-  // narrowed rest), where the brows' inner ends sit (down is positive) and
-  // their outer ends, and what the mouth does.
+  // How each expression sets the features: how open the eyes are (1 the
+  // fighter's own rest), where the brows' inner ends sit (down is positive)
+  // and their outer ends, and what the mouth does. The table is Jeff's; a
+  // fighter whose brows drop harder (BROW_TILT) carries that into every one.
   const X = {
-    idle:  { open: 1, inner: 0.6, outer: 0, mouth: 'set', squint: 1 },
+    idle:  { open: 1, inner: 0.6, outer: 0, mouth: 'set', squint: K.smug },
     angry: { open: 0.75, inner: 2.6, outer: -0.6, mouth: 'snarl' },
     block: { open: 0.65, inner: 2.2, outer: -0.4, mouth: 'grit' },
     hurt:  { open: 0, inner: -2, outer: 1.2, mouth: 'grimace' },
     ko:    { open: 0, inner: -0.8, outer: 1, mouth: 'slack' },
-    happy: { open: 0.9, inner: -0.6, outer: -0.6, mouth: 'grin', squint: 1 },
+    happy: { open: 0.9, inner: -0.6, outer: -0.6, mouth: 'grin', squint: true },
   }[expression] || { open: 1, inner: 0.6, outer: 0, mouth: 'set' };
+  const inner = X.inner + K.tilt, outer = X.outer - K.tilt * 0.4;
 
   for (const s of [-1, 1]) {
     const ex = s * J.eye.x, ey = J.eye.y;
     if (X.open > 0) {
-      // the white, an almond under a lid that sits low: he is never wide-eyed
-      const h = J.eye.h * X.open;
-      g.fillStyle = J.white;
+      // the white, an almond under a lid that sits low
+      const h = K.open * X.open;
+      g.fillStyle = WHITE;
       g.beginPath();
-      const inner = -s;                       // toward the nose
-      g.moveTo(ex + inner * J.eye.w, ey + 0.2);
-      g.lineTo(ex + inner * J.eye.w * 0.3, ey - h * 1.5);
-      g.lineTo(ex - inner * J.eye.w * 0.6, ey - h * 1.6);
-      g.quadraticCurveTo(ex - inner * J.eye.w * 1.05, ey - h * 0.9, ex - inner * J.eye.w, ey + 0.2);
-      g.quadraticCurveTo(ex, ey + h * 1.5, ex + inner * J.eye.w, ey + 0.2);
+      const nose = -s;                         // toward the nose
+      g.moveTo(ex + nose * J.eye.w, ey + 0.2);
+      g.lineTo(ex + nose * J.eye.w * 0.3, ey - h * 1.5);
+      g.lineTo(ex - nose * J.eye.w * 0.6, ey - h * 1.6);
+      g.quadraticCurveTo(ex - nose * J.eye.w * 1.05, ey - h * 0.9, ex - nose * J.eye.w, ey + 0.2);
+      g.quadraticCurveTo(ex, ey + h * 1.5, ex + nose * J.eye.w, ey + 0.2);
       g.fill();
       // the iris, clipped by the lids, looking straight ahead
       g.save();
       g.clip();
-      g.fillStyle = J.iris;
-      g.beginPath(); g.arc(ex, ey - 0.6, 1.9, 0, 7); g.fill();
+      g.fillStyle = IRIS;
+      g.beginPath(); g.arc(ex, ey - 0.6, K.iris, 0, 7); g.fill();
       g.fillStyle = INK;
-      g.beginPath(); g.arc(ex, ey - 0.6, 0.9, 0, 7); g.fill();
+      g.beginPath(); g.arc(ex, ey - 0.6, K.pupil, 0, 7); g.fill();
       // a catchlight: the difference between a glare and a tired stare
-      g.fillStyle = J.white;
+      g.fillStyle = WHITE;
       g.beginPath(); g.arc(ex - 0.6, ey - 1.1, 0.42, 0, 7); g.fill();
       g.restore();
-      // a confident squint: the lower lid pushed up under the outer half
+      // a squint: the lower lid pushed up under the outer half
       if (X.squint) {
         g.strokeStyle = INK;
         g.lineWidth = J.lid * 0.55;
         g.beginPath();
-        g.moveTo(ex - inner * J.eye.w * 0.05, ey + h * 1.25);
-        g.quadraticCurveTo(ex - inner * J.eye.w * 0.7, ey + h * 1.0, ex - inner * (J.eye.w + 0.2), ey + 0.1);
+        g.moveTo(ex - nose * J.eye.w * 0.05, ey + h * 1.25);
+        g.quadraticCurveTo(ex - nose * J.eye.w * 0.7, ey + h * 1.0, ex - nose * (J.eye.w + 0.2), ey + 0.1);
         g.stroke();
       }
       // the heavy upper lid line
       g.strokeStyle = INK;
       g.lineWidth = J.lid;
       g.beginPath();
-      g.moveTo(ex + inner * (J.eye.w + 0.3), ey + 0.3);
-      g.lineTo(ex + inner * J.eye.w * 0.3, ey - h * 1.5 - 0.2);
-      g.lineTo(ex - inner * J.eye.w * 0.6, ey - h * 1.6 - 0.2);
-      g.quadraticCurveTo(ex - inner * J.eye.w * 1.05, ey - h * 0.9, ex - inner * (J.eye.w + 0.4), ey + 0.4);
+      g.moveTo(ex + nose * (J.eye.w + 0.3), ey + 0.3);
+      g.lineTo(ex + nose * J.eye.w * 0.3, ey - h * 1.5 - 0.2);
+      g.lineTo(ex - nose * J.eye.w * 0.6, ey - h * 1.6 - 0.2);
+      g.quadraticCurveTo(ex - nose * J.eye.w * 1.05, ey - h * 0.9, ex - nose * (J.eye.w + 0.4), ey + 0.4);
       g.stroke();
     } else {
       // shut: squeezed in pain, or closed out cold
@@ -106,13 +129,13 @@ function paintJeff(g, def, expression) {
       }
       g.stroke();
     }
-    // the brow: hard, flat and thick, along the lower edge of the ridge
+    // the brow, along the lower edge of the ridge
     g.strokeStyle = hair;
-    g.lineWidth = J.brow.w;
+    g.lineWidth = K.brow;
     g.beginPath();
-    g.moveTo(s * J.brow.inner, J.brow.y + X.inner);
-    g.lineTo(s * (J.brow.inner + J.brow.outer) * 0.55, J.brow.y + (X.inner + X.outer) * 0.35);
-    g.lineTo(s * J.brow.outer, J.brow.y + X.outer - 0.4);
+    g.moveTo(s * J.brow.inner, J.brow.y + inner);
+    g.lineTo(s * (J.brow.inner + J.brow.outer) * 0.55, J.brow.y + (inner + outer) * 0.35);
+    g.lineTo(s * J.brow.outer, J.brow.y + outer - 0.4);
     g.stroke();
   }
 
@@ -121,7 +144,7 @@ function paintJeff(g, def, expression) {
   g.strokeStyle = INK;
   g.lineWidth = J.line;
   const teeth = (top, bottom, w) => {
-    g.fillStyle = J.white;
+    g.fillStyle = WHITE;
     g.beginPath();
     g.moveTo(-w, my + top * 0.3);
     g.quadraticCurveTo(0, my + top, w, my + top * 0.3);
@@ -132,10 +155,12 @@ function paintJeff(g, def, expression) {
     g.stroke();
   };
   if (X.mouth === 'set') {
-    // set, one corner up in a smirk: nothing about him is worried
+    // the fighter's own set: Jeff's is a smirk, one corner up; a lower
+    // MOUTH_CURVE levels it, and below zero pulls both corners down
+    const k = K.curve;
     g.beginPath();
-    g.moveTo(-mw, my + 0.2);
-    g.quadraticCurveTo(0, my + 0.8, mw + 0.4, my - 1.3);
+    g.moveTo(-mw, my + 0.2 - k * 0.4);
+    g.quadraticCurveTo(0, my + 0.8 + k * 0.5, mw + 0.4, my - 1.3 - k * 0.9);
     g.stroke();
     lip(g, lips, my, mw);
   } else if (X.mouth === 'snarl') {
@@ -153,7 +178,6 @@ function paintJeff(g, def, expression) {
     g.fillStyle = '#3a1a14';
     g.beginPath(); g.ellipse(0, my + 1.2, mw * 0.45, 2.2, 0, 0, 7); g.fill(); g.stroke();
   } else if (X.mouth === 'grin') {
-    // pleased with himself, which he usually is
     teeth(-0.9, 1.6, mw * 0.9);
     g.beginPath();
     g.moveTo(-mw - 0.4, my - 1.4); g.quadraticCurveTo(0, my + 2.6, mw + 0.4, my - 1.6);
@@ -173,5 +197,3 @@ function lip(g, colour, my, mw) {
   g.fill();
   g.globalAlpha = 1;
 }
-
-export const SCULPTED_FACES = { jeff: paintJeff };

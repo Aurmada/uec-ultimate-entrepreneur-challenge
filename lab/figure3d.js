@@ -11,9 +11,11 @@ import { computePose, FACE_PAINTER } from '/src/engine/drawFighter.js';
 import { applyProportions, clampBody } from '/src/engine/proportions.js';
 import { enable3D, has3D, form3D, preload3D, renderFull3D } from '/src/engine/gl3d/index.js';
 import { FIGHTER_MODELS, athleteFor } from '/src/data/models3d.js';
-// `models` entries: 'founder' (today's), 'athlete' (the shared new body), 'own' (each fighter's own).
-const modelId = (model, def) => (model === 'athlete' ? athleteFor(def) : model === 'own' ? def.id : model);
-const LABEL = { founder: 'today', athlete: 'shared new body', own: 'own body', 'jeff-sculpt': 'sculpted' };
+// `models` entries: 'founder' (today's), 'athlete' (the shared new body), 'own' (each fighter's own),
+// 'sculpted' (each fighter's sculpt, `sculpt:<id>`, for those remodelled so far).
+const modelId = (model, def) => (model === 'athlete' ? athleteFor(def) : model === 'own' ? def.id
+  : model === 'sculpted' ? `sculpt:${def.id}` : model);
+const LABEL = { founder: 'today', athlete: 'shared new body', own: 'own body', sculpted: 'sculpted' };
 import { getFighter } from '/src/data/fighters.js';
 import { ATTACKS } from '/src/config.js';
 import { CASES } from '/lab/figure-sheet.js';
@@ -72,8 +74,8 @@ export async function sheet(path, { ids = ['bozo'], cases = ['idle', 'punch', 'k
 // A model's face up close in every expression, standing in its idle pose, as
 // the renderer paints it: for judging a sculpted head and its painted face.
 //
-//   await m.faces('/lab/previews/faces.png', { id: 'bozo', model: 'jeff-sculpt' });
-export async function faces(path, { id = 'bozo', model = 'jeff-sculpt', size = 360, span = 52, focus = [14, -168], turn = null } = {}) {
+//   await m.faces('/lab/previews/faces.png', { id: 'bozo' });   // their sculpt, `sculpt:<id>`
+export async function faces(path, { id = 'bozo', model = `sculpt:${id}`, size = 360, span = 52, focus = [14, -168], turn = null } = {}) {
   const { FACE_STATES } = await import('/src/data/models3d.js');
   const { GL3D } = await import('/src/config.js');
   enable3D();

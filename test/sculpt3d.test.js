@@ -1,4 +1,4 @@
-// The sculpted Jeff's model as built (lab/blender/sculpt_jeff.py --rig):
+// The sculpted Jeff's model as built (lab/blender/fighter3d.py -- bozo --rig):
 // dressed in his clothes from the 2D game, bare fists (November 2026).
 
 import { test } from 'node:test';
@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { MODELS3D } from '../src/data/models3d.js';
 
-const glb = readFileSync(new URL(`../${MODELS3D['jeff-sculpt'].url}`, import.meta.url));
+const glb = readFileSync(new URL(`../${MODELS3D['sculpt:bozo'].url}`, import.meta.url));
 const model = extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength)));
 const body = model.primitives.filter((p) => p.name === 'body');
 

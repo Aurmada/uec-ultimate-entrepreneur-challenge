@@ -227,15 +227,15 @@ heroic proportions of the modern arcade fighters.
 `lab/blender/sculpt.py` sculpts in a signed distance field: masses blended
 broadly for the silhouette, then definition carved in as shallow grooves that
 follow the surface (`Field.groove`), so muscles read without standing proud as
-bubbles, then meshed with surface nets. `lab/blender/sculpt_jeff.py` is Jeff's
-body (7.5 heads, tapered limbs, fists, a placeholder head), and
-`lab/blender/clay.py` renders clay views. Stages, each shown to the owner
+bubbles, then meshed with surface nets. Jeff's body (7.5 heads, tapered
+limbs, fists) was `lab/blender/sculpt_jeff.py`, now the roster pipeline
+(below), and `lab/blender/clay.py` renders clay views. Stages, each shown to the owner
 before the next: the body; the face (an original design, not a likeness); the
 hands; the costume; then rigging and into the game on the same skeleton.
 
 Where it stands. The owner preferred him drawn by the game's own renderer to
-the Blender render, so he is rigged (`--rig`, `assets/models/sculpt/jeff.glb`)
-and registered as `jeff-sculpt` in `models3d.js`, used only by the lab sheets
+the Blender render, so he is rigged (`--rig`, `assets/models/sculpt/bozo.glb`)
+and registered as `sculpt:bozo` in `models3d.js`, used only by the lab sheets
 (`lab/figure3d.js`). Its `fit` lets a body built to its own size keep its own
 torso, neck and head, lean over bent knees, and nod at most `fit.nod`, all
 render only. Owner feedback so far: the neck and head were not humanly possible
@@ -279,8 +279,8 @@ flat brows, narrow eyes, a wide set jaw), never a likeness. The forms are
 sculpted (a heavy level brow, deep-set eyes under heavy lids, cheekbones, a
 broad straight nose, firm lips, a square chin and wide jaw). The eyes, brow
 hair and mouth are painted on in game, one cell per expression as the founder's
-face is, but by a painter made for this head (`src/engine/gl3d/faces3d.js`,
-named by the model's `face.painter`): the 2D face's layout puts the mouth
+face is, but by a painter drawn for sculpted heads (`src/engine/gl3d/faces3d.js`,
+to the model's `face.layout`): the 2D face's layout puts the mouth
 just under mid-head and cannot sit on a sculpted brow and mouth. Strokes are
 bold on purpose, so the face still reads on a 26 px head in a match. The
 owner: "the face is going in the right direction". Then a polish: a confident
@@ -292,8 +292,8 @@ sees his mouth.
 His shades (the owner: keep them, on all the time): a mesh of their own,
 `eyewear:shades` (worn because his accessory is shades), two wraparound
 lenses on a bar across the brow, a bridge and arms back to the ears, weighted
-wholly to the head and built in their own fine field (`eyewear()` in
-sculpt_jeff.py). The lenses are dark glass (`glass: { lens: 0.84 }`) his
+wholly to the head and built in their own fine field (`shades()` in
+fighter3d.py, placed by `eyewear()` in `fighters/bozo.py`). The lenses are dark glass (`glass: { lens: 0.84 }`) his
 painted eyes show faintly through, as in 2D, and the bar sits under the
 painted brows, so his brows and mouth still carry his expression.
 
@@ -302,7 +302,7 @@ His clothes (the owner: clothes, and bare fists): his outfit from the 2D game
 quilted vest open down the front with a standing collar, suit trousers and
 shoes, replacing the fight shorts. Each is the body's own surface pushed out
 and cut to its edges (`shirt()`, `vest()`, `trousers()`, `shoes()` in
-sculpt_jeff.py), in his palette's roles (`suit`, `pants`, `shoe`; the shirt
+fighter3d.py), in his palette's roles (`suit`, `pants`, `shoe`; the shirt
 white is the 2D outfit's own). The trouser legs fall straight from the thigh,
 each leg its own with a slot between them below the crotch: blended, they
 webbed together and tore into black spikes as the legs moved. The skin the
@@ -310,6 +310,34 @@ clothes cover is removed (`hidden`), all of it below the waist, so none shows
 through. `test/sculpt3d.test.js`.
 `lab/figure3d.js` `faces()` draws every expression close up (`focus` on
 `renderFull3D` frames one part of a fighter). `test/faces3d.test.js`.
+
+### The roster pipeline (2026-11-01)
+
+The owner: Jeff is the character "to build all the existing ones and improve
+them". So his build is now one pipeline for the whole cast, and Jeff is its
+first fighter, coming out of it byte for byte as he was (the same field, the
+same model file, the same painted face, call for call):
+
+- `lab/blender/fighter3d.py -- <id> --rig` builds `assets/models/sculpt/<id>.glb`
+  (`--views <dir>` for clay). The body is the pipeline's, scaled by the
+  fighter's own knobs read from the game (`Build`: `figure.muscle`, `chest`,
+  `waist`, `belly`, `neck`, `body.shoulders`). Jeff's knobs are the reference,
+  so his factors are all exactly 1; each knob moves only part of the way its
+  ratio says, since the 2D knobs are drawn exaggerated. A softer build is
+  carved shallower. Clothes come from the fighter's `outfit` (`OUTFITS`, so
+  far only Jeff's `vest`), in their palette; rig, weights and export are
+  shared.
+- `lab/blender/fighters/<id>.py` holds what is the fighter's alone: their head
+  (`head`), its carved lines (`head_definition`) and their eyewear, an
+  original face built to their character notes.
+- `models3d.js` registers each as `sculpt:<id>` from `SCULPTED`: what every
+  sculpted model shares, plus each one's leaf bones, joints' width, face
+  centre, face `layout` (where the eyes, brow ridge and lips are on that head,
+  in the painter's px) and form. Lab sheets name it `'sculpted'`.
+- The face painter is shared: the layout says where the features are, and the
+  fighter's own 2D face values (`LID_Y`, `PUPIL_R`, `BROW_W`, `BROW_TILT`,
+  `MOUTH_CURVE`) say how they are drawn, pinned on Jeff's (`FACE_REF`), so
+  another fighter's narrowed eyes, scowl or stare carry over from 2D.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

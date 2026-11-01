@@ -37,7 +37,7 @@ const punchAt = (k) => {
 };
 
 test('the sculpted Jeff boxes, and no 2D fighter carries a form', () => {
-  assert.ok(FORMS[MODELS3D['jeff-sculpt'].form], 'jeff-sculpt names a form that exists');
+  assert.ok(FORMS[MODELS3D['sculpt:bozo'].form], 'sculpt:bozo names a form that exists');
   for (const def of [...FIGHTERS, ...BASE_CHARACTERS]) {
     assert.equal(def.form, undefined, `${def.id} carries a form: it would reach the 2D game`);
   }
@@ -90,7 +90,7 @@ test('the body turns into the punch: away on the load, through on the hit, squar
   }
 });
 
-const spec = MODELS3D['jeff-sculpt'];
+const spec = MODELS3D['sculpt:bozo'];
 const glb = readFileSync(new URL(`../${spec.url}`, import.meta.url));
 const rig = buildRig(extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength))), spec);
 const joint = (m, bone, end = false) => transformPoint(m, rig.names.indexOf(bone), end ? rig.rest[bone].tail : rig.rest[bone].head);
