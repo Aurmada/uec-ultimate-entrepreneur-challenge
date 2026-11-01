@@ -17,6 +17,7 @@ import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import { FORMS } from '../../data/forms.js';
+import { SCULPTED_FACES } from './faces3d.js';
 import {
   MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D, athleteFor, newBodyFor,
   FACE_STATES, FACE_GRID, faceCell, faceKey, drawnFaceKey,
@@ -214,13 +215,15 @@ export function preload3D(id) { if (renderer && MODELS3D[id]) load(id); }
 
 // The whole fighter at any size, through the same renderer a match uses, for
 // lab sheets that judge a model itself (lab/figure3d.js). The view is `span`
-// rig px across with the feet near the bottom, drawn into `rect` on ctx.
-export function renderFull3D(ctx, rect, def, P, { state = 'idle', face = null, span = 250 } = {}) {
+// rig px across with the feet near the bottom, drawn into `rect` on ctx, or
+// centred on `focus` (rig px from the feet, y up negative), to look closely
+// at one part such as the face.
+export function renderFull3D(ctx, rect, def, P, { state = 'idle', face = null, span = 250, focus = null } = {}) {
   const entry = modelFor(def);
   if (!entry) return false;
   solvePose(entry.rig, P);
   const w = span, h = (span * rect.h) / rect.w;
-  const box = { ox: w * 0.42, oy: h - 12, w, h };
+  const box = focus ? { ox: w / 2 - focus[0], oy: h / 2 - focus[1], w, h } : { ox: w * 0.42, oy: h - 12, w, h };
   const { vw, vh } = drawModel(entry, def, state, false, P.face || 'idle', face, { box, ss: rect.w / w, light: stageLight });
   const img = renderer.image();
   ctx.drawImage(img.src, 0, 0, vw, vh, rect.x, rect.y, rect.w, rect.h);
@@ -380,6 +383,8 @@ function faceSlot(id, F) {
     map: [F.at[0], F.at[1], 2 * S * F.px[0], 2 * S * F.px[1]],
     axis: [Math.cos(F.turn || 0), Math.sin(F.turn || 0)],
     front: F.front, fade: F.fade, mesh: F.mesh, role: F.role,
+    // a sculpted head's own painter (faces3d.js), else the 2D one
+    paint: F.painter ? SCULPTED_FACES[F.painter] : null,
   };
 }
 
@@ -391,7 +396,7 @@ function faceSlot(id, F) {
 // fighter wearing it.
 function faceFor(slot, def, expression, painter, photo, r = renderer) {
   const key = slot.key + (photo ? faceKey(def) : drawnFaceKey(def));
-  slot.texture = r.texture(key) || r.uploadTexture(key, paintFaces(slot, def, painter.paint, photo));
+  slot.texture = r.texture(key) || r.uploadTexture(key, paintFaces(slot, def, slot.paint || painter.paint, photo));
   slot.cell = faceCell(expression);
   return slot;
 }

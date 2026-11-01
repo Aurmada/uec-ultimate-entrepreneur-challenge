@@ -95,6 +95,15 @@ MODELS3D['jeff-sculpt'] = {
   skull: 0.16,
   fit: { girth: 1, head: 1, nod: 0.2, lean: 0.14, pelvis: 0.85, shoulderHalf: 0.2, hipHalf: 0.095 },
   form: 'boxing',
+  // His face is sculpted, and its eyes, brows and mouth are painted on by a
+  // painter made for this head (engine/gl3d/faces3d.js), projected straight
+  // along his forward axis: the 2D face's layout cannot sit on a real brow
+  // and mouth. 0.0035 model units a px, centred on the face at 1.79.
+  face: {
+    mesh: 'body', role: 'skin', painter: 'jeff',
+    turn: 0, at: [0, 1.79], px: [0.0035, 0.0035],
+    front: 0.045, fade: [0.25, 0.0],
+  },
 };
 
 export const DEFAULT_MODEL = 'founder';

@@ -272,8 +272,19 @@ when the legs moved); the spine, shoulder blades and lat edges carved into the
 back; the pec running on into the arm as the front fold of the armpit; softer
 ab lines; and the skin under the shorts removed (`hide_under_shorts`), which
 was what showed through them as patches when the waist turned. Still to do:
-the neck from the side, the arms stretching a little at full punch, and the
-head, a mannequin until the face stage.
+the neck from the side, and the arms stretching a little at full punch.
+
+The face (2026-11-01): an original design built to his character notes (hard
+flat brows, narrow eyes, a wide set jaw), never a likeness. The forms are
+sculpted (a heavy level brow, deep-set eyes under heavy lids, cheekbones, a
+broad straight nose, firm lips, a square chin and wide jaw). The eyes, brow
+hair and mouth are painted on in game, one cell per expression as the founder's
+face is, but by a painter made for this head (`src/engine/gl3d/faces3d.js`,
+named by the model's `face.painter`): the 2D face's layout puts the mouth
+just under mid-head and cannot sit on a sculpted brow and mouth. Strokes are
+bold on purpose, so the face still reads on a 26 px head in a match.
+`lab/figure3d.js` `faces()` draws every expression close up (`focus` on
+`renderFull3D` frames one part of a fighter). `test/faces3d.test.js`.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

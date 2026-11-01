@@ -69,6 +69,48 @@ export async function sheet(path, { ids = ['bozo'], cases = ['idle', 'punch', 'k
   return `${path} → ${res.status}`;
 }
 
+// A model's face up close in every expression, standing in its idle pose, as
+// the renderer paints it: for judging a sculpted head and its painted face.
+//
+//   await m.faces('/lab/previews/faces.png', { id: 'bozo', model: 'jeff-sculpt' });
+export async function faces(path, { id = 'bozo', model = 'jeff-sculpt', size = 360, span = 52, focus = [14, -168], turn = null } = {}) {
+  const { FACE_STATES } = await import('/src/data/models3d.js');
+  const { GL3D } = await import('/src/config.js');
+  enable3D();
+  preload3D(model);
+  const saved = { ...FIGHTER_MODELS }, yaw = { YAW: GL3D.YAW, HIP_YAW: GL3D.HIP_YAW, HEAD_YAW: GL3D.HEAD_YAW };
+  const def = getFighter(id);
+  const out = document.createElement('canvas');
+  out.width = size * FACE_STATES.length;
+  out.height = size + 20;
+  const oc = out.getContext('2d');
+  oc.fillStyle = '#141a2e';
+  oc.fillRect(0, 0, out.width, out.height);
+  try {
+    FIGHTER_MODELS[id] = model;
+    // `turn` faces the body toward the viewer, as a portrait does
+    if (turn) Object.assign(GL3D, turn);
+    for (let i = 0; i < 200 && !has3D(def); i++) await wait(50);
+    FACE_STATES.forEach((expression, i) => {
+      const f = { def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching: false, movingBack: false, attack: null };
+      const P = applyProportions(computePose(f, 0, form3D(def)), clampBody(def.body));
+      figureFrame(P);
+      P.face = expression;
+      renderFull3D(oc, { x: i * size, y: 20, w: size, h: size }, def, P, { face: FACE_PAINTER, span, focus });
+      oc.fillStyle = '#ffd23f';
+      oc.font = '600 14px system-ui';
+      oc.fillText(expression, i * size + 10, 15);
+    });
+  } finally {
+    Object.assign(GL3D, yaw);
+    for (const k of Object.keys(FIGHTER_MODELS)) delete FIGHTER_MODELS[k];
+    Object.assign(FIGHTER_MODELS, saved);
+  }
+  const blob = await new Promise((r) => out.toBlob(r, 'image/png'));
+  const res = await fetch(path, { method: 'PUT', body: blob });
+  return `${path} → ${res.status}`;
+}
+
 // The cast in one pose, a row per body: today's founder over the athlete.
 //
 //   await m.cast('/lab/previews/figure3d-cast.png', { pose: 'idle' });
