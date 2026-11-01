@@ -20,7 +20,7 @@ import { carried } from './tracks.js';
 // one at the chin, elbows down over the ribs, chin down, knees bent, the feet
 // a long stance apart with the rear one back.
 const GUARD_F = { x: 50, y: -172 };
-const GUARD_B = { x: 31, y: -166 };
+const GUARD_B = { x: 32, y: -162 };   // at the jaw, under the mouth, so the camera still sees it
 const HIP = -82, SHOULDER = -148, HEAD = -176;   // REST lowered by the stance
 
 // The lead straight, thrown from the guard and back to it along the same line.

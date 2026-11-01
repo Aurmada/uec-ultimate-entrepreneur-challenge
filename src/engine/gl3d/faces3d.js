@@ -41,12 +41,12 @@ function paintJeff(g, def, expression) {
   // narrowed rest), where the brows' inner ends sit (down is positive) and
   // their outer ends, and what the mouth does.
   const X = {
-    idle:  { open: 1, inner: 0.6, outer: 0, mouth: 'set' },
+    idle:  { open: 1, inner: 0.6, outer: 0, mouth: 'set', squint: 1 },
     angry: { open: 0.75, inner: 2.6, outer: -0.6, mouth: 'snarl' },
     block: { open: 0.65, inner: 2.2, outer: -0.4, mouth: 'grit' },
     hurt:  { open: 0, inner: -2, outer: 1.2, mouth: 'grimace' },
     ko:    { open: 0, inner: -0.8, outer: 1, mouth: 'slack' },
-    happy: { open: 0.9, inner: -0.6, outer: -0.6, mouth: 'grin' },
+    happy: { open: 0.9, inner: -0.6, outer: -0.6, mouth: 'grin', squint: 1 },
   }[expression] || { open: 1, inner: 0.6, outer: 0, mouth: 'set' };
 
   for (const s of [-1, 1]) {
@@ -67,10 +67,22 @@ function paintJeff(g, def, expression) {
       g.save();
       g.clip();
       g.fillStyle = J.iris;
-      g.beginPath(); g.arc(ex, ey - 0.2, 1.9, 0, 7); g.fill();
+      g.beginPath(); g.arc(ex, ey - 0.6, 1.9, 0, 7); g.fill();
       g.fillStyle = INK;
-      g.beginPath(); g.arc(ex, ey - 0.2, 0.9, 0, 7); g.fill();
+      g.beginPath(); g.arc(ex, ey - 0.6, 0.9, 0, 7); g.fill();
+      // a catchlight: the difference between a glare and a tired stare
+      g.fillStyle = J.white;
+      g.beginPath(); g.arc(ex - 0.6, ey - 1.1, 0.42, 0, 7); g.fill();
       g.restore();
+      // a confident squint: the lower lid pushed up under the outer half
+      if (X.squint) {
+        g.strokeStyle = INK;
+        g.lineWidth = J.lid * 0.55;
+        g.beginPath();
+        g.moveTo(ex - inner * J.eye.w * 0.05, ey + h * 1.25);
+        g.quadraticCurveTo(ex - inner * J.eye.w * 0.7, ey + h * 1.0, ex - inner * (J.eye.w + 0.2), ey + 0.1);
+        g.stroke();
+      }
       // the heavy upper lid line
       g.strokeStyle = INK;
       g.lineWidth = J.lid;
@@ -120,10 +132,10 @@ function paintJeff(g, def, expression) {
     g.stroke();
   };
   if (X.mouth === 'set') {
-    // set, the corners a touch up: nothing about him is worried
+    // set, one corner up in a smirk: nothing about him is worried
     g.beginPath();
-    g.moveTo(-mw, my - 0.5);
-    g.quadraticCurveTo(0, my + 0.9, mw, my - 0.7);
+    g.moveTo(-mw, my + 0.2);
+    g.quadraticCurveTo(0, my + 0.8, mw + 0.4, my - 1.3);
     g.stroke();
     lip(g, lips, my, mw);
   } else if (X.mouth === 'snarl') {

@@ -282,7 +282,12 @@ hair and mouth are painted on in game, one cell per expression as the founder's
 face is, but by a painter made for this head (`src/engine/gl3d/faces3d.js`,
 named by the model's `face.painter`): the 2D face's layout puts the mouth
 just under mid-head and cannot sit on a sculpted brow and mouth. Strokes are
-bold on purpose, so the face still reads on a 26 px head in a match.
+bold on purpose, so the face still reads on a 26 px head in a match. The
+owner: "the face is going in the right direction". Then a polish: a confident
+squint, a catchlight and a smirk at rest (he looked tired), the eye hollows
+moved up under the brow (they read as bags), a squarer chin (a ball in
+profile), and his rear guard fist lowered to the jaw so the game's camera
+sees his mouth.
 `lab/figure3d.js` `faces()` draws every expression close up (`focus` on
 `renderFull3D` frames one part of a fighter). `test/faces3d.test.js`.
 

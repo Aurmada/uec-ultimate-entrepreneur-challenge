@@ -134,9 +134,11 @@ for s in (1, -1):
     E(V(0.08, s * 0.031, 1.852), (0.016, 0.036, 0.015), k=0.022)
 E(V(0.088, 0, 1.849), (0.01, 0.016, 0.013), k=0.016)
 # Sockets under it, then the eyes set back in them under heavy lids: the
-# narrowed look is carved, so it holds whatever the painted eye is doing.
+# narrowed look is carved, so it holds whatever the painted eye is doing. The
+# hollow is under the brow, not the eye: carved lower, it read as bags under
+# his eyes and made him look tired.
 for s in (1, -1):
-    F.cut(sc.Ellipsoid(V(0.095, s * EYE_Y, EYE_Z + 0.001), (0.016, 0.02, 0.011)), 0.012)
+    F.cut(sc.Ellipsoid(V(0.095, s * EYE_Y, EYE_Z + 0.004), (0.016, 0.02, 0.01)), 0.012)
 for s in (1, -1):
     E(V(0.074, s * EYE_Y, EYE_Z), (0.0135, 0.0135, 0.0135), k=0.004)          # eyeball
     E(V(0.078, s * EYE_Y, EYE_Z + 0.005), (0.011, 0.016, 0.006), k=0.006)    # heavy upper lid
@@ -149,7 +151,7 @@ for s in (1, -1):
 E(V(0.068, 0, 1.75), (0.026, 0.04, 0.028), k=0.03)
 E(V(0.091, 0, 1.746), (0.006, 0.022, 0.005), k=0.008)
 E(V(0.089, 0, 1.733), (0.007, 0.019, 0.005), k=0.008)
-E(V(0.087, 0, 1.704), (0.02, 0.032, 0.02), k=0.015)
+F.add(sc.Box(V(0.081, 0, 1.706), (0.013, 0.025, 0.012), 0.013), 0.022)     # square, not a ball in profile
 for s in (1, -1):
     E(V(-0.006, s * 0.084, 1.825), (0.022, 0.011, 0.03), sc.rot(ry=-10), k=0.01)  # ear
     F.cut(sc.Ellipsoid(V(-0.002, s * 0.093, 1.82), (0.009, 0.006, 0.013)), 0.004)  # and its bowl
