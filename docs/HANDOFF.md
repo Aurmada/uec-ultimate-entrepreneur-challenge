@@ -49,6 +49,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | `main` | The live game, v3.12 (`SIM_VERSION` 9), with the 3D preview behind `?gl` or Settings | Deployed. A push here is a release. 462 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Built on 2026-10-30, not released. 471 tests pass. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | In progress on 2026-10-30, not released. 482 tests pass. |
+| `claude/jeff-model` | `claude/figure-pass` plus Jeff remodelled from scratch, one stage at a time | In progress on 2026-11-01. The pre-rendered route (`claude/blender-sprites`) was turned down. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -211,6 +212,26 @@ fighter wears and that no two share a build; both fail with one shared body.
 Next for uniqueness, as the owner set the direction: their own heads and faces
 (the face is still projected onto today's round head), signature costume
 pieces, then how each one moves.
+
+## Jeff, remodelled from scratch (2026-11-01, on `claude/jeff-model`, in progress)
+
+Two routes before this were turned down by the owner. Better 3D bodies built
+from metaballs read as "bulky, chunky": every form blended into its
+neighbours, so an arm was a sausage the same thickness from shoulder to wrist,
+and the live 3D also draws every limb 40% thicker (`GL3D.ARM_GIRTH` and
+friends). Pre-rendering those same bodies in Blender (`claude/blender-sprites`,
+2026-10-31) changed nothing, since the shapes were the problem. So the owner
+asked to start again, one character at a time, beginning with Jeff, to the
+heroic proportions of the modern arcade fighters.
+
+`lab/blender/sculpt.py` sculpts in a signed distance field: masses blended
+broadly for the silhouette, then definition carved in as shallow grooves that
+follow the surface (`Field.groove`), so muscles read without standing proud as
+bubbles, then meshed with surface nets. `lab/blender/sculpt_jeff.py` is Jeff's
+body (7.5 heads, tapered limbs, fists, a placeholder head), and
+`lab/blender/clay.py` renders clay views. Stages, each shown to the owner
+before the next: the body; the face (an original design, not a likeness); the
+hands; the costume; then rigging and into the game on the same skeleton.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 
