@@ -288,6 +288,14 @@ squint, a catchlight and a smirk at rest (he looked tired), the eye hollows
 moved up under the brow (they read as bags), a squarer chin (a ball in
 profile), and his rear guard fist lowered to the jaw so the game's camera
 sees his mouth.
+
+His shades (the owner: keep them, on all the time): a mesh of their own,
+`eyewear:shades` (worn because his accessory is shades), two wraparound
+lenses on a bar across the brow, a bridge and arms back to the ears, weighted
+wholly to the head and built in their own fine field (`eyewear()` in
+sculpt_jeff.py). The lenses are dark glass (`glass: { lens: 0.84 }`) his
+painted eyes show faintly through, as in 2D, and the bar sits under the
+painted brows, so his brows and mouth still carry his expression.
 `lab/figure3d.js` `faces()` draws every expression close up (`focus` on
 `renderFull3D` frames one part of a fighter). `test/faces3d.test.js`.
 

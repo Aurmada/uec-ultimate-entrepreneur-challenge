@@ -6,6 +6,9 @@ import assert from 'node:assert/strict';
 import { SCULPTED_FACES } from '../src/engine/gl3d/faces3d.js';
 import { MODELS3D, FACE_STATES } from '../src/data/models3d.js';
 import { getFighter } from '../src/data/fighters.js';
+import { readFileSync } from 'node:fs';
+import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
+import { wearing } from '../src/engine/gl3d/index.js';
 
 // A 2D context that records what is drawn, enough to tell one face from another.
 function recorder() {
@@ -33,4 +36,14 @@ test("the sculpted Jeff's face paints every expression, each its own", () => {
     return calls.join(';');
   });
   assert.equal(new Set(drawn).size, FACE_STATES.length, 'two expressions paint the same face');
+});
+
+test('the sculpted Jeff wears his shades, dark glass over his eyes', () => {
+  const spec = MODELS3D['jeff-sculpt'];
+  const glb = readFileSync(new URL(`../${spec.url}`, import.meta.url));
+  const model = extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength)));
+  const roles = model.primitives.filter((p) => p.name === 'eyewear:shades').map((p) => p.role).sort();
+  assert.deepEqual(roles, ['frame', 'lens'], 'no shades mesh with a lens and a frame');
+  assert.ok(wearing(getFighter('bozo'), 'idle')('eyewear:shades'), 'Jeff does not wear them');
+  assert.ok(spec.glass?.lens > 0 && spec.glass.lens < 1, 'the lenses are not see-through glass');
 });

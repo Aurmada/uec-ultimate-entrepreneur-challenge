@@ -104,6 +104,10 @@ MODELS3D['jeff-sculpt'] = {
     turn: 0, at: [0, 1.79], px: [0.0035, 0.0035],
     front: 0.045, fade: [0.25, 0.0],
   },
+  // His shades are a mesh of their own ('eyewear:shades', worn because his
+  // accessory is shades), the lenses dark glass his painted eyes show faintly
+  // through, as the 2D shades let them.
+  glass: { lens: 0.84 },
 };
 
 export const DEFAULT_MODEL = 'founder';

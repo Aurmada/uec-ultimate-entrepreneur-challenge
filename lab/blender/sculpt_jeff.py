@@ -414,6 +414,37 @@ def hide_under_shorts(obj):
     bm.free()
 
 
+def eyewear():
+    """His shades (the owner: keep them), on whatever he is doing: two
+    wraparound lenses on a bar across the brow, a bridge on the nose and arms
+    back to the ears. The bar sits under the painted brows, so his brows still
+    carry his expression above it and his mouth below. Its own fine field: the
+    body's 3 mm samples are too coarse for a frame."""
+    import bpy
+    lo, hi = (-0.03, -0.11, 1.795), (0.125, 0.11, 1.85)
+    L = sc.Field(lo=lo, hi=hi, h=0.0012)
+    for s in (1, -1):
+        L.add(sc.Ellipsoid(V(0.104, s * 0.031, 1.822), (0.0028, 0.025, 0.0135), sc.rot(rz=s * 18)), 0.0)
+    lens = sc.to_blender('lens', *L.mesh(), smooth=1)
+    R = sc.Field(lo=lo, hi=hi, h=0.0012)
+    bar = [V(0.08, -0.062, 1.834), V(0.1, -0.034, 1.837), V(0.107, 0, 1.835), V(0.1, 0.034, 1.837), V(0.08, 0.062, 1.834)]
+    for a, b in zip(bar, bar[1:]):
+        R.add(sc.RoundCone(a, b, 0.0032, 0.0032), 0.002)
+    R.add(sc.RoundCone(V(0.107, -0.008, 1.828), V(0.107, 0.008, 1.828), 0.0025, 0.0025), 0.002)
+    for s in (1, -1):
+        R.add(sc.RoundCone(V(0.08, s * 0.062, 1.834), V(-0.012, s * 0.09, 1.826), 0.003, 0.0026), 0.002)
+    frame = sc.to_blender('frame', *R.mesh(), smooth=1)
+    for ob, role, colour in ((lens, 'lens', (0.02, 0.025, 0.045, 1)), (frame, 'frame', (0.012, 0.012, 0.016, 1))):
+        m = bpy.data.materials.new(role)
+        m.use_nodes = True
+        m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = colour
+        ob.data.materials.append(m)
+    with bpy.context.temp_override(active_object=lens, selected_editable_objects=[lens, frame], selected_objects=[lens, frame]):
+        bpy.ops.object.join()
+    lens.name = lens.data.name = 'eyewear:shades'
+    return lens
+
+
 def export_rigged(path, tris=40000):
     """Jeff as a game model: decimated, in shorts, weighted to the skeleton."""
     import bpy
@@ -462,6 +493,17 @@ def export_rigged(path, tris=40000):
     mod = obj.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig
     obj.parent = rig
+    # the shades ride the head, wholly
+    shades = eyewear()
+    dec = shades.modifiers.new('Decimate', 'DECIMATE')
+    dec.ratio = min(1.0, 3000 / (2 * len(shades.data.polygons)))
+    with bpy.context.temp_override(object=shades, active_object=shades, selected_objects=[shades]):
+        bpy.ops.object.modifier_apply(modifier=dec.name)
+    shades.data.shade_smooth()
+    shades.vertex_groups.new(name='head').add(list(range(len(shades.data.vertices))), 1.0, 'REPLACE')
+    mod = shades.modifiers.new('Armature', 'ARMATURE')
+    mod.object = rig
+    shades.parent = rig
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=path, export_format='GLB', use_selection=False,
