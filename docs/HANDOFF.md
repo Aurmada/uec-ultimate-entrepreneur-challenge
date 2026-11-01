@@ -260,15 +260,20 @@ loaded and turned through the hips and shoulders, the rear fist home
 throughout. Kicks, the uppercut and the slap still use the shared tracks.
 `test/forms.test.js`.
 
-An independent review of the body (2026-11-01), worst first, for the next
-sculpt pass: the legs and forearms are too small for the upper body (thighs
-no wider than the head, a straight tube of a leg in the kick); the neck reads
-long from the side and the back is a smooth slab (no spine groove, shoulder
-blades or lat edges); the pec rounds into a hanging lobe when the arm moves,
-and the side under the armpit shows a dark hollow when the chest turns to the
-camera; the belly crumples on a twist and the carved abs break into chips
-through the toon bands. Also still to do: the arms stretch a little at full
-punch, and the head is a mannequin until the face stage.
+An independent review of the body (2026-11-01), worst first: the legs and
+forearms were too small for the upper body (thighs no wider than the head);
+the neck reads long from the side and the back was a smooth slab; the pec
+rounded into a hanging lobe when the arm moved, with a dark hollow under the
+armpit when the chest turned to the camera; the belly crumpled on a twist and
+the carved abs broke into chips through the toon bands. The body pass that
+followed: thighs about 1.2 heads wide with an outer sweep, fuller calves and
+forearms, the thighs parted below the crotch (fused to mid-thigh, they tore
+when the legs moved); the spine, shoulder blades and lat edges carved into the
+back; the pec running on into the arm as the front fold of the armpit; softer
+ab lines; and the skin under the shorts removed (`hide_under_shorts`), which
+was what showed through them as patches when the waist turned. Still to do:
+the neck from the side, the arms stretching a little at full punch, and the
+head, a mannequin until the face stage.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

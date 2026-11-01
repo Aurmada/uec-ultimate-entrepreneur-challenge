@@ -82,6 +82,9 @@ E(V(-0.08, 0, 1.47), (0.032, 0.078, 0.1), k=0.03)
 for s in (1, -1):
     E(V(0.076, s * 0.078, 1.47), (0.06, 0.098, 0.072), sc.rot(rx=s * 12), k=0.03)    # pectoral
     E(V(0.03, s * 0.158, 1.49), (0.045, 0.055, 0.055), k=0.03)                      # into the armpit
+    # The pec's outer edge runs on into the arm as the fold at the front of the
+    # armpit: a pec that just ended rounded into a hanging lobe as the arm moved.
+    C(V(0.055, s * 0.15, 1.46), V(0.025, s * 0.205, 1.5), 0.028, 0.022, k=0.03)
     E(V(0.01, s * 0.103, 1.13), (0.07, 0.04, 0.085), k=0.04)                        # obliques
     C(V(-0.035, s * 0.15, 1.47), V(-0.05, s * 0.095, 1.18), 0.065, 0.035, k=0.04)   # lats
     # The traps run from the neck right out to the point of the shoulder, over a
@@ -91,6 +94,8 @@ for s in (1, -1):
     C(V(-0.03, s * 0.08, 1.58), V(-0.02, s * 0.19, 1.56), 0.05, 0.04, k=0.04)
     C(V(-0.03, s * 0.064, 1.636), V(-0.015, s * 0.205, 1.598), 0.046, 0.028, k=0.045)  # traps
     E(V(-0.088, s * 0.08, 1.44), (0.04, 0.075, 0.09), k=0.035)                      # shoulder blade
+    E(V(-0.1, s * 0.115, 1.43), (0.03, 0.055, 0.06), k=0.025)                       # infraspinatus, on the blade
+    E(V(-0.07, s * 0.16, 1.4), (0.03, 0.04, 0.032), k=0.025)                        # teres, from the blade to the armpit
     E(V(-0.08, s * 0.03, 1.2), (0.03, 0.032, 0.16), k=0.03)                         # erectors
     E(V(-0.05, s * 0.07, 0.955), (0.066, 0.076, 0.088), sc.rot(rx=s * 8), k=0.04)   # glutes
 
@@ -135,8 +140,9 @@ for s in (1, -1):
     E(El, (0.042, 0.04, 0.042), ax, k=0.02)
     E(El - v * 0.032, (0.018, 0.018, 0.018), k=0.012)
     u, v, lat, ax = limb(El, W, s)
-    C(El, W, 0.052, 0.031, k=0.02, flat=(lat, 0.8))
-    E(El + u * 0.08 + v * 0.008, (0.13, 0.052, 0.052), ax, k=0.03)    # forearm muscles
+    C(El, W, 0.056, 0.034, k=0.02, flat=(lat, 0.8))
+    E(El + u * 0.08 + v * 0.008, (0.13, 0.06, 0.058), ax, k=0.03)     # forearm muscles
+    E(El + u * 0.07 + v * 0.022 + lat * 0.018, (0.1, 0.034, 0.034), ax, k=0.025)  # brachioradialis, the thumb side
     E(W, (0.022, 0.032, 0.024), ax, k=0.015)
     # a fist, palm toward the thigh: the back of the hand, a row of knuckles,
     # four fingers curled into the palm, the thumb across them
@@ -154,19 +160,22 @@ for s in (1, -1):
     A = V(-0.008, s * 0.105, 0.085)
     LEG[s] = (Hj, K, A)
     u, v, lat, ax = limb(Hj, K, s)
-    C(Hj, K, 0.095, 0.056, k=0.045)
-    E(lerp(Hj, K, 0.45) + v * 0.032 + lat * 0.022, (0.22, 0.065, 0.065), ax, k=0.035)  # quadriceps
-    E(lerp(Hj, K, 0.25) - lat * 0.04, (0.17, 0.056, 0.05), ax, k=0.035)            # adductors
-    E(lerp(Hj, K, 0.45) - v * 0.04, (0.22, 0.056, 0.056), ax, k=0.035)             # hamstrings
+    # the core a little oval and set out from the middle, so the thighs part
+    # below the crotch: fused down to mid-thigh, they tore when the legs moved
+    C(Hj + lat * 0.01, K + lat * 0.004, 0.105, 0.06, k=0.045, flat=(lat, 0.85))
+    E(lerp(Hj, K, 0.45) + v * 0.036 + lat * 0.028, (0.22, 0.08, 0.078), ax, k=0.035)  # quadriceps
+    E(lerp(Hj, K, 0.48) + v * 0.008 + lat * 0.062, (0.2, 0.05, 0.056), ax, k=0.035)  # the outer sweep
+    E(lerp(Hj, K, 0.25) - lat * 0.036, (0.17, 0.062, 0.045), ax, k=0.035)          # adductors
+    E(lerp(Hj, K, 0.45) - v * 0.04, (0.22, 0.064, 0.062), ax, k=0.035)             # hamstrings
     E(lerp(Hj, K, 0.8) + v * 0.02 - lat * 0.036, (0.09, 0.045, 0.048), ax, k=0.02) # vastus medialis
     E(K, (0.046, 0.048, 0.05), ax, k=0.025)
     E(K + v * 0.043 + V(0, 0, 0.012), (0.022, 0.02, 0.026), ax, k=0.012)          # kneecap
     u, v, lat, ax = limb(K, A, s)
-    C(K, A, 0.054, 0.04, k=0.025)
-    E(lerp(K, A, 0.3) - v * 0.038, (0.15, 0.058, 0.062), ax, k=0.03)               # calf
-    E(lerp(K, A, 0.3) - v * 0.028 - lat * 0.03, (0.13, 0.046, 0.046), ax, k=0.025)  # its inner head
-    E(lerp(K, A, 0.26) - v * 0.028 + lat * 0.028, (0.12, 0.043, 0.042), ax, k=0.025)  # and outer
-    E(lerp(K, A, 0.58) - v * 0.012, (0.15, 0.042, 0.05), ax, k=0.03)               # soleus, down to the ankle
+    C(K, A, 0.056, 0.043, k=0.025)
+    E(lerp(K, A, 0.3) - v * 0.04, (0.15, 0.064, 0.07), ax, k=0.03)                 # calf
+    E(lerp(K, A, 0.3) - v * 0.03 - lat * 0.032, (0.13, 0.052, 0.052), ax, k=0.025)  # its inner head
+    E(lerp(K, A, 0.26) - v * 0.03 + lat * 0.03, (0.12, 0.048, 0.048), ax, k=0.025)  # and outer
+    E(lerp(K, A, 0.58) - v * 0.014, (0.15, 0.046, 0.056), ax, k=0.03)              # soleus, down to the ankle
     E(lerp(K, A, 0.35) + v * 0.02 + lat * 0.016, (0.14, 0.024, 0.024), ax, k=0.015)  # shin muscle
     C(lerp(K, A, 0.7) - v * 0.024, A - v * 0.034, 0.02, 0.015, k=0.018)            # Achilles
     for o in (-0.028, 0.028):
@@ -187,16 +196,26 @@ SOFT = dict(depth=0.002, width=0.011, k=0.008)
 # chest and belly
 G([(0.13, 0, 1.55), (0.13, 0, 1.47), (0.125, 0, 1.405)], **STRONG)
 G([(0.122, 0, 1.385), (0.12, 0, 1.25), (0.115, 0, 1.08)], **LINE)
+# The abs' rows and the lines down either side of them are soft: carved as
+# deep as the midline, they broke into scattered dark chips through the game's
+# flat light bands instead of reading as a six-pack.
 for z in (1.3, 1.235, 1.17):
-    G([(0.11, -0.058, z + 0.006), (0.118, -0.03, z), (0.12, 0, z - 0.004), (0.118, 0.03, z), (0.11, 0.058, z + 0.006)], **LINE)
+    G([(0.11, -0.058, z + 0.006), (0.118, -0.03, z), (0.12, 0, z - 0.004), (0.118, 0.03, z), (0.11, 0.058, z + 0.006)], **SOFT)
 for s in (1, -1):
     G([(0.12, s * 0.008, 1.4), (0.118, s * 0.05, 1.388), (0.105, s * 0.1, 1.395), (0.075, s * 0.145, 1.42), (0.045, s * 0.17, 1.46)], **STRONG)
-    G([(0.11, s * 0.066, 1.385), (0.112, s * 0.064, 1.25), (0.105, s * 0.058, 1.12), (0.095, s * 0.045, 1.04)], **LINE)
-    G([(0.07, s * 0.122, 1.08), (0.09, s * 0.09, 1.02), (0.1, s * 0.055, 0.96)], **LINE)
+    G([(0.11, s * 0.066, 1.385), (0.112, s * 0.064, 1.25), (0.105, s * 0.058, 1.12), (0.095, s * 0.045, 1.04)], **SOFT)
+    G([(0.07, s * 0.122, 1.08), (0.09, s * 0.09, 1.02), (0.1, s * 0.055, 0.96)], **SOFT)
 
-# back
+# back: the spine, faint between the shoulder blades and deep between the
+# muscles of the lower back; each shoulder blade's inner edge
+# and the ridge across its top; the lat's edge, up into the armpit; the glute
+# fold. Without them the back was one smooth slab.
+G([(-0.09, 0, 1.58), (-0.115, 0, 1.48), (-0.12, 0, 1.36)], **SOFT)
+G([(-0.12, 0, 1.36), (-0.11, 0, 1.22), (-0.1, 0, 1.1), (-0.1, 0, 1.02)], **LINE)
 for s in (1, -1):
-    G([(-0.1, s * 0.04, 1.2), (-0.08, s * 0.1, 1.24), (-0.05, s * 0.14, 1.3)], **SOFT)
+    G([(-0.12, s * 0.045, 1.55), (-0.125, s * 0.05, 1.45), (-0.12, s * 0.06, 1.37), (-0.11, s * 0.09, 1.32)], **LINE)
+    G([(-0.11, s * 0.06, 1.53), (-0.08, s * 0.14, 1.555), (-0.045, s * 0.185, 1.575)], **SOFT)
+    G([(-0.1, s * 0.04, 1.18), (-0.085, s * 0.1, 1.23), (-0.06, s * 0.145, 1.31), (-0.035, s * 0.168, 1.4)], **LINE)
     G([(-0.11, s * 0.03, 0.87), (-0.11, s * 0.07, 0.86), (-0.095, s * 0.11, 0.875)], **STRONG)
 
 # arms: the deltoid's edge front and back to where it inserts, and the line
@@ -229,6 +248,9 @@ def build():
     return sc.to_blender('body', verts, quads)
 
 
+SHORTS_HEM, SHORTS_WAIST, SHORTS_HALF = 0.8, 1.075, 0.25
+
+
 def shorts():
     """Fight shorts: the body's own surface pushed out 7 mm and cut flat at
     the waistband and at both hems, so the edges are clean lines that move with
@@ -237,8 +259,8 @@ def shorts():
     Z = F.lo[2] + np.arange(F.n[2]) * F.h
     shell = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
     d = F.d - np.float32(0.007)
-    np.maximum(d, np.maximum(Z - 1.075, 0.8 - Z).astype(np.float32)[None, None, :], out=d)
-    np.maximum(d, (np.abs(Y) - 0.25).astype(np.float32)[None, :, None], out=d)
+    np.maximum(d, np.maximum(Z - SHORTS_WAIST, SHORTS_HEM - Z).astype(np.float32)[None, None, :], out=d)
+    np.maximum(d, (np.abs(Y) - SHORTS_HALF).astype(np.float32)[None, :, None], out=d)
     shell.d = d
     verts, quads = shell.mesh()
     return sc.to_blender('shorts', verts, quads, smooth=1)
@@ -338,11 +360,29 @@ def skin_weights(verts, edges, J):
     return names, W
 
 
+def hide_under_shorts(obj):
+    """Removes the skin the shorts cover, a little inside their hems. Left in,
+    it showed through them wherever a bent leg or a turned waist moved the two
+    surfaces apart by more than the 7 mm between them, as patches of skin on
+    the shorts. The shorts are a closed solid, so nothing shows through the
+    hole."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    lo, hi = SHORTS_HEM + 0.015, SHORTS_WAIST - 0.015
+    gone = [f for f in bm.faces
+            if all(lo < v.co.z < hi and abs(v.co.y) < SHORTS_HALF - 0.01 for v in f.verts)]
+    bmesh.ops.delete(bm, geom=gone, context='FACES')
+    bm.to_mesh(obj.data)
+    bm.free()
+
+
 def export_rigged(path, tris=40000):
     """Jeff as a game model: decimated, in shorts, weighted to the skeleton."""
     import bpy
     obj = build()
     pants = shorts()
+    hide_under_shorts(obj)
     for ob, n in ((obj, tris * 0.86), (pants, tris * 0.14)):
         dec = ob.modifiers.new('Decimate', 'DECIMATE')
         dec.ratio = n / (2 * len(ob.data.polygons))
