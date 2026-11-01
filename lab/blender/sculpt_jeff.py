@@ -84,22 +84,34 @@ for s in (1, -1):
     E(V(0.03, s * 0.158, 1.49), (0.045, 0.055, 0.055), k=0.03)                      # into the armpit
     E(V(0.01, s * 0.103, 1.13), (0.07, 0.04, 0.085), k=0.04)                        # obliques
     C(V(-0.035, s * 0.15, 1.47), V(-0.05, s * 0.095, 1.18), 0.065, 0.035, k=0.04)   # lats
-    E(V(-0.02, s * 0.074, 1.655), (0.05, 0.095, 0.046), sc.rot(rx=s * -26), k=0.045)  # traps
+    # The traps run from the neck right out to the point of the shoulder, over a
+    # solid shoulder girdle, and taper there onto the top of the deltoid. Short
+    # and stopping above the shoulder, as they were, they left a notch and the
+    # deltoid stood up beyond it as a ball.
+    C(V(-0.03, s * 0.08, 1.58), V(-0.02, s * 0.19, 1.56), 0.05, 0.04, k=0.04)
+    C(V(-0.03, s * 0.064, 1.636), V(-0.015, s * 0.205, 1.598), 0.046, 0.028, k=0.045)  # traps
     E(V(-0.088, s * 0.08, 1.44), (0.04, 0.075, 0.09), k=0.035)                      # shoulder blade
     E(V(-0.08, s * 0.03, 1.2), (0.03, 0.032, 0.16), k=0.03)                         # erectors
     E(V(-0.05, s * 0.07, 0.955), (0.066, 0.076, 0.088), sc.rot(rx=s * 8), k=0.04)   # glutes
 
-# neck
-C(V(-0.012, 0, 1.58), V(-0.008, 0, 1.76), 0.076, 0.062, k=0.035)
+# neck: the column, the two muscles down its front to the notch between the
+# collarbones, and the collarbones. The notch is kept wide: a narrow slot there
+# let the ink outline show through as a black fleck at the base of the neck.
+C(V(-0.014, 0, 1.58), V(-0.01, 0, 1.75), 0.078, 0.065, k=0.035)
 for s in (1, -1):
-    C(V(-0.025, s * 0.052, 1.765), V(0.04, s * 0.014, 1.6), 0.015, 0.011, k=0.02)
+    C(V(-0.025, s * 0.052, 1.765), V(0.042, s * 0.024, 1.6), 0.015, 0.011, k=0.02)
     C(V(0.042, s * 0.018, 1.588), V(0.0, s * 0.175, 1.605), 0.008, 0.008, k=0.02)
 
 # A mannequin head for now, in proportion: the cranium, one smooth lower face
-# and jaw, a brow, a plain nose and ears. The face is its own stage.
+# and jaw, a brow, a plain nose and ears. The face is its own stage. The jaw
+# goes on before the rest, met tightly by the neck, so the neck runs up under
+# it with a line where they meet: blended broadly, the face melted down into
+# the throat and the neck seemed to carry on into the chin.
+E(V(0.022, 0, 1.736), (0.08, 0.066, 0.046), k=0.012)
+for s in (1, -1):
+    E(V(-0.012, s * 0.054, 1.738), (0.022, 0.016, 0.028), k=0.012)         # angle of the jaw
 E(V(-0.01, 0, 1.86), (0.1, 0.082, 0.097), k=0.02)
 E(V(0.042, 0, 1.8), (0.058, 0.064, 0.08), k=0.03)
-E(V(0.028, 0, 1.745), (0.064, 0.068, 0.062), k=0.04)
 E(V(0.086, 0, 1.858), (0.016, 0.058, 0.015), k=0.022)
 C(V(0.097, 0, 1.848), V(0.11, 0, 1.795), 0.008, 0.011, k=0.014)
 for s in (1, -1):
@@ -116,7 +128,7 @@ for s in (1, -1):
     ARM[s] = (S, El, W)
     u, v, lat, ax = limb(S, El, s)
     E(S, (0.055, 0.055, 0.055), k=0.03)
-    E(S + u * 0.05 + lat * 0.034, (0.125, 0.08, 0.068), ax, k=0.03)    # deltoid
+    E(S + u * 0.062 + lat * 0.03, (0.11, 0.08, 0.068), ax, k=0.03)    # deltoid, its top under the traps' end
     C(S, El, 0.062, 0.044, k=0.025)
     E(S + u * 0.18 + v * 0.032, (0.115, 0.052, 0.05), ax, k=0.025)    # biceps
     E(S + u * 0.13 - v * 0.038, (0.135, 0.056, 0.054), ax, k=0.025)   # triceps
@@ -285,13 +297,20 @@ def skin_weights(verts, edges, J):
     never takes a limb bone from the other side, or the thighs web together."""
     names = [b[0] for b in BONES if not b[0].startswith('grip')]
     parent = {b[0]: b[3] for b in BONES}
-    seg = {b[0]: (J[b[1]], J[b[2]]) for b in BONES}
+    seg = {b[0]: [(J[b[1]], J[b[2]])] for b in BONES}
+    # The skeleton has no collarbones, so the chest reaches out along where
+    # they would be, most of the way to each shoulder: by distance to its own
+    # bone alone, the traps went to the neck and the upper arms, and rose and
+    # fell with every nod and swing of the arm, a lump at the side of the neck.
+    for s in (1, -1):
+        seg['chest'].append((J['neck'], V(-0.015, s * 0.15, 1.62)))
     D = np.empty((len(verts), len(names)))
     for i, n in enumerate(names):
-        a, b = seg[n]
-        ab = b - a
-        t = np.clip(((verts - a) @ ab) / (ab @ ab), 0, 1)
-        D[:, i] = np.linalg.norm(verts - (a + t[:, None] * ab), axis=1)
+        D[:, i] = np.inf
+        for a, b in seg[n]:
+            ab = b - a
+            t = np.clip(((verts - a) @ ab) / (ab @ ab), 0, 1)
+            D[:, i] = np.minimum(D[:, i], np.linalg.norm(verts - (a + t[:, None] * ab), axis=1))
         if n.endswith('.L'):
             D[verts[:, 1] < -0.02, i] = np.inf
         if n.endswith('.R'):

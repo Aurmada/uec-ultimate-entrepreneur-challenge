@@ -83,14 +83,15 @@ export const newBodyFor = (def) => (CAST_MODELS.includes(def?.id) ? def.id : ath
 // the review page puts him in it. Built to heroic proportions at his own size,
 // so `fit` draws him as built (engine/gl3d/rig.js): his own torso, neck and
 // head (the 2D pose only leans the torso and nods the head, at most `nod`
-// radians), a straight back leaned `lean` further over his bent knees with
+// radians: the 2D head throws itself forward on a punch, and a real neck
+// following it pushed the head out ahead of the chest), a straight back leaned `lean` further over his bent knees with
 // the pelvis taking `pelvis` of it, no girth or head pushed for game size, and
 // his own shoulder and hip width. No face yet: that is the remodel's next stage.
 MODELS3D['jeff-sculpt'] = {
   url: 'assets/models/sculpt/jeff.glb',
   leaf: { forearm: 0.367, head: 0.255, foot: [0.18, -0.065, 0] },
   skull: 0.16,
-  fit: { girth: 1, head: 1, nod: 0.35, lean: 0.14, pelvis: 0.85, shoulderHalf: 0.2, hipHalf: 0.095 },
+  fit: { girth: 1, head: 1, nod: 0.2, lean: 0.14, pelvis: 0.85, shoulderHalf: 0.2, hipHalf: 0.095 },
 };
 
 export const DEFAULT_MODEL = 'founder';

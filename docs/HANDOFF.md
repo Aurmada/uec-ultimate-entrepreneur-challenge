@@ -233,6 +233,19 @@ body (7.5 heads, tapered limbs, fists, a placeholder head), and
 before the next: the body; the face (an original design, not a likeness); the
 hands; the costume; then rigging and into the game on the same skeleton.
 
+Where it stands. The owner preferred him drawn by the game's own renderer to
+the Blender render, so he is rigged (`--rig`, `assets/models/sculpt/jeff.glb`)
+and registered as `jeff-sculpt` in `models3d.js`, used only by the lab sheets
+(`lab/figure3d.js`). Its `fit` lets a body built to its own size keep its own
+torso, neck and head, lean over bent knees, and nod at most `fit.nod`, all
+render only. Owner feedback so far: the neck and head were not humanly possible
+and the back not straight (fixed in `4d885c7`), then "his neck and shoulder
+looks off" (fixed next: the deltoids were balls sitting above the traps, the
+traps were weighted to the neck and arms so they lumped with every move, the
+jaw melted into the neck, and the head jutted on a punch). Still to do: the
+guard hands sit low, the arms stretch a little at full punch, and the head is
+a mannequin until the face stage.
+
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 
 - **A Settings switch for the 3D preview** ("Graphics: Classic / 3D preview").
