@@ -78,8 +78,9 @@ export function buildRig(model, spec) {
     neckOff: at('neck')[1] - hip[1],
     skull: spec.skull,
     // A model sculpted to its own size and build (models3d.js `fit`) is drawn
-    // as built: no girth or head pushed for game size, its own shoulders and
-    // hips, and no build or shoulder knob from the 2D body on top.
+    // as built: its own torso, neck and head, no girth or head pushed for game
+    // size, its own shoulders and hips, and no build or shoulder knob from the
+    // 2D body on top.
     fit: spec.fit || null,
     // The rest foot's angle from its shin, so a lifted foot keeps the same set,
     // and the rest foot itself, which is how a planted one lies on the floor.
@@ -121,8 +122,14 @@ const onHinge = (hinge, from, to) => cross(hinge, normalize(sub(to, from)));
 export function solvePose(rig, P, elbow = {}, turn = null) {
   const U = GL3D.UNIT;
   const pt = (x, y, z = 0) => [x / U, -y / U, z];
-  const leanRad = (P.bodyLean || 0) * GL3D.LEAN;
-  const cl = Math.cos(leanRad), sl = Math.sin(leanRad);
+  const fit = rig.fit;
+  const own = !!fit;
+  const lean2D = (P.bodyLean || 0) * GL3D.LEAN;
+  // A sculpted body leans its straight back a little further over bent knees
+  // than the 2D figure does (fit.lean), its pelvis going with it (fit.pelvis),
+  // or the knees bend under an upright trunk and the seat juts out behind.
+  const leanRad = lean2D + (own ? fit.lean ?? 0 : 0);
+  const cl = Math.cos(lean2D), sl = Math.sin(lean2D);
   // The same socket rotation drawFighter applies to the torso, about the hip.
   const socket = (x, y) => {
     const dy = y - P.hipY;
@@ -135,14 +142,12 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   const chestFwd = tip([Math.cos(yc), 0, Math.sin(yc)], leanRad);
   const chestLat = tip([-Math.sin(yc), 0, Math.cos(yc)], leanRad);   // toward the near side
   const chestUp = tip([0, 1, 0], leanRad);
-  const pl = leanRad * GL3D.PELVIS_LEAN;
+  const pl = leanRad * (own ? fit.pelvis ?? GL3D.PELVIS_LEAN : GL3D.PELVIS_LEAN);
   const pelFwd = tip([Math.cos(yp), 0, Math.sin(yp)], pl);
   const pelLat = tip([-Math.sin(yp), 0, Math.cos(yp)], pl);
   const pelUp = tip([0, 1, 0], pl);
   const headFwd = tip([Math.cos(yh), 0, Math.sin(yh)], leanRad);
 
-  const fit = rig.fit;
-  const own = !!fit;
   const build = own ? 1 : (P.build ?? 1);
   const wide = own ? 1 : (P.shoulderW ?? 1);
   const G = (k) => (own ? fit.girth ?? 1 : GL3D[k]);
@@ -154,28 +159,52 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   // ---- torso: joints spaced along the leaned torso, stretched to its length
   const hip = pt(0, P.hipY);
   const [scx, scy] = socket(0, P.shoulderY + GL3D.SOCKET_DROP);
-  const shoulderC = pt(scx, scy);
-  const ts = dist(hip, shoulderC) / rig.torso;
+  // A model sculpted to its own proportions keeps its own torso: the 2D
+  // figure's is shorter, built under a head three times the size, and
+  // stretching a real body to it squashed the spine into a hunch.
+  const shoulderC = own ? add(hip, scale(chestUp, rig.torso)) : pt(scx, scy);
+  const ts = own ? 1 : dist(hip, shoulderC) / rig.torso;
   const spineJ = add(hip, scale(pelUp, rig.spineOff * ts));
   const chestJ = add(hip, scale(chestUp, rig.chestOff * ts));
   const neckJ = add(hip, scale(chestUp, rig.neckOff * ts));
 
   const headR = P.headR ?? STYLIZE.HEAD_R;
-  const hs = (headR / STYLIZE.HEAD_R) * (own ? fit.head ?? 1 : GL3D.HEAD_SCALE);
   const headTop = P.shoulderY - (headR - STYLIZE.NECK_OVERLAP);
   const [hx, hy] = socket(P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX, Math.max(P.headY, headTop));
-  // a head smaller than the 2D one sits higher on its neck than the 2D head's
-  // centre, or the chin sinks into the collar
-  const headBase = sub(add(pt(hx, hy), scale(chestUp, own ? fit.headLift ?? 0 : 0)), scale(chestUp, rig.skull * hs));
-  const headTail = add(headBase, scale(chestUp, rig.rest.head.len * hs));
+  let hs, headBase, headTail, neckFwd = chestFwd, faceFwd = headFwd;
+  if (own) {
+    // ...and its head stays on its own neck. From the 2D pose it takes only
+    // how far the head is thrown forward of the torso or snapped back, as a
+    // nod at the base of the neck, never more than fit.nod: placed at the 2D
+    // head's centre, the neck was dragged out to reach it, and a punch's
+    // forward drive stretched it to nearly twice its length.
+    // A fighter leaning in keeps his head level, eyes on the opponent: the
+    // neck takes part of the trunk's lean and the head little of it, so the
+    // head does not jut forward with the shoulders. A snap back from a hit
+    // goes less far than a nod forward.
+    const h2 = sub(pt(hx, hy), pt(scx, scy));
+    const lim = fit.nod ?? 0.35;
+    const nod = Math.max(-lim * 0.7, Math.min(lim, Math.atan2(h2[0], h2[1]) - lean2D));
+    const neckUp = tip([0, 1, 0], leanRad * 0.6 + nod);
+    const headUp = tip([0, 1, 0], leanRad * 0.15 + nod);
+    hs = fit.head ?? 1;
+    headBase = add(neckJ, scale(neckUp, rig.rest.neck.len));
+    headTail = add(headBase, scale(headUp, rig.rest.head.len * hs));
+    neckFwd = tip([Math.cos(yc), 0, Math.sin(yc)], leanRad * 0.6 + nod);
+    faceFwd = tip([Math.cos(yh), 0, Math.sin(yh)], leanRad * 0.15 + nod);
+  } else {
+    hs = (headR / STYLIZE.HEAD_R) * GL3D.HEAD_SCALE;
+    headBase = sub(pt(hx, hy), scale(chestUp, rig.skull * hs));
+    headTail = add(headBase, scale(chestUp, rig.rest.head.len * hs));
+  }
 
   const torso = build * G('TORSO_GIRTH');
   set('hips', hip, spineJ, pelFwd, dist(hip, spineJ) / rig.rest.hips.len, torso, torso);
   set('spine', spineJ, chestJ, normalize(add(pelFwd, chestFwd)),
       dist(spineJ, chestJ) / rig.rest.spine.len, torso, torso * (1 + wide) / 2);
   set('chest', chestJ, neckJ, chestFwd, dist(chestJ, neckJ) / rig.rest.chest.len, torso, torso * wide);
-  set('neck', neckJ, headBase, chestFwd, dist(neckJ, headBase) / rig.rest.neck.len);
-  set('head', headBase, headTail, headFwd, hs, hs, hs);
+  set('neck', neckJ, headBase, neckFwd, dist(neckJ, headBase) / rig.rest.neck.len);
+  set('head', headBase, headTail, faceFwd, hs, hs, hs);
 
   // ---- arms: the lead hand (armF) on the far shoulder, the rear hand near
   const half = (own ? fit.shoulderHalf ?? GL3D.SHOULDER_HALF : GL3D.SHOULDER_HALF) * wide;

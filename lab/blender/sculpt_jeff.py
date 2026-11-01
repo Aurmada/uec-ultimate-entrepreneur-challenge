@@ -76,18 +76,18 @@ def limb(a, b, s):
 # trunk
 E(V(-0.006, 0, 1.425), (0.132, 0.162, 0.18), k=0.04)
 E(V(0.0, 0, 1.54), (0.095, 0.145, 0.075), k=0.04)
-E(V(0.018, 0, 1.2), (0.096, 0.122, 0.15), k=0.05)
+E(V(0.012, 0, 1.2), (0.096, 0.122, 0.15), k=0.05)
 E(V(0.0, 0, 1.0), (0.104, 0.155, 0.1), k=0.05)
-E(V(-0.084, 0, 1.47), (0.034, 0.078, 0.1), k=0.03)
+E(V(-0.08, 0, 1.47), (0.032, 0.078, 0.1), k=0.03)
 for s in (1, -1):
     E(V(0.076, s * 0.078, 1.47), (0.06, 0.098, 0.072), sc.rot(rx=s * 12), k=0.03)    # pectoral
     E(V(0.03, s * 0.158, 1.49), (0.045, 0.055, 0.055), k=0.03)                      # into the armpit
     E(V(0.01, s * 0.103, 1.13), (0.07, 0.04, 0.085), k=0.04)                        # obliques
     C(V(-0.035, s * 0.15, 1.47), V(-0.05, s * 0.095, 1.18), 0.065, 0.035, k=0.04)   # lats
-    E(V(-0.03, s * 0.074, 1.66), (0.056, 0.095, 0.048), sc.rot(rx=s * -26), k=0.045)  # traps
-    E(V(-0.094, s * 0.08, 1.44), (0.046, 0.075, 0.09), k=0.035)                     # shoulder blade
+    E(V(-0.02, s * 0.074, 1.655), (0.05, 0.095, 0.046), sc.rot(rx=s * -26), k=0.045)  # traps
+    E(V(-0.088, s * 0.08, 1.44), (0.04, 0.075, 0.09), k=0.035)                      # shoulder blade
     E(V(-0.08, s * 0.03, 1.2), (0.03, 0.032, 0.16), k=0.03)                         # erectors
-    E(V(-0.068, s * 0.07, 0.95), (0.075, 0.08, 0.092), sc.rot(rx=s * 8), k=0.04)    # glutes
+    E(V(-0.05, s * 0.07, 0.955), (0.066, 0.076, 0.088), sc.rot(rx=s * 8), k=0.04)   # glutes
 
 # neck
 C(V(-0.012, 0, 1.58), V(-0.008, 0, 1.76), 0.076, 0.062, k=0.035)
@@ -217,6 +217,21 @@ def build():
     return sc.to_blender('body', verts, quads)
 
 
+def shorts():
+    """Fight shorts: the body's own surface pushed out 7 mm and cut flat at
+    the waistband and at both hems, so the edges are clean lines that move with
+    the legs, where painting the body's faces left a ragged edge."""
+    Y = F.lo[1] + np.arange(F.n[1]) * F.h
+    Z = F.lo[2] + np.arange(F.n[2]) * F.h
+    shell = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
+    d = F.d - np.float32(0.007)
+    np.maximum(d, np.maximum(Z - 1.075, 0.8 - Z).astype(np.float32)[None, None, :], out=d)
+    np.maximum(d, (np.abs(Y) - 0.25).astype(np.float32)[None, :, None], out=d)
+    shell.d = d
+    verts, quads = shell.mesh()
+    return sc.to_blender('shorts', verts, quads, smooth=1)
+
+
 if __name__ == '__main__' and '--rig' in ARGS:
     pass       # handled below, once everything is defined
 elif __name__ == '__main__':
@@ -308,24 +323,23 @@ def export_rigged(path, tris=40000):
     """Jeff as a game model: decimated, in shorts, weighted to the skeleton."""
     import bpy
     obj = build()
-    me = obj.data
-    dec = obj.modifiers.new('Decimate', 'DECIMATE')
-    dec.ratio = tris / (2 * len(me.polygons))
-    with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
-        bpy.ops.object.modifier_apply(modifier=dec.name)
-    me.shade_smooth()
-    # materials by palette role: skin, and a pair of fight shorts
-    for role, colour in (('skin', (0.75, 0.42, 0.25, 1)), ('pants', (0.03, 0.035, 0.06, 1))):
+    pants = shorts()
+    for ob, n in ((obj, tris * 0.86), (pants, tris * 0.14)):
+        dec = ob.modifiers.new('Decimate', 'DECIMATE')
+        dec.ratio = n / (2 * len(ob.data.polygons))
+        with bpy.context.temp_override(object=ob, active_object=ob, selected_objects=[ob]):
+            bpy.ops.object.modifier_apply(modifier=dec.name)
+    # materials by palette role: skin, and the shorts in his trousers' colour
+    for ob, role, colour in ((obj, 'skin', (0.75, 0.42, 0.25, 1)), (pants, 'pants', (0.03, 0.035, 0.06, 1))):
         m = bpy.data.materials.new(role)
         m.use_nodes = True
         m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = colour
         m.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1.0
-        me.materials.append(m)
-    cen = np.zeros(len(me.polygons) * 3)
-    me.polygons.foreach_get('center', cen)
-    cen = cen.reshape(-1, 3)
-    shorts = (cen[:, 2] > 0.8) & (cen[:, 2] < 1.075) & (np.abs(cen[:, 1]) < 0.25)
-    me.polygons.foreach_set('material_index', shorts.astype(np.int32))
+        ob.data.materials.append(m)
+    with bpy.context.temp_override(active_object=obj, selected_editable_objects=[obj, pants], selected_objects=[obj, pants]):
+        bpy.ops.object.join()
+    me = obj.data
+    me.shade_smooth()
     J = joints()
     co = np.zeros(len(me.vertices) * 3)
     me.vertices.foreach_get('co', co)
