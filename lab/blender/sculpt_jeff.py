@@ -8,7 +8,7 @@ fighters rather than the soft, fused shapes of the metaball bodies.
 
 Writes the body as a static mesh and, with --views, clay renders from the
 front, three quarters, the side and the back. With --rig it writes the game
-model instead: decimated, in fight shorts, weighted to the skeleton.
+model instead: dressed, decimated, weighted to the skeleton.
 
 Proportions. About 7.5 heads tall: crown 1.955, chin 1.69, so a head of 0.265.
 The crotch sits at half the height, the nipples a head below the chin, the
@@ -285,22 +285,170 @@ def build():
     return sc.to_blender('body', verts, quads)
 
 
-SHORTS_HEM, SHORTS_WAIST, SHORTS_HALF = 0.8, 1.075, 0.25
+# ================================================================ clothes
+# His clothes from the 2D game (data/fighters.js, outfit 'vest'): a fitted shirt
+# with long sleeves, tucked in, under a quilted vest that hangs open at the
+# front; suit trousers; shoes. Bare fists. Each is the body's own surface pushed
+# out and cut to its edges, so it fits him wherever he is built up, and the skin
+# each one covers is removed (`hidden`), so none of it can show through as the
+# pieces move apart.
+WAIST, SHIRT_HEM, VEST_HEM, CUFF, ANKLE = 1.03, 1.0, 0.985, 0.012, 0.105
 
 
-def shorts():
-    """Fight shorts: the body's own surface pushed out 7 mm and cut flat at
-    the waistband and at both hems, so the edges are clean lines that move with
-    the legs, where painting the body's faces left a ragged edge."""
-    Y = F.lo[1] + np.arange(F.n[1]) * F.h
-    Z = F.lo[2] + np.arange(F.n[2]) * F.h
-    shell = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
-    d = F.d - np.float32(0.007)
-    np.maximum(d, np.maximum(Z - SHORTS_WAIST, SHORTS_HEM - Z).astype(np.float32)[None, None, :], out=d)
-    np.maximum(d, (np.abs(Y) - SHORTS_HALF).astype(np.float32)[None, :, None], out=d)
-    shell.d = d
-    verts, quads = shell.mesh()
-    return sc.to_blender('shorts', verts, quads, smooth=1)
+def _grid(sl=(slice(None),) * 3):
+    """Coordinates of the body's field samples, broadcastable, for a slab."""
+    ax = [F.lo[k] + np.arange(F.n[k])[sl[k]] * F.h for k in range(3)]
+    return (ax[0][:, None, None].astype(np.float32), ax[1][None, :, None].astype(np.float32),
+            ax[2][None, None, :].astype(np.float32))
+
+
+def _zslab(z0, z1):
+    k0 = max(0, int((z0 - F.lo[2]) / F.h))
+    k1 = min(F.n[2], int((z1 - F.lo[2]) / F.h) + 2)
+    return (slice(None), slice(None), slice(k0, k1))
+
+
+def _shell(off):
+    out = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
+    out.d = F.d - np.float32(off)
+    return out
+
+
+def _keep_below(d, z):
+    """Keeps the solid below height z."""
+    np.maximum(d, (_grid()[2] - np.float32(z)), out=d)
+
+
+def _keep_above(d, z):
+    np.maximum(d, (np.float32(z) - _grid()[2]), out=d)
+
+
+def shirt():
+    """Fitted, long sleeves to the wrists, a round neck with a V at the front,
+    tucked into the trousers."""
+    S = _shell(0.004)
+    d = S.d
+    _keep_above(d, SHIRT_HEM)
+    for s in (1, -1):                                   # the cuffs
+        _, El, W = ARM[s]
+        n = sc.unit(W - El)
+        c = W - n * CUFF
+        X, Y, Z = _grid()
+        np.maximum(d, (X - c[0]) * n[0] + (Y - c[1]) * n[1] + (Z - c[2]) * n[2], out=d)
+    _keep_below(d, 1.72)                                # nothing above the collar
+    sl = _zslab(1.45, 1.73)                             # the neck
+    X, Y, Z = _grid(sl)
+    r = np.sqrt((X + 0.012) ** 2 + Y ** 2)
+    neck = np.maximum(r - 0.084, 1.57 - Z)
+    v = np.maximum(np.abs(Y) - (Z - 1.5) * 0.55, 0.02 - X)
+    d[sl] = np.maximum(d[sl], -np.minimum(neck, v))
+    return S
+
+
+def vest():
+    """A quilted vest, two centimetres thick, open down the front, with a
+    collar standing up round the back of the neck and armholes at the
+    shoulders."""
+    S = _shell(0.02)
+    d = S.d
+    _keep_above(d, VEST_HEM)
+    _keep_below(d, 1.72)
+    X, Y, Z = _grid()
+    np.maximum(d, np.abs(Y) - np.float32(0.185), out=d)          # armholes
+    sl = _zslab(0.95, 1.8)
+    X, Y, Z = _grid(sl)
+    r = np.sqrt((X + 0.012) ** 2 + Y ** 2)
+    neck = np.maximum(r - 0.092, 1.55 - Z)
+    opening = np.maximum(np.abs(Y) - (0.028 + np.maximum(Z - 1.32, 0) * 0.16), 0.03 - X)
+    d[sl] = np.maximum(d[sl], -np.minimum(neck, opening))
+    # quilting: the surface drawn in along a channel every 6.5 cm
+    for zi in np.arange(1.06, 1.66, 0.065):
+        sl = _zslab(zi - 0.02, zi + 0.02)
+        Z = _grid(sl)[2]
+        d[sl] += np.float32(0.0035) * np.exp(-((Z - np.float32(zi)) / np.float32(0.004)) ** 2)
+    return S
+
+
+def trousers():
+    """Suit trousers: the hips fitted, the legs falling straight from the thigh
+    to a hem over the shoe, so they read as cloth and not as skin."""
+    # Each leg's fall of cloth is its own, met with the other's without any
+    # blending, and set a little out from the middle: blended, the two legs
+    # webbed together down to the knees and tore into black spikes between
+    # them whenever the legs moved apart.
+    S = _shell(0.004)
+    for s in (1, -1):
+        Hj, K, A = LEG[s]
+        out = V(0, s * 0.01, 0)
+        leg = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
+        leg.add(sc.RoundCone(Hj + out + V(0, 0, -0.01), K + out, 0.09, 0.076), 0.03)
+        leg.add(sc.RoundCone(K + out, V(A[0], A[1] + out[1], ANKLE), 0.076, 0.066), 0.03)
+        np.minimum(S.d, leg.d, out=S.d)
+        del leg
+    # a waistband standing clear of the shirt tucked into it: at the same
+    # offset, the shirt showed through as white flecks along the belt line
+    sl = _zslab(0.9, WAIST + 0.01)
+    Z = _grid(sl)[2]
+    S.d[sl] -= np.float32(0.004) * np.clip((Z - 0.9) / 0.05, 0, 1)
+    # and a slot down the middle below the crotch, so they never meet there
+    sl = _zslab(-0.01, 0.86)
+    Y = _grid(sl)[1]
+    S.d[sl] = np.maximum(S.d[sl], np.float32(0.004) - np.abs(Y))
+    d = S.d
+    _keep_below(d, WAIST)
+    _keep_above(d, ANKLE - 0.004)
+    X, Y, Z = _grid()
+    np.maximum(d, np.abs(Y) - np.float32(0.25), out=d)
+    return S
+
+
+def shoes():
+    """Shoes: the foot pushed out, the sole flat on the floor."""
+    S = _shell(0.008)
+    d = S.d
+    _keep_below(d, ANKLE + 0.02)
+    _keep_above(d, -0.006)
+    X, Y, Z = _grid()
+    np.maximum(d, np.float32(0.03) - np.abs(Y), out=d)
+    return S
+
+
+def hidden(obj, covers, depth=0.0025, below=None):
+    """Removes the faces of obj lying wholly inside any of `covers` (fields),
+    by more than `depth`: skin under clothes, shirt under the vest. With
+    `below`, everything of the body under that height goes too: the trousers
+    and shoes cover all of it, and the skin left where the legs are joined at
+    the crotch showed through the parting between the trouser legs."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    co = np.array([v.co[:] for v in bm.verts])
+    inside = np.zeros(len(co), bool)
+    for f in covers:
+        inside |= f.sample(co) < -depth
+    if below is not None:
+        inside |= (co[:, 2] < below) & (np.abs(co[:, 1]) < 0.25)
+    gone = [f for f in bm.faces if all(inside[v.index] for v in f.verts)]
+    bmesh.ops.delete(bm, geom=gone, context='FACES')
+    bm.to_mesh(obj.data)
+    bm.free()
+
+
+def dressed():
+    """Body and clothes as Blender objects, each with its material, the hidden
+    parts removed: (body, [(object, role, colour)])."""
+    import bpy
+    body = build()
+    pieces = {'shirt': shirt(), 'vest': vest(), 'trousers': trousers(), 'shoes': shoes()}
+    objs = {n: sc.to_blender(n, *f.mesh(), smooth=1) for n, f in pieces.items()}
+    hidden(body, [pieces['shirt'], pieces['trousers'], pieces['shoes']], below=WAIST - 0.012)
+    hidden(objs['shirt'], [pieces['vest'], pieces['trousers']])
+    hidden(objs['trousers'], [pieces['shoes']])
+    srgb = lambda h: tuple(((int(h[i:i + 2], 16) / 255 + 0.055) / 1.055) ** 2.4 for i in (1, 3, 5)) + (1,)
+    # roles: the palette's where he has one (data/fighters.js `c`), else the
+    # 2D vest outfit's own shirt white
+    return body, [(objs['shirt'], 'shirt', srgb('#e8ecf4')), (objs['vest'], 'suit', srgb('#1f4a56')),
+                  (objs['trousers'], 'pants', srgb('#2c3644')), (objs['shoes'], 'shoe', srgb('#3d4a5c'))]
 
 
 if __name__ == '__main__' and '--rig' in ARGS:
@@ -397,23 +545,6 @@ def skin_weights(verts, edges, J):
     return names, W
 
 
-def hide_under_shorts(obj):
-    """Removes the skin the shorts cover, a little inside their hems. Left in,
-    it showed through them wherever a bent leg or a turned waist moved the two
-    surfaces apart by more than the 7 mm between them, as patches of skin on
-    the shorts. The shorts are a closed solid, so nothing shows through the
-    hole."""
-    import bmesh
-    bm = bmesh.new()
-    bm.from_mesh(obj.data)
-    lo, hi = SHORTS_HEM + 0.015, SHORTS_WAIST - 0.015
-    gone = [f for f in bm.faces
-            if all(lo < v.co.z < hi and abs(v.co.y) < SHORTS_HALF - 0.01 for v in f.verts)]
-    bmesh.ops.delete(bm, geom=gone, context='FACES')
-    bm.to_mesh(obj.data)
-    bm.free()
-
-
 def eyewear():
     """His shades (the owner: keep them), on whatever he is doing: two
     wraparound lenses on a bar across the brow, a bridge on the nose and arms
@@ -445,25 +576,26 @@ def eyewear():
     return lens
 
 
-def export_rigged(path, tris=40000):
-    """Jeff as a game model: decimated, in shorts, weighted to the skeleton."""
+def export_rigged(path, tris=44000):
+    """Jeff as a game model: dressed, decimated, weighted to the skeleton."""
     import bpy
-    obj = build()
-    pants = shorts()
-    hide_under_shorts(obj)
-    for ob, n in ((obj, tris * 0.86), (pants, tris * 0.14)):
+    obj, clothes = dressed()
+    parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
+    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'pants': 0.17, 'shoe': 0.07}
+    for ob, role, colour in parts:
         dec = ob.modifiers.new('Decimate', 'DECIMATE')
-        dec.ratio = n / (2 * len(ob.data.polygons))
+        dec.ratio = min(1.0, tris * budget[role] / (2 * max(1, len(ob.data.polygons))))
         with bpy.context.temp_override(object=ob, active_object=ob, selected_objects=[ob]):
             bpy.ops.object.modifier_apply(modifier=dec.name)
-    # materials by palette role: skin, and the shorts in his trousers' colour
-    for ob, role, colour in ((obj, 'skin', (0.75, 0.42, 0.25, 1)), (pants, 'pants', (0.03, 0.035, 0.06, 1))):
+        # materials by palette role (the renderer takes the fighter's colour for
+        # a role he has, else this one)
         m = bpy.data.materials.new(role)
         m.use_nodes = True
         m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = colour
         m.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1.0
         ob.data.materials.append(m)
-    with bpy.context.temp_override(active_object=obj, selected_editable_objects=[obj, pants], selected_objects=[obj, pants]):
+    every = [p[0] for p in parts]
+    with bpy.context.temp_override(active_object=obj, selected_editable_objects=every, selected_objects=every):
         bpy.ops.object.join()
     me = obj.data
     me.shade_smooth()

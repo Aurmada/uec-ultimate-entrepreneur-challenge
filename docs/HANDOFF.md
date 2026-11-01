@@ -296,6 +296,18 @@ wholly to the head and built in their own fine field (`eyewear()` in
 sculpt_jeff.py). The lenses are dark glass (`glass: { lens: 0.84 }`) his
 painted eyes show faintly through, as in 2D, and the bar sits under the
 painted brows, so his brows and mouth still carry his expression.
+
+His clothes (the owner: clothes, and bare fists): his outfit from the 2D game
+(`outfit: 'vest'`), a fitted white shirt with long sleeves tucked in, a teal
+quilted vest open down the front with a standing collar, suit trousers and
+shoes, replacing the fight shorts. Each is the body's own surface pushed out
+and cut to its edges (`shirt()`, `vest()`, `trousers()`, `shoes()` in
+sculpt_jeff.py), in his palette's roles (`suit`, `pants`, `shoe`; the shirt
+white is the 2D outfit's own). The trouser legs fall straight from the thigh,
+each leg its own with a slot between them below the crotch: blended, they
+webbed together and tore into black spikes as the legs moved. The skin the
+clothes cover is removed (`hidden`), all of it below the waist, so none shows
+through. `test/sculpt3d.test.js`.
 `lab/figure3d.js` `faces()` draws every expression close up (`focus` on
 `renderFull3D` frames one part of a fighter). `test/faces3d.test.js`.
 
