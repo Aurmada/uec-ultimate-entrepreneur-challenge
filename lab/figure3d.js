@@ -9,7 +9,7 @@
 
 import { computePose, FACE_PAINTER } from '/src/engine/drawFighter.js';
 import { applyProportions, clampBody } from '/src/engine/proportions.js';
-import { enable3D, has3D, preload3D, renderFull3D } from '/src/engine/gl3d/index.js';
+import { enable3D, has3D, form3D, preload3D, renderFull3D } from '/src/engine/gl3d/index.js';
 import { FIGHTER_MODELS, athleteFor } from '/src/data/models3d.js';
 // `models` entries: 'founder' (today's), 'athlete' (the shared new body), 'own' (each fighter's own).
 const modelId = (model, def) => (model === 'athlete' ? athleteFor(def) : model === 'own' ? def.id : model);
@@ -48,7 +48,7 @@ export async function sheet(path, { ids = ['bozo'], cases = ['idle', 'punch', 'k
             vy: c.airborne ? -300 : 0, airborne: !!c.airborne, crouching: !!c.crouching, movingBack: false,
             attack: c.kind ? { ...ATTACKS[c.kind], kind: c.kind, button: c.kind, hasHit: false } : null,
           };
-          const P = applyProportions(computePose(f, c.t), clampBody(def.body));
+          const P = applyProportions(computePose(f, c.t, form3D(def)), clampBody(def.body));
           if (frame && model !== 'founder') figureFrame(P);     // as the game stands the new bodies
           const y = row * (CH + LAB);
           renderFull3D(oc, { x: i * CW, y: y + LAB, w: CW, h: CH }, def, P, { state: c.state, face: FACE_PAINTER, span });
@@ -99,7 +99,7 @@ export async function cast(path, { ids, pose = 'idle', models = ['founder', 'ath
           vy: c.airborne ? -300 : 0, airborne: !!c.airborne, crouching: !!c.crouching, movingBack: false,
           attack: c.kind ? { ...ATTACKS[c.kind], kind: c.kind, button: c.kind, hasHit: false } : null,
         };
-        const P = applyProportions(computePose(f, c.t), clampBody(def.body));
+        const P = applyProportions(computePose(f, c.t, form3D(def)), clampBody(def.body));
         if (frame && model !== 'founder') figureFrame(P);
         const y = row * (CH + LAB);
         renderFull3D(oc, { x: i * CW, y: y + LAB, w: CW, h: CH }, def, P, { state: c.state, face: FACE_PAINTER, span });

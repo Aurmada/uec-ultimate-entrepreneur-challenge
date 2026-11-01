@@ -137,8 +137,12 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   };
   const tip = (v, a) => rotZ(v, -a);         // positive lean tips forward
 
-  const yc = turn?.yaw ?? GL3D.YAW, yp = turn?.hipYaw ?? GL3D.HIP_YAW;
-  const yh = yc + (turn?.headYaw ?? GL3D.HEAD_YAW);
+  // A fighting form can turn the shoulders and hips through a move (P.twist,
+  // P.hipTwist, data/forms.js): a boxer's punch is thrown by turning the
+  // body into it. The head turns only a little with them, eyes on the target.
+  const tw = P.twist || 0;
+  const yc = (turn?.yaw ?? GL3D.YAW) + tw, yp = (turn?.hipYaw ?? GL3D.HIP_YAW) + (P.hipTwist || 0);
+  const yh = yc - tw * GL3D.TWIST_HEAD_STAYS + (turn?.headYaw ?? GL3D.HEAD_YAW);
   const chestFwd = tip([Math.cos(yc), 0, Math.sin(yc)], leanRad);
   const chestLat = tip([-Math.sin(yc), 0, Math.cos(yc)], leanRad);   // toward the near side
   const chestUp = tip([0, 1, 0], leanRad);
@@ -209,15 +213,29 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   // ---- arms: the lead hand (armF) on the far shoulder, the rear hand near
   const half = (own ? fit.shoulderHalf ?? GL3D.SHOULDER_HALF : GL3D.SHOULDER_HALF) * wide;
   const fists = {};
-  const arm = (side, shoulder, hand, bendSign, flare) => {
-    const target = pt(hand.x, hand.y, shoulder[2] * GL3D.HAND_DEPTH);
+  const arm = (side, shoulder, hand, bendSign, flare, depth = GL3D.HAND_DEPTH, turn = 0) => {
+    // A guard hand can turn with the shoulders (a form's P.guardTurn), fist
+    // and elbow both, so a rear fist kept at the chin keeps its place against
+    // the chest as the shoulders turn through a punch, instead of being left
+    // behind while the shoulder it hangs from swings back. It is placed as
+    // though the shoulders were square, then turned about the spine as the
+    // chest is: upright, then leaned again.
+    const a = tw * turn;
+    const turned = (v, by, o = [0, 0, 0]) => {
+      const u = tip(sub(v, o), -leanRad), c = Math.cos(by), sn = Math.sin(by);
+      return add(o, tip([u[0] * c - u[2] * sn, u[1], u[0] * sn + u[2] * c], leanRad));
+    };
+    const depthOf = a ? turned(shoulder, -a, shoulderC) : shoulder;
+    let target = pt(hand.x, hand.y, depthOf[2] * depth);
+    if (a) target = turned(target, a, shoulderC);
     // Elbows point down and back, and out a little. drawFighter bends toward
     // the perpendicular of shoulder-to-hand instead, which flips sign when a
     // hand passes behind the body; at 2D's gentle bend that reads fine, but a
     // real upper arm folds hard and the flip becomes a chicken wing. The
     // per-character sign is kept: a negative bend swings the elbow forward.
     const k = Math.sign(bendSign) || 1;
-    const pole = normalize(add([-GL3D.ELBOW_BACK * k, -1, 0], scale(chestLat, flare * GL3D.ELBOW_FLARE)));
+    const back = [-GL3D.ELBOW_BACK * k, -1, 0];
+    const pole = normalize(add(a ? turned(back, a) : back, scale(chestLat, flare * GL3D.ELBOW_FLARE)));
     const up = rig.rest[`upper_arm.${side}`], lo = rig.rest[`forearm.${side}`];
     const s = ik(shoulder, target, up.len, lo.len, pole);
     const girth = build * G('ARM_GIRTH');
@@ -225,8 +243,11 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     set(`forearm.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / lo.len, girth, girth);
     fists[side] = s.end;
   };
-  arm('L', sub(shoulderC, scale(chestLat, half)), P.armF, elbow.F ?? STYLIZE.ELBOW, -1);
-  arm('R', add(shoulderC, scale(chestLat, half)), P.armB, elbow.B ?? STYLIZE.ELBOW, 1);
+  // A form can bring the hands in toward the middle (P.handDepth, lead and
+  // rear): a boxer's fists guard the face from in front of it, not out over
+  // each shoulder.
+  arm('L', sub(shoulderC, scale(chestLat, half)), P.armF, elbow.F ?? STYLIZE.ELBOW, -1, P.handDepth?.F);
+  arm('R', add(shoulderC, scale(chestLat, half)), P.armB, elbow.B ?? STYLIZE.ELBOW, 1, P.handDepth?.B, P.guardTurn);
   // A held prop rides a fist but faces the way the body faces, as a 2D part is
   // an unrotated offset from the hand, instead of turning with the arm.
   for (const side of ['L', 'R']) {

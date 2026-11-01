@@ -9,7 +9,7 @@ import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
-import { has3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D, athlete3D } from './gl3d/index.js';
+import { has3D, form3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D, athlete3D } from './gl3d/index.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 import { FX_STYLE } from './fx.js';
 import { drawFigure, figureHead, figureFrame } from './figure.js';
@@ -189,7 +189,9 @@ function trackedAttackPose(f, atk) {
       pose[limb].x = A + (pose[limb].x - A) * k;
     }
   }
-  if (f.def?.stance) {
+  // A track written in the fighter's own guard (a form's, data/forms.js)
+  // already starts and ends there.
+  if (f.def?.stance && !track.own) {
     const G = guardOf(f.def, (STYLES[f.def.style] || STYLES.balanced).stance);
     const dy = REST.shoulderY - G.shoulder;
     const own = t < 1 ? 1 - ease.smooth(Math.min(1, t / 0.9)) : t > 2.2 ? ease.smooth(Math.min(1, (t - 2.2) / 0.8)) : 0;
@@ -332,7 +334,35 @@ function carryGuard(P, G, lift = 0) {
 // Returns limb targets in local space (+x = facing direction, y up = negative, origin at feet).
 // Exported for the tests and the lab, which check what a pose means (a guard,
 // a punch) without a canvas; the game only ever reaches it through drawFighter.
-export function computePose(f, t) {
+//
+// `form` is a fighting form (data/forms.js) the fighter is drawn in, which
+// stands in for their own stance, motion and attack tracks. Only a 3D model
+// carries one for now (gl3d form3D), so the 2D fighters never see it.
+export function computePose(f, t, form = null) {
+  if (!form) return basePose(f, t);
+  const def = { ...f.def, stance: form.stance, motion: form.motion ?? f.def?.motion,
+    animOverrides: { ...f.def?.animOverrides, ...form.tracks } };
+  const P = basePose({ ...f, def }, t);
+  if (f.state === 'idle' && form.bounce) {
+    // the whole body rides the knees, hands and all
+    const b = Math.sin(t * form.bounce.rate) * form.bounce.px;
+    P.hipY += b; P.shoulderY += b; P.headY += b;
+    P.armF.y += b; P.armB.y += b;
+  }
+  if (f.state === 'block' && form.block) {
+    const G = guardOf(def, (STYLES[def.style] || STYLES.balanced).stance);
+    const dy = P.shoulderY - G.shoulder;
+    for (const k of ['armF', 'armB']) {
+      P[k] = { x: G[k].x + form.block[k].x, y: G[k].y + dy + form.block[k].y };
+    }
+    P.twist = form.block.twist ?? 0;
+  }
+  P.handDepth = form.handDepth;
+  P.guardTurn = form.guardTurn;
+  return P;
+}
+
+function basePose(f, t) {
   // sx/sy = squash & stretch, applied around the feet in drawFighter. Purely
   // visual weight — hitboxes come from ATTACKS timing, never from the pose.
   // The rig comes from REST — the ONE place the stance is defined. This used to
@@ -1362,7 +1392,7 @@ export function drawFighter(ctx, f, t) {
   const tDraw = timing3D() ? performance.now() : 0;
   const def = f.def;
   const body = f.body || clampBody(def.body);
-  const P = applyProportions(computePose(f, t), body);
+  const P = applyProportions(computePose(f, t, form3D(def)), body);
   if (FX_STYLE.impact) lastPoses.set(f, { P, t });
   const c = def.c;
   ctx.save();

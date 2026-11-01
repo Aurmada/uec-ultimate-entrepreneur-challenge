@@ -242,9 +242,33 @@ render only. Owner feedback so far: the neck and head were not humanly possible
 and the back not straight (fixed in `4d885c7`), then "his neck and shoulder
 looks off" (fixed next: the deltoids were balls sitting above the traps, the
 traps were weighted to the neck and arms so they lumped with every move, the
-jaw melted into the neck, and the head jutted on a punch). Still to do: the
-guard hands sit low, the arms stretch a little at full punch, and the head is
-a mannequin until the face stage.
+jaw melted into the neck, and the head jutted on a punch).
+
+Then: "boxers guard their face", and a punch is thrown by turning the upper
+body into it; each character can have their own fighting form, and Jeff's is
+boxing. `src/data/forms.js` holds fighting forms, render only: a form brings
+its own guard, motion and attack tracks in place of the fighter's own
+(`computePose(f, t, form)`), and can turn the shoulders and hips through a
+move (`twist`, `hipTwist`, new pose channels only the 3D rig reads), bring the
+fists in to guard the face (`handDepth`) and keep the rear fist at the chin as
+the body turns (`guardTurn`). A form belongs to a model for now
+(`models3d.js` `form`, read through `gl3d` `form3D`), so the 2D Jeff keeps his
+karate stance and the parcel under his arm; moving `form` onto the fighter
+would give the 2D game the same boxing, and is the owner's call. Boxing so
+far: the guard (idle, walk, crouch, jump), a shell block, and a lead straight
+loaded and turned through the hips and shoulders, the rear fist home
+throughout. Kicks, the uppercut and the slap still use the shared tracks.
+`test/forms.test.js`.
+
+An independent review of the body (2026-11-01), worst first, for the next
+sculpt pass: the legs and forearms are too small for the upper body (thighs
+no wider than the head, a straight tube of a leg in the kick); the neck reads
+long from the side and the back is a smooth slab (no spine groove, shoulder
+blades or lat edges); the pec rounds into a hanging lobe when the arm moves,
+and the side under the armpit shows a dark hollow when the chest turns to the
+camera; the belly crumples on a twist and the carved abs break into chips
+through the toon bands. Also still to do: the arms stretch a little at full
+punch, and the head is a mannequin until the face stage.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

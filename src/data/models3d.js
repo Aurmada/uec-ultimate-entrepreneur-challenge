@@ -86,12 +86,15 @@ export const newBodyFor = (def) => (CAST_MODELS.includes(def?.id) ? def.id : ath
 // radians: the 2D head throws itself forward on a punch, and a real neck
 // following it pushed the head out ahead of the chest), a straight back leaned `lean` further over his bent knees with
 // the pelvis taking `pelvis` of it, no girth or head pushed for game size, and
-// his own shoulder and hip width. No face yet: that is the remodel's next stage.
+// his own shoulder and hip width. He boxes (`form`, data/forms.js): his
+// guard, punch and block are a boxer's wherever this model draws him. No face
+// yet: that is the remodel's next stage.
 MODELS3D['jeff-sculpt'] = {
   url: 'assets/models/sculpt/jeff.glb',
   leaf: { forearm: 0.367, head: 0.255, foot: [0.18, -0.065, 0] },
   skull: 0.16,
   fit: { girth: 1, head: 1, nod: 0.2, lean: 0.14, pelvis: 0.85, shoulderHalf: 0.2, hipHalf: 0.095 },
+  form: 'boxing',
 };
 
 export const DEFAULT_MODEL = 'founder';

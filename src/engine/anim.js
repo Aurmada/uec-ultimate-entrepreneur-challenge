@@ -51,10 +51,15 @@ export const REST = {
   armF: { x: 58, y: -152 }, armB: { x: 41, y: -158 },
   legF: { x: 26, y: 0 }, legB: { x: -25, y: 0 },
   bodyLean: 0.08, sx: 1, sy: 1,
+  twist: 0, hipTwist: 0,
 };
 
 const VEC_KEYS = ['armF', 'armB', 'legF', 'legB'];
-const NUM_KEYS = ['hipY', 'shoulderY', 'headX', 'headY', 'rot', 'crouch', 'bodyLean', 'sx', 'sy'];
+// twist and hipTwist turn the shoulders and the hips about the spine, in
+// radians, positive bringing the lead side forward. Only the 3D rig can show
+// a turn (engine/gl3d/rig.js), so they are 0 except where a fighting form
+// keys them (data/forms.js); the 2D figure ignores them.
+const NUM_KEYS = ['hipY', 'shoulderY', 'headX', 'headY', 'rot', 'crouch', 'bodyLean', 'sx', 'sy', 'twist', 'hipTwist'];
 
 export const EASE = {
   linear:  (k) => k,
@@ -164,6 +169,7 @@ export const AUTHORED_REST = Object.freeze({
   armF: Object.freeze({ x: 30, y: -98 }), armB: Object.freeze({ x: 18, y: -90 }),
   legF: Object.freeze({ x: 15, y: 0 }), legB: Object.freeze({ x: -14, y: 0 }),
   bodyLean: 0, sx: 1, sy: 1,
+  twist: 0, hipTwist: 0,     // added with the joints, at the zero every pose then had
 });
 
 export function addDelta(P, pose, base) {

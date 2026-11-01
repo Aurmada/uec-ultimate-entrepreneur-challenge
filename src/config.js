@@ -582,6 +582,7 @@ export const GL3D = {
   HIP_HALF: 0.10,
   HIP_DROP: 0.02,
   HAND_DEPTH: 0.85,     // how much of its shoulder's depth a hand keeps
+  TWIST_HEAD_STAYS: 0.4,  // share of a form's shoulder turn the head does not follow
   FOOT_DEPTH: 1.10,
   ANKLE_PX: 6,          // the 2D rig aims the shin 6 px above the foot
   FOOT_LIFT: 12,        // px of lift over which a foot rolls from flat on the floor to hanging off the shin

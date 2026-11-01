@@ -16,6 +16,7 @@ import { buildRig, solvePose, transformPoint } from './rig.js';
 import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
+import { FORMS } from '../../data/forms.js';
 import {
   MODELS3D, DEFAULT_MODEL, FIGHTER_MODELS, resolveLook3D, athleteFor, newBodyFor,
   FACE_STATES, FACE_GRID, faceCell, faceKey, drawnFaceKey,
@@ -202,6 +203,10 @@ function modelFor(def) {
 }
 
 export function has3D(def) { return !!modelFor(def); }
+
+// The fighting form a fighter's model is drawn in (models3d.js `form`,
+// data/forms.js), or null where they are drawn in 2D or the model has none.
+export const form3D = (def) => (modelFor(def) ? FORMS[MODELS3D[modelIdFor(def)].form] ?? null : null);
 
 // Start loading a model nobody wears by default (the lab, the review page),
 // so it is ready when a fighter is moved into it through FIGHTER_MODELS.

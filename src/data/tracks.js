@@ -28,7 +28,7 @@ export const NOMINAL_REACH = { slap: 78, punch: 84, kick: 106, launch: 74 };
 // hand, and how it breaks again the next time a key gains a joint. So a key
 // of an attack track keeps what the keys before it set, unless it says
 // otherwise, which is what anyone writing one assumes it does.
-function carried(keys) {
+export function carried(keys) {
   const held = {};
   return keys.map((key) => {
     for (const [j, v] of Object.entries(key.joints)) held[j] = v;
