@@ -59,11 +59,15 @@ def views(objs, out, name, engine='WORKBENCH', size=(720, 1000), span=2.12, cent
         scene.cycles.use_denoising = True
         world.use_nodes = True
         world.node_tree.nodes['Background'].inputs['Color'].default_value = (0.035, 0.04, 0.06, 1)
-        world.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.6
+        world.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.25
+        # clay is judged by its shadows: keep the lit side well short of white
+        scene.view_settings.view_transform = 'AgX'
+        scene.view_settings.look = 'AgX - Medium High Contrast'
+        scene.view_settings.exposure = -1.3
         clay = bpy.data.materials.new('clay')
         clay.use_nodes = True
         b = clay.node_tree.nodes['Principled BSDF']
-        b.inputs['Base Color'].default_value = (0.42, 0.37, 0.33, 1)
+        b.inputs['Base Color'].default_value = (0.3, 0.26, 0.23, 1)
         b.inputs['Roughness'].default_value = 0.55
         for o in objs:
             o.data.materials.clear()
@@ -86,10 +90,11 @@ def _lights(scene, centre):
     """A key high on the front left, a fill on the right, and a rim behind:
     the usual sculpture lighting, so every form throws a shadow."""
     from mathutils import Vector
-    for name, d, energy, size in (('key', (0.6, 0.55, 0.75), 900, 1.5),
-                                  ('fill', (0.5, -0.8, 0.2), 250, 2.5),
-                                  ('rim', (-0.8, 0.2, 0.6), 700, 1.0),
-                                  ('rim2', (-0.6, -0.6, 0.4), 400, 1.0)):
+    # the key raking from high on one side, so every muscle throws a shadow
+    for name, d, energy, size in (('key', (0.45, 0.75, 0.6), 1100, 1.0),
+                                  ('fill', (0.5, -0.8, 0.1), 120, 2.5),
+                                  ('rim', (-0.8, 0.2, 0.6), 600, 1.0),
+                                  ('rim2', (-0.6, -0.7, 0.4), 350, 1.0)):
         data = bpy.data.lights.new(name, 'AREA')
         data.energy = energy
         data.size = size

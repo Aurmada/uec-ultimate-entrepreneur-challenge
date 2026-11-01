@@ -72,23 +72,23 @@ def limb(a, b, s):
 # carved in (see "definition").
 
 # trunk
-E(V(-0.008, 0, 1.42), (0.122, 0.162, 0.18), k=0.04)
+E(V(-0.006, 0, 1.425), (0.132, 0.162, 0.18), k=0.04)
 E(V(0.0, 0, 1.54), (0.095, 0.145, 0.075), k=0.04)
-E(V(0.014, 0, 1.2), (0.096, 0.122, 0.15), k=0.05)
+E(V(0.018, 0, 1.2), (0.096, 0.122, 0.15), k=0.05)
 E(V(0.0, 0, 1.0), (0.104, 0.155, 0.1), k=0.05)
 E(V(-0.084, 0, 1.47), (0.034, 0.078, 0.1), k=0.03)
 for s in (1, -1):
-    E(V(0.068, s * 0.078, 1.468), (0.058, 0.098, 0.072), sc.rot(rx=s * 12), k=0.03)   # pectoral
+    E(V(0.076, s * 0.078, 1.47), (0.06, 0.098, 0.072), sc.rot(rx=s * 12), k=0.03)    # pectoral
     E(V(0.03, s * 0.158, 1.49), (0.045, 0.055, 0.055), k=0.03)                      # into the armpit
     E(V(0.01, s * 0.103, 1.13), (0.07, 0.04, 0.085), k=0.04)                        # obliques
     C(V(-0.035, s * 0.15, 1.47), V(-0.05, s * 0.095, 1.18), 0.065, 0.035, k=0.04)   # lats
-    E(V(-0.03, s * 0.078, 1.645), (0.055, 0.095, 0.042), sc.rot(rx=s * -22), k=0.045)  # traps
-    E(V(-0.088, s * 0.08, 1.44), (0.04, 0.075, 0.085), k=0.035)                     # shoulder blade
+    E(V(-0.03, s * 0.074, 1.66), (0.056, 0.095, 0.048), sc.rot(rx=s * -26), k=0.045)  # traps
+    E(V(-0.094, s * 0.08, 1.44), (0.046, 0.075, 0.09), k=0.035)                     # shoulder blade
     E(V(-0.08, s * 0.03, 1.2), (0.03, 0.032, 0.16), k=0.03)                         # erectors
-    E(V(-0.06, s * 0.07, 0.95), (0.072, 0.08, 0.092), sc.rot(rx=s * 8), k=0.04)     # glutes
+    E(V(-0.068, s * 0.07, 0.95), (0.075, 0.08, 0.092), sc.rot(rx=s * 8), k=0.04)    # glutes
 
 # neck
-C(V(-0.012, 0, 1.58), V(-0.008, 0, 1.76), 0.074, 0.06, k=0.035)
+C(V(-0.012, 0, 1.58), V(-0.008, 0, 1.76), 0.076, 0.062, k=0.035)
 for s in (1, -1):
     C(V(-0.025, s * 0.052, 1.765), V(0.04, s * 0.014, 1.6), 0.015, 0.011, k=0.02)
     C(V(0.042, s * 0.018, 1.588), V(0.0, s * 0.175, 1.605), 0.008, 0.008, k=0.02)
@@ -182,34 +182,30 @@ for s in (1, -1):
 
 # back
 for s in (1, -1):
-    G([(-0.105, s * 0.035, 1.53), (-0.11, s * 0.045, 1.44), (-0.105, s * 0.07, 1.36), (-0.085, s * 0.13, 1.33)], **SOFT)
     G([(-0.1, s * 0.04, 1.2), (-0.08, s * 0.1, 1.24), (-0.05, s * 0.14, 1.3)], **SOFT)
     G([(-0.11, s * 0.03, 0.87), (-0.11, s * 0.07, 0.86), (-0.095, s * 0.11, 0.875)], **STRONG)
 
-# arms: the deltoid's edge front and back to where it inserts, the line
-# between biceps and triceps either side, the forearm's two masses
+# arms: the deltoid's edge front and back to where it inserts, and the line
+# between biceps and triceps either side
 for s in (1, -1):
     S, El, W = ARM[s]
     u, v, lat, ax = limb(S, El, s)
     ins = S + u * 0.17 + lat * 0.04
-    G([S + v * 0.065 + u * 0.035, S + u * 0.09 + v * 0.06 + lat * 0.025, ins + v * 0.015], **STRONG)
-    G([S - v * 0.065 + u * 0.035, S + u * 0.09 - v * 0.06 + lat * 0.025, ins - v * 0.015], **STRONG)
+    G([S + v * 0.06 + u * 0.06, S + u * 0.1 + v * 0.055 + lat * 0.02, ins + v * 0.015], **LINE)
+    G([S - v * 0.06 + u * 0.06, S + u * 0.1 - v * 0.055 + lat * 0.02, ins - v * 0.015], **LINE)
     G([S + u * 0.17 + lat * 0.05, S + u * 0.25 + lat * 0.045, El + lat * 0.035 - u * 0.01], **LINE)
     G([S + u * 0.1 - lat * 0.04, S + u * 0.2 - lat * 0.045, El - lat * 0.035], **LINE)
     u, v, lat, ax = limb(El, W, s)
-    G([El + u * 0.03 + v * 0.03, El + u * 0.15 + v * 0.02, W - u * 0.03 + v * 0.012], **SOFT)
 
-# legs: the edge of the outer quadricep, the teardrop over the knee, and
-# where the calf ends
+# legs: the teardrop over the knee, and where the calf ends
 for s in (1, -1):
     Hj, K, A = LEG[s]
     u, v, lat, ax = limb(Hj, K, s)
     L = lambda t: lerp(Hj, K, t)
-    G([L(0.3) + v * 0.07 + lat * 0.045, L(0.55) + v * 0.06 + lat * 0.05, L(0.8) + v * 0.045 + lat * 0.04], **SOFT)
-    G([L(0.62) + v * 0.065 - lat * 0.015, L(0.78) + v * 0.05 - lat * 0.04, L(0.93) + v * 0.035 - lat * 0.038], **STRONG)
+    G([L(0.62) + v * 0.065 - lat * 0.015, L(0.78) + v * 0.05 - lat * 0.04, L(0.93) + v * 0.035 - lat * 0.038], **LINE)
     u, v, lat, ax = limb(K, A, s)
     L = lambda t: lerp(K, A, t)
-    G([L(0.45) - v * 0.03 + lat * 0.04, L(0.53) - v * 0.05, L(0.45) - v * 0.03 - lat * 0.04], **LINE)
+    G([L(0.45) - v * 0.03 + lat * 0.04, L(0.53) - v * 0.05, L(0.45) - v * 0.03 - lat * 0.04], **SOFT)
 
 
 def build():
