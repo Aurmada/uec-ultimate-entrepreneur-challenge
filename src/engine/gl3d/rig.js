@@ -77,6 +77,10 @@ export function buildRig(model, spec) {
     chestOff: at('chest')[1] - hip[1],
     neckOff: at('neck')[1] - hip[1],
     skull: spec.skull,
+    // A model sculpted to its own size and build (models3d.js `fit`) is drawn
+    // as built: no girth or head pushed for game size, its own shoulders and
+    // hips, and no build or shoulder knob from the 2D body on top.
+    fit: spec.fit || null,
     // The rest foot's angle from its shin, so a lifted foot keeps the same set,
     // and the rest foot itself, which is how a planted one lies on the floor.
     footAngle: Math.atan2(shin[0] * foot[1] - shin[1] * foot[0], shin[0] * foot[0] + shin[1] * foot[1]),
@@ -137,8 +141,11 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   const pelUp = tip([0, 1, 0], pl);
   const headFwd = tip([Math.cos(yh), 0, Math.sin(yh)], leanRad);
 
-  const build = P.build ?? 1;
-  const wide = P.shoulderW ?? 1;
+  const fit = rig.fit;
+  const own = !!fit;
+  const build = own ? 1 : (P.build ?? 1);
+  const wide = own ? 1 : (P.shoulderW ?? 1);
+  const G = (k) => (own ? fit.girth ?? 1 : GL3D[k]);
   const pose = {};
   const set = (name, head, tail, ref, sx, sy = build, sz = build) => {
     pose[name] = { head, tail, ref, sx, sy, sz };
@@ -154,13 +161,15 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   const neckJ = add(hip, scale(chestUp, rig.neckOff * ts));
 
   const headR = P.headR ?? STYLIZE.HEAD_R;
-  const hs = (headR / STYLIZE.HEAD_R) * GL3D.HEAD_SCALE;
+  const hs = (headR / STYLIZE.HEAD_R) * (own ? fit.head ?? 1 : GL3D.HEAD_SCALE);
   const headTop = P.shoulderY - (headR - STYLIZE.NECK_OVERLAP);
   const [hx, hy] = socket(P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX, Math.max(P.headY, headTop));
-  const headBase = sub(pt(hx, hy), scale(chestUp, rig.skull * hs));
+  // a head smaller than the 2D one sits higher on its neck than the 2D head's
+  // centre, or the chin sinks into the collar
+  const headBase = sub(add(pt(hx, hy), scale(chestUp, own ? fit.headLift ?? 0 : 0)), scale(chestUp, rig.skull * hs));
   const headTail = add(headBase, scale(chestUp, rig.rest.head.len * hs));
 
-  const torso = build * GL3D.TORSO_GIRTH;
+  const torso = build * G('TORSO_GIRTH');
   set('hips', hip, spineJ, pelFwd, dist(hip, spineJ) / rig.rest.hips.len, torso, torso);
   set('spine', spineJ, chestJ, normalize(add(pelFwd, chestFwd)),
       dist(spineJ, chestJ) / rig.rest.spine.len, torso, torso * (1 + wide) / 2);
@@ -169,7 +178,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   set('head', headBase, headTail, headFwd, hs, hs, hs);
 
   // ---- arms: the lead hand (armF) on the far shoulder, the rear hand near
-  const half = GL3D.SHOULDER_HALF * wide;
+  const half = (own ? fit.shoulderHalf ?? GL3D.SHOULDER_HALF : GL3D.SHOULDER_HALF) * wide;
   const fists = {};
   const arm = (side, shoulder, hand, bendSign, flare) => {
     const target = pt(hand.x, hand.y, shoulder[2] * GL3D.HAND_DEPTH);
@@ -182,7 +191,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     const pole = normalize(add([-GL3D.ELBOW_BACK * k, -1, 0], scale(chestLat, flare * GL3D.ELBOW_FLARE)));
     const up = rig.rest[`upper_arm.${side}`], lo = rig.rest[`forearm.${side}`];
     const s = ik(shoulder, target, up.len, lo.len, pole);
-    const girth = build * GL3D.ARM_GIRTH;
+    const girth = build * G('ARM_GIRTH');
     set(`upper_arm.${side}`, shoulder, s.mid, onHinge(s.hinge, shoulder, s.mid), dist(shoulder, s.mid) / up.len, girth, girth);
     set(`forearm.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / lo.len, girth, girth);
     fists[side] = s.end;
@@ -211,7 +220,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     const pole = normalize(add([1, 0, 0], scale(pelLat, flare * GL3D.KNEE_FLARE)));
     const th = rig.rest[`thigh.${side}`], sn = rig.rest[`shin.${side}`], ft = rig.rest[`foot.${side}`];
     const s = ik(hipJ, target, th.len * stride, sn.len * stride, pole);
-    const girth = build * GL3D.LEG_GIRTH;
+    const girth = build * G('LEG_GIRTH');
     set(`thigh.${side}`, hipJ, s.mid, onHinge(s.hinge, hipJ, s.mid), dist(hipJ, s.mid) / th.len, girth, girth);
     set(`shin.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / sn.len, girth, girth);
     const shinDir = normalize(sub(s.end, s.mid));
@@ -224,11 +233,12 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     const hang = normalize(rotZ(shinDir, rig.footAngle));
     const toe = normalize(add(scale(rig.footRest, 1 - lift), scale(hang, lift)));
     const up = normalize(add(scale([0, 1, 0], 1 - lift), scale(shinDir, -lift)), [0, 1, 0]);
-    const fs = build * GL3D.FOOT_SCALE;
+    const fs = build * G('FOOT_SCALE');
     set(`foot.${side}`, s.end, add(s.end, scale(toe, ft.len * fs)), up, fs, fs, fs);
   };
-  leg('L', sub(hipBase, scale(pelLat, GL3D.HIP_HALF)), P.legF, -1);
-  leg('R', add(hipBase, scale(pelLat, GL3D.HIP_HALF)), P.legB, 1);
+  const hipHalf = own ? fit.hipHalf ?? GL3D.HIP_HALF : GL3D.HIP_HALF;
+  leg('L', sub(hipBase, scale(pelLat, hipHalf)), P.legF, -1);
+  leg('R', add(hipBase, scale(pelLat, hipHalf)), P.legB, 1);
 
   const out = rig.matrices;
   const scratch = new Array(16);

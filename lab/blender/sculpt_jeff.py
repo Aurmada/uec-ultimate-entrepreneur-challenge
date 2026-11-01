@@ -4,9 +4,11 @@ character artist builds one, to the heroic proportions of the modern arcade
 fighters rather than the soft, fused shapes of the metaball bodies.
 
     python lab/blender/sculpt_jeff.py -- <out.glb> [--h 0.003] [--views <dir>]
+    python lab/blender/sculpt_jeff.py -- assets/models/sculpt/jeff.glb --rig
 
-Writes the body as a static mesh (no rig yet) and, with --views, clay renders
-from the front, three quarters, the side and the back.
+Writes the body as a static mesh and, with --views, clay renders from the
+front, three quarters, the side and the back. With --rig it writes the game
+model instead: decimated, in fight shorts, weighted to the skeleton.
 
 Proportions. About 7.5 heads tall: crown 1.955, chin 1.69, so a head of 0.265.
 The crotch sits at half the height, the nipples a head below the chin, the
@@ -215,7 +217,9 @@ def build():
     return sc.to_blender('body', verts, quads)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' and '--rig' in ARGS:
+    pass       # handled below, once everything is defined
+elif __name__ == '__main__':
     import time
     t0 = time.time()
     obj = build()
@@ -228,3 +232,135 @@ if __name__ == '__main__':
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         import clay
         clay.views([obj], VIEWS, 'jeff')
+
+
+# ================================================================ into the game
+# The live 3D renderer poses a model from the 2D pose through the founder's
+# skeleton contract (build_founder.py): the same joint names, the body facing
+# +x, his left on +y. Jeff keeps his own joint positions, measured from his
+# sculpt; models3d.js says where his leaf bones end and how to fit him.
+def joints():
+    J = {'hip': V(0, 0, 0.98), 'spine': V(0, 0, 1.12), 'chest': V(0, 0, 1.32),
+         'neck': V(0, 0, 1.585), 'head': V(0, 0, 1.7), 'head_top': V(0, 0, 1.955)}
+    for side, s in (('R', -1), ('L', 1)):
+        S, El, W = ARM[s]
+        fist = W + sc.unit(El - S) * 0.052
+        J.update({'shoulder.' + side: S, 'elbow.' + side: El, 'fist.' + side: fist,
+                  'grip.' + side: fist, 'grip_tip.' + side: fist + V(0.1, 0, 0)})
+        Hj, K, A = LEG[s]
+        J.update({'hipj.' + side: Hj, 'knee.' + side: K, 'ankle.' + side: A, 'toe.' + side: A + V(0.18, 0, -0.065)})
+    return J
+
+
+BONES = [('hips', 'hip', 'spine', None), ('spine', 'spine', 'chest', 'hips'),
+         ('chest', 'chest', 'neck', 'spine'), ('neck', 'neck', 'head', 'chest'), ('head', 'head', 'head_top', 'neck')]
+for _s in ('R', 'L'):
+    BONES += [('upper_arm.' + _s, 'shoulder.' + _s, 'elbow.' + _s, 'chest'),
+              ('forearm.' + _s, 'elbow.' + _s, 'fist.' + _s, 'upper_arm.' + _s),
+              ('thigh.' + _s, 'hipj.' + _s, 'knee.' + _s, 'hips'),
+              ('shin.' + _s, 'knee.' + _s, 'ankle.' + _s, 'thigh.' + _s),
+              ('foot.' + _s, 'ankle.' + _s, 'toe.' + _s, 'shin.' + _s)]
+BONES += [('grip.L', 'grip.L', 'grip_tip.L', 'forearm.L'), ('grip.R', 'grip.R', 'grip_tip.R', 'forearm.R')]
+
+
+def skin_weights(verts, edges, J):
+    """Weights by distance to each bone, among the nearest bone and those
+    joined to it (so a forearm never pulls on the chest), three at most,
+    then smoothed over the mesh so the joints bend without creasing. A vertex
+    never takes a limb bone from the other side, or the thighs web together."""
+    names = [b[0] for b in BONES if not b[0].startswith('grip')]
+    parent = {b[0]: b[3] for b in BONES}
+    seg = {b[0]: (J[b[1]], J[b[2]]) for b in BONES}
+    D = np.empty((len(verts), len(names)))
+    for i, n in enumerate(names):
+        a, b = seg[n]
+        ab = b - a
+        t = np.clip(((verts - a) @ ab) / (ab @ ab), 0, 1)
+        D[:, i] = np.linalg.norm(verts - (a + t[:, None] * ab), axis=1)
+        if n.endswith('.L'):
+            D[verts[:, 1] < -0.02, i] = np.inf
+        if n.endswith('.R'):
+            D[verts[:, 1] > 0.02, i] = np.inf
+    near = np.zeros((len(names), len(names)), bool)
+    for i, n in enumerate(names):
+        for j, m in enumerate(names):
+            near[i, j] = n == m or parent[n] == m or parent[m] == n
+    D[~near[np.argmin(D, axis=1)]] = np.inf
+    W = np.where(np.isfinite(D), 1.0 / (D + 0.02) ** 4, 0.0)
+
+    def top3(W):
+        cut = np.sort(W, axis=1)[:, -3][:, None]
+        W = np.where(W >= cut, W, 0.0)
+        return W / np.maximum(W.sum(1, keepdims=True), 1e-12)
+
+    W = top3(W)
+    a, b = edges[:, 0], edges[:, 1]
+    deg = np.bincount(np.concatenate([a, b]), minlength=len(verts))[:, None]
+    for _ in range(3):
+        acc = np.zeros_like(W)
+        np.add.at(acc, a, W[b])
+        np.add.at(acc, b, W[a])
+        W = top3(0.5 * W + 0.5 * acc / np.maximum(deg, 1))
+    return names, W
+
+
+def export_rigged(path, tris=40000):
+    """Jeff as a game model: decimated, in shorts, weighted to the skeleton."""
+    import bpy
+    obj = build()
+    me = obj.data
+    dec = obj.modifiers.new('Decimate', 'DECIMATE')
+    dec.ratio = tris / (2 * len(me.polygons))
+    with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
+        bpy.ops.object.modifier_apply(modifier=dec.name)
+    me.shade_smooth()
+    # materials by palette role: skin, and a pair of fight shorts
+    for role, colour in (('skin', (0.75, 0.42, 0.25, 1)), ('pants', (0.03, 0.035, 0.06, 1))):
+        m = bpy.data.materials.new(role)
+        m.use_nodes = True
+        m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = colour
+        m.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1.0
+        me.materials.append(m)
+    cen = np.zeros(len(me.polygons) * 3)
+    me.polygons.foreach_get('center', cen)
+    cen = cen.reshape(-1, 3)
+    shorts = (cen[:, 2] > 0.8) & (cen[:, 2] < 1.075) & (np.abs(cen[:, 1]) < 0.25)
+    me.polygons.foreach_set('material_index', shorts.astype(np.int32))
+    J = joints()
+    co = np.zeros(len(me.vertices) * 3)
+    me.vertices.foreach_get('co', co)
+    ed = np.zeros(len(me.edges) * 2, dtype=np.int64)
+    me.edges.foreach_get('vertices', ed)
+    names, W = skin_weights(co.reshape(-1, 3), ed.reshape(-1, 2), J)
+    groups = {n: obj.vertex_groups.new(name=n) for n in names}
+    for i, n in enumerate(names):
+        idx = np.nonzero(W[:, i] > 0.01)[0]
+        for vi, w in zip(idx.tolist(), W[idx, i].tolist()):
+            groups[n].add([vi], w, 'REPLACE')
+    arm = bpy.data.armatures.new('rig')
+    rig = bpy.data.objects.new('rig', arm)
+    bpy.context.scene.collection.objects.link(rig)
+    bpy.context.view_layer.objects.active = rig
+    rig.select_set(True)
+    bpy.ops.object.mode_set(mode='EDIT')
+    for name, hj, tj, par in BONES:
+        eb = arm.edit_bones.new(name)
+        eb.head, eb.tail = tuple(J[hj]), tuple(J[tj])
+        if par:
+            eb.parent = arm.edit_bones[par]
+    bpy.ops.object.mode_set(mode='OBJECT')
+    mod = obj.modifiers.new('Armature', 'ARMATURE')
+    mod.object = rig
+    obj.parent = rig
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    bpy.ops.export_scene.gltf(
+        filepath=path, export_format='GLB', use_selection=False,
+        export_skins=True, export_animations=False, export_morph=False,
+        export_materials='EXPORT', export_texcoords=False, export_yup=True,
+        export_apply=False, export_def_bones=False,
+    )
+    print(f'[jeff] rigged: {len(me.polygons)} faces, {os.path.getsize(path)} bytes -> {path}', flush=True)
+
+
+if __name__ == '__main__' and '--rig' in ARGS:
+    export_rigged(OUT)
