@@ -644,6 +644,14 @@ OUTFITS = {
         'skin': ['shirt', 'trousers', 'shoes'],
         'covers': {'shirt': ['vest', 'trousers'], 'trousers': ['shoes']},
     },
+    # Trousers and shoes and nothing above the waist: what a fighter wears
+    # until their own outfit is made, so their head and face can be judged in
+    # the game before their clothes are.
+    'base': {
+        'pieces': [('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['trousers', 'shoes'],
+        'covers': {'trousers': ['shoes']},
+    },
 }
 
 
@@ -672,7 +680,10 @@ def dressed(data):
     """Body and clothes as Blender objects, the hidden parts removed:
     (body, [(object, role, colour)]), colours from the fighter's palette."""
     body = build()
-    O = OUTFITS[data['outfit']]
+    O = OUTFITS.get(data['outfit'])
+    if O is None:
+        print(f'[{data["id"]}] no {data["outfit"]} yet (OUTFITS): trousers and shoes for now', flush=True)
+        O = OUTFITS['base']
     pieces = {n: make() for n, make, _, _ in O['pieces']}
     objs = {n: sc.to_blender(n, *f.mesh(), smooth=1) for n, f in pieces.items()}
     hidden(body, [pieces[n] for n in O['skin']], below=WAIST - 0.012)
@@ -803,9 +814,11 @@ def export_rigged(data, spec, path, tris=44000):
     import bpy
     if spec is Placeholder:
         sys.exit(f'{data["id"]} has no head of their own yet (lab/blender/fighters/{data["id"]}.py)')
-    if data['outfit'] not in OUTFITS:
-        sys.exit(f'{data["id"]} wears a {data["outfit"]}, which the pipeline cannot dress yet (OUTFITS)')
     obj, clothes = dressed(data)
+    # what rides the head (a cap, hair under it), and the skin it covers
+    wears = spec.headwear(sys.modules[__name__]) if hasattr(spec, 'headwear') else []
+    for _, covers in wears:
+        hidden(obj, covers)
     parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
     for ob, _, _ in parts:
         FR.warp_mesh(ob)
@@ -860,6 +873,14 @@ def export_rigged(data, spec, path, tris=44000):
         mod = wear.modifiers.new('Armature', 'ARMATURE')
         mod.object = rig
         wear.parent = rig
+    for wear, _ in wears:
+        FR.warp_mesh(wear)
+        _decimate(wear, 6000)
+        wear.data.shade_smooth()
+        wear.vertex_groups.new(name='head').add(list(range(len(wear.data.vertices))), 1.0, 'REPLACE')
+        mod = wear.modifiers.new('Armature', 'ARMATURE')
+        mod.object = rig
+        wear.parent = rig
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=path, export_format='GLB', use_selection=False,
@@ -908,7 +929,12 @@ if __name__ == '__main__':
     if '--rig' in ARGS:
         export_rigged(data, spec, os.path.abspath(opt('--out', os.path.join(ROOT, 'assets', 'models', 'sculpt', f'{fid}.glb'))))
     elif '--views' in ARGS:
+        # the body in clay, with whatever rides the head
         import clay
         obj = build()
-        FR.warp_mesh(obj)
-        clay.views([obj], opt('--views', '.'), fid)
+        objs = [obj] + [w for w, _ in (spec.headwear(sys.modules[__name__]) if hasattr(spec, 'headwear') else [])]
+        if hasattr(spec, 'eyewear'):
+            objs.append(spec.eyewear(sys.modules[__name__]))
+        for o in objs:
+            FR.warp_mesh(o)
+        clay.views(objs, opt('--views', '.'), fid)

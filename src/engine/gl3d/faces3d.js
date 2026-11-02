@@ -24,6 +24,7 @@
 // of those is pinned (FACE_REF) and another fighter's move it from there.
 import { shade } from '../../data/fighters.js';
 import { STYLIZE } from '../../config.js';
+import { resolveLook3D } from '../../data/models3d.js';
 
 const INK = '#140c08';
 const IRIS = '#47342a', WHITE = '#eee5d6';
@@ -46,8 +47,10 @@ export function character(def) {
     tilt: d('BROW_TILT') * 0.5,                 // the inner ends drop by this more than Jeff's
     curve: d('MOUTH_CURVE'),                    // the set mouth, from Jeff's smirk
     // a fighter pleased with himself narrows his eyes at rest, as the
-    // squint of a smile does
-    smug: F.MOUTH_CURVE > 0,
+    // squint of a smile does; one whose eyes are wide (a high lid) stares
+    smug: F.MOUTH_CURVE > 0 && F.LID_Y <= STYLIZE.FACE.LID_Y,
+    // a mouth that lifts this far is a grin even at rest, teeth showing
+    leer: F.MOUTH_CURVE >= 2,
   };
 }
 
@@ -57,13 +60,14 @@ export function paintSculpted(g, def, expression, layout) {
   const lips = shade(c.skin || '#e2ab84', -38);
   g.lineCap = 'round';
   g.lineJoin = 'round';
+  if (resolveLook3D(def).facialHair === 'stubble') stubble(g, hair, J);
 
   // How each expression sets the features: how open the eyes are (1 the
   // fighter's own rest), where the brows' inner ends sit (down is positive)
   // and their outer ends, and what the mouth does. The table is Jeff's; a
   // fighter whose brows drop harder (BROW_TILT) carries that into every one.
   const X = {
-    idle:  { open: 1, inner: 0.6, outer: 0, mouth: 'set', squint: K.smug },
+    idle:  { open: 1, inner: 0.6, outer: 0, mouth: K.leer ? 'leer' : 'set', squint: K.smug },
     angry: { open: 0.75, inner: 2.6, outer: -0.6, mouth: 'snarl' },
     block: { open: 0.65, inner: 2.2, outer: -0.4, mouth: 'grit' },
     hurt:  { open: 0, inner: -2, outer: 1.2, mouth: 'grimace' },
@@ -163,6 +167,12 @@ export function paintSculpted(g, def, expression, layout) {
     g.quadraticCurveTo(0, my + 0.8 + k * 0.5, mw + 0.4, my - 1.3 - k * 0.9);
     g.stroke();
     lip(g, lips, my, mw);
+  } else if (X.mouth === 'leer') {
+    // a loose grin at rest, lopsided, the far corner higher: enjoying it
+    teeth(-1.3, 1.9, mw * 0.8);
+    g.beginPath();
+    g.moveTo(-mw - 0.2, my - 0.4); g.quadraticCurveTo(0, my + 2.2, mw + 0.5, my - 2.2);
+    g.stroke();
   } else if (X.mouth === 'snarl') {
     teeth(-1.4, 1.4, mw * 0.85);
     g.beginPath();
@@ -183,6 +193,27 @@ export function paintSculpted(g, def, expression, layout) {
     g.moveTo(-mw - 0.4, my - 1.4); g.quadraticCurveTo(0, my + 2.6, mw + 0.4, my - 1.6);
     g.stroke();
   }
+}
+
+// Stubble, as the 2D face has it: a translucent shade of the hair colour,
+// soft-edged, over the upper lip, round the mouth and down the jaw to under
+// the chin. Not up the cheeks: carried across them, its top edge read as a
+// band, a mask over the lower face.
+function stubble(g, colour, J) {
+  const my = J.mouth.y, mw = J.mouth.w;
+  g.save();
+  g.fillStyle = colour;
+  g.globalAlpha = 0.24;
+  g.filter = 'blur(1.2px)';
+  g.beginPath();
+  g.moveTo(-mw * 0.95, my - 3.2);
+  g.quadraticCurveTo(0, my - 6, mw * 0.95, my - 3.2);             // the upper lip, under the nose
+  g.quadraticCurveTo(mw + 3.5, my + 0.5, mw + 7, my + 4);          // past the corner, down the jaw
+  g.quadraticCurveTo(mw * 0.8, my + 15, 0, my + 15.5);             // under the chin
+  g.quadraticCurveTo(-mw * 0.8, my + 15, -mw - 7, my + 4);
+  g.quadraticCurveTo(-mw - 3.5, my + 0.5, -mw * 0.95, my - 3.2);
+  g.fill();
+  g.restore();
 }
 
 // The lower lip's shadow under a closed mouth, so the mouth reads as lips at

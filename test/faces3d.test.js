@@ -73,6 +73,15 @@ test("the painter is pinned on Jeff's face values, and another fighter's move it
   assert.equal(faces.size, new Set(FIGHTERS.map((d) => JSON.stringify(d.face))).size);
 });
 
+test('stubble is painted for a fighter who has it, and a wide-eyed one stares rather than squints', () => {
+  const adam = getFighter('max'), jeff = getFighter('bozo');
+  const shaded = (def) => painted(def, 'idle').join(';').includes('globalAlpha=0.24');
+  assert.ok(shaded(adam), "Adam's stubble is not painted");
+  assert.ok(!shaded(jeff), 'Jeff is painted with stubble he does not have');
+  assert.equal(character(adam).smug, false, 'Adam (wide eyes) squints at rest');
+  assert.equal(character(jeff).smug, true);
+});
+
 test('the sculpted Jeff wears his shades, dark glass over his eyes', () => {
   const spec = MODELS3D['sculpt:bozo'];
   const glb = readFileSync(new URL(`../${spec.url}`, import.meta.url));

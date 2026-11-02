@@ -398,12 +398,31 @@ upper arms, less round the middle) comes with the women's base.
    (`lab/figure3d.js` with `models: ['sculpted']`, and `faces()`), and show
    the owner before the next stage.
 
-**Next: Adam** (`max`, the owner's pick, 2026-11-01). His body at his game
-size is the first stage: 1.26 times Jeff's height, legs 1.23 times, widths
-1.18, his head about Jeff's, so he stands about 8.6 heads to Jeff's 7.4.
-Then his head (an original face for "manic": brows up, eyes wide, a loose
-mouth, a heavy jaw), his oversized hoodie, baggy trousers and white shoes, his
-backwards cap and painted stubble, and a brawler's form.
+**Adam** (`max`, the owner's pick, 2026-11-01). His body at his game size
+was the first stage: 1.26 times Jeff's height, legs 1.23 times, widths 1.18,
+his head about Jeff's, so he stands about 8.6 heads to Jeff's 7.4. The owner:
+"the model is good", with the note on fat above.
+
+His head (2026-11-02, `lab/blender/fighters/max.py`): an original face for
+"manic", open where Jeff's is shut. A high rounded forehead, a light brow
+ridge arched high, big eyes set shallow under thin lids, high cheekbones, a
+long nose with a bump, a wide full mouth, a long heavy jaw and a round chin
+with a cleft. Its first build showed black wedges from the eyes to the
+nostrils in the game's light (the ink outline through a tight crease beside
+a nose standing off the face); the nose now sits on broad side planes and a
+lower lid fills under each eye. His cap is backwards, as in 2D: a crown a
+little proud of the skull, a stiff brim over the nape, a button on top, in
+`suit2` and `accent`, over short dark hair, the skin under both removed
+(`headwear` in the design module: a `hair:cap` mesh, as his look's hair is
+`cap`). The shared painter paints his face from his 2D values: wide eyes
+that stare rather than squint (`smug` needs a narrowed lid), raised brows, a
+loose grin at rest (`leer`, for a mouth curve of 2 or more, only his), and
+stubble, a soft shade over the upper lip, round the mouth and down the jaw
+(up the cheeks, it read as a mask). Until his hoodie is made he wears the
+pipeline's base outfit, trousers and shoes (`OUTFITS.base`), so his head can
+be judged in the game first. Registered as `sculpt:max`.
+
+Next for him: the oversized hoodie and baggy trousers, then a brawler's form.
 
 **Gaps, before the rest of the cast can be built:**
 

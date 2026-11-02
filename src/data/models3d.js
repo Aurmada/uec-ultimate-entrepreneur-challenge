@@ -131,6 +131,26 @@ export const SCULPTED = {
     },
     form: 'boxing',
   },
+  // Adam, the second (`max`), at his own size: a quarter taller than Jeff,
+  // so his numbers are Jeff's carried through his frame (fighter3d.py prints
+  // them). Wide eyes 0.034 out at 1.828, the brow ridge's lower edge at about
+  // 1.851, arched and lifted, the lips meeting at 1.741 and wider than Jeff's;
+  // the painter takes his stare, raised brows and loose smirk from his 2D face
+  // values. No form yet: his 2D stance and moves until his brawling is made.
+  max: {
+    leaf: { forearm: 0.4488, head: 0.2641, foot: [0.213, -0.0798, 0] },
+    skull: 0.1657,
+    fit: { shoulderHalf: 0.2416, hipHalf: 0.1124, legs: 1.2283 },
+    face: {
+      at: [0, 2.183], px: [0.003625, 0.003625],
+      layout: {
+        eye: { x: 9.7, y: -10.9, w: 4.0 },
+        brow: { y: -17.4, inner: 3.4, outer: 16.0 },
+        mouth: { y: 14.0, w: 7.4 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+  },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
   MODELS3D[`sculpt:${id}`] = {
