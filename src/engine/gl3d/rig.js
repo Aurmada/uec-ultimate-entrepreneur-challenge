@@ -264,7 +264,10 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   // the same bend.
   // LEG_SLACK makes them a little longer than the hip height needs, so the
   // knees always carry some bend: legs locked straight read as standing about.
-  const stride = (P.stride ?? 1) * GL3D.LEG_SLACK;
+  // A sculpt built to the fighter's own stride already has legs that long
+  // (fit.legs, as many times Jeff's as the stride makes them), so only the
+  // rest of the stride is left to scale.
+  const stride = (P.stride ?? 1) * GL3D.LEG_SLACK / (own ? fit.legs ?? 1 : 1);
   const leg = (side, hipJ, foot, flare) => {
     const target = pt(foot.x, foot.y - GL3D.ANKLE_PX, hipJ[2] * GL3D.FOOT_DEPTH);
     const pole = normalize(add([1, 0, 0], scale(pelLat, flare * GL3D.KNEE_FLARE)));

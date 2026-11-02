@@ -13,7 +13,8 @@ A fighter is:
 - their build: the body below, scaled by their own knobs in
   src/data/fighters.js (`figure`: muscle, chest, waist, belly, neck, jaw;
   `body`: shoulders), read from the game itself, so the 2D and 3D fighters are
-  the same person (`Build`);
+  the same person (`Build`), at their own size and proportions (`Frame`:
+  `body` height, stride, head and build);
 - their head, eyewear and design notes: lab/blender/fighters/<id>.py, an
   original face built to their character notes, never a likeness;
 - their clothes, from the game's `outfit` (`OUTFITS`), in their palette;
@@ -55,10 +56,12 @@ V = lambda *a: np.array(a, float)
 lerp = lambda a, b, t: a + (b - a) * t
 D45 = math.sqrt(0.5)
 
-# The fighter being built, set by sculpt(): its field, limb joints and build.
+# The fighter being built, set by sculpt(): its field, limb joints, build and
+# frame (their size and proportions).
 F = None
 ARM, LEG = {}, {}
 B = None
+FR = None
 
 
 # ================================================================ the fighter
@@ -107,6 +110,60 @@ class Build:
         gy = 1 + (self.waist - 1) * ease(0.98, 1.12)
         gy = gy + (self.chest - gy) * ease(1.24, 1.38)
         return 1 + (gy - 1) * 0.5, gy
+
+
+class Frame:
+    """The fighter's size and proportions against Jeff's, as the game draws
+    them (engine/proportions.js): legs as long as their `stride` makes them,
+    the trunk, neck and arms by `height`, the head by `head` and their size
+    together (as the 2D head is sized for the body under it), and every width
+    by their size and `build`. Everything is built in Jeff's space and then
+    warped to theirs (`warp`), meshes and joints alike, so no part of the
+    build needs to know. The game's rig draws a sculpt's own trunk and head,
+    but stretches its legs by the stride; `fit.legs` tells it they are built
+    long already."""
+
+    REF = {'height': 0.92, 'stride': 0.92, 'build': 1.14, 'head': 1.12}
+    # where the legs end, the neck begins and the head begins. The neck is as
+    # long as the head makes it and as thick as the trunk: lengthened with the
+    # trunk, a tall fighter's neck stretched into a stalk under a small head.
+    HIP, NECK_L, NECK, BAND = 0.955, 1.6, 1.70, 0.03
+
+    def __init__(self, data):
+        b = data.get('body') or {}
+        g = lambda k: b.get(k, 1) / self.REF[k]
+        self.size = g('height')
+        self.legs = g('stride')
+        self.wide = self.size * (1 + 0.5 * (g('build') - 1))
+        self.head = g('head') * self.size
+        self.identity = all(abs(v - 1) < 1e-12 for v in (self.size, self.legs, self.wide, self.head))
+        # how much each height is lengthened and widened, eased across the
+        # two boundaries, and the lengthening summed into a map of heights
+        z = np.linspace(-0.1, 2.2, 23001)
+        ease = lambda c: (lambda t: t * t * (3 - 2 * t))(np.clip((z - c + self.BAND) / (2 * self.BAND), 0, 1))
+        sz = self.legs + (self.size - self.legs) * ease(self.HIP) + (self.head - self.size) * ease(self.NECK_L)
+        self._w = self.wide + (self.head - self.wide) * ease(self.NECK)
+        zp = np.concatenate([[0], np.cumsum((sz[1:] + sz[:-1]) / 2 * np.diff(z))])
+        self._z, self._zp = z, zp - np.interp(0.0, z, zp)
+
+    def warp(self, P):
+        """Points in Jeff's space to the fighter's."""
+        P = np.array(P, float)
+        if self.identity:
+            return P
+        w = np.interp(P[..., 2], self._z, self._w)
+        P[..., 2] = np.interp(P[..., 2], self._z, self._zp)
+        P[..., 0] *= w
+        P[..., 1] *= w
+        return P
+
+    def warp_mesh(self, obj):
+        if self.identity:
+            return
+        co = np.zeros(len(obj.data.vertices) * 3)
+        obj.data.vertices.foreach_get('co', co)
+        obj.data.vertices.foreach_set('co', self.warp(co.reshape(-1, 3)).ravel())
+        obj.data.update()
 
 
 def scaled(r, *k):
@@ -177,11 +234,13 @@ def design(fid):
 
 
 def sculpt(fid, h=0.003):
-    """The fighter's body and head into the field F."""
-    global F, B
+    """The fighter's body and head into the field F, in Jeff's space (the
+    frame FR takes the meshes made from it to theirs)."""
+    global F, B, FR
     data = game_data(fid)
     spec = design(fid)
     B = Build(data)
+    FR = Frame(data)
     F = sc.Field(lo=(-0.22, -0.74, -0.01), hi=(0.30, 0.74, 1.985), h=h)
     trunk()
     neck()
@@ -613,7 +672,7 @@ def joints():
                   'grip.' + side: fist, 'grip_tip.' + side: fist + V(0.1, 0, 0)})
         Hj, K, A = LEG[s]
         J.update({'hipj.' + side: Hj, 'knee.' + side: K, 'ankle.' + side: A, 'toe.' + side: A + V(0.18, 0, -0.065)})
-    return J
+    return {k: FR.warp(v) for k, v in J.items()}
 
 
 BONES = [('hips', 'hip', 'spine', None), ('spine', 'spine', 'chest', 'hips'),
@@ -640,7 +699,7 @@ def skin_weights(verts, edges, J):
     # bone alone, the traps went to the neck and the upper arms, and rose and
     # fell with every nod and swing of the arm, a lump at the side of the neck.
     for s in (1, -1):
-        seg['chest'].append((J['neck'], V(-0.015, s * 0.15 * B.shoulders, 1.62)))
+        seg['chest'].append((J['neck'], FR.warp(V(-0.015, s * 0.15 * B.shoulders, 1.62))))
     D = np.empty((len(verts), len(names)))
     for i, n in enumerate(names):
         D[:, i] = np.inf
@@ -693,6 +752,8 @@ def export_rigged(data, spec, path, tris=44000):
         sys.exit(f'{data["id"]} wears a {data["outfit"]}, which the pipeline cannot dress yet (OUTFITS)')
     obj, clothes = dressed(data)
     parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
+    for ob, _, _ in parts:
+        FR.warp_mesh(ob)
     budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'pants': 0.17, 'shoe': 0.07}
     for ob, role, colour in parts:
         _decimate(ob, tris * budget[role])
@@ -737,6 +798,7 @@ def export_rigged(data, spec, path, tris=44000):
     # eyewear rides the head, wholly
     wear = spec.eyewear(sys.modules[__name__]) if hasattr(spec, 'eyewear') else None
     if wear is not None:
+        FR.warp_mesh(wear)
         _decimate(wear, 3000)
         wear.data.shade_smooth()
         wear.vertex_groups.new(name='head').add(list(range(len(wear.data.vertices))), 1.0, 'REPLACE')
@@ -751,17 +813,32 @@ def export_rigged(data, spec, path, tris=44000):
         export_apply=False, export_def_bones=False,
     )
     print(f'[{data["id"]}] rigged: {len(me.polygons)} faces, {os.path.getsize(path)} bytes -> {path}', flush=True)
+    print(model_numbers(J), flush=True)
+
+
+def model_numbers(J):
+    """What src/data/models3d.js needs to know of the fighter's model, from
+    their joints and frame, as Jeff's numbers carried into it: where the leaf
+    bones end, the skull, the joints' width, the face's centre and scale."""
+    r = lambda v: round(float(v), 4)
+    arm = np.linalg.norm(J['fist.L'] - J['elbow.L']) / 0.317       # Jeff's elbow to fist
+    foot = [r(0.18 * FR.wide), r(-0.065 * FR.legs), 0]           # the foot is all below the hip
+    return ('  leaf: { forearm: %s, head: %s, foot: %s },\n  skull: %s,\n'
+            '  fit: { shoulderHalf: %s, hipHalf: %s, legs: %s },\n  face: at [0, %s], px %s'
+            % (r(0.367 * arm), r(0.255 * FR.head), foot, r(0.16 * FR.head),
+               r(abs(J['shoulder.L'][1])), r(abs(J['hipj.L'][1])), r(FR.legs),
+               r(FR.warp(V(0, 0, 1.79))[2]), r(0.0035 * FR.head)))
 
 
 def cast(ids, out, engine='WORKBENCH'):
-    """Clay views of each fighter's body, all at one scale, so the cast can
-    be judged side by side. Each is built at Jeff's height: building to a
-    fighter's own (`body.height`, with the head kept to `body.head`) is still
-    to come, and scaling the whole figure would swell the head with it."""
+    """Clay views of each fighter's body at their own size, all at one scale,
+    so the cast can be judged side by side as the game stands them."""
     import clay
     for fid in ids:
         sculpt(fid)
-        clay.views([build()], out, fid, engine=engine, size=(640, 1000), span=2.3)
+        obj = build()
+        FR.warp_mesh(obj)
+        clay.views([obj], out, fid, engine=engine, size=(640, 1000), span=2.8, centre=(0.0, 0.0, 1.3))
 
 
 if __name__ == '__main__':
@@ -777,4 +854,6 @@ if __name__ == '__main__':
         export_rigged(data, spec, os.path.abspath(opt('--out', os.path.join(ROOT, 'assets', 'models', 'sculpt', f'{fid}.glb'))))
     elif '--views' in ARGS:
         import clay
-        clay.views([build()], opt('--views', '.'), fid)
+        obj = build()
+        FR.warp_mesh(obj)
+        clay.views([obj], opt('--views', '.'), fid)

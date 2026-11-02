@@ -313,6 +313,11 @@ through. `test/sculpt3d.test.js`.
 
 ### The roster pipeline (2026-11-01)
 
+The cast's names here are the ids in `data/fighters.js`; in the game they are
+Adam (`max`), Steve (`kai`), Carl (`dex`), Elo, Jeff (`bozo`), Scam, Lizbeth
+(`ava`), Kim (`zara`) and Cathie (`eleanor`).
+
+
 The owner: Jeff is the character "to build all the existing ones and improve
 them". So his build is now one pipeline for the whole cast, and Jeff is its
 first fighter, coming out of it byte for byte as he was (the same field, the
@@ -351,6 +356,18 @@ well as the muscle on them, carves the definition shallower and tighter, and
 a belly hides the abs. All of it is exactly 1 for Jeff, whose field is checked
 bit for bit after every change.
 
+Each fighter is built to their own size (`Frame`), as the game draws them:
+legs as long as their `stride` makes them, the trunk by `height`, the head
+by `head` and their size together (as the 2D head is sized for the body under
+it), every width by their size and `build`, and the neck as long as the head
+makes it and as thick as the trunk (lengthened with the trunk, a tall
+fighter's neck became a stalk). The body is built in Jeff's space and the
+finished meshes and joints are warped to theirs, so no part of the build has
+to know. The game's rig draws a sculpt's own trunk and head but scales its
+legs by the stride, so a sculpt records how long its legs are built
+(`fit.legs`, against Jeff's) and the rig scales only the rest. `--rig` prints
+the numbers its `SCULPTED` entry needs.
+
 **Remodelling the next fighter, the recipe:**
 
 1. Read their entry in `data/fighters.js`: build knobs, face values, outfit,
@@ -367,13 +384,17 @@ bit for bit after every change.
    (`lab/figure3d.js` with `models: ['sculpted']`, and `faces()`), and show
    the owner before the next stage.
 
+**Next: Adam** (`max`, the owner's pick, 2026-11-01). His body at his game
+size is the first stage: 1.26 times Jeff's height, legs 1.23 times, widths
+1.18, his head about Jeff's, so he stands about 8.6 heads to Jeff's 7.4.
+Then his head (an original face for "manic": brows up, eyes wide, a loose
+mouth, a heavy jaw), his oversized hoodie, baggy trousers and white shoes, his
+backwards cap and painted stubble, and a brawler's form.
+
 **Gaps, before the rest of the cast can be built:**
 
-- Height. Everyone is built at Jeff's 1.955. A sculpt keeps its own torso
-  (`fit`) while the 2D pose sets the hips by `body.height`, so each fighter
-  must be built to their own height (legs and torso by `body.height`, the
-  head kept to `body.head`, arms by `reach`). Scaling the whole figure swells
-  the head with it. `body.build` (overall girth) is not read yet either.
+- `body.reach` is not read: the arms are as long as the fighter's height
+  makes them, and the rig reaches them to the 2D fists.
 - The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
   as the 2D figure and the athlete bodies have, with `figure.hips`.
 - Outfits. Only Jeff's vest. The rest: hoodie (Max), turtleneck (Kai),

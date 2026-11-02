@@ -92,7 +92,8 @@ test('the body turns into the punch: away on the load, through on the hit, squar
 
 const spec = MODELS3D['sculpt:bozo'];
 const glb = readFileSync(new URL(`../${spec.url}`, import.meta.url));
-const rig = buildRig(extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength))), spec);
+const model = extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength)));
+const rig = buildRig(model, spec);
 const joint = (m, bone, end = false) => transformPoint(m, rig.names.indexOf(bone), end ? rig.rest[bone].tail : rig.rest[bone].head);
 
 test('in 3D a turn brings the lead shoulder forward, and the rear fist turns with the chest', () => {
@@ -109,4 +110,19 @@ test('in 3D a turn brings the lead shoulder forward, and the rear fist turns wit
   assert.ok(turned.lead[0] > square.lead[0] + 0.03, 'the lead shoulder does not come forward');
   assert.ok(Math.abs(turned.across - square.across) < 0.01,
     `the rear fist slides ${(turned.across - square.across).toFixed(3)} across the chest as it turns`);
+});
+
+test('a sculpt built with long legs (fit.legs) is not stretched again by the stride', () => {
+  // the rig scales a model's legs by the fighter's stride; a sculpt built to
+  // that stride already says how many times Jeff's its legs are, and only the
+  // rest is scaled, so its knees bend as Jeff's do
+  const thigh = (legs) => {
+    const r = buildRig(model, { ...spec, fit: { ...spec.fit, legs } });
+    const m = solvePose(r, posed('idle'));
+    const a = transformPoint(m, r.names.indexOf('thigh.L'), r.rest['thigh.L'].head);
+    const b = transformPoint(m, r.names.indexOf('thigh.L'), r.rest['thigh.L'].tail);
+    return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  };
+  assert.ok(Math.abs(thigh(0.8) / thigh(1) - 1.25) < 1e-6, `${(thigh(0.8) / thigh(1)).toFixed(4)}`);
+  assert.equal(spec.fit.legs ?? 1, 1, "Jeff's legs are the reference");
 });
