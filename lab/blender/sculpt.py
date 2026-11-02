@@ -216,6 +216,20 @@ class Field:
     def cut(self, shape, k=0.0):
         self.apply(shape, k, 'cut')
 
+    def swell(self, c, r, t, axes=None):
+        """Pushes the surface out by up to t around c, easing to nothing at the
+        edge of the ellipsoid (c, r, axes as Ellipsoid's): soft tissue laid
+        over the forms already there, such as fat. Overlapping swells add."""
+        c, r = np.asarray(c, float), np.asarray(r, float)
+        R = np.eye(3) if axes is None else np.asarray(axes, float)
+        ext = np.abs(R) @ r
+        sl, X, Y, Z = self._block(c - ext, c + ext)
+        if X.size == 0:
+            return
+        px, py, pz = X - c[0], Y - c[1], Z - c[2]
+        q = sum(((px * R[0, i] + py * R[1, i] + pz * R[2, i]) / r[i]) ** 2 for i in range(3))
+        self.d[sl] -= (t * np.clip(1 - q, 0, 1) ** 2).astype(np.float32)
+
     # ------------------------------------------------------------ carving
     def sample(self, P):
         """The field at points P (n, 3), interpolated between samples."""

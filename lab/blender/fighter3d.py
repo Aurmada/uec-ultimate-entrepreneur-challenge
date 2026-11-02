@@ -14,7 +14,8 @@ A fighter is:
   src/data/fighters.js (`figure`: muscle, chest, waist, belly, neck, jaw;
   `body`: shoulders), read from the game itself, so the 2D and 3D fighters are
   the same person (`Build`), at their own size and proportions (`Frame`:
-  `body` height, stride, head and build);
+  `body` height, stride, head and build), with the fat they carry (the
+  2D `belly`) laid on where a man carries it, not only on the belly (`fat`);
 - their head, eyewear and design notes: lab/blender/fighters/<id>.py, an
   original face built to their character notes, never a likeness;
 - their clothes, from the game's `outfit` (`OUTFITS`), in their palette;
@@ -96,9 +97,13 @@ class Build:
         self.jaw = r('jaw', f.get('jaw', 1), 0.6)
         self.shoulders = r('shoulders', b.get('shoulders', 1), 0.5)
         self.belly = f.get('belly', 0)
-        # how deep definition is carved: a soft body shows less of it, and a
-        # belly hides the abs altogether
-        self.definition = min(1.0, max(0.25, f.get('muscle', 1) / REF['muscle']))
+        # How much fat they carry. The 2D figure has one knob for it, the belly,
+        # but fat is never only there (`fat`).
+        self.fat = self.belly
+        self.frame = f.get('frame', 'm')
+        # how deep definition is carved: a soft body shows less of it, fat
+        # covers more of it, and a belly hides the abs altogether
+        self.definition = min(1.0, max(0.25, f.get('muscle', 1) / REF['muscle'])) * (1 - 0.9 * self.fat)
         self.abs = self.definition * max(0.0, 1 - 2 * self.belly)
 
     def girth(self, z):
@@ -247,6 +252,7 @@ def sculpt(fid, h=0.003):
     spec.head(sys.modules[__name__])
     arms()
     legs()
+    fat()
     definition(spec)
     return data, spec
 
@@ -371,6 +377,53 @@ def legs():
         E(A + V(0.17, 0, -0.066), (0.035, 0.044, 0.018), k=0.014)
 
 
+# ================================================================ fat
+# Fat is never only on the belly. A man carries most of it round the middle,
+# the flanks and the lower back, and then on his chest, under his chin, at
+# the back of his neck, on his upper arms and thighs, least on his forearms
+# and calves, none on his hands and feet. Each region is laid over the forms
+# as a smooth swell (Field.swell), its thickness at full fat in metres,
+# scaled by how much the fighter carries. The belly's own mass (trunk) is the
+# gut under it.
+#
+# A woman carries it differently, mostly on the hips, buttocks and thighs,
+# the breasts and the backs of the upper arms, and less round the middle:
+# her regions come with the women's base.
+FAT_M = [
+    # (centre, radii, thickness), mirrored where y is not 0
+    ((0.1, 0, 1.15), (0.1, 0.16, 0.17), 0.04),          # over the belly
+    ((0.0, 0.13, 1.08), (0.12, 0.085, 0.11), 0.07),     # the flanks, rolling over the hips
+    ((-0.09, 0, 1.12), (0.07, 0.14, 0.13), 0.04),       # the lower back
+    ((0.085, 0.075, 1.4), (0.065, 0.09, 0.085), 0.045), # the chest, heaviest at the pec's lower edge
+    ((0.0, 0.15, 1.38), (0.075, 0.05, 0.1), 0.035),     # the side of the chest, under the arm
+    ((-0.1, 0, 1.47), (0.07, 0.15, 0.13), 0.025),       # the upper back
+    ((-0.06, 0, 1.64), (0.055, 0.08, 0.065), 0.025),    # the back of the neck
+    ((0.055, 0, 1.695), (0.055, 0.07, 0.045), 0.02),    # under the chin
+    ((-0.06, 0.085, 0.95), (0.085, 0.1, 0.1), 0.025),   # the seat
+]
+
+
+def fat():
+    t = B.fat
+    if t <= 0:
+        return
+    for c, r, d in FAT_M:
+        for s in ((1, -1) if c[1] else (1,)):
+            F.swell(V(c[0], s * c[1], c[2]), r, d * t)
+    for s in (1, -1):
+        S, El, W = ARM[s]
+        u, v, lat, ax = limb(S, El, s)
+        F.swell(S + u * 0.17 - v * 0.015, (0.16, 0.085, 0.085), 0.035 * t, ax)       # the upper arm, most at the back
+        u, v, lat, ax = limb(El, W, s)
+        F.swell(El + u * 0.09, (0.12, 0.06, 0.06), 0.012 * t, ax)                   # the forearm, a little
+        Hj, K, A = LEG[s]
+        u, v, lat, ax = limb(Hj, K, s)
+        F.swell(lerp(Hj, K, 0.35), (0.27, 0.12, 0.12), 0.035 * t, ax)               # the thigh
+        F.swell(lerp(Hj, K, 0.3) - lat * 0.05, (0.2, 0.07, 0.06), 0.015 * t, ax)    # and its inside, where they meet
+        u, v, lat, ax = limb(K, A, s)
+        F.swell(lerp(K, A, 0.3), (0.15, 0.07, 0.07), 0.01 * t, ax)                  # the calf, least
+
+
 # ================================================================ definition
 # Carved, not added: each line is a shallow groove where two muscles meet,
 # laid along the surface. This is what reads as muscle at game size, and it
@@ -383,9 +436,11 @@ SOFT = dict(depth=0.002, width=0.011, k=0.008)
 
 def G(points, depth, width, k, f=None):
     """A groove at the fighter's definition (or `f`): shallower, and blended
-    tighter, so a faint line stays a faint line and not a soft trench."""
+    tighter, so a faint line stays a faint line and not a soft trench. Under
+    a fifth of Jeff's, none at all: so faint, it was only a hairline scored
+    across a soft chest."""
     f = B.definition if f is None else f
-    if f > 0:
+    if f >= 0.2:
         F.groove(points, depth=depth * f, width=width, k=k * f)
 
 

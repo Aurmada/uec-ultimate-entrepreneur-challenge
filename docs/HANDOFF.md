@@ -368,6 +368,20 @@ legs by the stride, so a sculpt records how long its legs are built
 (`fit.legs`, against Jeff's) and the rig scales only the rest. `--rig` prints
 the numbers its `SCULPTED` entry needs.
 
+Fat (2026-11-02). The owner: heavier fighters only had a bigger stomach,
+when fat goes to the chest, the arms and everywhere else, and men and
+women carry it differently. So the 2D `belly` knob is now how much fat a
+fighter carries (`Build.fat`), laid over the forms as smooth swells
+(`Field.swell`) where a man carries it (`FAT_M` in fighter3d.py): most round
+the middle, the flanks and the lower back, then the chest (heaviest at the
+pec's lower edge, so it droops), the side of the chest, the upper back, the
+back of the neck, under the chin, the seat, the upper arms and thighs, a
+little on the forearms and calves, nothing on the hands and feet. The gut's
+own mass stays under it. Fat also covers definition, and a groove under a
+fifth of Jeff's depth is left out (it was a hairline scored across a soft
+chest). A woman's pattern (hips, buttocks, thighs, breasts, the backs of the
+upper arms, less round the middle) comes with the women's base.
+
 **Remodelling the next fighter, the recipe:**
 
 1. Read their entry in `data/fighters.js`: build knobs, face values, outfit,
@@ -396,7 +410,8 @@ backwards cap and painted stubble, and a brawler's form.
 - `body.reach` is not read: the arms are as long as the fighter's height
   makes them, and the rig reaches them to the 2D fists.
 - The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
-  as the 2D figure and the athlete bodies have, with `figure.hips`.
+  as the 2D figure and the athlete bodies have, with `figure.hips`, and its
+  own fat pattern (`FAT_M` is a man's).
 - Outfits. Only Jeff's vest. The rest: hoodie (Max), turtleneck (Kai),
   pinstripe suit (Dex), tee (Elo), henley (Scam), blazer (Ava), bomber
   (Zara), suit (Eleanor). Most are the same shells with other edges; the 2D
