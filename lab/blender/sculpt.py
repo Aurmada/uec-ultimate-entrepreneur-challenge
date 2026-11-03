@@ -182,6 +182,20 @@ class Union:
 
 
 # ---------------------------------------------------------------- the field
+def _blur(a, r):
+    """Three box passes of 2r + 1 samples along each axis: near enough a
+    Gaussian blur of about r samples, at the cost of a running sum."""
+    for axis in range(3):
+        n = a.shape[axis]
+        pad = [(0, 0)] * 3
+        pad[axis] = (r + 1, r)
+        for _ in range(3):
+            c = np.cumsum(np.pad(a, pad, mode='edge'), axis=axis, dtype=np.float64)
+            a = ((np.take(c, np.arange(2 * r + 1, 2 * r + 1 + n), axis=axis)
+                  - np.take(c, np.arange(n), axis=axis)) / (2 * r + 1)).astype(np.float32)
+    return a
+
+
 class Field:
     """A sampled distance field over a box, built up one form at a time."""
 
@@ -229,6 +243,43 @@ class Field:
         px, py, pz = X - c[0], Y - c[1], Z - c[2]
         q = sum(((px * R[0, i] + py * R[1, i] + pz * R[2, i]) / r[i]) ** 2 for i in range(3))
         self.d[sl] -= (t * np.clip(1 - q, 0, 1) ** 2).astype(np.float32)
+
+    def _slabs(self, step=48):
+        """The field a slab of heights at a time: (slice, X, Y, Z), the
+        coordinates broadcastable over the slab."""
+        ax = [self.lo[k] + np.arange(self.n[k]) * self.h for k in range(3)]
+        X = ax[0][:, None, None].astype(np.float32)
+        Y = ax[1][None, :, None].astype(np.float32)
+        for k0 in range(0, self.n[2], step):
+            k1 = min(self.n[2], k0 + step)
+            yield (slice(None), slice(None), slice(k0, k1)), X, Y, ax[2][None, None, k0:k1].astype(np.float32)
+
+    def thicken(self, t, weight):
+        """Pushes the surface out by t times weight(X, Y, Z) (0 to 1): a layer
+        of soft tissue over everything the weight covers."""
+        for sl, X, Y, Z in self._slabs():
+            self.d[sl] -= np.float32(t) * weight(X, Y, Z)
+
+    def soften(self, sigma, weight, step=3):
+        """Softens the forms with a blur of about sigma, blended in by
+        weight(X, Y, Z) (0 to 1): creases fill and small bumps ease, as soft
+        tissue lies over muscle. A blur this wide does not need every sample,
+        so it is made at a third of the resolution and brought back up."""
+        n, s = self.n, step
+        m = [(k + s - 1) // s for k in n]
+        a = np.pad(self.d, [(0, m[k] * s - n[k]) for k in range(3)], mode='edge')
+        a = a.reshape(m[0], s, m[1], s, m[2], s).mean(axis=(1, 3, 5), dtype=np.float32)
+        a = _blur(a, max(1, int(round(sigma / (self.h * s)))))
+        for axis in range(3):                       # back up, linear along each axis
+            f = (np.arange(n[axis]) - (s - 1) / 2) / s
+            i0 = np.clip(np.floor(f).astype(int), 0, m[axis] - 1)
+            i1 = np.clip(i0 + 1, 0, m[axis] - 1)
+            shape = [1, 1, 1]
+            shape[axis] = -1
+            t = np.clip(f - np.floor(f), 0, 1).astype(np.float32).reshape(shape)
+            a = np.take(a, i0, axis=axis) * (1 - t) + np.take(a, i1, axis=axis) * t
+        for sl, X, Y, Z in self._slabs():
+            self.d[sl] += weight(X, Y, Z) * (a[sl] - self.d[sl])
 
     # ------------------------------------------------------------ carving
     def sample(self, P):

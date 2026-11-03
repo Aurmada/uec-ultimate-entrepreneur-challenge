@@ -137,10 +137,13 @@ export const SCULPTED = {
   // 1.851, arched and lifted, the lips meeting at 1.741 and wider than Jeff's;
   // the painter takes his stare, raised brows and loose smirk from his 2D face
   // values. No form yet: his 2D stance and moves until his brawling is made.
+  // His 2D stance already slouches, so his sculpt leans back from it a little
+  // (`lean` below zero) rather than further over: on top of the slouch, the
+  // sculpts' usual lean rounded his back and brought his shoulders forward.
   max: {
     leaf: { forearm: 0.4488, head: 0.2641, foot: [0.213, -0.0798, 0] },
     skull: 0.1657,
-    fit: { shoulderHalf: 0.2416, hipHalf: 0.1124, legs: 1.2283 },
+    fit: { shoulderHalf: 0.2416, hipHalf: 0.1124, legs: 1.2283, lean: -0.06 },
     face: {
       at: [0, 2.183], px: [0.003625, 0.003625],
       layout: {

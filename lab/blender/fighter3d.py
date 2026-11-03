@@ -378,50 +378,71 @@ def legs():
 
 
 # ================================================================ fat
-# Fat is never only on the belly. A man carries most of it round the middle,
-# the flanks and the lower back, and then on his chest, under his chin, at
-# the back of his neck, on his upper arms and thighs, least on his forearms
-# and calves, none on his hands and feet. Each region is laid over the forms
-# as a smooth swell (Field.swell), its thickness at full fat in metres,
-# scaled by how much the fighter carries. The belly's own mass (trunk) is the
-# gut under it.
+# Fat is never only on the belly, and it is not a lump laid on muscle. It
+# lies over the whole body as a layer, filling the creases between the
+# muscles and rounding their shapes away, and it gathers where a man carries
+# it: most round the middle, the flanks and the lower back, then the chest,
+# under the chin, the back of the neck, the upper arms and thighs, least on
+# the forearms and calves. None on the hands, the feet or the face (the face
+# is the fighter's own design). So, scaled by how much the fighter carries:
+#
+#   1. a layer over all of it (Field.thicken);
+#   2. the regions where it gathers (FAT_M), each a smooth swell
+#      (Field.swell), its thickness at full fat in metres;
+#   3. all of it softened (Field.soften), so the muscles under it no longer
+#      read one by one: laid only as swells, they did, and a heavy man read
+#      as a muscled one with a gut.
+#
+# The belly's own mass (trunk) is the gut under it.
 #
 # A woman carries it differently, mostly on the hips, buttocks and thighs,
 # the breasts and the backs of the upper arms, and less round the middle:
 # her regions come with the women's base.
 FAT_M = [
     # (centre, radii, thickness), mirrored where y is not 0
-    ((0.1, 0, 1.15), (0.1, 0.16, 0.17), 0.04),          # over the belly
-    ((0.0, 0.13, 1.08), (0.12, 0.085, 0.11), 0.07),     # the flanks, rolling over the hips
-    ((-0.09, 0, 1.12), (0.07, 0.14, 0.13), 0.04),       # the lower back
-    ((0.085, 0.075, 1.4), (0.065, 0.09, 0.085), 0.045), # the chest, heaviest at the pec's lower edge
-    ((0.0, 0.15, 1.38), (0.075, 0.05, 0.1), 0.035),     # the side of the chest, under the arm
-    ((-0.1, 0, 1.47), (0.07, 0.15, 0.13), 0.025),       # the upper back
-    ((-0.06, 0, 1.64), (0.055, 0.08, 0.065), 0.025),    # the back of the neck
-    ((0.055, 0, 1.695), (0.055, 0.07, 0.045), 0.02),    # under the chin
-    ((-0.06, 0.085, 0.95), (0.085, 0.1, 0.1), 0.025),   # the seat
+    ((0.1, 0, 1.15), (0.1, 0.16, 0.17), 0.045),         # over the belly
+    ((0.0, 0.13, 1.08), (0.12, 0.085, 0.11), 0.08),     # the flanks, rolling over the hips
+    ((-0.09, 0, 1.12), (0.07, 0.14, 0.13), 0.045),      # the lower back
+    ((0.085, 0.075, 1.4), (0.065, 0.09, 0.085), 0.05),  # the chest, heaviest at the pec's lower edge
+    ((0.115, 0, 1.43), (0.04, 0.05, 0.08), 0.025),      # and between them, so they read as one soft chest
+    ((0.0, 0.15, 1.38), (0.075, 0.05, 0.1), 0.04),      # the side of the chest, under the arm
+    ((-0.1, 0, 1.47), (0.07, 0.15, 0.13), 0.03),        # the upper back
+    ((-0.06, 0, 1.64), (0.055, 0.08, 0.065), 0.03),     # the back of the neck
+    ((0.055, 0, 1.695), (0.055, 0.07, 0.045), 0.022),   # under the chin
+    ((-0.06, 0.085, 0.95), (0.085, 0.1, 0.1), 0.03),    # the seat
 ]
+
+
+def covered(X, Y, Z):
+    """Where fat lies (0 to 1): everywhere but the head, the hands and the
+    feet, eased in so no edge shows. In Jeff's space, as the field is."""
+    ease = lambda v, a, b: (lambda u: u * u * (3 - 2 * u))(np.clip((v - a) / (b - a), 0, 1))
+    return (1 - ease(Z, 1.66, 1.73)) * ease(Z, 0.1, 0.17) * (1 - ease(np.abs(Y), 0.53, 0.6))
 
 
 def fat():
     t = B.fat
     if t <= 0:
         return
+    F.thicken(0.016 * t, covered)
     for c, r, d in FAT_M:
         for s in ((1, -1) if c[1] else (1,)):
             F.swell(V(c[0], s * c[1], c[2]), r, d * t)
     for s in (1, -1):
         S, El, W = ARM[s]
         u, v, lat, ax = limb(S, El, s)
-        F.swell(S + u * 0.17 - v * 0.015, (0.16, 0.085, 0.085), 0.035 * t, ax)       # the upper arm, most at the back
+        F.swell(S + u * 0.17 - v * 0.015, (0.16, 0.085, 0.085), 0.04 * t, ax)        # the upper arm, most at the back
         u, v, lat, ax = limb(El, W, s)
         F.swell(El + u * 0.09, (0.12, 0.06, 0.06), 0.012 * t, ax)                   # the forearm, a little
         Hj, K, A = LEG[s]
         u, v, lat, ax = limb(Hj, K, s)
-        F.swell(lerp(Hj, K, 0.35), (0.27, 0.12, 0.12), 0.035 * t, ax)               # the thigh
-        F.swell(lerp(Hj, K, 0.3) - lat * 0.05, (0.2, 0.07, 0.06), 0.015 * t, ax)    # and its inside, where they meet
+        F.swell(lerp(Hj, K, 0.35), (0.27, 0.12, 0.12), 0.04 * t, ax)                # the thigh
+        F.swell(lerp(Hj, K, 0.3) - lat * 0.05, (0.2, 0.07, 0.06), 0.018 * t, ax)    # and its inside, where they meet
         u, v, lat, ax = limb(K, A, s)
         F.swell(lerp(K, A, 0.3), (0.15, 0.07, 0.07), 0.01 * t, ax)                  # the calf, least
+    # last, so the swells' own edges soften too: softened first, the chest's
+    # lower edge stood out as a ledge over the belly
+    F.soften(0.008 + 0.014 * t, lambda X, Y, Z: np.float32(min(1.0, 1.6 * t)) * covered(X, Y, Z))
 
 
 # ================================================================ definition

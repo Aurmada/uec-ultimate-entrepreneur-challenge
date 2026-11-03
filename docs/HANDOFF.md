@@ -371,16 +371,20 @@ the numbers its `SCULPTED` entry needs.
 Fat (2026-11-02). The owner: heavier fighters only had a bigger stomach,
 when fat goes to the chest, the arms and everywhere else, and men and
 women carry it differently. So the 2D `belly` knob is now how much fat a
-fighter carries (`Build.fat`), laid over the forms as smooth swells
-(`Field.swell`) where a man carries it (`FAT_M` in fighter3d.py): most round
-the middle, the flanks and the lower back, then the chest (heaviest at the
-pec's lower edge, so it droops), the side of the chest, the upper back, the
-back of the neck, under the chin, the seat, the upper arms and thighs, a
-little on the forearms and calves, nothing on the hands and feet. The gut's
-own mass stays under it. Fat also covers definition, and a groove under a
-fifth of Jeff's depth is left out (it was a hairline scored across a soft
-chest). A woman's pattern (hips, buttocks, thighs, breasts, the backs of the
-upper arms, less round the middle) comes with the women's base.
+fighter carries (`Build.fat`), laid on where a man carries it (`fat` in
+fighter3d.py): a layer over the whole body but the head, hands and feet
+(`Field.thicken`), then swells where it gathers (`FAT_M`: most round the
+middle, the flanks and the lower back, then the chest, under the arm, the
+upper back, the back of the neck, under the chin, the seat, the upper arms
+and thighs, a little on the forearms and calves), and last all of it
+softened (`Field.soften`, a blur made at a third of the resolution and
+blended in), so the muscles under it stop reading one by one. The owner's
+second look, "fat is not quite there yet": laid only as swells, a heavy man
+still read as a muscled one with a gut and two plates on his chest; softened
+last, the swells' edges go too. Fat also covers definition, and a groove
+under a fifth of Jeff's depth is left out. A woman's pattern (hips,
+buttocks, thighs, breasts, the backs of the upper arms, less round the
+middle) comes with the women's base.
 
 **Remodelling the next fighter, the recipe:**
 
@@ -421,6 +425,12 @@ stubble, a soft shade over the upper lip, round the mouth and down the jaw
 (up the cheeks, it read as a mask). Until his hoodie is made he wears the
 pipeline's base outfit, trousers and shoes (`OUTFITS.base`), so his head can
 be judged in the game first. Registered as `sculpt:max`.
+
+The owner on it: "facial expression, head size looks great. shoulder looks
+like it is a bit forward". His 2D stance already slouches, and the sculpts'
+usual lean (`fit.lean`, made for Jeff's boxer over bent knees) on top of it
+rounded his back and brought his shoulders forward; his `fit.lean` is now a
+little below zero, and he stands up straight with his chest up.
 
 Next for him: the oversized hoodie and baggy trousers, then a brawler's form.
 
