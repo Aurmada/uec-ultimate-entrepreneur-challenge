@@ -63,6 +63,7 @@ F = None
 ARM, LEG = {}, {}
 B = None
 FR = None
+GAME = {}
 
 
 # ================================================================ the fighter
@@ -241,11 +242,13 @@ def design(fid):
 def sculpt(fid, h=0.003):
     """The fighter's body and head into the field F, in Jeff's space (the
     frame FR takes the meshes made from it to theirs)."""
-    global F, B, FR
+    global F, B, FR, GAME
     data = game_data(fid)
     spec = design(fid)
+    GAME = data
     B = Build(data)
     FR = Frame(data)
+    _LOOSE.clear()
     F = sc.Field(lo=(-0.22, -0.74, -0.01), hi=(0.30, 0.74, 1.985), h=h)
     trunk()
     neck()
@@ -604,20 +607,43 @@ def vest():
     return S
 
 
+# How each cut of trousers in the game (`figure.costume.legs`) falls: the
+# radius of its drape at the top of the thigh, the knee and the hem; how far
+# out to the side they may reach, past which the arms are (kept to the
+# suit's, baggy legs were cut flat there, and the flats read as pockets); how
+# the thigh's fall of cloth meets the shin's at the knee (blended, the wide
+# baggy legs bulged in a ring there); and for a wide cut, its widest at
+# mid-thigh, so it hangs clear of the thigh (narrower, the thigh's own shape
+# broke through above the knee in round patches) without flaring out at the
+# hips past the hem of a top.
+LEG_CUTS = {
+    'suit': dict(top=0.09, knee=0.076, hem=0.066, side=0.25, k=0.03),
+    'baggy': dict(top=0.1, mid=0.118, knee=0.106, hem=0.092, side=0.33, k=0.0),
+}
+
+
 def trousers():
-    """Suit trousers: the hips fitted, the legs falling straight from the thigh
-    to a hem over the shoe, so they read as cloth and not as skin."""
+    """Trousers: the hips fitted, the legs falling straight from the thigh to a
+    hem over the shoe, so they read as cloth and not as skin, as wide as their
+    cut (`LEG_CUTS`)."""
     # Each leg's fall of cloth is its own, met with the other's without any
     # blending, and set a little out from the middle: blended, the two legs
     # webbed together down to the knees and tore into black spikes between
     # them whenever the legs moved apart.
+    cut = LEG_CUTS.get(((GAME.get('figure') or {}).get('costume') or {}).get('legs'), LEG_CUTS['suit'])
+    top, knee, hem, side = cut['top'], cut['knee'], cut['hem'], cut['side']
     S = _shell(0.004)
     for s in (1, -1):
         Hj, K, A = LEG[s]
         out = V(0, s * 0.01, 0)
         leg = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
-        leg.add(sc.RoundCone(Hj + out + V(0, 0, -0.01), K + out, 0.09, 0.076), 0.03)
-        leg.add(sc.RoundCone(K + out, V(A[0], A[1] + out[1], ANKLE), 0.076, 0.066), 0.03)
+        if 'mid' in cut:
+            M = lerp(Hj, K, 0.45) + out
+            leg.add(sc.RoundCone(Hj + out + V(0, 0, -0.01), M, top, cut['mid']), 0.0)
+            leg.add(sc.RoundCone(M, K + out, cut['mid'], knee), cut['k'])
+        else:
+            leg.add(sc.RoundCone(Hj + out + V(0, 0, -0.01), K + out, top, knee), 0.03)
+        leg.add(sc.RoundCone(K + out, V(A[0], A[1] + out[1], ANKLE), knee, hem), cut['k'])
         np.minimum(S.d, leg.d, out=S.d)
         del leg
     # a waistband standing clear of the shirt tucked into it: at the same
@@ -633,7 +659,7 @@ def trousers():
     _keep_below(d, WAIST)
     _keep_above(d, ANKLE - 0.004)
     X, Y, Z = _grid()
-    np.maximum(d, np.abs(Y) - np.float32(0.25), out=d)
+    np.maximum(d, np.abs(Y) - np.float32(side), out=d)
     return S
 
 
@@ -645,6 +671,175 @@ def shoes():
     _keep_above(d, -0.006)
     X, Y, Z = _grid()
     np.maximum(d, np.float32(0.03) - np.abs(Y), out=d)
+    return S
+
+
+# An oversized hoodie (data/fighters.js `outfit: 'hoodie'`, the 2D figure's
+# fit 'oversized'): it does not follow the body's forms but hangs from the
+# shoulders and the chest, with ribbed cuffs and a ribbed band at the hem, a
+# hood bunched round the back of the neck, drawstrings and a pouch pocket.
+HOODIE_HEM, HOODIE_BAND = 0.975, 0.925
+_LOOSE = {}
+
+
+def _loose():
+    """The body as loose cloth lies over it: its forms blurred away, a couple
+    of centimetres out, and below the chest falling straight down from the
+    widest part above it, as cloth hangs. The trunk and the arms are made
+    apart and met at the armholes: blurred together, the cloth webbed from
+    the arm to the side like a bat's wing, and the web, half on the arm and
+    half on the chest, stretched into a fin whenever the arm came up. Made
+    once a fighter."""
+    if 'f' in _LOOSE:
+        return _LOOSE['f']
+    T, A = _shell(0.0), _shell(0.0)
+    away = np.float32(0.04)
+    for sl, X, Y, Z in F._slabs():
+        arm = np.zeros(F.d[sl].shape, bool)
+        for s in (1, -1):
+            S, El, W = ARM[s]
+            u = sc.unit(W - S)
+            px, py, pz = X - S[0], Y - S[1], Z - S[2]
+            t = px * u[0] + py * u[1] + pz * u[2]
+            far = np.sqrt((px - t * u[0]) ** 2 + (py - t * u[1]) ** 2 + (pz - t * u[2]) ** 2)
+            # the arm's, a hand's width down from the shoulder (a dropped
+            # shoulder, as loose tops have: split at the joint, each sleeve
+            # was a puff set on a vest) and nearer its axis than the trunk's
+            arm |= (s * Y > 0.08) & (t > 0.1) & (far < 0.6 * np.sqrt(X ** 2 + Y ** 2))
+        d = F.d[sl]
+        T.d[sl] = np.where(arm, np.maximum(d, away), d)
+        A.d[sl] = np.where(arm, d, np.maximum(d, away))
+    every = lambda X, Y, Z: np.float32(1)
+    T.soften(0.02, every)
+    A.soften(0.014, every)
+    T.d -= np.float32(0.022)
+    A.d -= np.float32(0.02)
+    # the hang: each column under the chest takes the widest the cloth is
+    # above it, eased out toward the sides, then softened again: hung outright
+    # and cut off at the sides, it was a box with an edge down each side
+    k0, k1 = max(0, int((0.88 - F.lo[2]) / F.h)), int((1.42 - F.lo[2]) / F.h) + 1
+    j0, j1 = int((-0.2 - F.lo[1]) / F.h), int((0.2 - F.lo[1]) / F.h) + 1
+    blk = T.d[:, j0:j1, k0:k1]
+    hung = np.minimum.accumulate(blk[:, :, ::-1], axis=2)[:, :, ::-1]
+    y = np.abs(F.lo[1] + np.arange(j0, j1) * F.h)
+    w = (1 - np.clip((y - 0.15) / 0.05, 0, 1) ** 2).astype(np.float32)[None, :, None]
+    T.d[:, j0:j1, k0:k1] = blk + w * (hung - blk)
+    T.soften(0.012, every)
+    np.minimum(T.d, A.d, out=T.d)
+    del A
+    _LOOSE['f'] = T
+    return T
+
+
+def _cuff_cut(d, at, keep_wrist_side=False):
+    """Cuts the field at a plane across each forearm, `at` short of the wrist:
+    the hand side goes, or with keep_wrist_side only that side stays, and only
+    round the arms (a plane alone would keep the far side of the body too)."""
+    X, Y, Z = _grid()
+    keep = np.float32(1)
+    for s in (1, -1):
+        _, El, W = ARM[s]
+        n = sc.unit(W - El)
+        c = W - n * at
+        side = (X - c[0]) * n[0] + (Y - c[1]) * n[1] + (Z - c[2]) * n[2]
+        if keep_wrist_side:
+            # within reach of the forearm: the plane runs on through the body,
+            # and kept wherever it went, it laid a cuff's patch on the thigh
+            u = X - El[0], Y - El[1], Z - El[2]
+            along = u[0] * n[0] + u[1] * n[1] + u[2] * n[2]
+            near = (u[0] - along * n[0]) ** 2 + (u[1] - along * n[1]) ** 2 + (u[2] - along * n[2]) ** 2 < 0.1 ** 2
+            keep = np.where((s * Y > 0.2) & near, -side, keep)
+        else:
+            np.maximum(d, side, out=d)
+    if keep_wrist_side:
+        np.maximum(d, keep, out=d)
+
+
+def _neck_cut(d, r, z):
+    sl = _zslab(z - 0.01, 1.8)
+    X, Y, Z = _grid(sl)
+    neck = np.maximum(np.sqrt((X + 0.012) ** 2 + Y ** 2) - r, z - Z)
+    d[sl] = np.maximum(d[sl], -neck)
+
+
+def hoodie():
+    """The hoodie's body and sleeves, cut at the band and the cuffs."""
+    S = _shell(0.0)
+    S.d[:] = _loose().d
+    d = S.d
+    _keep_above(d, HOODIE_HEM)
+    # the collar stops at the base of the neck: kept up to the shirt's line,
+    # the loose cloth stood round the neck to the jaw like a turtleneck
+    _keep_below(d, 1.645)
+    _cuff_cut(d, CUFF + 0.045)
+    # the neckline close round the neck: cut wider, the gap between the loose
+    # collar and the neck showed its inside as a black band under the jaw
+    _neck_cut(d, 0.088, 1.55)
+    # the pouch pocket, a panel of cloth a few millimetres proud of the front,
+    # following it round: a flat box on the curve stood out only at its ends
+    sl = _zslab(0.98, 1.12)
+    X, Y, Z = _grid(sl)
+    panel = sc.Box(V(0.2, 0, 1.05), (0.2, 0.085, 0.046), 0.012).sdf(X, Y, Z).astype(np.float32)
+    d[sl] = np.minimum(d[sl], np.maximum(d[sl] - np.float32(0.005), np.maximum(panel, -X)))
+    return S
+
+
+def hoodie_rib():
+    """The ribbed parts, in the hoodie's second colour: the band at the hem a
+    little tighter than the cloth above it, the cuffs, and the hood bunched
+    round the back of the neck, laid on the hoodie wherever it is."""
+    L = _loose()
+    S = _shell(0.0)
+    S.d[:] = L.d + np.float32(0.004)
+    d = S.d
+    _keep_above(d, HOODIE_BAND)
+    _keep_below(d, HOODIE_HEM + 0.008)
+    cuffs = _shell(0.014)
+    _cuff_cut(cuffs.d, CUFF)
+    _cuff_cut(cuffs.d, CUFF + 0.05, keep_wrist_side=True)
+    np.minimum(d, cuffs.d, out=d)
+    del cuffs
+    # The hood, lying down: a layer of cloth over the upper back, its lower
+    # edge a rounded U, and a soft roll round the neckline where it opens, on
+    # the hoodie wherever it is, ending at the sides of the neck. Made as a
+    # ring of beads alone, it read as a pillow round his neck; carried round
+    # to the front, its ends rose under the chin like a beard.
+    sl = _zslab(1.4, 1.75)
+    X, Y, Z = _grid(sl)
+    U = sc.Ellipsoid(V(-0.13, 0, 1.6), (0.12, 0.135, 0.16)).sdf(X, Y, Z).astype(np.float32)
+    region = np.maximum(U, np.maximum(X + np.float32(0.035), Z - np.float32(1.66)))
+    d[sl] = np.minimum(d[sl], np.maximum(L.d[sl] - np.float32(0.011), region))
+    ring = []
+    for a in np.radians(np.linspace(-80, 80, 27)):
+        x, y = -0.012 - 0.1 * np.cos(a), 0.1 * np.sin(a)
+        zs = np.arange(1.72, 1.5, -0.001)
+        col = L.sample(np.stack([np.full_like(zs, x), np.full_like(zs, y), zs], axis=1))
+        z = zs[np.argmax(col < 0)]
+        r = 0.012 + 0.012 * np.cos(a / 2) ** 2
+        ring.append((V(x, y, z + r * 0.4), r))
+    S.add(sc.Union(sc.RoundCone(a, b, ra, rb) for (a, ra), (b, rb) in zip(ring, ring[1:])), 0.02)
+    return S
+
+
+def hoodie_strings():
+    """Two drawstrings hanging from the front of the neckline down the cloth,
+    in a fine field of their own: the body's samples are too coarse for a
+    cord. Each lies on the hoodie wherever it is (projected onto it), or a
+    straight cord went into the cloth hanging out over the chest."""
+    H = _shell(0.0)
+    H.d[:] = _loose().d
+    _neck_cut(H.d, 0.088, 1.55)
+    S = None
+    for s in (1, -1):
+        # from just off the chest: projected from much further, out where the
+        # field was never written, they landed anywhere
+        P = np.array([[0.17, s * (0.032 + 0.006 * t), 1.565 - 0.155 * t] for t in np.linspace(0, 1, 8)])
+        P = H.project(P)
+        P = P + H.normal(P) * 0.004
+        if S is None:
+            S = sc.Field(lo=P.min(0) - 0.03 - V(0, 0.08, 0), hi=P.max(0) + 0.03 + V(0, 0.08, 0), h=0.0012)
+        S.add(sc.Union(sc.RoundCone(a, b, 0.0045, 0.0045) for a, b in zip(P, P[1:])), 0.0)
+        S.add(sc.RoundCone(P[-1], P[-1] + V(0, 0, -0.02), 0.006, 0.006), 0.002)     # the tip
     return S
 
 
@@ -664,6 +859,15 @@ OUTFITS = {
                    ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
         'skin': ['shirt', 'trousers', 'shoes'],
         'covers': {'shirt': ['vest', 'trousers'], 'trousers': ['shoes']},
+    },
+    # an oversized hoodie over baggy trousers and sneakers (Adam's)
+    'hoodie': {
+        'pieces': [('hoodie', hoodie, 'suit', None), ('rib', hoodie_rib, 'suit2', None),
+                   ('strings', hoodie_strings, 'accent', None),
+                   ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['hoodie', 'rib', 'trousers', 'shoes'],
+        'covers': {'hoodie': ['rib'], 'trousers': ['hoodie', 'rib', 'shoes']},
+        'loose': True,
     },
     # Trousers and shoes and nothing above the waist: what a fighter wears
     # until their own outfit is made, so their head and face can be judged in
@@ -773,7 +977,7 @@ for _s in ('R', 'L'):
 BONES += [('grip.L', 'grip.L', 'grip_tip.L', 'forearm.L'), ('grip.R', 'grip.R', 'grip_tip.R', 'forearm.R')]
 
 
-def skin_weights(verts, edges, J):
+def skin_weights(verts, edges, J, loose=False):
     """Weights by distance to each bone, among the nearest bone and those
     joined to it (so a forearm never pulls on the chest), three at most,
     then smoothed over the mesh so the joints bend without creasing. A vertex
@@ -787,6 +991,12 @@ def skin_weights(verts, edges, J):
     # fell with every nod and swing of the arm, a lump at the side of the neck.
     for s in (1, -1):
         seg['chest'].append((J['neck'], FR.warp(V(-0.015, s * 0.15 * B.shoulders, 1.62))))
+        # Under loose cloth the chest also reaches out to each side under the
+        # arm: the cloth there stands well off the body, nearer the upper arm
+        # than the chest, and went with the arm, a fin of cloth stretched from
+        # the back to the elbow whenever the arm came up.
+        if loose:
+            seg['chest'].append((FR.warp(V(0, 0, 1.36)), FR.warp(V(-0.04, s * 0.17, 1.38))))
     D = np.empty((len(verts), len(names)))
     for i, n in enumerate(names):
         D[:, i] = np.inf
@@ -821,6 +1031,20 @@ def skin_weights(verts, edges, J):
     return names, W
 
 
+def material(role, colour):
+    """The material for a palette role: one each, shared by every piece in
+    it. The game reads a mesh's role from its material's name, and a second
+    material of the same name came out as 'suit2.001', a role no palette has."""
+    import bpy
+    m = bpy.data.materials.get(role)
+    if m is None:
+        m = bpy.data.materials.new(role)
+        m.use_nodes = True
+        m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = colour
+        m.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1.0
+    return m
+
+
 def _decimate(ob, target):
     import bpy
     dec = ob.modifiers.new('Decimate', 'DECIMATE')
@@ -843,16 +1067,12 @@ def export_rigged(data, spec, path, tris=44000):
     parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
     for ob, _, _ in parts:
         FR.warp_mesh(ob)
-    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'pants': 0.17, 'shoe': 0.07}
+    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'suit2': 0.1, 'accent': 0.02, 'pants': 0.17, 'shoe': 0.07}
     for ob, role, colour in parts:
         _decimate(ob, tris * budget[role])
         # materials by palette role (the renderer takes the fighter's colour for
         # a role he has, else this one)
-        m = bpy.data.materials.new(role)
-        m.use_nodes = True
-        m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = colour
-        m.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1.0
-        ob.data.materials.append(m)
+        ob.data.materials.append(material(role, colour))
     every = [p[0] for p in parts]
     with bpy.context.temp_override(active_object=obj, selected_editable_objects=every, selected_objects=every):
         bpy.ops.object.join()
@@ -863,7 +1083,7 @@ def export_rigged(data, spec, path, tris=44000):
     me.vertices.foreach_get('co', co)
     ed = np.zeros(len(me.edges) * 2, dtype=np.int64)
     me.edges.foreach_get('vertices', ed)
-    names, W = skin_weights(co.reshape(-1, 3), ed.reshape(-1, 2), J)
+    names, W = skin_weights(co.reshape(-1, 3), ed.reshape(-1, 2), J, loose=OUTFITS.get(data['outfit'], {}).get('loose', False))
     groups = {n: obj.vertex_groups.new(name=n) for n in names}
     for i, n in enumerate(names):
         idx = np.nonzero(W[:, i] > 0.01)[0]

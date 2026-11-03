@@ -432,7 +432,35 @@ usual lean (`fit.lean`, made for Jeff's boxer over bent knees) on top of it
 rounded his back and brought his shoulders forward; his `fit.lean` is now a
 little below zero, and he stands up straight with his chest up.
 
-Next for him: the oversized hoodie and baggy trousers, then a brawler's form.
+His clothes (2026-11-03, the owner: "looks good, continue"): his oversized
+hoodie, baggy trousers and white sneakers, as in 2D (`OUTFITS.hoodie` in
+fighter3d.py). An oversized top does not follow the body, so the hoodie is
+made from the body as loose cloth lies over it (`_loose`): the forms blurred
+away a couple of centimetres out, and below the chest each column falling
+straight from the widest part above, as cloth hangs. The trunk and sleeves
+are made apart and met a hand's width down the arm, a dropped shoulder:
+blurred together, the cloth webbed from arm to side like a bat's wing and
+stretched into a fin of cloth whenever the arm came up, and split at the
+joint each sleeve was a puff on a vest. Under loose cloth the chest's weights
+also reach out under each arm (`loose` outfits, `skin_weights`). In its
+second colour (`suit2`) a ribbed band at the hem, ribbed cuffs, and the hood
+lying down: a layer over the upper back with a U-shaped edge and a soft roll
+round the back and sides of the neckline (a ring of beads read as a neck
+pillow; carried round to the front, it rose under his chin like a beard). A
+pouch pocket follows the front (a flat box on the curve stood out only at its
+ends), and two drawstrings in `accent` lie on the cloth (projected onto it;
+from too far out, where the field was never written, they landed anywhere).
+The neckline is cut close and the collar stops at the base of the neck: wider,
+the gap showed its inside as a black band under the jaw; kept up to the
+shirt's line, it stood round his neck like a turtleneck. Trousers now come in
+cuts (`LEG_CUTS`, from the 2D `costume.legs`): baggy legs widest at mid-thigh,
+wide enough to hang clear of the thigh, and allowed further out to the side
+(kept to the suit's limits, they were cut flat there in patches that read as
+pockets). One material a palette role, shared by every piece (`material`): a
+second of the same name came out as `suit2.001`, a role no palette has.
+`test/sculpt3d.test.js` checks his roles, his cap and his bare fists.
+
+Next for him: a brawler's form.
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -441,7 +469,7 @@ Next for him: the oversized hoodie and baggy trousers, then a brawler's form.
 - The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
   as the 2D figure and the athlete bodies have, with `figure.hips`, and its
   own fat pattern (`FAT_M` is a man's).
-- Outfits. Only Jeff's vest. The rest: hoodie (Max), turtleneck (Kai),
+- Outfits. Jeff's vest and Adam's hoodie. The rest: turtleneck (Kai),
   pinstripe suit (Dex), tee (Elo), henley (Scam), blazer (Ava), bomber
   (Zara), suit (Eleanor). Most are the same shells with other edges; the 2D
   `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)

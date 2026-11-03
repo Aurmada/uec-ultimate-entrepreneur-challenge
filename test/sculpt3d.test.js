@@ -40,3 +40,26 @@ test('his fists are bare', () => {
     assert.ok(reach(p) < skin - 0.06, `${p.role} reaches over the hands`);
   }
 });
+
+// Adam (`max`), the second: his hoodie, baggy trousers and sneakers, and his
+// cap backwards over short hair, all in his own palette's roles.
+const adamGlb = readFileSync(new URL(`../${MODELS3D['sculpt:max'].url}`, import.meta.url));
+const adam = extractModel(parseGLB(adamGlb.buffer.slice(adamGlb.byteOffset, adamGlb.byteOffset + adamGlb.byteLength)));
+
+test('Adam wears his hoodie, its ribbing and strings, his trousers and shoes, and his cap', () => {
+  const roles = new Set(adam.primitives.filter((p) => p.name === 'body').map((p) => p.role));
+  for (const role of ['skin', 'suit', 'suit2', 'accent', 'pants', 'shoe']) assert.ok(roles.has(role), `no ${role}`);
+  const cap = new Set(adam.primitives.filter((p) => p.name === 'hair:cap').map((p) => p.role));
+  for (const role of ['suit2', 'accent', 'hair']) assert.ok(cap.has(role), `his cap has no ${role}`);
+});
+
+test("Adam's fists are bare too: his cuffs end at the wrist", () => {
+  const reach = (p) => {
+    let m = 0;
+    for (let i = 0; i < p.positions.length; i += 3) m = Math.max(m, Math.abs(p.positions[i + 2]));
+    return m;
+  };
+  const body = adam.primitives.filter((p) => p.name === 'body');
+  const skin = reach(body.find((p) => p.role === 'skin'));
+  for (const p of body.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.06, `${p.role} reaches over the hands`);
+});

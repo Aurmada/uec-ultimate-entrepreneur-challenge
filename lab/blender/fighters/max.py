@@ -114,11 +114,7 @@ def headwear(fx):
 
     for ob, role, colour in ((crown, 'suit2', (0.64, 0.09, 0.0, 1)), (button, 'accent', (1.0, 0.65, 0.02, 1)),
                              (fuzz, 'hair', (0.04, 0.025, 0.012, 1))):
-        m = bpy.data.materials.new(role)
-        m.use_nodes = True
-        m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = colour
-        m.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1.0
-        ob.data.materials.append(m)
+        ob.data.materials.append(fx.material(role, colour))
     objs = [crown, button, fuzz]
     with bpy.context.temp_override(active_object=crown, selected_editable_objects=objs, selected_objects=objs):
         bpy.ops.object.join()
