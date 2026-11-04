@@ -688,7 +688,7 @@ def _loose():
     return _drape(0.022, 0.02, 0.02, 0.014, 0.012, 0.1)
 
 
-def _drape(off_t, off_a, blur_t, blur_a, blur_after, drop):
+def _drape(off_t, off_a, blur_t, blur_a, blur_after, drop, hang_back=True):
     """The body as cloth lies over it: its forms blurred away (`blur_t` on
     the trunk, `blur_a` on the arms, `blur_after` again once hung), `off_t`
     and `off_a` out, and below the chest falling straight down from the
@@ -696,9 +696,10 @@ def _drape(off_t, off_a, blur_t, blur_a, blur_after, drop):
     apart and met where the sleeve is set in, `drop` down the arm from the
     shoulder joint: blurred together, the cloth webbed from the arm to the
     side like a bat's wing, and the web, half on the arm and half on the
-    chest, stretched into a fin whenever the arm came up. Made once a
-    fighter for each cut."""
-    key = (off_t, off_a, blur_t, blur_a, blur_after, drop)
+    chest, stretched into a fin whenever the arm came up. Without
+    `hang_back` only the front hangs, as a tailored back follows the small
+    of the back. Made once a fighter for each cut."""
+    key = (off_t, off_a, blur_t, blur_a, blur_after, drop, hang_back)
     if key in _LOOSE:
         return _LOOSE[key]
     T, A = _shell(0.0), _shell(0.0)
@@ -733,6 +734,11 @@ def _drape(off_t, off_a, blur_t, blur_a, blur_after, drop):
     hung = np.minimum.accumulate(blk[:, :, ::-1], axis=2)[:, :, ::-1]
     y = np.abs(F.lo[1] + np.arange(j0, j1) * F.h)
     w = (1 - np.clip((y - 0.15) / 0.05, 0, 1) ** 2).astype(np.float32)[None, :, None]
+    if not hang_back:
+        # hung from the shoulder blades, a jacket's back stood off the small of
+        # the back, and leaning into his stance it folded there into a corner
+        x = F.lo[0] + np.arange(T.d.shape[0]) * F.h
+        w = w * np.clip((x + 0.06) / 0.06, 0, 1).astype(np.float32)[:, None, None]
     T.d[:, j0:j1, k0:k1] = blk + w * (hung - blk)
     T.soften(blur_after, every)
     np.minimum(T.d, A.d, out=T.d)
@@ -871,7 +877,7 @@ def _jacket():
     the shirt showed through at the shoulders."""
     if 'jacket' not in _LOOSE:
         J = _shell(0.0085)
-        np.minimum(J.d, _drape(0.011, 0.01, 0.012, 0.008, 0.008, 0.04).d, out=J.d)
+        np.minimum(J.d, _drape(0.011, 0.01, 0.012, 0.008, 0.008, 0.04, hang_back=False).d, out=J.d)
         _LOOSE['jacket'] = J
     return _LOOSE['jacket']
 _NECK_AXIS = -0.012                     # as _neck_cut's

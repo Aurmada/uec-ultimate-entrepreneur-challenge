@@ -494,7 +494,10 @@ shoes. The jacket is the body as cloth lies over it (`_drape`, the hoodie's
 `_loose` made general: with Adam's numbers it gives his hoodie byte for
 byte), a centimetre out with the sleeves set in near the shoulder, and never
 nearer the body than that: draped alone, it dipped where the sleeves meet the
-trunk and the shirt showed through at the shoulders. It opens in a V from the
+trunk and the shirt showed through at the shoulders. Only its front hangs
+straight (`hang_back`): hung from the shoulder blades as well, its back stood
+off the small of his back and folded into a corner there as he leant into his
+stance. It opens in a V from the
 button to the base of the neck, its collar stands round the back of the neck
 under the shirt's, and below the button its fronts part over the paunch, as
 the 2D jacket's do. The lapels widen from the button to a notch under the
