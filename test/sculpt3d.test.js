@@ -10,6 +10,8 @@ import { MODELS3D } from '../src/data/models3d.js';
 import { roleColour } from '../src/engine/gl3d/toon.js';
 import { getFighter } from '../src/data/fighters.js';
 import { mix } from '../src/engine/figure.js';
+import { buildRig, solvePose, transformPoint } from '../src/engine/gl3d/rig.js';
+import { restPose } from '../src/engine/anim.js';
 
 const glb = readFileSync(new URL(`../${MODELS3D['sculpt:bozo'].url}`, import.meta.url));
 const model = extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength)));
@@ -107,4 +109,49 @@ test('a role in shade takes its palette colour darkened, and an unknown role kee
   assert.deepEqual(roleColour(pal, 'suit*0.5', [1, 1, 1]), [0x4a / 510, 0x40 / 510, 0x38 / 510]);
   assert.deepEqual(roleColour(pal, 'shirt', [1, 1, 1]), [1, 1, 1]);
   assert.deepEqual(roleColour(pal, 'suit2*0.5', [0, 0, 1]), [0, 0, 1]);
+});
+
+// Props (2026-11-04), as the founder's model carries them: each sculpt raises
+// the block briefcase in its lead fist, and Carl carries his own case in his
+// rear one, each riding its grip bone wholly.
+const sculpts = { bozo: model, max: adam, dex: carl };
+const top = (m, p, v) => {
+  let best = -1, joint = 0;
+  for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
+  return [m.jointNames[joint], best];
+};
+
+test('every sculpt raises the block briefcase on its lead grip, and Carl his case on his rear one', () => {
+  const carries = { bozo: { 'prop:guard-case': 'grip.L' }, max: { 'prop:guard-case': 'grip.L' },
+    dex: { 'prop:guard-case': 'grip.L', 'prop:case': 'grip.R' } };
+  for (const [id, props] of Object.entries(carries)) {
+    const m = sculpts[id];
+    for (const [name, grip] of Object.entries(props)) {
+      const prims = m.primitives.filter((p) => p.name === name);
+      assert.deepEqual(new Set(prims.map((p) => p.role)), new Set(['case', 'frame', 'brass']), `${id} ${name}`);
+      for (const p of prims) {
+        for (let v = 0; v < p.positions.length / 3; v++) {
+          const [joint, w] = top(m, p, v);
+          assert.ok(joint === grip && w > 0.999, `${id} ${name} vertex ${v} rides ${joint} at ${w}`);
+        }
+      }
+    }
+  }
+});
+
+test("Carl's case hangs below his rear fist with its handle in it, not beside it", () => {
+  const rig = buildRig(carl, MODELS3D['sculpt:dex']);
+  const m = solvePose(rig, restPose());
+  const fist = transformPoint(m, rig.names.indexOf('forearm.R'), rig.rest['forearm.R'].tail);
+  const shell = carl.primitives.find((p) => p.name === 'prop:case' && p.role === 'case');
+  const handle = carl.primitives.find((p) => p.name === 'prop:case' && p.role === 'frame');
+  const centre = (p) => {
+    const c = [0, 0, 0], n = p.positions.length / 3;
+    for (let v = 0; v < n; v++) for (let k = 0; k < 3; k++) c[k] += p.positions[v * 3 + k] / n;
+    return transformPoint(m, rig.names.indexOf('grip.R'), c);
+  };
+  const c = centre(shell), h = centre(handle);
+  assert.ok(c[1] < fist[1] - 0.12, `the case should hang below the hand (${c[1].toFixed(2)} vs ${fist[1].toFixed(2)})`);
+  assert.ok(Math.hypot(h[0] - fist[0], h[2] - fist[2]) < 0.04, 'the handle should be under the fist holding it');
+  assert.ok(Math.abs(h[1] - fist[1]) < 0.08, `the handle should be at the fist (${h[1].toFixed(2)} vs ${fist[1].toFixed(2)})`);
 });

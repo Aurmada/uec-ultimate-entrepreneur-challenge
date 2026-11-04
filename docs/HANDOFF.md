@@ -517,8 +517,20 @@ pattern, which the toon renderer has no way to paint) and a waistcoat (the V
 shows only the shirt, as in 2D). `test/sculpt3d.test.js` checks his roles,
 the lapels' shade against figure.js's, and his bare fists.
 
-Next for him: his briefcase, then a grappler's form with open, reaching
-hands.
+His briefcase (2026-11-04): props now come out of the pipeline as the
+founder's model has them (`PROPS`, `props()` in fighter3d.py), a
+`prop:<id>` mesh for each part the fighter carries, which the game shows in
+that part's states, riding a grip bone that follows the fist but faces the
+way the body faces. Carl's case hangs from his rear fist, and every sculpt
+now raises the block briefcase in its lead fist (Jeff and Adam rebuilt with
+it, nothing else in their models changed). Each is an original attache case
+(`briefcase`): a hard leather shell with rounded corners and the seam where
+its lid closes, a handle arched on two brass mounts, and brass latches,
+sized as the founder's and hung with the handle in the fist: at the
+founder's ten centimetres ahead of it, the fist floated beside the handle.
+`test/sculpt3d.test.js`.
+
+Next for him: a grappler's form with open, reaching hands.
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -537,6 +549,9 @@ hands.
 - Eyewear beyond shades (Kai's glasses, Ava's visor), the earrings and
   brooch.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
+- Props. The block briefcase and Carl's case are made; Jeff's parcel and
+  Adam's mat come with their next look (the 2D props of the women and the
+  others with their remodels).
 - Forms: boxing (Jeff) and brawling (Adam). Each fighter's own fighting style
   is its own stage, after their model.
 

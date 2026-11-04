@@ -73,7 +73,7 @@ def game_data(fid):
           f"const d = getFighter('{fid}');"
           "console.log(JSON.stringify({ id: d.id, name: d.name, figure: d.figure || {}, body: d.body || {},"
           " face: d.face || {}, outfit: d.outfit, accessory: d.accessory, eyewear: d.eyewear,"
-          " hairStyle: d.hairStyle, c: d.c }));")
+          " hairStyle: d.hairStyle, c: d.c, parts: (d.parts || []).map((p) => ({ id: p.id, fill: p.fill })) }));")
     out = subprocess.run(['node', '--input-type=module', '-e', js], capture_output=True, text=True, check=True)
     return json.loads(out.stdout)
 
@@ -1123,6 +1123,86 @@ def shades(lens_c, lens_r, lens_turn, bar, bridge, arm_from, arm_to):
     return lens
 
 
+# ================================================================ props
+# What a fighter carries (data/fighters.js `parts`), as the founder's model
+# carries it (build_founder.py): a mesh `prop:<id>` for each part, which the
+# game shows in that part's states, held on a grip bone that follows the fist
+# but faces the way the body faces (rig.js), as a 2D part is an unrotated
+# offset from the hand. Built in the fighter's own space at their grip joint
+# and sized with them. The block briefcase every fighter raises is here, and
+# Carl's own; each other fighter's prop comes with their remodel.
+FRAME_C, BRASS_C = '#1b1a22', '#c9a03c'
+
+
+def _axes(f):
+    ax = [f.lo[k] + np.arange(f.n[k]) * f.h for k in range(3)]
+    return (ax[0][:, None, None].astype(np.float32), ax[1][None, :, None].astype(np.float32),
+            ax[2][None, None, :].astype(np.float32))
+
+
+def briefcase(name, grip, at, half, fill):
+    """An attache case hanging from the fist by its handle: a hard leather
+    shell with rounded corners and the seam where its lid closes, the handle
+    arched over the top on two brass mounts, and a brass latch either side of
+    it on each face. `at` is its centre from the grip and `half` its half
+    sizes (length, depth, height), both at Jeff's size: the founder's sizes,
+    hung with the handle in the fist. One object, `name`."""
+    import bpy
+    s = FR.size
+    c = np.asarray(grip, float) + np.asarray(at) * s
+    e = np.asarray(half, float) * s
+    top = c[2] + e[2]
+    lo, hi = c - e - 0.03 * s, c + e + np.array([0.03, 0.03, 0.08]) * s
+    shell = sc.Field(lo=lo, hi=hi, h=0.002)
+    shell.add(sc.Box(c, e, 0.018 * s), 0.0)
+    X, Y, Z = _axes(shell)
+    inset = sc.Box(c, e - 0.003 * s, 0.015 * s).sdf(X, Y, Z)
+    seam = np.maximum(np.abs(Y - (c[1] + e[1] * 0.33)) - np.float32(0.0015 * s), -inset)
+    shell.d = np.maximum(shell.d, -seam).astype(np.float32)
+    handle = sc.Field(lo=lo, hi=hi, h=0.0015)
+    t = np.linspace(0, np.pi, 11)
+    arc = [V(c[0] - 0.065 * s * math.cos(a), c[1], top + 0.045 * s * math.sin(a)) for a in t]
+    for a, b in zip(arc, arc[1:]):
+        handle.add(sc.RoundCone(a, b, 0.009 * s, 0.009 * s), 0.002)
+    brass = sc.Field(lo=lo, hi=hi, h=0.0015)
+    for sx in (1, -1):
+        brass.add(sc.Box(V(c[0] + sx * 0.065 * s, c[1], top + 0.003 * s), np.array([0.013, 0.013, 0.006]) * s, 0.003 * s), 0.0)
+        for sy in (1, -1):
+            brass.add(sc.Box(V(c[0] + sx * 0.12 * s, c[1] + sy * (e[1] + 0.001 * s), top - 0.026 * s),
+                             np.array([0.015, 0.004, 0.011]) * s, 0.002 * s), 0.0)
+    objs = []
+    for f, role, colour in ((shell, 'case', fill), (handle, 'frame', FRAME_C), (brass, 'brass', BRASS_C)):
+        ob = sc.to_blender(name, *f.mesh(), smooth=1)
+        ob.data.materials.append(material(role, srgb(colour)))
+        objs.append(ob)
+    with bpy.context.temp_override(active_object=objs[0], selected_editable_objects=objs, selected_objects=objs):
+        bpy.ops.object.join()
+    objs[0].name = objs[0].data.name = name
+    return objs[0]
+
+
+# part id: (the grip it hangs from, its centre from the grip, its half sizes).
+# Each hangs with its handle in the fist: at the founder's ten centimetres
+# ahead of the fist, the fist floated beside the handle instead of holding it.
+PROPS = {
+    # the block briefcase, below the lead fist
+    'guard-case': ('grip.L', (0.0, 0, -0.205), (0.19, 0.045, 0.15)),
+    # Carl's: the asset he just stripped, hanging from the rear hand
+    'case': ('grip.R', (0.0, 0, -0.215), (0.21, 0.05, 0.16)),
+}
+
+
+def props(data, J):
+    """The fighter's props as [(object, grip bone)], for the parts they carry
+    that the pipeline makes."""
+    out = []
+    for part in data.get('parts') or []:
+        if part['id'] in PROPS:
+            bone, at, half = PROPS[part['id']]
+            out.append((briefcase('prop:' + part['id'], J[bone], at, half, part.get('fill') or '#6b4a2b'), bone))
+    return out
+
+
 # ================================================================ into the game
 # The live 3D renderer poses a model from the 2D pose through the founder's
 # skeleton contract (build_founder.py): the same joint names, the body facing
@@ -1230,7 +1310,7 @@ def _decimate(ob, target):
 
 def export_rigged(data, spec, path, tris=44000):
     """The fighter as a game model: dressed, decimated, weighted to the
-    skeleton, with his eyewear riding his head."""
+    skeleton, with his eyewear riding his head and his props his grips."""
     import bpy
     if spec is Placeholder:
         sys.exit(f'{data["id"]} has no head of their own yet (lab/blender/fighters/{data["id"]}.py)')
@@ -1297,6 +1377,14 @@ def export_rigged(data, spec, path, tris=44000):
         mod = wear.modifiers.new('Armature', 'ARMATURE')
         mod.object = rig
         wear.parent = rig
+    # props ride their grip wholly, built where it already is in his space
+    for prop, bone in props(data, J):
+        _decimate(prop, 2400)
+        prop.data.shade_smooth()
+        prop.vertex_groups.new(name=bone).add(list(range(len(prop.data.vertices))), 1.0, 'REPLACE')
+        mod = prop.modifiers.new('Armature', 'ARMATURE')
+        mod.object = rig
+        prop.parent = rig
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=path, export_format='GLB', use_selection=False,
