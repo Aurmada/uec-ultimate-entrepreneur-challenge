@@ -110,10 +110,11 @@ def headwear(fx):
     hair.add(sc.Ellipsoid(V(0.054, 0, 1.952), (0.046, 0.066, 0.033), sc.rot(ry=-25)), 0.02)
     for s in (1, -1):
         hair.cut(sc.Ellipsoid(V(-0.008, s * 0.08, 1.826), (0.03, 0.03, 0.044)), 0.004)
-    # the comb's lines, up off the front of the quiff and back over it
+    # the comb's lines, up off the front of the quiff and back over it, shallow:
+    # deeper, the ink drew them as black scribbles at game size
     for y in (-0.036, -0.012, 0.012, 0.036):
         hair.groove([(0.09, y * 0.9, 1.94), (0.05, y, 1.982), (-0.01, y * 1.05, 1.99), (-0.07, y * 1.1, 1.965)],
-                    depth=0.0012, width=0.003, k=0.0018)
+                    depth=0.0007, width=0.0024, k=0.0015)
     obj = sc.to_blender('hair:quiff', *hair.mesh(), smooth=1)
     obj.data.materials.append(fx.material('hair', (0.26, 0.27, 0.32, 1)))
     return [(obj, [hair])]

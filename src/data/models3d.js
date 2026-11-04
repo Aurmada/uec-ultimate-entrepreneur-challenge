@@ -185,7 +185,7 @@ export const SCULPTED = {
   // eyes 0.033 out at 1.826 behind clear glasses, a light level brow, its
   // painted line just over the rims at 1.848, thin lips meeting at 1.742.
   // His 2D stance stands tall with the chest open, so his sculpt adds no lean
-  // of its own (see Adam's and Carl's).
+  // of its own (see Adam's and Carl's). He showboats (data/forms.js).
   kai: {
     leaf: { forearm: 0.4083, head: 0.2518, foot: [0.1928, -0.0749, 0] },
     skull: 0.158,
@@ -199,6 +199,7 @@ export const SCULPTED = {
         lid: 1.7, line: 1.4,
       },
     },
+    form: 'showboating',
   },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {

@@ -619,6 +619,8 @@ def vest():
 LEG_CUTS = {
     'suit': dict(top=0.09, knee=0.076, hem=0.066, side=0.25, k=0.03),
     'baggy': dict(top=0.1, mid=0.118, knee=0.106, hem=0.092, side=0.33, k=0.0),
+    # under the leg's own shell, so they hug it, narrowing to the ankle
+    'skinny': dict(top=0.08, knee=0.056, hem=0.048, side=0.22, k=0.03),
 }
 
 
@@ -1000,6 +1002,61 @@ def tie():
     return T
 
 
+# A fitted turtleneck (data/fighters.js `outfit: 'turtleneck'`, Steve's): a
+# fine knit close over the body, long sleeves to the wrists, its hem just over
+# the waistband, and the roll collar up the neck to under the jaw in the
+# second colour, as the 2D figure draws it. The 2D figure's says the chest
+# and the waist show through it, so it is the body's own shell, softened only
+# enough that a knit does not show every muscle.
+def turtleneck():
+    """The turtleneck's body and sleeves, up under the collar."""
+    S = _shell(0.005)
+    S.soften(0.008, lambda X, Y, Z: np.float32(1))
+    # and never nearer the body than a few millimetres: softened, it sank
+    # under the skin over the shoulders and the lats, which showed through
+    np.minimum(S.d, F.d - np.float32(0.003), out=S.d)
+    d = S.d
+    _keep_above(d, 0.99)
+    _cuff_cut(d, CUFF)
+    # up under the collar and no further: with only the neck cut out of it,
+    # the knit ran on up over the whole head and hid the face, cut round the
+    # neck wider than the collar it left the skin bare behind it, and stopped
+    # under the collar's base, it left the tops of the shoulders bare; higher
+    # behind, as the collar is, where the back of the neck rises
+    sl = _zslab(1.6, 1.75)
+    X, Y, Z = _grid(sl)
+    d[sl] = np.maximum(d[sl], Z - (np.float32(1.665) + np.float32(0.028) * np.clip(-X / np.float32(0.07), 0, 1)))
+    _keep_below(d, 1.7)
+    return S
+
+
+def turtleneck_collar():
+    """The roll collar: a thick tube of the knit round the neck, wider where
+    it sits on the shoulders, up to under the jaw and higher behind, its top
+    edge rolled round, folded over once. A tube sized to the neck (`neck()`'s
+    column, its muscles inside it): the neck's own surface pushed out took
+    the slope of the shoulders with it, and the collar stood on them as a
+    plate."""
+    n = B.neck
+    tube = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
+    tube.add(sc.RoundCone(V(-0.014, 0, 1.57), V(-0.011, 0, 1.72), 0.078 * n + 0.02, 0.064 * n + 0.017), 0.0)
+    sl = _zslab(1.55, 1.76)
+    X, Y, Z = _grid(sl)
+    behind = np.clip(-X / np.float32(0.07), 0, 1)
+    top = np.float32(1.674) + np.float32(0.026) * behind
+    # sitting on the shoulders, higher behind where the back of the neck
+    # rises out of them: level, its base stood out over the upper back
+    bottom = np.float32(1.575) + np.float32(0.04) * behind
+    d = sc.smax(tube.d[sl], Z - top, 0.008)
+    tube.d[:] = np.float32(1)
+    tube.d[sl] = np.maximum(d, bottom - Z).astype(np.float32)
+    # the fold, a soft line round it a little below the middle
+    sl = _zslab(1.6, 1.66)
+    Z = _grid(sl)[2]
+    tube.d[sl] += np.float32(0.0025) * np.exp(-((Z - np.float32(1.628)) / np.float32(0.004)) ** 2)
+    return tube
+
+
 def srgb(h, k=1.0):
     """A palette hex as a glTF (linear) colour, darkened by k first as the
     game darkens it (in sRGB)."""
@@ -1036,6 +1093,13 @@ OUTFITS = {
         'covers': {'shirt': ['jacket', 'tie', 'trousers'], 'tie': ['jacket'], 'jacket': ['lapels'],
                    'trousers': ['jacket', 'shoes']},
         'loose': True,
+    },
+    # a fitted turtleneck with its roll collar, over skinny trousers (Steve's)
+    'turtleneck': {
+        'pieces': [('turtleneck', turtleneck, 'suit', None), ('collar', turtleneck_collar, 'suit2', None),
+                   ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['turtleneck', 'collar', 'trousers', 'shoes'],
+        'covers': {'turtleneck': ['collar'], 'trousers': ['turtleneck', 'shoes']},
     },
     # Trousers and shoes and nothing above the waist: what a fighter wears
     # until their own outfit is made, so their head and face can be judged in
@@ -1219,7 +1283,8 @@ def glasses(lens_c, lens_half, lens_turn, bridge, arm_from, arm_to, rad=0.0055, 
 # but faces the way the body faces (rig.js), as a 2D part is an unrotated
 # offset from the hand. Built in the fighter's own space at their grip joint
 # and sized with them. The block briefcase every fighter raises is here, and
-# Carl's own; each other fighter's prop comes with their remodel.
+# Carl's case and Steve's device; each other fighter's prop comes with their
+# remodel.
 FRAME_C, BRASS_C = '#1b1a22', '#c9a03c'
 
 
@@ -1270,14 +1335,40 @@ def briefcase(name, grip, at, half, fill):
     return objs[0]
 
 
-# part id: (the grip it hangs from, its centre from the grip, its half sizes).
-# Each hangs with its handle in the fist: at the founder's ten centimetres
-# ahead of the fist, the fist floated beside the handle instead of holding it.
+def device(name, grip, fill, pal):
+    """Steve's device: a thin slab with rounded corners held up in the rear
+    hand, its face to the camera, the fist round its lower part, the edge of
+    its screen just drawn in on each face. Solid in the 2D part's colour
+    (`accent`, a palette role, so it follows the palette), as the founder's
+    is: a dark screen on the camera side hid the colour that makes it read
+    at game size. One object, `name`."""
+    s = FR.size
+    c = np.asarray(grip, float) + np.array([0.03, 0, 0.08]) * s
+    e = np.array([0.08, 0.011, 0.13]) * s
+    D = sc.Field(lo=c - e - 0.02 * s, hi=c + e + 0.02 * s, h=0.0015)
+    D.add(sc.Box(c, e, 0.012 * s), 0.0)
+    X, Y, Z = _axes(D)
+    face = np.abs(Y - np.float32(c[1])) - np.float32(e[1] - 0.0008 * s)
+    edge = np.maximum(sc.Box(c, e - np.array([0.012, 0, 0.012]) * s, 0.006 * s).sdf(X, Y, Z) * -1,
+                      sc.Box(c, e - np.array([0.0135, 0, 0.0135]) * s, 0.005 * s).sdf(X, Y, Z))
+    D.d = np.maximum(D.d, -np.maximum(-face, -edge)).astype(np.float32)
+    ob = sc.to_blender(name, *D.mesh(), smooth=1)
+    role = fill if fill in (pal or {}) else 'accent'
+    ob.data.materials.append(material(role, role_colour(pal or {}, role, '#eef1ff')))
+    return ob
+
+
+# Each prop: the grip it rides, and how it is made from (name, grip joint,
+# the 2D part's fill, the palette). The cases hang with the handle in the
+# fist: at the founder's ten centimetres ahead of it, the fist floated beside
+# the handle instead of holding it.
 PROPS = {
     # the block briefcase, below the lead fist
-    'guard-case': ('grip.L', (0.0, 0, -0.205), (0.19, 0.045, 0.15)),
+    'guard-case': ('grip.L', lambda n, g, fill, pal: briefcase(n, g, (0.0, 0, -0.205), (0.19, 0.045, 0.15), fill)),
     # Carl's: the asset he just stripped, hanging from the rear hand
-    'case': ('grip.R', (0.0, 0, -0.215), (0.21, 0.05, 0.16)),
+    'case': ('grip.R', lambda n, g, fill, pal: briefcase(n, g, (0.0, 0, -0.215), (0.21, 0.05, 0.16), fill)),
+    # Steve's: the device, held up in the rear hand
+    'device': ('grip.R', device),
 }
 
 
@@ -1287,8 +1378,8 @@ def props(data, J):
     out = []
     for part in data.get('parts') or []:
         if part['id'] in PROPS:
-            bone, at, half = PROPS[part['id']]
-            out.append((briefcase('prop:' + part['id'], J[bone], at, half, part.get('fill') or '#6b4a2b'), bone))
+            bone, make = PROPS[part['id']]
+            out.append((make('prop:' + part['id'], J[bone], part.get('fill') or '#6b4a2b', data.get('c')), bone))
     return out
 
 

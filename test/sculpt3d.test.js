@@ -114,21 +114,28 @@ test('a role in shade takes its palette colour darkened, and an unknown role kee
 // Props (2026-11-04), as the founder's model carries them: each sculpt raises
 // the block briefcase in its lead fist, and Carl carries his own case in his
 // rear one, each riding its grip bone wholly.
-const sculpts = { bozo: model, max: adam, dex: carl };
+const steveGlb = readFileSync(new URL(`../${MODELS3D['sculpt:kai'].url}`, import.meta.url));
+const steve = extractModel(parseGLB(steveGlb.buffer.slice(steveGlb.byteOffset, steveGlb.byteOffset + steveGlb.byteLength)));
+const sculpts = { bozo: model, max: adam, dex: carl, kai: steve };
 const top = (m, p, v) => {
   let best = -1, joint = 0;
   for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
   return [m.jointNames[joint], best];
 };
 
-test('every sculpt raises the block briefcase on its lead grip, and Carl his case on his rear one', () => {
-  const carries = { bozo: { 'prop:guard-case': 'grip.L' }, max: { 'prop:guard-case': 'grip.L' },
-    dex: { 'prop:guard-case': 'grip.L', 'prop:case': 'grip.R' } };
+test('every sculpt raises the block briefcase on its lead grip, and carries its own prop on its rear one', () => {
+  const CASE = ['case', 'frame', 'brass'];
+  const carries = {
+    bozo: { 'prop:guard-case': ['grip.L', CASE] },
+    max: { 'prop:guard-case': ['grip.L', CASE] },
+    dex: { 'prop:guard-case': ['grip.L', CASE], 'prop:case': ['grip.R', CASE] },
+    kai: { 'prop:guard-case': ['grip.L', CASE], 'prop:device': ['grip.R', ['accent']] },   // his device in his palette's accent
+  };
   for (const [id, props] of Object.entries(carries)) {
     const m = sculpts[id];
-    for (const [name, grip] of Object.entries(props)) {
+    for (const [name, [grip, roles]] of Object.entries(props)) {
       const prims = m.primitives.filter((p) => p.name === name);
-      assert.deepEqual(new Set(prims.map((p) => p.role)), new Set(['case', 'frame', 'brass']), `${id} ${name}`);
+      assert.deepEqual(new Set(prims.map((p) => p.role)), new Set(roles), `${id} ${name}`);
       for (const p of prims) {
         for (let v = 0; v < p.positions.length / 3; v++) {
           const [joint, w] = top(m, p, v);
@@ -183,8 +190,6 @@ test("every sculpt's lead hand comes as a fist and open, parted from the body", 
 // 2D ones are drawn, the rims wire drawn without the ink outline (outlined,
 // the ink filled each lens black) and the lenses faint glass the painted eyes
 // show through; his hair is a quiff, all in his palette's roles.
-const steveGlb = readFileSync(new URL(`../${MODELS3D['sculpt:kai'].url}`, import.meta.url));
-const steve = extractModel(parseGLB(steveGlb.buffer.slice(steveGlb.byteOffset, steveGlb.byteOffset + steveGlb.byteLength)));
 
 test('Steve wears his glasses, rims round clear lenses the painted eyes show through, and his quiff', () => {
   const roles = (name) => new Set(steve.primitives.filter((p) => p.name === name).map((p) => p.role));

@@ -1,7 +1,8 @@
 // Fighting forms: how a fighter stands, guards and throws, as a martial art
 // rather than as a personality. Boxing first (November 2026), for the
-// sculpted Jeff, then brawling, for Adam, and grappling, for Carl; karate,
-// kung fu and the rest are each their own when a fighter takes them up.
+// sculpted Jeff, then brawling, for Adam, grappling, for Carl, and
+// showboating, for Steve; karate, kung fu and the rest are each their own
+// when a fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -109,6 +110,36 @@ const SEIZE = {
   ]),
 };
 
+// A showman's guard, Steve's from 2D: mid-presentation, tall, the chest open,
+// the lead hand open, out and high, showing you the thing, and the device
+// held at the chest in the other.
+const SHOW_F = { x: 66, y: -170 };
+const SHOW_B = { x: 42, y: -142 };
+const S_HIP = -84, S_SHOULDER = -152, S_HEAD = -183;   // REST, the head raised by the stance
+
+// The big finish: a flourish, the open hand swept up and back over his
+// shoulder and the body turned away with it, the chest open to the
+// audience; the hand closes at the top of it, and the punch comes down
+// straight at the chest. Then he holds the finish a beat too long, chin up,
+// because the swing is a demo and the demo needs an audience, before he
+// opens the hand and goes back to presenting. The device stays at his chest.
+const BIG_FINISH = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: { armF: SHOW_F, armB: SHOW_B, hipY: S_HIP, shoulderY: S_SHOULDER, headY: S_HEAD, headX: 2, bodyLean: -0.06, twist: 0, hipTwist: 0, sx: 1, sy: 1.02, legF: { x: 21, y: 0 }, legB: { x: -19, y: 0 } } },
+    // the flourish, up and back, the body turning away
+    { t: 0.5,  hand: 'open', joints: { armF: { x: 30, y: -196 }, headX: -1, bodyLean: -0.12, twist: -0.3, hipTwist: -0.12 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'fist', joints: { armF: { x: 20, y: -192 }, headX: -2, bodyLean: -0.14, twist: -0.38, hipTwist: -0.16, sx: 1.02, sy: 1.03 }, ease: 'outQuad' },
+    // down and straight through at the chest
+    { t: 1.15, hand: 'fist', joints: { armF: { x: 104, y: -164 }, hipY: S_HIP + 2, headX: 4, bodyLean: 0.1, twist: 0.28, hipTwist: 0.14, sx: 0.98, sy: 1.01, legB: { x: -16, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'fist', joints: { armF: { x: 102, y: -165 }, headX: 4, bodyLean: 0.08, twist: 0.26, hipTwist: 0.13 }, hold: true },
+    // the finish, held a beat too long, chin up to the audience
+    { t: 2.55, hand: 'fist', joints: { armF: { x: 98, y: -167 }, hipY: S_HIP, headX: 3, bodyLean: -0.02, twist: 0.2, hipTwist: 0.1, sx: 1, sy: 1.02 }, ease: 'outQuad' },
+    // and back to presenting
+    { t: 3,    hand: 'open', joints: { armF: SHOW_F, headX: 2, bodyLean: -0.06, twist: 0, hipTwist: 0, legB: { x: -19, y: 0 } }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -166,5 +197,22 @@ export const FORMS = {
     // The seizure is written whole; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 8, squash: 0.08, brace: 4, thrust: 5 },
     tracks: { punch: SEIZE },
+  },
+  showboating: {
+    stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
+    // The lead hand open, presenting, wherever he is not hitting or holding
+    // the block briefcase. His keynote drift at rest (the presenting hand
+    // rising on "one more thing") is his own 2D idle, which the form keeps.
+    open: ['idle', 'walk', 'dash', 'crouch', 'jump'],
+    // He covers behind the briefcase raised in the presenting hand, the
+    // shoulders turned a little away.
+    block: { armF: { x: -10, y: 6 }, armB: { x: -4, y: -6 }, twist: -0.12 },
+    // The presenting hand out in front of him, the device at the middle of
+    // his chest.
+    handDepth: { F: 0.8, B: 0.75 },
+    guardTurn: 0.7,
+    // The flourish and the held finish are written into the punch itself.
+    motion: { windup: 1, follow: 1, drop: 3, squash: 0.04, brace: 0, thrust: 3 },
+    tracks: { punch: BIG_FINISH },
   },
 };

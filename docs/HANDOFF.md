@@ -573,12 +573,38 @@ drawn without the ink outline (`rim`, inkless for every sculpt): outlined,
 the ink filled each lens black, as the founder's wire would be. The nose's
 side planes are wide (narrower, the crease beside it went black, as Adam's
 did). His 2D stance stands tall with the chest open, so his sculpt adds no
-lean of its own. Registered as `sculpt:kai`, in the base outfit until his
-turtleneck is made.
+lean of its own. Registered as `sculpt:kai`. The owner: "Continue".
 
-Next for him: the owner's look at his body and head, then his turtleneck
-and skinny trousers, his device, and a showman's form with the lead hand
-open, presenting.
+His clothes (2026-11-04, `OUTFITS.turtleneck`): a fitted teal turtleneck,
+skinny trousers and his white sneakers, as in 2D. The knit is the body's own
+shell softened only enough not to show every muscle (the 2D figure says the
+chest and waist show through it) and never nearer the body than a few
+millimetres (softened, it sank under the skin over the shoulders and lats).
+The roll collar, in the second colour, is a tube round the neck sized to it,
+up to under the jaw and higher behind, sitting on the shoulders: the neck's
+own surface pushed out took the shoulders' slope with it and stood on them
+as a plate, and blurred after it was cut out, it was eaten down to a ring.
+The knit runs up under the collar and no further (open only round the neck,
+it ran on up over his head and hid the face). Skinny legs are a new cut
+(`LEG_CUTS.skinny`), under the leg's own shell so they hug it.
+
+His device (2026-11-04): a thin slab with rounded corners held up at his
+chest in the rear hand, the edge of its screen just drawn in, solid in his
+palette's `accent` as the 2D part is (`device`; `PROPS` now names a maker for
+each prop). The comb lines in his quiff were made shallow: deeper, the ink
+drew them as black scribbles at game size.
+
+His form (2026-11-04): showboating (`data/forms.js`), from his 2D guard: tall,
+the chest open, the lead hand open, out and high, presenting, the device at
+his chest. His punch is the big finish: a flourish, the open hand swept up
+and back over his shoulder with the body turned away, the hand closing at the
+top of it, the punch down at the chest, and the finish held a beat too long,
+chin up, before he goes back to presenting. He blocks behind the briefcase in
+the presenting hand. His keynote drift at rest is his own 2D idle.
+`test/forms.test.js`, `test/sculpt3d.test.js`.
+
+Next for him: the owner's look. Then the next fighter: Elo, Scam, or the
+women's base.
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -587,8 +613,8 @@ open, presenting.
 - The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
   as the 2D figure and the athlete bodies have, with `figure.hips`, and its
   own fat pattern (`FAT_M` is a man's).
-- Outfits. Jeff's vest, Adam's hoodie and Carl's suit. The rest: turtleneck
-  (Kai), tee (Elo), henley (Scam), blazer (Ava), bomber (Zara), suit
+- Outfits. Jeff's vest, Adam's hoodie, Carl's suit and Steve's turtleneck.
+  The rest: tee (Elo), henley (Scam), blazer (Ava), bomber (Zara), suit
   (Eleanor); the blazer and Eleanor's suit can start from Carl's jacket. Most are the same shells with other edges; the 2D
   `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)
   says how far each stands off the body and how the trousers fall.
@@ -597,10 +623,11 @@ open, presenting.
 - Eyewear beyond shades and glasses (Ava's visor), the earrings and
   brooch.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
-- Props. The block briefcase and Carl's case are made; Jeff's parcel and
-  Adam's mat come with their next look (the 2D props of the women and the
-  others with their remodels).
-- Forms: boxing (Jeff), brawling (Adam) and grappling (Carl). Each fighter's own fighting style
+- Props. The block briefcase, Carl's case and Steve's device are made;
+  Jeff's parcel and Adam's mat come with their next look (the 2D props of
+  the women and the others with their remodels).
+- Forms: boxing (Jeff), brawling (Adam), grappling (Carl) and showboating
+  (Steve). Each fighter's own fighting style
   is its own stage, after their model.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings

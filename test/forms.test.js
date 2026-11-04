@@ -205,3 +205,37 @@ test('the seizure reaches out open, closes on contact and hauls it back in', () 
   for (const [name, track] of Object.entries(GRAPPLING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
   assert.deepEqual(validateTrack('bad', { keys: [{ t: 0, hand: 'claw', joints: {} }] }), ['bad[0]: unknown hand claw']);
 });
+
+// Steve (`kai`), the fourth: a showman. His lead hand is open, presenting, and
+// his punch is a big finish: a flourish up and back, the hand closing at the
+// top of it, the punch down at the chest, and the finish held a beat too long.
+const steve = getFighter('kai');
+const SHOWBOATING = FORMS.showboating;
+const steveAt = (state, extra = {}, t = 0) => computePose(
+  { def: steve, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, SHOWBOATING);
+const finishAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return steveAt('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Steve showboats from the guard his 2D figure stands in, the lead hand open and high', () => {
+  assert.equal(MODELS3D['sculpt:kai'].form, 'showboating');
+  const own = applyProportions(computePose({ def: steve, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(steve.body));
+  const show = applyProportions(steveAt('idle'), clampBody(steve.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(show[k], own[k], `his ${k} is not where his 2D guard holds it`);
+  assert.ok(show.armF.y < show.shoulderY, 'the presenting hand is not up and high');
+  for (const [state, extra] of [['idle', {}], ['walk', { walkPhase: 2.1 }]]) assert.equal(steveAt(state, extra).hand, 'open', `${state}: not presenting`);
+  assert.equal(steveAt('block').hand, undefined, 'blocking, his lead hand holds the briefcase: a fist');
+});
+
+test('the big finish flourishes up and back, closes at the top and holds the finish a beat too long', () => {
+  const guard = finishAt(0);
+  assert.equal(finishAt(0.5).hand, 'open', 'the flourish is not open-handed');
+  assert.ok(finishAt(0.5).armF.y < guard.armF.y - 15 && finishAt(0.95).twist < -0.3, 'no flourish: the hand up and back, the body turned away');
+  for (const k of [0.95, 1.15, 2, 2.5]) assert.equal(finishAt(k).hand, 'fist', `at ${k} the hand is open`);
+  assert.equal(finishAt(3).hand, 'open', 'he does not go back to presenting');
+  // a boxer is back at his guard by now; the showman is still holding it out
+  assert.ok(finishAt(2.5).armF.x > guard.armF.x + 25, 'he does not hold the finish');
+  assert.ok(posed('attack', { attack: PUNCH, stateT: PUNCH.startup + PUNCH.active + 0.5 * PUNCH.recovery }).armF.x < finishAt(2.5).armF.x - 20, 'the boxer holds his as long');
+  for (const [name, track] of Object.entries(SHOWBOATING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});
