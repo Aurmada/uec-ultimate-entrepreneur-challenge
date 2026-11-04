@@ -530,7 +530,29 @@ sized as the founder's and hung with the handle in the fist: at the
 founder's ten centimetres ahead of it, the fist floated beside the handle.
 `test/sculpt3d.test.js`.
 
-Next for him: a grappler's form with open, reaching hands.
+His form (2026-11-04): grappling (`data/forms.js`), as his 2D style is a
+grappler's, from the guard his 2D figure stands in: hunched well forward over
+a wide low base, chin down, the lead hand open and reaching at chest height,
+the rear one low with the case, and a slow, heavy shift of his weight at
+rest. His punch is a seizure: the weight sinks and the open hand draws in,
+shoots out at the chest with the body behind it, closes on what it finds and
+hauls it back in to his chest, the body turning away with the pull. He blocks
+hunched behind the block briefcase. `test/forms.test.js`.
+
+The open hand is new to the pipeline and serves every sculpt: the lead hand
+comes in two shapes, `hand:fist` (the body's own, parted from the arm under
+the sleeve, `_part_hands`) and `hand:open` (`open_hand`: the flat of the
+hand, the fingers out together and a little curled, the thumb off it, its
+wrist the body's own), and the renderer shows one by the pose (`P.hand`,
+`conditions.hand` in `wearing`). A form names the states it holds the hand
+open in (`open`), an attack track can open and close it on a key (`hand`,
+switched as `face` is), and a slap opens it in every form, as the 2D figure
+draws everyone's; anything else is a fist. Jeff and Adam were rebuilt with
+it, so their slaps are open-handed now; nothing else in their models
+changed. The first open hand was a skeleton's (thin fingers apart), and its
+thumb was cut flat by the edge of its own field.
+
+Next for him: the owner's look at the grappler. Then the next fighter.
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -552,7 +574,7 @@ Next for him: a grappler's form with open, reaching hands.
 - Props. The block briefcase and Carl's case are made; Jeff's parcel and
   Adam's mat come with their next look (the 2D props of the women and the
   others with their remodels).
-- Forms: boxing (Jeff) and brawling (Adam). Each fighter's own fighting style
+- Forms: boxing (Jeff), brawling (Adam) and grappling (Carl). Each fighter's own fighting style
   is its own stage, after their model.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings

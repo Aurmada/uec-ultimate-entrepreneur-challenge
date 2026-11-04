@@ -120,6 +120,16 @@ test('every part the roster carries has a 3D prop', () => {
   assert.deepEqual(missing, NOT_MODELLED);
 });
 
+// The sculpts' lead hand (hand:fist, hand:open): one shape at a time, the
+// fist unless the pose opens it (P.hand, passed in as conditions.hand).
+test('the lead hand shows one shape at a time: the fist unless the pose opens it', () => {
+  const carl = FIGHTERS.find((f) => f.id === 'dex');
+  assert.equal(wearing(carl, 'idle')('hand:fist'), true);
+  assert.equal(wearing(carl, 'idle')('hand:open'), false);
+  assert.equal(wearing(carl, 'idle', { hand: 'open' })('hand:open'), true);
+  assert.equal(wearing(carl, 'idle', { hand: 'open' })('hand:fist'), false);
+});
+
 test('a fighter wears their own options and nobody else\'s', () => {
   const adam = FIGHTERS.find((f) => f.id === 'max');
   const w = wearing(adam, 'idle');

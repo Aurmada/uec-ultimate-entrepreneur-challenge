@@ -155,3 +155,26 @@ test("Carl's case hangs below his rear fist with its handle in it, not beside it
   assert.ok(Math.hypot(h[0] - fist[0], h[2] - fist[2]) < 0.04, 'the handle should be under the fist holding it');
   assert.ok(Math.abs(h[1] - fist[1]) < 0.08, `the handle should be at the fist (${h[1].toFixed(2)} vs ${fist[1].toFixed(2)})`);
 });
+
+// The lead hand (2026-11-04) comes in two shapes, parted from the body under
+// the sleeve, which the game swaps by the pose: the fist and the hand open.
+test("every sculpt's lead hand comes as a fist and open, parted from the body", () => {
+  // glTF is y up, the character's left (the lead side) on -z
+  const reach = (p, side) => {
+    let m = -Infinity;
+    for (let i = 0; i < p.positions.length; i += 3) m = Math.max(m, side * p.positions[i + 2]);
+    return m;
+  };
+  for (const [id, m] of Object.entries(sculpts)) {
+    const prim = (name) => m.primitives.find((p) => p.name === name && p.role === 'skin');
+    const body = prim('body'), fist = prim('hand:fist'), open = prim('hand:open');
+    assert.ok(fist && open, `${id} has no lead hand of its own`);
+    assert.ok(reach(body, -1) < reach(fist, -1) - 0.08, `${id}'s body still carries the lead fist`);
+    assert.ok(Math.abs(reach(body, 1) - reach(fist, -1)) < 0.03, `${id}'s fist is not where his other one is`);
+    for (const p of [fist, open]) {
+      let on = 0;
+      for (let v = 0; v < p.positions.length / 3; v++) if (top(m, p, v)[0] === 'forearm.L') on++;
+      assert.ok(on / (p.positions.length / 3) > 0.95, `${id} ${p.name} does not ride the lead forearm`);
+    }
+  }
+});

@@ -161,3 +161,47 @@ test('the haymaker coils deeper than any punch, swings through and keeps going',
   assert.ok(Math.abs(tw(3)) < 1e-6, 'he does not come back to his guard');
   for (const [name, track] of Object.entries(BRAWLING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
 });
+
+// Carl (`dex`), the third: a grappler. His lead hand is open, reaching, and his
+// punch is a seizure that closes it on contact (P.hand, the lead hand's shape
+// a sculpt shows: `hand:open` or `hand:fist`).
+const carl = getFighter('dex');
+const GRAPPLING = FORMS.grappling;
+const carlAt = (state, extra = {}, t = 0) => computePose(
+  { def: carl, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, GRAPPLING);
+const seizeAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return carlAt('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Carl grapples from the guard his 2D figure stands in, the lead hand open', () => {
+  assert.equal(MODELS3D['sculpt:dex'].form, 'grappling');
+  const own = applyProportions(computePose({ def: carl, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(carl.body));
+  const grab = applyProportions(carlAt('idle'), clampBody(carl.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(grab[k], own[k], `his ${k} is not where his 2D guard holds it`);
+  for (const [state, extra] of [['idle', {}], ['walk', { walkPhase: 2.1 }], ['crouch', { crouching: true }]]) {
+    assert.equal(carlAt(state, extra).hand, 'open', `${state}: his lead hand is not open`);
+  }
+  assert.equal(carlAt('block').hand, undefined, 'blocking, his lead hand holds the briefcase: a fist');
+  // a pose drawn without a form has no hand to show
+  assert.equal(computePose(fighter('idle'), 0).hand, undefined);
+});
+
+test('a slap opens the lead hand in every form, as the 2D figure draws it; a punch keeps the fist', () => {
+  const SLAP = { kind: 'slap', button: 'slap', startup: 4, active: 3, recovery: 6, reach: 78 };
+  for (const [name, form] of Object.entries(FORMS)) {
+    assert.equal(computePose(fighter('attack', { attack: SLAP, stateT: 5 }), 0, form).hand, 'open', `${name}: a slap with a fist`);
+  }
+  assert.equal(computePose(fighter('attack', { attack: PUNCH, stateT: 6 }), 0, BOXING).hand, undefined, 'a boxer punches open-handed');
+});
+
+test('the seizure reaches out open, closes on contact and hauls it back in', () => {
+  for (const k of [0, 0.95, 1.15]) assert.equal(seizeAt(k).hand, 'open', `at ${k} the hand is not open`);
+  for (const k of [1.6, 2, 2.45]) assert.equal(seizeAt(k).hand, 'fist', `at ${k} the hand has let go`);
+  assert.equal(seizeAt(3).hand, 'open', 'he does not let go after');
+  assert.ok(seizeAt(1.15).armF.x > seizeAt(0).armF.x + 25, 'the hand does not reach out');
+  assert.ok(seizeAt(2.45).armF.x < seizeAt(1.6).armF.x - 30, 'he does not haul it back in');
+  assert.ok(seizeAt(1.15).twist > 0 && seizeAt(2.45).twist < 0, 'the body does not lunge in and turn away with the pull');
+  for (const [name, track] of Object.entries(GRAPPLING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+  assert.deepEqual(validateTrack('bad', { keys: [{ t: 0, hand: 'claw', joints: {} }] }), ['bad[0]: unknown hand claw']);
+});

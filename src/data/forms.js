@@ -1,7 +1,7 @@
 // Fighting forms: how a fighter stands, guards and throws, as a martial art
 // rather than as a personality. Boxing first (November 2026), for the
-// sculpted Jeff, then brawling, for Adam; karate, kung fu and the rest are
-// each their own when a fighter takes them up.
+// sculpted Jeff, then brawling, for Adam, and grappling, for Carl; karate,
+// kung fu and the rest are each their own when a fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -77,6 +77,38 @@ const HAYMAKER = {
   ]),
 };
 
+// A grappler's stance, Carl's from 2D: hunched well forward over a wide low
+// base, chin down, the lead hand open and reaching at chest height for
+// something to take hold of, the rear one low with his briefcase.
+const GRAB_F = { x: 64, y: -134 };
+const GRAB_B = { x: 44, y: -122 };
+const G_HIP = -68, G_SHOULDER = -140, G_HEAD = -160;   // REST lowered by the stance
+
+// The seizure: a grappler does not hit you, he takes hold of you. The weight
+// sinks and the open hand draws in, then shoots out at the chest with the
+// body behind it, closes on whatever it finds (`hand`, the lead hand's shape
+// in 3D) and hauls it back in to his chest, the body turning away with the
+// pull, before he lets go and settles back. The rear hand keeps the case low
+// throughout.
+const SEIZE = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: { armF: GRAB_F, armB: GRAB_B, hipY: G_HIP, shoulderY: G_SHOULDER, headY: G_HEAD, headX: 2, bodyLean: 0.22, twist: 0, hipTwist: 0, sx: 1.04, sy: 0.96, legF: { x: 31, y: 0 }, legB: { x: -29, y: 0 } } },
+    // gathering: the hand drawn in a little, the weight sinking
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 58, y: -136 }, hipY: G_HIP + 3, bodyLean: 0.2, twist: -0.08, hipTwist: -0.05, sx: 1.06, sy: 0.94 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -138 }, hipY: G_HIP + 5, bodyLean: 0.19, twist: -0.12, hipTwist: -0.08, sx: 1.07, sy: 0.93 }, ease: 'outQuad' },
+    // the lunge, the open hand out at the chest and the body behind it
+    { t: 1.15, hand: 'open', joints: { armF: { x: 102, y: -146 }, hipY: G_HIP + 2, headX: 6, bodyLean: 0.34, twist: 0.22, hipTwist: 0.12, sx: 0.98, sy: 0.99, legB: { x: -26, y: 0 } }, ease: 'outBack', smear: true },
+    // and it closes on what it found
+    { t: 1.35, hand: 'fist', joints: { armF: { x: 100, y: -144 }, hipY: G_HIP + 3, bodyLean: 0.34, twist: 0.2 }, ease: 'outQuad' },
+    { t: 2,    hand: 'fist', joints: { armF: { x: 98, y: -143 }, bodyLean: 0.33, twist: 0.19 }, hold: true },
+    // the haul, back in to his chest, the body turning away with the pull
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 52, y: -138 }, hipY: G_HIP + 4, headX: 0, bodyLean: 0.16, twist: -0.18, hipTwist: -0.1, sx: 1.06, sy: 0.95, legB: { x: -31, y: 0 } }, ease: 'outCubic' },
+    // he lets go and settles back into his stance
+    { t: 3,    hand: 'open', joints: { armF: GRAB_F, hipY: G_HIP, headX: 2, bodyLean: 0.22, twist: 0, hipTwist: 0, sx: 1.04, sy: 0.96, legB: { x: -29, y: 0 } }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -115,5 +147,24 @@ export const FORMS = {
     // not scaled again; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 7, squash: 0.06, brace: 6, thrust: 5 },
     tracks: { punch: HAYMAKER },
+  },
+  grappling: {
+    stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
+      legF: { x: 31 }, legB: { x: -29 }, sx: 1.04, sy: 0.96 },
+    // The states his lead hand is held open in, reaching; it closes to hold
+    // the block briefcase, and his seizure opens and closes it itself.
+    open: ['idle', 'walk', 'dash', 'crouch', 'jump'],
+    // He does not fidget, he waits: a slow, heavy shift of his weight.
+    roll: { twist: 0.04, hip: 0.03, rate: 0.9 },
+    // He hunches behind the briefcase, the lead hand up at the chest with it
+    // and the shoulders turned a little away.
+    block: { armF: { x: -8, y: -22 }, armB: { x: -6, y: -10 }, twist: -0.1 },
+    // The open hand reaches in toward the middle, at what it means to take;
+    // the case hangs at his side.
+    handDepth: { F: 0.6, B: 0.95 },
+    guardTurn: 0.6,
+    // The seizure is written whole; the hit lands with his weight.
+    motion: { windup: 1, follow: 1, drop: 8, squash: 0.08, brace: 4, thrust: 5 },
+    tracks: { punch: SEIZE },
   },
 };

@@ -131,7 +131,7 @@ export function drawLayer3D(f, P, m, box, { elbowF, elbowB, jitter = 0, face = n
   const sq = (v) => (Number.isFinite(v) ? v : 1);
   const lags = swayOf(f, P);
   drawModel(entry, f.def, f.state, f.unicornT > 0, P.face, face, {
-    box, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight,
+    box, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight, hand: P.hand,
     sway: entry.sway.size ? (p) => hangOf(entry, p, lags) : null,
     screen: { m: [m.a, m.b, m.c, m.d, m.e, m.f], flash, keyline },
   }, layerR);
@@ -224,7 +224,7 @@ export function renderFull3D(ctx, rect, def, P, { state = 'idle', face = null, s
   solvePose(entry.rig, P);
   const w = span, h = (span * rect.h) / rect.w;
   const box = focus ? { ox: w / 2 - focus[0], oy: h / 2 - focus[1], w, h } : { ox: w * 0.42, oy: h - 12, w, h };
-  const { vw, vh } = drawModel(entry, def, state, false, P.face || 'idle', face, { box, ss: rect.w / w, light: stageLight });
+  const { vw, vh } = drawModel(entry, def, state, false, P.face || 'idle', face, { box, ss: rect.w / w, light: stageLight, hand: P.hand });
   const img = renderer.image();
   ctx.drawImage(img.src, 0, 0, vw, vh, rect.x, rect.y, rect.w, rect.h);
   img.done();
@@ -266,7 +266,7 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, face = null }) {
   const sq = (v) => (Number.isFinite(v) ? v : 1);
   const lags = swayOf(f, P);
   const { vw, vh } = drawModel(entry, f.def, f.state, f.unicornT > 0, P.face, face, {
-    box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight,
+    box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight, hand: P.hand,
     sway: entry.sway.size ? (p) => hangOf(entry, p, lags) : null,
   });
   if (perf) renderer.finish();
@@ -350,10 +350,10 @@ function drawModel(entry, def, state, unicorn, expression, painter, view, r = re
   };
   const photo = def.photo && painter ? painter.photo(def) : null;
   const face = entry.face && painter ? faceFor(entry.face, def, expression, painter, photo, r) : null;
-  const wkey = `${state}|${unicorn ? 'u' : ''}|${photo ? 'p' : ''}`;
+  const wkey = `${state}|${unicorn ? 'u' : ''}|${photo ? 'p' : ''}|${view.hand || ''}`;
   let wears = memo.wears.get(wkey);
   if (!wears) {
-    wears = wearing(def, state, { unicorn, photo: !!photo });
+    wears = wearing(def, state, { unicorn, photo: !!photo, hand: view.hand });
     memo.wears.set(wkey, wears);
   }
   return r.render(gpuFor(entry, r), entry.rig.matrices, {
@@ -433,7 +433,9 @@ export const timing3D = () => !!perf;
 // carry a part with that id, in that part's states, exactly as the 2D parts
 // system gates it (the block briefcase only shows while blocking).
 // "fx:<flag>" when the fighter is in that condition right now (`conditions`,
-// such as { unicorn: true } in Unicorn Mode). While a founder's face is their
+// such as { unicorn: true } in Unicorn Mode). "hand:<shape>" is the lead
+// hand's shape this frame (`conditions.hand`, from the pose's P.hand): the
+// fist unless a slap or a fighting form opens it. While a founder's face is their
 // photo (`conditions.photo`) they wear no modelled eyewear or facial hair, as
 // drawHead draws none over a photo: the person's own are in it.
 export function wearing(def, state, conditions = {}) {
@@ -450,6 +452,8 @@ export function wearing(def, state, conditions = {}) {
         on = !!part && (!part.states || part.states.includes(state));
       } else if (slot === 'fx') {
         on = !!conditions[option];
+      } else if (slot === 'hand') {
+        on = option === (conditions.hand || 'fist');
       } else if (conditions.photo && (slot === 'eyewear' || slot === 'facialHair')) {
         on = false;
       } else {

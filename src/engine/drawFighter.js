@@ -365,6 +365,13 @@ export function computePose(f, t, form = null) {
   }
   P.handDepth = form.handDepth;
   P.guardTurn = form.guardTurn;
+  // The lead hand's shape, for a model that has more than a fist: what the
+  // attack track says, else open for a slap (as figure.js draws everyone's)
+  // or wherever the form holds it open.
+  if (!P.hand) {
+    const slap = f.state === 'attack' && f.attack && (f.attack.button || f.attack.kind) === 'slap';
+    if (slap || form.open?.includes(f.state)) P.hand = 'open';
+  }
   return P;
 }
 

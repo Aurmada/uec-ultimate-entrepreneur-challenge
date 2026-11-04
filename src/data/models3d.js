@@ -161,7 +161,7 @@ export const SCULPTED = {
   // just above the bar of his shades at 1.842 (on the ridge, under the bar,
   // his brows were hidden); thin lips meeting at 1.7415. His 2D stance is a
   // wrestler's, already hunched well forward, so his sculpt adds no lean of
-  // its own (see Adam's). No form yet.
+  // its own (see Adam's). He grapples (data/forms.js), the lead hand open.
   dex: {
     leaf: { forearm: 0.3701, head: 0.2466, foot: [0.1791, -0.0636, 0] },
     skull: 0.1547,
@@ -175,6 +175,7 @@ export const SCULPTED = {
         lid: 1.7, line: 1.4,
       },
     },
+    form: 'grappling',
   },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
@@ -193,7 +194,8 @@ export const FIGHTER_MODELS = {};
 
 // The look slots a mesh name can select: "<slot>:<option>". A mesh with no
 // colon is the base body and always draws; "prop:<id>" follows the fighter's
-// parts and "fx:<condition>" what they are in the middle of (see index.js).
+// parts, "fx:<condition>" what they are in the middle of and "hand:<shape>"
+// the lead hand's shape in the pose (see index.js).
 export const LOOK_SLOTS = ['hair', 'headwear', 'eyewear', 'facialHair', 'outfit', 'accessory'];
 
 // The conditions an "fx:<condition>" mesh can wait for (see wearing() in index.js).

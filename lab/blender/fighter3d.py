@@ -1069,9 +1069,60 @@ def hidden(obj, covers, depth=0.0025, below=None):
     bm.free()
 
 
-def dressed(data):
+# ================================================================ the lead hand
+# The lead hand comes in two shapes, the body's fist and the hand open, as
+# meshes of their own (`hand:fist`, `hand:open`) the game swaps by the pose
+# (P.hand): open for a slap, as the 2D figure draws it for everyone, and
+# wherever a fighting form holds it open (a grappler reaching). They are
+# parted from the arm under the sleeve, so the join never shows.
+HAND_CUT = 0.07                      # back from the wrist joint: under every sleeve
+
+
+def open_hand(s=1):
+    """The lead hand open, as the 2D figure draws it (figure.js `fist`,
+    open): the flat of the hand, the fingers out together and a little
+    curled toward the palm, the thumb off it, in the fist's own frame (the
+    palm toward the thigh at rest, the thumb forward). Its wrist is the
+    body's, sampled from the body's field back to where the hand is parted
+    from the arm, so it meets the sleeve exactly as the fist does. A fine
+    field of its own: at the body's samples the fingers ran together."""
+    S, El, W = ARM[s]
+    u, v, lat, ax = limb(El, W, s)
+    ends = np.array([W - u * HAND_CUT, W + u * 0.2])
+    H = sc.Field(lo=ends.min(0) - 0.1, hi=ends.max(0) + 0.1, h=0.002)         # room for the thumb: at 5 cm it was cut flat
+    X, Y, Z = _axes(H)
+    P = np.stack(np.broadcast_arrays(X, Y, Z), axis=-1).reshape(-1, 3)
+    wrist = F.sample(P).reshape(H.d.shape).astype(np.float32)
+    along = (X - W[0]) * u[0] + (Y - W[1]) * u[1] + (Z - W[2]) * u[2]
+    # the body's wrist, stopped well short of where its fist begins (its cut
+    # end is under the sleeve), and a bridge on from the cuff to the flatter
+    # palm, as thick as the fighter's own wrist: cut at the fist, its flat
+    # end stood out of the thinner palm as an oval, and thicker, the bridge
+    # showed through a tight sleeve
+    H.d = np.maximum(wrist, np.maximum(np.float32(-HAND_CUT - 0.01) - along, along + np.float32(0.03))).astype(np.float32)
+    E = lambda c, r, k: H.add(sc.Ellipsoid(c, r, ax), k)
+    mc = 1 + 0.4 * (B.muscle - 1)
+    H.add(sc.RoundCone(W - u * 0.014, W + u * 0.03, 0.033 * mc, 0.031 * mc, flat=(lat, 0.74)), 0.01)
+    H.add(sc.Box(W + u * 0.046, (0.052, 0.047, 0.018), 0.016, ax), 0.022)                # the palm
+    E(W + u * 0.03 + v * 0.028 - lat * 0.01, (0.034, 0.021, 0.016), 0.012)                # the ball of the thumb
+    # the fingers out together, index (by the thumb) to little, a little
+    # curled: thin and apart, they read as a skeleton's
+    for o, n in ((0.0345, 0.078), (0.0115, 0.086), (-0.0115, 0.081), (-0.0345, 0.066)):
+        a = W + u * 0.09 + v * o
+        b = a + u * n * 0.55 - lat * n * 0.06
+        c = b + u * n * 0.42 - lat * n * 0.2
+        H.add(sc.RoundCone(a, b, 0.0128, 0.0116), 0.007)
+        H.add(sc.RoundCone(b, c, 0.0116, 0.0098), 0.005)
+    H.add(sc.RoundCone(W + u * 0.03 + v * 0.044 - lat * 0.008, W + u * 0.068 + v * 0.07 - lat * 0.026, 0.0145, 0.0125), 0.008)
+    H.add(sc.RoundCone(W + u * 0.068 + v * 0.07 - lat * 0.026, W + u * 0.098 + v * 0.078 - lat * 0.036, 0.0125, 0.0108), 0.004)
+    return H
+
+
+def dressed(data, hand=False):
     """Body and clothes as Blender objects, the hidden parts removed:
-    (body, [(object, role, colour)]), colours from the fighter's palette."""
+    (body, [(object, role, colour)]), colours from the fighter's palette;
+    with `hand`, the open lead hand as well, its wrist hidden under the
+    sleeve as the body's is: (body, clothes, hand)."""
     body = build()
     O = OUTFITS.get(data['outfit'])
     if O is None:
@@ -1083,7 +1134,12 @@ def dressed(data):
     for n, over in O['covers'].items():
         hidden(objs[n], [pieces[o] for o in over])
     pal = data.get('c') or {}
-    return body, [(objs[n], role, role_colour(pal, role, own)) for n, _, role, own in O['pieces']]
+    clothes = [(objs[n], role, role_colour(pal, role, own)) for n, _, role, own in O['pieces']]
+    if not hand:
+        return body, clothes
+    opened = sc.to_blender('open-hand', *open_hand().mesh(), smooth=1)       # named when it is parted off
+    hidden(opened, [pieces[n] for n in O['skin']])
+    return body, clothes, opened
 
 
 def role_colour(pal, role, own):
@@ -1314,7 +1370,7 @@ def export_rigged(data, spec, path, tris=44000):
     import bpy
     if spec is Placeholder:
         sys.exit(f'{data["id"]} has no head of their own yet (lab/blender/fighters/{data["id"]}.py)')
-    obj, clothes = dressed(data)
+    obj, clothes, opened = dressed(data, hand=True)
     # what rides the head (a cap, hair under it), and the skin it covers
     wears = spec.headwear(sys.modules[__name__]) if hasattr(spec, 'headwear') else []
     for _, covers in wears:
@@ -1328,7 +1384,13 @@ def export_rigged(data, spec, path, tris=44000):
         # materials by palette role (the renderer takes the fighter's colour for
         # a role he has, else this one)
         ob.data.materials.append(material(role, colour))
-    every = [p[0] for p in parts]
+    # the open hand joins the body to be weighted with it, marked so it can be
+    # parted off again (_part_hands)
+    FR.warp_mesh(opened)
+    _decimate(opened, 2400)
+    opened.data.materials.append(material('skin', parts[0][2]))
+    opened.vertex_groups.new(name='hand:open').add(list(range(len(opened.data.vertices))), 1.0, 'REPLACE')
+    every = [p[0] for p in parts] + [opened]
     with bpy.context.temp_override(active_object=obj, selected_editable_objects=every, selected_objects=every):
         bpy.ops.object.join()
     me = obj.data
@@ -1359,6 +1421,7 @@ def export_rigged(data, spec, path, tris=44000):
     mod = obj.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig
     obj.parent = rig
+    _part_hands(obj)
     # eyewear rides the head, wholly
     wear = spec.eyewear(sys.modules[__name__]) if hasattr(spec, 'eyewear') else None
     if wear is not None:
@@ -1394,6 +1457,55 @@ def export_rigged(data, spec, path, tris=44000):
     )
     print(f'[{data["id"]}] rigged: {len(me.polygons)} faces, {os.path.getsize(path)} bytes -> {path}', flush=True)
     print(model_numbers(J), flush=True)
+
+
+def _part_hands(obj):
+    """Parts the lead hand off the weighted body as two meshes, `hand:open`
+    (marked when it was joined) and `hand:fist` (the body's own, from where
+    it was parted under the sleeve to the knuckles), each keeping its
+    weights. Only near the forearm's line: a plane across the arm alone
+    reaches on through the body and took the leg below it."""
+    import bpy
+    import bmesh
+    S, El, W = ARM[1]
+    u = sc.unit(W - El)
+    a, b = FR.warp(W - u * HAND_CUT), FR.warp(W)
+    n = sc.unit(b - FR.warp(El))
+    for name in ('hand:open', 'hand:fist'):
+        me = obj.data
+        co = np.zeros(len(me.vertices) * 3)
+        me.vertices.foreach_get('co', co)
+        co = co.reshape(-1, 3)
+        gi = obj.vertex_groups['hand:open'].index
+        marked = np.array([any(g.group == gi and g.weight > 0 for g in v.groups) for v in me.vertices])
+        if name == 'hand:open':
+            take = marked
+        else:
+            t = (co - a) @ n
+            off = np.linalg.norm(co - (a + np.outer(t, n)), axis=1)
+            take = (t > 0) & (t < 0.3 * FR.size) & (off < 0.12 * FR.size) & ~marked
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.context.tool_settings.mesh_select_mode = (False, False, True)
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bm = bmesh.from_edit_mesh(me)
+        bm.verts.ensure_lookup_table()
+        skin = obj.material_slots.find('skin')
+        for f in bm.faces:
+            # the skin only: the shirt's cuff lies over the same stretch of arm
+            f.select_set(f.material_index == skin and all(take[v.index] for v in f.verts))
+        bm.select_flush_mode()
+        bmesh.update_edit_mesh(me)
+        bpy.ops.mesh.separate(type='SELECTED')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        part = next(o for o in bpy.context.selected_objects if o is not obj)
+        part.name = part.data.name = name
+    for o in bpy.data.objects:
+        g = o.vertex_groups.get('hand:open') if o.type == 'MESH' else None
+        if g is not None:
+            o.vertex_groups.remove(g)
 
 
 def model_numbers(J):

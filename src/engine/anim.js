@@ -141,6 +141,8 @@ export function samplePose(track, t, base) {
   // simulation never sees it.
   pose.smear = !!(lo.smear || (hi.smear && k > 0.35));
   if (lo.face || hi.face) pose.face = (k > 0.5 && hi.face) ? hi.face : (lo.face || hi.face);
+  // The lead hand's shape (a 3D model's `hand:<shape>`), switched as `face` is.
+  if (lo.hand || hi.hand) pose.hand = (k > 0.5 && hi.hand) ? hi.hand : (lo.hand || hi.hand);
   return pose;
 }
 
@@ -215,6 +217,9 @@ export function trackFor(def, state, baseTracks) {
 // stylised fighter and a puppet snapping between positions.
 export const MIN_ANTICIPATION_KEYS = 2;
 
+// The lead hand's shapes a key can ask for (a 3D model's `hand:<shape>` meshes).
+export const HAND_SHAPES = ['fist', 'open'];
+
 export function validateTrack(name, track, { attack = false } = {}) {
   const errors = [];
   const keys = Array.isArray(track) ? track : (track && track.keys);
@@ -233,6 +238,7 @@ export function validateTrack(name, track, { attack = false } = {}) {
     last = k.t;
     if (k.ease && !EASE[k.ease]) errors.push(`${name}[${i}]: unknown ease ${k.ease}`);
     if (k.joints && typeof k.joints !== 'object') errors.push(`${name}[${i}]: joints must be an object`);
+    if (k.hand !== undefined && !HAND_SHAPES.includes(k.hand)) errors.push(`${name}[${i}]: unknown hand ${k.hand}`);
   }
   if (attack) {
     const windUp = keys.filter(k => typeof k.t === 'number' && k.t < 1).length;
