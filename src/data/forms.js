@@ -1,8 +1,8 @@
 // Fighting forms: how a fighter stands, guards and throws, as a martial art
 // rather than as a personality. Boxing first (November 2026), for the
-// sculpted Jeff, then brawling, for Adam, grappling, for Carl, and
-// showboating, for Steve; karate, kung fu and the rest are each their own
-// when a fighter takes them up.
+// sculpted Jeff, then brawling, for Adam, grappling, for Carl, showboating,
+// for Steve, and the shoulder roll, for Elo; karate, kung fu and the rest are
+// each their own when a fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -140,6 +140,35 @@ const BIG_FINISH = {
   ]),
 };
 
+// A shoulder roll, Elo's from 2D: the lead arm dropped low across the belly,
+// the rear fist parked at the chin, chin up, weight back. The guard of
+// someone who thinks you are not worth putting his hands up for.
+const ROLL_F = { x: 30, y: -112 };
+const ROLL_B = { x: 40, y: -160 };
+const R_HIP = -84, R_SHOULDER = -152, R_HEAD = -180;   // REST, the head raised by the stance
+
+// The whip, a glass cannon's: power out of no mass. The low lead fist is
+// drawn back past his hip and the body coils away with it, a huge wind-up
+// anyone can read, then it whips up and out at the head, the body snapping
+// round behind it, and is held out only as long as it can hit before it is
+// snapped back home at once, which is why he is so punishable. The rear
+// fist stays at his chin.
+const WHIP = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: { armF: ROLL_F, armB: ROLL_B, hipY: R_HIP, shoulderY: R_SHOULDER, headY: R_HEAD, headX: 2, bodyLean: -0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 20, y: 0 }, legB: { x: -23, y: 0 } } },
+    // the wind-up, the fist back past the hip and the body coiled away
+    { t: 0.55, joints: { armF: { x: -4, y: -116 }, headX: -1, bodyLean: -0.1, twist: -0.45, hipTwist: -0.2, sx: 1.02, sy: 0.98 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: -12, y: -120 }, headX: -2, bodyLean: -0.12, twist: -0.55, hipTwist: -0.25, sx: 1.03, sy: 0.97 }, ease: 'outQuad' },
+    // the whip, up and out at the head, the body snapping round behind it
+    { t: 1.15, joints: { armF: { x: 102, y: -160 }, hipY: R_HIP + 1, headX: 5, bodyLean: 0.12, twist: 0.36, hipTwist: 0.18, sx: 0.98, sy: 1.02, legB: { x: -20, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 98, y: -158 }, bodyLean: 0.1, twist: 0.32, hipTwist: 0.16 }, hold: true },
+    // and snapped straight back home
+    { t: 2.3,  joints: { armF: { x: 36, y: -116 }, hipY: R_HIP, headX: 2, bodyLean: -0.03, twist: 0.04, hipTwist: 0.02, sx: 1, sy: 1, legB: { x: -23, y: 0 } }, ease: 'outCubic' },
+    { t: 3,    joints: { armF: ROLL_F, bodyLean: -0.04, twist: 0, hipTwist: 0 }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -214,5 +243,19 @@ export const FORMS = {
     // The flourish and the held finish are written into the punch itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.04, brace: 0, thrust: 3 },
     tracks: { punch: BIG_FINISH },
+  },
+  shoulderRoll: {
+    stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
+    // He blocks the way the guard means to, rolling the shot off the lead
+    // shoulder: the body turned well away, that shoulder up, the hands where
+    // they were.
+    block: { armF: { x: 4, y: -12 }, armB: { x: 0, y: -4 }, twist: -0.28 },
+    // The lead fist across the belly toward the middle, the rear one at the
+    // chin, turning with the chest.
+    handDepth: { F: 0.7, B: 0.8 },
+    guardTurn: 1,
+    // The coil and the snap back are written into the whip itself.
+    motion: { windup: 1, follow: 1, drop: 3, squash: 0.06, brace: 6, thrust: 4 },
+    tracks: { punch: WHIP },
   },
 };

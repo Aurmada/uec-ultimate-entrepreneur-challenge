@@ -116,20 +116,23 @@ test('a role in shade takes its palette colour darkened, and an unknown role kee
 // rear one, each riding its grip bone wholly.
 const steveGlb = readFileSync(new URL(`../${MODELS3D['sculpt:kai'].url}`, import.meta.url));
 const steve = extractModel(parseGLB(steveGlb.buffer.slice(steveGlb.byteOffset, steveGlb.byteOffset + steveGlb.byteLength)));
-const sculpts = { bozo: model, max: adam, dex: carl, kai: steve };
+const eloGlb = readFileSync(new URL(`../${MODELS3D['sculpt:elo'].url}`, import.meta.url));
+const elo = extractModel(parseGLB(eloGlb.buffer.slice(eloGlb.byteOffset, eloGlb.byteOffset + eloGlb.byteLength)));
+const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo };
 const top = (m, p, v) => {
   let best = -1, joint = 0;
   for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
   return [m.jointNames[joint], best];
 };
 
-test('every sculpt raises the block briefcase on its lead grip, and carries its own prop on its rear one', () => {
+test('every sculpt raises the block briefcase on its lead grip, and carries its own prop where the 2D one is', () => {
   const CASE = ['case', 'frame', 'brass'];
   const carries = {
     bozo: { 'prop:guard-case': ['grip.L', CASE] },
     max: { 'prop:guard-case': ['grip.L', CASE] },
     dex: { 'prop:guard-case': ['grip.L', CASE], 'prop:case': ['grip.R', CASE] },
     kai: { 'prop:guard-case': ['grip.L', CASE], 'prop:device': ['grip.R', ['accent']] },   // his device in his palette's accent
+    elo: { 'prop:guard-case': ['grip.L', CASE], 'prop:booster': ['chest', ['accent', 'frame']] },   // worn on his back
   };
   for (const [id, props] of Object.entries(carries)) {
     const m = sculpts[id];
@@ -199,4 +202,21 @@ test('Steve wears his glasses, rims round clear lenses the painted eyes show thr
   assert.ok(spec.inkless.includes('rim'), 'the rims are outlined: the ink fills the lenses');
   assert.ok(spec.glass.clear > 0 && spec.glass.clear < 0.3, 'the lenses are not faint glass');
   assert.notEqual(roleColour(getFighter('kai').c, 'hair', null), null, 'his hair is not in his palette');
+});
+
+// Elo (`elo`), the fifth: his tee with its ribbed crew neck and the red
+// diamond on the chest, baggy trousers and shoes, his fists bare below the
+// short sleeves, his buzz cut, all in his palette's roles.
+test('Elo wears his tee, its rib and its red diamond, his trousers, shoes and buzz cut', () => {
+  const body = elo.primitives.filter((p) => p.name === 'body');
+  const roles = new Set(body.map((p) => p.role));
+  for (const role of ['skin', 'suit', 'suit2', 'accent', 'pants', 'shoe']) assert.ok(roles.has(role), `no ${role}`);
+  assert.deepEqual(new Set(elo.primitives.filter((p) => p.name === 'hair:buzz').map((p) => p.role)), new Set(['hair']));
+  const reach = (p) => {
+    let m = 0;
+    for (let i = 0; i < p.positions.length; i += 3) m = Math.max(m, Math.abs(p.positions[i + 2]));
+    return m;
+  };
+  const skin = reach(body.find((p) => p.role === 'skin'));
+  for (const p of body.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.2, `${p.role} reaches past his short sleeves`);
 });

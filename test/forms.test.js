@@ -239,3 +239,35 @@ test('the big finish flourishes up and back, closes at the top and holds the fin
   assert.ok(posed('attack', { attack: PUNCH, stateT: PUNCH.startup + PUNCH.active + 0.5 * PUNCH.recovery }).armF.x < finishAt(2.5).armF.x - 20, 'the boxer holds his as long');
   for (const [name, track] of Object.entries(SHOWBOATING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
 });
+
+// Elo (`elo`), the fifth: a shoulder roll, the lead arm low across the belly
+// and the rear fist at the chin, and the glass cannon's whip: a huge wind-up,
+// held out only while it can hit, then snapped straight back.
+const eloDef = getFighter('elo');
+const ROLL = FORMS.shoulderRoll;
+const eloAt = (state, extra = {}, t = 0) => computePose(
+  { def: eloDef, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, ROLL);
+const whipAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return eloAt('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Elo stands in a shoulder roll, the guard his 2D figure stands in', () => {
+  assert.equal(MODELS3D['sculpt:elo'].form, 'shoulderRoll');
+  const own = applyProportions(computePose({ def: eloDef, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(eloDef.body));
+  const roll = applyProportions(eloAt('idle'), clampBody(eloDef.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(roll[k], own[k], `his ${k} is not where his 2D guard holds it`);
+  assert.ok(roll.armF.y > roll.armB.y + 30, 'the lead arm is not dropped low, the rear fist up at the chin');
+  assert.ok(eloAt('block').twist < -0.2, 'he does not roll the shot off his shoulder');
+});
+
+test('the whip winds up hugely, holds only while it can hit, and snaps straight back', () => {
+  const guard = whipAt(0);
+  assert.ok(whipAt(0.95).twist < -0.5, `not much of a wind-up (twist ${whipAt(0.95).twist})`);
+  assert.ok(whipAt(0.95).armF.x < guard.armF.x - 30, 'the fist is not drawn back');
+  assert.ok(whipAt(1.6).armF.x > guard.armF.x + 50, 'the fist is not out while it can hit');
+  // back home by 2.3, where a boxer's straight is still on its way back
+  assert.ok(Math.abs(whipAt(2.3).armF.x - guard.armF.x) < 10, 'the whip is not snapped back');
+  assert.ok(punchAt(2.3).armF.x > posed('idle').armF.x + 10, 'the boxer is home as fast');
+  for (const [name, track] of Object.entries(ROLL.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});

@@ -201,6 +201,26 @@ export const SCULPTED = {
     },
     form: 'showboating',
   },
+  // Elo (2026-11-04): the tallest, 1.28 times Jeff's height and as long in the
+  // leg, heavy-set, a small head for his size (lab/blender/fighters/elo.py):
+  // big eyes 0.034 out at 1.828 under a brow ridge set high, its painted line
+  // at 1.855; a small mouth meeting at 1.7425. His 2D stance leans back, chin
+  // up, so his sculpt adds no lean of its own. A shoulder roll (data/forms.js).
+  elo: {
+    leaf: { forearm: 0.4525, head: 0.2628, foot: [0.2126, -0.0834, 0] },
+    skull: 0.1649,
+    fit: { shoulderHalf: 0.2028, hipHalf: 0.1122, legs: 1.2826, lean: 0 },
+    face: {
+      at: [0, 2.248], px: [0.003607, 0.003607],
+      layout: {
+        eye: { x: 9.7, y: -10.9, w: 4.0 },
+        brow: { y: -18.6, inner: 3.1, outer: 15.7 },
+        mouth: { y: 13.6, w: 5.1 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+    form: 'shoulderRoll',
+  },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
   MODELS3D[`sculpt:${id}`] = {

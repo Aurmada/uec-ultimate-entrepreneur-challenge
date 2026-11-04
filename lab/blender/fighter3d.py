@@ -1057,6 +1057,85 @@ def turtleneck_collar():
     return tube
 
 
+# A tee (data/fighters.js `outfit: 'tee'`, Elo's): regular fit, stretched over
+# the middle as the 2D figure has it, short sleeves halfway to the elbow, a
+# ribbed crew neck in the second colour, worn out over the trousers, and the
+# red diamond the 2D figure draws on the chest, in the accent colour.
+TEE_HEM, TEE_SLEEVE = 0.95, 0.15
+
+
+def _sleeve_cut(d, at):
+    """Cuts short sleeves `at` down each upper arm from the shoulder joint:
+    the arm beyond goes, and only the arm (a plane alone runs on through the
+    body)."""
+    X, Y, Z = _grid()
+    for s in (1, -1):
+        S, El, W = ARM[s]
+        n = sc.unit(El - S)                 # the arm hangs straight in the rest pose
+        px, py, pz = X - S[0], Y - S[1], Z - S[2]
+        t = px * n[0] + py * n[1] + pz * n[2]
+        off = np.sqrt((px - t * n[0]) ** 2 + (py - t * n[1]) ** 2 + (pz - t * n[2]) ** 2)
+        arm = (off < np.float32(0.11)) & (s * Y > np.float32(0.12))
+        np.maximum(d, np.where(arm, t - np.float32(at), np.float32(-1)), out=d)
+
+
+def tee():
+    """The tee's body and sleeves: the body's shell, softened so a cotton tee
+    does not show every muscle, and never nearer the body than a few
+    millimetres (see the turtleneck's)."""
+    S = _shell(0.007)
+    S.soften(0.01, lambda X, Y, Z: np.float32(1))
+    np.minimum(S.d, F.d - np.float32(0.004), out=S.d)
+    d = S.d
+    # hanging a little looser toward the hem, over the trousers' waistband:
+    # as close as it is above, the waistband stood out over it and the hem
+    # was lost inside the trousers
+    sl = _zslab(TEE_HEM - 0.02, 1.13)
+    Z = _grid(sl)[2]
+    d[sl] -= np.float32(0.008) * np.clip((np.float32(1.12) - Z) / np.float32(0.14), 0, 1)
+    _keep_above(d, TEE_HEM)
+    # no higher than the neckline: up to 1.7 it took in the soft under the
+    # chin wherever that lay outside the neck opening
+    _keep_below(d, 1.655)
+    _sleeve_cut(d, TEE_SLEEVE)
+    _neck_cut(d, 0.084, 1.56)
+    return S
+
+
+def tee_rib():
+    """The crew neck's ribbed band, a little proud of the tee round the edge
+    of the neck opening."""
+    S = _shell(0.011)
+    sl = _zslab(1.5, 1.72)
+    X, Y, Z = _grid(sl)
+    r = np.sqrt((X - np.float32(_NECK_AXIS)) ** 2 + Y ** 2)
+    # two and a half centimetres wide: narrower, at the body's samples it
+    # broke into a string of beads round the neck
+    band = np.maximum(np.maximum(np.float32(0.08) - r, r - np.float32(0.105)), np.float32(1.56) - Z)
+    d = np.maximum(S.d[sl], band)
+    S.d[:] = np.float32(1)
+    # kept to the neckline: up to 1.7 it took in the soft under the chin
+    S.d[sl] = np.maximum(d, Z - np.float32(1.635))
+    return S
+
+
+def tee_mark():
+    """The red diamond on the chest, printed on the tee: the tee's cloth a
+    hair proud of it, inside a diamond, high in the middle of the chest
+    under the neckline, as the 2D figure draws it. Lower, the arm crossed in
+    front of it in his guard and only a red spot showed at the crook of the
+    elbow; to one side, the chest turned it away."""
+    S = _shell(0.0085)
+    S.soften(0.01, lambda X, Y, Z: np.float32(1))
+    sl = _zslab(1.4, 1.6)
+    X, Y, Z = _grid(sl)
+    diamond = np.abs(Y) / np.float32(0.024) + np.abs(Z - np.float32(1.495)) / np.float32(0.038) - np.float32(1)
+    d = np.maximum(S.d[sl], np.maximum(diamond * np.float32(0.02), np.float32(0.02) - X))
+    S.d[:] = np.float32(1)
+    S.d[sl] = d
+    return S
+
+
 def srgb(h, k=1.0):
     """A palette hex as a glTF (linear) colour, darkened by k first as the
     game darkens it (in sRGB)."""
@@ -1100,6 +1179,14 @@ OUTFITS = {
                    ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
         'skin': ['turtleneck', 'collar', 'trousers', 'shoes'],
         'covers': {'turtleneck': ['collar'], 'trousers': ['turtleneck', 'shoes']},
+    },
+    # a black tee with a ribbed crew neck and the red diamond, out over baggy
+    # trousers (Elo's)
+    'tee': {
+        'pieces': [('tee', tee, 'suit', None), ('rib', tee_rib, 'suit2', None), ('mark', tee_mark, 'accent', None),
+                   ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['tee', 'rib', 'trousers', 'shoes'],
+        'covers': {'tee': ['rib', 'mark'], 'trousers': ['tee', 'shoes']},
     },
     # Trousers and shoes and nothing above the waist: what a fighter wears
     # until their own outfit is made, so their head and face can be judged in
@@ -1283,8 +1370,8 @@ def glasses(lens_c, lens_half, lens_turn, bridge, arm_from, arm_to, rad=0.0055, 
 # but faces the way the body faces (rig.js), as a 2D part is an unrotated
 # offset from the hand. Built in the fighter's own space at their grip joint
 # and sized with them. The block briefcase every fighter raises is here, and
-# Carl's case and Steve's device; each other fighter's prop comes with their
-# remodel.
+# Carl's case, Steve's device and Elo's booster; each other fighter's prop
+# comes with their remodel.
 FRAME_C, BRASS_C = '#1b1a22', '#c9a03c'
 
 
@@ -1358,8 +1445,46 @@ def device(name, grip, fill, pal):
     return ob
 
 
-# Each prop: the grip it rides, and how it is made from (name, grip joint,
-# the 2D part's fill, the palette). The cases hang with the handle in the
+def booster(name, chest, fill, pal):
+    """Elo's booster, on his back as the 2D part is (`booster`, behind the
+    shoulder): a rocket stood upright a hand's width off his back, its body
+    in the part's colour (`accent`, a palette role), a pointed nose, a dark
+    band round it, a dark nozzle bell at the foot and three dark fins. It
+    rides the chest, wholly. One object, `name`."""
+    import bpy
+    s = FR.size
+    back = F.project(np.array([[-0.17, 0.0, 1.36]]))[0]                # his back, in Jeff's space
+    a = FR.warp(back + V(-0.075, 0, 0))                                # the rocket's axis, behind it
+    top, foot, r = a + V(0, 0, 0.22 * s), a - V(0, 0, 0.26 * s), 0.062 * s
+    lo, hi = a - np.array([0.16, 0.16, 0.42]) * s, a + np.array([0.16, 0.16, 0.42]) * s
+    body = sc.Field(lo=lo, hi=hi, h=0.002)
+    body.add(sc.RoundCone(foot, top, r, r), 0.0)
+    body.add(sc.RoundCone(top, top + V(0, 0, 0.1 * s), r, 0.008 * s), 0.02 * s)      # the nose
+    dark = sc.Field(lo=lo, hi=hi, h=0.002)
+    band = top - V(0, 0, 0.07 * s)
+    dark.add(sc.RoundCone(band - V(0, 0, 0.012 * s), band + V(0, 0, 0.012 * s), r + 0.004 * s, r + 0.004 * s), 0.0)
+    dark.add(sc.RoundCone(foot - V(0, 0, 0.01 * s), foot - V(0, 0, 0.075 * s), 0.035 * s, 0.056 * s), 0.004 * s)  # nozzle
+    for k in range(3):
+        t = math.radians(90 + 120 * k)
+        d = V(-math.sin(t), math.cos(t), 0)                              # out from the axis, one fin straight back
+        c = foot + d * (r + 0.03 * s) + V(0, 0, 0.03 * s)
+        ax = np.stack([d, V(-d[1], d[0], 0), V(0, 0, 1)], axis=1)
+        dark.add(sc.Box(c, np.array([0.035, 0.004, 0.05]) * s, 0.003 * s, ax), 0.004 * s)
+    objs = []
+    for f, role, colour in ((body, 'accent', role_colour(pal or {}, fill if fill in (pal or {}) else 'accent', '#ff3d2e')),
+                            (dark, 'frame', srgb(FRAME_C))):
+        ob = sc.to_blender(name, *f.mesh(), smooth=1)
+        ob.data.materials.append(material(role, colour))
+        objs.append(ob)
+    with bpy.context.temp_override(active_object=objs[0], selected_editable_objects=objs, selected_objects=objs):
+        bpy.ops.object.join()
+    objs[0].name = objs[0].data.name = name
+    return objs[0]
+
+
+# Each prop: the bone it rides (a grip, or the chest for what is worn on the
+# back), and how it is made from (name, that bone's joint, the 2D part's
+# fill, the palette). The cases hang with the handle in the
 # fist: at the founder's ten centimetres ahead of it, the fist floated beside
 # the handle instead of holding it.
 PROPS = {
@@ -1369,6 +1494,8 @@ PROPS = {
     'case': ('grip.R', lambda n, g, fill, pal: briefcase(n, g, (0.0, 0, -0.215), (0.21, 0.05, 0.16), fill)),
     # Steve's: the device, held up in the rear hand
     'device': ('grip.R', device),
+    # Elo's: the booster on his back, riding the chest
+    'booster': ('chest', booster),
 }
 
 
