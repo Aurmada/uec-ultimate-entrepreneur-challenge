@@ -156,6 +156,26 @@ export const SCULPTED = {
     },
     form: 'brawling',
   },
+  // Carl, the third (`dex`): about Jeff's height, short in the leg. His eyes
+  // 0.034 out at 1.822 under the lowest brow in the cast, its painted line
+  // just above the bar of his shades at 1.842 (on the ridge, under the bar,
+  // his brows were hidden); thin lips meeting at 1.7415. His 2D stance is a
+  // wrestler's, already hunched well forward, so his sculpt adds no lean of
+  // its own (see Adam's). No form yet.
+  dex: {
+    leaf: { forearm: 0.3701, head: 0.2466, foot: [0.1791, -0.0636, 0] },
+    skull: 0.1547,
+    fit: { shoulderHalf: 0.2031, hipHalf: 0.0945, legs: 0.9783, lean: 0 },
+    face: {
+      at: [0, 1.777], px: [0.003385, 0.003385],
+      layout: {
+        eye: { x: 9.7, y: -9.1, w: 3.6 },
+        brow: { y: -14.8, inner: 3.0, outer: 17.5 },
+        mouth: { y: 13.9, w: 6.3 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+  },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
   MODELS3D[`sculpt:${id}`] = {

@@ -473,7 +473,25 @@ and badly, both forearms thrown up across his face from the belly, turned
 away. Kicks, the slap and the launcher are still the shared tracks, blended
 to his guard. `test/forms.test.js`.
 
-Next: the owner's pick of the next fighter.
+**Carl** (`dex`, the owner's pick after Adam, 2026-11-04). His body came out
+of the pipeline as it is: about Jeff's height, short in the leg, the heaviest
+of the men (his `belly` 0.65), so the fat layer gives him his paunch, bull
+neck and second chin. His head (`lab/blender/fighters/dex.py`): an original
+face for "predator", an older man's heavy face, the lowest and heaviest brow
+in the cast over deep-set heavy-lidded eyes with bags, a big fleshy nose,
+deep folds to a thin pressed mouth, jowls at the jaw line and large ears. His
+silver hair is combed straight back off a receding hairline, laid on his own
+head's surface (sampled from the body's field) a few millimetres out, with
+the comb's lines through it: on a skull of its own with volume behind, it
+stood off his head like a helmet. He wears shades, made as Jeff's are; his
+painted brows sit just above their bar (on the ridge, under it, they were
+hidden). His 2D stance is a wrestler's, already hunched, so his sculpt adds
+no lean of its own. Registered as `sculpt:dex`, in
+the base outfit until his pinstripe suit is made.
+
+Next for him: the pinstripe suit (a closed jacket with lapels, a waistcoat
+over the paunch, shirt, the pink tie, pinstripes), his briefcase, then a
+grappler's form with open, reaching hands.
 
 **Gaps, before the rest of the cast can be built:**
 
