@@ -1,7 +1,7 @@
 // Fighting forms: how a fighter stands, guards and throws, as a martial art
 // rather than as a personality. Boxing first (November 2026), for the
-// sculpted Jeff; karate, kung fu and the rest are each their own when a
-// fighter takes them up.
+// sculpted Jeff, then brawling, for Adam; karate, kung fu and the rest are
+// each their own when a fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -47,6 +47,36 @@ const LEAD_STRAIGHT = {
   ]),
 };
 
+// A bar-room brawler's guard, Adam's from 2D: slouched low on the hips, the
+// fists down at the belly and too far apart, chin tucked, the widest base in
+// the cast. Ready to fight, never once ready to defend.
+const BRAWL_F = { x: 60, y: -126 };
+const BRAWL_B = { x: 42, y: -134 };
+const B_HIP = -70, B_SHOULDER = -148, B_HEAD = -168;    // REST lowered by the stance
+
+// The haymaker: all wind-up and no control. The fist goes back by his ear
+// and the whole body turns away with it, the deepest coil in the cast, so
+// everyone sees it coming; then it swings round and through, the hips
+// dragging the shoulders, and keeps going after the hit has landed, the body
+// turned on past the target and off balance, before he stumbles back to his
+// guard. The rear fist stays down at the belly, where his guard keeps it.
+const HAYMAKER = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: { armF: BRAWL_F, armB: BRAWL_B, hipY: B_HIP, shoulderY: B_SHOULDER, headY: B_HEAD, headX: 2, bodyLean: 0.14, twist: 0, hipTwist: 0, sx: 1.06, sy: 0.98, legF: { x: 33, y: 0 }, legB: { x: -31, y: 0 } } },
+    // the wind-up: back past the ear, the body turned away
+    { t: 0.6,  joints: { armF: { x: 16, y: -158 }, hipY: B_HIP + 4, headX: -1, bodyLean: 0.02, twist: -0.42, hipTwist: -0.22, sx: 1.08, sy: 0.95 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: 6, y: -162 }, hipY: B_HIP + 5, bodyLean: -0.02, twist: -0.52, hipTwist: -0.28, sx: 1.09, sy: 0.94 }, ease: 'outQuad' },
+    // the swing, round and through in one frame
+    { t: 1.15, joints: { armF: { x: 104, y: -160 }, hipY: B_HIP - 2, headX: 7, bodyLean: 0.3, twist: 0.5, hipTwist: 0.3, sx: 0.95, sy: 1.05, legB: { x: -27, y: 0 } }, ease: 'outBack', smear: true },
+    // and on past it
+    { t: 2,    joints: { armF: { x: 92, y: -146 }, hipY: B_HIP, headX: 9, bodyLean: 0.36, twist: 0.66, hipTwist: 0.4, sx: 0.97, sy: 1.03, legB: { x: -24, y: -4 } }, hold: true },
+    // the stumble back
+    { t: 2.5,  joints: { armF: { x: 74, y: -134 }, hipY: B_HIP + 2, headX: 4, bodyLean: 0.2, twist: 0.3, hipTwist: 0.18, sx: 1.03, sy: 1, legB: { x: -29, y: 0 } }, ease: 'outQuad' },
+    { t: 3,    joints: { armF: BRAWL_F, armB: BRAWL_B, hipY: B_HIP, headX: 2, bodyLean: 0.14, twist: 0, hipTwist: 0, sx: 1.06, sy: 0.98, legB: { x: -31, y: 0 } }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -66,5 +96,24 @@ export const FORMS = {
     guardTurn: 1,
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
     tracks: { punch: LEAD_STRAIGHT },
+  },
+  brawling: {
+    stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
+      legF: { x: 33 }, legB: { x: -31 }, sx: 1.06, swayX: 2.2, swayRate: 1.6 },
+    // Rolling his weight at rest: the shoulders swing with the sway of the
+    // fists and the hips follow a beat behind (radians, at the sway's rate).
+    roll: { twist: 0.08, hip: 0.04, rate: 1.6 },
+    // He covers up, late and badly: both forearms thrown up across the face
+    // from the belly, the body turned away from the hit.
+    block: { armF: { x: -16, y: -46 }, armB: { x: -12, y: -36 }, twist: -0.15 },
+    // The fists out wider than his shoulders (the shared rig keeps a hand at
+    // 0.85 of its shoulder's depth): too far apart, an open door down the middle.
+    handDepth: { F: 1.2, B: 1.1 },
+    // The rear fist only half follows the chest round as he swings.
+    guardTurn: 0.5,
+    // The exaggeration is written into the haymaker itself, so the swing is
+    // not scaled again; the hit lands with his weight.
+    motion: { windup: 1, follow: 1, drop: 7, squash: 0.06, brace: 6, thrust: 5 },
+    tracks: { punch: HAYMAKER },
   },
 };

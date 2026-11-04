@@ -136,7 +136,8 @@ export const SCULPTED = {
   // them). Wide eyes 0.034 out at 1.828, the brow ridge's lower edge at about
   // 1.851, arched and lifted, the lips meeting at 1.741 and wider than Jeff's;
   // the painter takes his stare, raised brows and loose smirk from his 2D face
-  // values. No form yet: his 2D stance and moves until his brawling is made.
+  // values. He brawls (`form`, data/forms.js): his own 2D guard, rolling his
+  // weight, and a haymaker that winds up and swings through.
   // His 2D stance already slouches, so his sculpt leans back from it a little
   // (`lean` below zero) rather than further over: on top of the slouch, the
   // sculpts' usual lean rounded his back and brought his shoulders forward.
@@ -153,6 +154,7 @@ export const SCULPTED = {
         lid: 1.7, line: 1.4,
       },
     },
+    form: 'brawling',
   },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {

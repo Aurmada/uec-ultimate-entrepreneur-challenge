@@ -126,3 +126,38 @@ test('a sculpt built with long legs (fit.legs) is not stretched again by the str
   assert.ok(Math.abs(thigh(0.8) / thigh(1) - 1.25) < 1e-6, `${(thigh(0.8) / thigh(1)).toFixed(4)}`);
   assert.equal(spec.fit.legs ?? 1, 1, "Jeff's legs are the reference");
 });
+
+// Brawling (data/forms.js), for the sculpted Adam: his own 2D guard, and a
+// haymaker that is all wind-up and follow-through.
+const adam = getFighter('max');
+const BRAWLING = FORMS.brawling;
+const adamPosed = (state, extra = {}, t = 0) => figureFrame(applyProportions(computePose(
+  { def: adam, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, BRAWLING), clampBody(adam.body)));
+const haymakerAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return adamPosed('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Adam brawls, from the guard his 2D figure stands in', () => {
+  assert.equal(MODELS3D['sculpt:max'].form, 'brawling');
+  const own = applyProportions(computePose({ def: adam, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(adam.body));
+  const brawl = applyProportions(computePose({ def: adam, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, BRAWLING), clampBody(adam.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(brawl[k], own[k], `his ${k} is not where his 2D guard holds it`);
+  // fists low and wide: below the shoulders, wider than the shared rig holds them
+  assert.ok(brawl.armF.y > brawl.shoulderY + 10, 'his lead fist is up at his face, not down at his belly');
+  assert.ok(BRAWLING.handDepth.F > 1 && BRAWLING.handDepth.B > 1, 'his fists are not out wider than his shoulders');
+  // rolling his weight: the shoulders turn back and forth at rest
+  const turns = [0, 0.5, 1, 1.5, 2].map((t) => adamPosed('idle', {}, t).twist);
+  assert.ok(Math.max(...turns) - Math.min(...turns) > 0.08, 'he stands square and still');
+});
+
+test('the haymaker coils deeper than any punch, swings through and keeps going', () => {
+  const tw = (k) => haymakerAt(k).twist;
+  assert.ok(tw(0.95) < -0.4, `not much of a coil (twist ${tw(0.95)})`);
+  assert.ok(tw(0.95) < FORMS.boxing.tracks.punch.keys.reduce((m, key) => Math.min(m, key.joints.twist ?? 0), 0), 'a boxer loads deeper than a brawler');
+  assert.ok(haymakerAt(0.95).armF.x < haymakerAt(0).armF.x - 30, 'the fist is not drawn back: no telegraph');
+  assert.ok(tw(1.15) > 0.4, 'the swing does not turn through');
+  assert.ok(tw(2) > tw(1.15), 'the body does not keep turning after the hit');
+  assert.ok(Math.abs(tw(3)) < 1e-6, 'he does not come back to his guard');
+  for (const [name, track] of Object.entries(BRAWLING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});

@@ -460,7 +460,20 @@ pockets). One material a palette role, shared by every piece (`material`): a
 second of the same name came out as `suit2.001`, a role no palette has.
 `test/sculpt3d.test.js` checks his roles, his cap and his bare fists.
 
-Next for him: a brawler's form.
+His form (2026-11-04): brawling (`data/forms.js`), as his 2D style is a
+brawler's. His guard is his own from 2D (fists low at the belly and too far
+apart, the widest base in the cast), the fists out wider than his shoulders
+(`handDepth` above 1), and at rest he rolls his weight: the shoulders turn
+with the sway of his fists and the hips follow a beat behind (`roll`, a new
+form setting, read in `computePose`). His punch is a haymaker, all wind-up
+and no control: the fist back by his ear and the body turned away, the
+deepest coil in the cast so everyone sees it coming, then round and through,
+and on past the target off balance before he stumbles back. He covers up late
+and badly, both forearms thrown up across his face from the belly, turned
+away. Kicks, the slap and the launcher are still the shared tracks, blended
+to his guard. `test/forms.test.js`.
+
+Next: the owner's pick of the next fighter.
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -478,8 +491,8 @@ Next for him: a brawler's form.
   (ponytail, cap, quiff, puffs, bob, slick, buzz, curly).
 - Eyewear beyond shades (Kai's glasses, Ava's visor), the earrings and
   brooch, and Max's stubble (painted, as in 2D).
-- Forms: only boxing exists. Each fighter's own fighting style is its own
-  stage, after their model.
+- Forms: boxing (Jeff) and brawling (Adam). Each fighter's own fighting style
+  is its own stage, after their model.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

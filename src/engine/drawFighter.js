@@ -343,6 +343,12 @@ export function computePose(f, t, form = null) {
   const def = { ...f.def, stance: form.stance, motion: form.motion ?? f.def?.motion,
     animOverrides: { ...f.def?.animOverrides, ...form.tracks } };
   const P = basePose({ ...f, def }, t);
+  if (f.state === 'idle' && form.roll) {
+    // the shoulders and hips roll with the weight, the hips a beat behind
+    const w = t * form.roll.rate;
+    P.twist = Math.sin(w) * form.roll.twist;
+    P.hipTwist = Math.sin(w - 0.6) * (form.roll.hip ?? 0);
+  }
   if (f.state === 'idle' && form.bounce) {
     // the whole body rides the knees, hands and all
     const b = Math.sin(t * form.bounce.rate) * form.bounce.px;
