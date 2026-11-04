@@ -1179,6 +1179,39 @@ def shades(lens_c, lens_r, lens_turn, bar, bridge, arm_from, arm_to):
     return lens
 
 
+def glasses(lens_c, lens_half, lens_turn, bridge, arm_from, arm_to, rad=0.0055, rim=0.0052):
+    """Glasses, as the 2D figure draws them: two rounded-rectangle rims round
+    clear lenses (`clear`, drawn as faint glass in game, so the painted eyes
+    show through), a bridge over the nose, arms back to the ears. `lens_c`
+    is the centre of the left lens (mirrored), `lens_half` its half width
+    and height, `lens_turn` how far it wraps round (degrees). The rims are
+    wire (`rim`), drawn without the ink outline and thick enough to read
+    without it, as the founder's are: outlined, the ink filled each lens
+    black. Built in a fine field of its own, as the shades are."""
+    import bpy
+    lo, hi = (-0.03, -0.11, 1.79), (0.13, 0.11, 1.86)
+    L = sc.Field(lo=lo, hi=hi, h=0.001)
+    R = sc.Field(lo=lo, hi=hi, h=0.001)
+    w, h = lens_half
+    for s in (1, -1):
+        c = V(lens_c[0], s * lens_c[1], lens_c[2])
+        ax = sc.rot(rz=s * lens_turn)
+        L.add(sc.Box(c, (0.0007, w - rim * 0.5, h - rim * 0.5), rad - rim * 0.5, ax), 0.0)
+        R.add(sc.Box(c, (0.0022, w + rim * 0.5, h + rim * 0.5), rad, ax), 0.0)
+        R.cut(sc.Box(c, (0.004, w - rim * 0.5, h - rim * 0.5), rad - rim, ax), 0.0)
+    R.add(sc.RoundCone(*bridge, 0.0026, 0.0026), 0.0015)
+    for s in (1, -1):
+        R.add(sc.RoundCone(V(arm_from[0], s * arm_from[1], arm_from[2]), V(arm_to[0], s * arm_to[1], arm_to[2]), 0.0018, 0.0016), 0.0015)
+    lens = sc.to_blender('clear', *L.mesh(), smooth=1)
+    frame = sc.to_blender('rim', *R.mesh(), smooth=1)
+    lens.data.materials.append(material('clear', (0.9, 0.93, 1.0, 1)))
+    frame.data.materials.append(material('rim', (0.012, 0.012, 0.016, 1)))
+    with bpy.context.temp_override(active_object=lens, selected_editable_objects=[lens, frame], selected_objects=[lens, frame]):
+        bpy.ops.object.join()
+    lens.name = lens.data.name = 'eyewear:glasses'
+    return lens
+
+
 # ================================================================ props
 # What a fighter carries (data/fighters.js `parts`), as the founder's model
 # carries it (build_founder.py): a mesh `prop:<id>` for each part, which the

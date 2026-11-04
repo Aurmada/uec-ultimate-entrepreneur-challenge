@@ -552,7 +552,33 @@ it, so their slaps are open-handed now; nothing else in their models
 changed. The first open hand was a skeleton's (thin fingers apart), and its
 thumb was cut flat by the edge of its own field.
 
-Next for him: the owner's look at the grappler. Then the next fighter.
+The owner on it: "It's good".
+
+**Steve** (`kai`, the owner's pick after Carl, 2026-11-04). His body came
+out of the pipeline as it is: 1.15 times Jeff's height and as long in the
+leg, the narrowest chest and shoulders so far, little muscle on him and
+carved shallow, his head about Jeff's. His head
+(`lab/blender/fighters/kai.py`): an original face for "the showman", a long
+lean face on a tall narrow skull, a high forehead, a light level brow over
+deep-set eyes under heavy lids, high cheekbones, a long straight nose, a
+small thin-lipped mouth and a narrow pointed chin. His grey hair is a quiff
+(`headwear`, sampled from the head as Carl's is): volume over the whole top,
+short at the sides, rolled up and forward off the front, the hairline curving
+down past the temples to the sideburns (kept narrower than the head, the
+quiff stood up as a crest; cut square, the hairline stepped down over the
+temples). His glasses are new to the pipeline (`glasses` in fighter3d.py):
+rounded-rectangle rims round clear lenses, as the 2D ones are drawn, the
+lenses faint glass (`clear`) the painted eyes show through and the rims wire
+drawn without the ink outline (`rim`, inkless for every sculpt): outlined,
+the ink filled each lens black, as the founder's wire would be. The nose's
+side planes are wide (narrower, the crease beside it went black, as Adam's
+did). His 2D stance stands tall with the chest open, so his sculpt adds no
+lean of its own. Registered as `sculpt:kai`, in the base outfit until his
+turtleneck is made.
+
+Next for him: the owner's look at his body and head, then his turtleneck
+and skinny trousers, his device, and a showman's form with the lead hand
+open, presenting.
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -566,9 +592,9 @@ Next for him: the owner's look at the grappler. Then the next fighter.
   (Eleanor); the blazer and Eleanor's suit can start from Carl's jacket. Most are the same shells with other edges; the 2D
   `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)
   says how far each stands off the body and how the trousers fall.
-- Hair and headwear. Adam's cap and Carl's slick are made; every other style
-  needs a maker (ponytail, quiff, puffs, bob, buzz, curly).
-- Eyewear beyond shades (Kai's glasses, Ava's visor), the earrings and
+- Hair and headwear. Adam's cap, Carl's slick and Steve's quiff are made;
+  every other style needs a maker (ponytail, puffs, bob, buzz, curly).
+- Eyewear beyond shades and glasses (Ava's visor), the earrings and
   brooch.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
 - Props. The block briefcase and Carl's case are made; Jeff's parcel and

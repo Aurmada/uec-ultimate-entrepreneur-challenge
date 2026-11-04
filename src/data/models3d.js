@@ -100,7 +100,10 @@ export const newBodyFor = (def) => (CAST_MODELS.includes(def?.id) ? def.id : ath
 const SCULPTED_BASE = {
   fit: { girth: 1, head: 1, nod: 0.2, lean: 0.14, pelvis: 0.85 },
   face: { mesh: 'body', role: 'skin', turn: 0, px: [0.0035, 0.0035], front: 0.045, fade: [0.25, 0.0] },
-  glass: { lens: 0.84 },
+  // clear lenses (glasses) as the 2D ones are filled: a faint sheen
+  glass: { lens: 0.84, clear: 0.14 },
+  // glasses' rims are wire, too thin to outline: the ink filled the lenses
+  inkless: ['rim'],
 };
 
 // Each fighter's own: where their leaf bones end and their skull sits, their
@@ -176,6 +179,26 @@ export const SCULPTED = {
       },
     },
     form: 'grappling',
+  },
+  // Steve (kai, 2026-11-04): tall and rake thin, 1.15 times Jeff's height and
+  // as long in the leg, his head about Jeff's (lab/blender/fighters/kai.py):
+  // eyes 0.033 out at 1.826 behind clear glasses, a light level brow, its
+  // painted line just over the rims at 1.848, thin lips meeting at 1.742.
+  // His 2D stance stands tall with the chest open, so his sculpt adds no lean
+  // of its own (see Adam's and Carl's).
+  kai: {
+    leaf: { forearm: 0.4083, head: 0.2518, foot: [0.1928, -0.0749, 0] },
+    skull: 0.158,
+    fit: { shoulderHalf: 0.1893, hipHalf: 0.1018, legs: 1.1522, lean: 0 },
+    face: {
+      at: [0, 2.0311], px: [0.003457, 0.003457],
+      layout: {
+        eye: { x: 9.4, y: -10.3, w: 3.8 },
+        brow: { y: -16.5, inner: 3.4, outer: 15.7 },
+        mouth: { y: 13.7, w: 5.4 },
+        lid: 1.7, line: 1.4,
+      },
+    },
   },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {

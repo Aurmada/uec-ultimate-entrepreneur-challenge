@@ -178,3 +178,20 @@ test("every sculpt's lead hand comes as a fist and open, parted from the body", 
     }
   }
 });
+
+// Steve (`kai`), the fourth: his glasses are rims round clear lenses, as the
+// 2D ones are drawn, the rims wire drawn without the ink outline (outlined,
+// the ink filled each lens black) and the lenses faint glass the painted eyes
+// show through; his hair is a quiff, all in his palette's roles.
+const steveGlb = readFileSync(new URL(`../${MODELS3D['sculpt:kai'].url}`, import.meta.url));
+const steve = extractModel(parseGLB(steveGlb.buffer.slice(steveGlb.byteOffset, steveGlb.byteOffset + steveGlb.byteLength)));
+
+test('Steve wears his glasses, rims round clear lenses the painted eyes show through, and his quiff', () => {
+  const roles = (name) => new Set(steve.primitives.filter((p) => p.name === name).map((p) => p.role));
+  assert.deepEqual(roles('eyewear:glasses'), new Set(['clear', 'rim']));
+  assert.deepEqual(roles('hair:quiff'), new Set(['hair']));
+  const spec = MODELS3D['sculpt:kai'];
+  assert.ok(spec.inkless.includes('rim'), 'the rims are outlined: the ink fills the lenses');
+  assert.ok(spec.glass.clear > 0 && spec.glass.clear < 0.3, 'the lenses are not faint glass');
+  assert.notEqual(roleColour(getFighter('kai').c, 'hair', null), null, 'his hair is not in his palette');
+});
