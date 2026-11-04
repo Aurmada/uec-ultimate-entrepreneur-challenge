@@ -330,8 +330,8 @@ same model file, the same painted face, call for call):
   so his factors are all exactly 1; each knob moves only part of the way its
   ratio says, since the 2D knobs are drawn exaggerated. A softer build is
   carved shallower. Clothes come from the fighter's `outfit` (`OUTFITS`, so
-  far only Jeff's `vest`), in their palette; rig, weights and export are
-  shared.
+  far Jeff's `vest`, Adam's `hoodie` and Carl's `pinstripe`), in their
+  palette; rig, weights and export are shared.
 - `lab/blender/fighters/<id>.py` holds what is the fighter's alone: their head
   (`head`), its carved lines (`head_definition`) and their eyewear, an
   original face built to their character notes.
@@ -486,12 +486,36 @@ the comb's lines through it: on a skull of its own with volume behind, it
 stood off his head like a helmet. He wears shades, made as Jeff's are; his
 painted brows sit just above their bar (on the ridge, under it, they were
 hidden). His 2D stance is a wrestler's, already hunched, so his sculpt adds
-no lean of its own. Registered as `sculpt:dex`, in
-the base outfit until his pinstripe suit is made.
+no lean of its own. Registered as `sculpt:dex`.
 
-Next for him: the pinstripe suit (a closed jacket with lapels, a waistcoat
-over the paunch, shirt, the pink tie, pinstripes), his briefcase, then a
-grappler's form with open, reaching hands.
+His suit (2026-11-04, `OUTFITS.pinstripe`): a dress shirt with a closed
+collar, the pink tie, a jacket buttoned over his paunch, suit trousers and
+shoes. The jacket is the body as cloth lies over it (`_drape`, the hoodie's
+`_loose` made general: with Adam's numbers it gives his hoodie byte for
+byte), a centimetre out with the sleeves set in near the shoulder, and never
+nearer the body than that: draped alone, it dipped where the sleeves meet the
+trunk and the shirt showed through at the shoulders. It opens in a V from the
+button to the base of the neck, its collar stands round the back of the neck
+under the shirt's, and below the button its fronts part over the paunch, as
+the 2D jacket's do. The lapels widen from the button to a notch under the
+collarbone, the collar narrower above it, a few millimetres proud of the
+jacket and in the suit's colour in shade, as the 2D figure darkens it: a
+material role can now ask for a palette colour in shade (`suit*0.78`,
+`roleColour` in `gl3d/toon.js`), so the shade follows any palette. In
+`suit2`, nearly black on Carl, the lapels read as a black stand-up collar.
+The lapels are cut from the finished jacket: from its cloth uncut, the collar
+ran on up the neck to the jaw. The tie is swept down the shirt as one ribbon:
+a chain of flattened capsules, each turned to the shirt under it, stepped
+over the paunch and read as beads. The shirt shows in the V and at the cuffs,
+and its collar is kept to the neck: a band at the body's height, it ran out
+over the tops of the shoulders, too near the jacket there to be hidden under
+it, and showed through in flecks. Not yet: the pinstripes themselves (a
+pattern, which the toon renderer has no way to paint) and a waistcoat (the V
+shows only the shirt, as in 2D). `test/sculpt3d.test.js` checks his roles,
+the lapels' shade against figure.js's, and his bare fists.
+
+Next for him: his briefcase, then a grappler's form with open, reaching
+hands.
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -500,15 +524,16 @@ grappler's form with open, reaching hands.
 - The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
   as the 2D figure and the athlete bodies have, with `figure.hips`, and its
   own fat pattern (`FAT_M` is a man's).
-- Outfits. Jeff's vest and Adam's hoodie. The rest: turtleneck (Kai),
-  pinstripe suit (Dex), tee (Elo), henley (Scam), blazer (Ava), bomber
-  (Zara), suit (Eleanor). Most are the same shells with other edges; the 2D
+- Outfits. Jeff's vest, Adam's hoodie and Carl's suit. The rest: turtleneck
+  (Kai), tee (Elo), henley (Scam), blazer (Ava), bomber (Zara), suit
+  (Eleanor); the blazer and Eleanor's suit can start from Carl's jacket. Most are the same shells with other edges; the 2D
   `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)
   says how far each stands off the body and how the trousers fall.
-- Hair and headwear. Jeff is bald; nobody else is. Every style needs a maker
-  (ponytail, cap, quiff, puffs, bob, slick, buzz, curly).
+- Hair and headwear. Adam's cap and Carl's slick are made; every other style
+  needs a maker (ponytail, quiff, puffs, bob, buzz, curly).
 - Eyewear beyond shades (Kai's glasses, Ava's visor), the earrings and
-  brooch, and Max's stubble (painted, as in 2D).
+  brooch.
+- Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
 - Forms: boxing (Jeff) and brawling (Adam). Each fighter's own fighting style
   is its own stage, after their model.
 

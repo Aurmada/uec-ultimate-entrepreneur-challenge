@@ -176,6 +176,18 @@ export const hexToRGB = (hex) => {
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 };
 
+// A mesh's colour from the fighter's palette by its role (its material's
+// name), else the colour it was built in. A role can ask for a palette colour
+// in shade, 'suit*0.78' being the suit darkened as the 2D figure darkens it
+// for the lapels (mixed with black), so the shade follows any palette.
+export const roleColour = (palette, role, own) => {
+  const m = /^(\w+)\*([0-9.]+)$/.exec(role);
+  const hex = palette[m ? m[1] : role];
+  if (!hex) return own;
+  const k = m ? Number(m[2]) : 1;
+  return hexToRGB(hex).map((v) => v * k);
+};
+
 // Returns null where WebGL2 is unavailable, so the caller falls back cleanly.
 // `onScreen`: a canvas that is itself on the page, to draw fighters straight
 // onto (render's `screen`). It is never read back, so its buffer is not kept.

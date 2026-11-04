@@ -13,7 +13,7 @@
 
 import { parseGLB, extractModel } from './glb.js';
 import { buildRig, solvePose, transformPoint } from './rig.js';
-import { createToon, hexToRGB, MAX_JOINTS } from './toon.js';
+import { createToon, roleColour, MAX_JOINTS } from './toon.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import { FORMS } from '../../data/forms.js';
@@ -343,7 +343,7 @@ function drawModel(entry, def, state, unicorn, expression, painter, view, r = re
   const colours = (p) => {
     let rgb = memo.colours.get(p.role);
     if (!rgb) {
-      rgb = palette[p.role] ? hexToRGB(palette[p.role]) : p.color;
+      rgb = roleColour(palette, p.role, p.color);
       memo.colours.set(p.role, rgb);
     }
     return rgb;

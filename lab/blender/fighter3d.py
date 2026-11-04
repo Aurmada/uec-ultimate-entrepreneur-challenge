@@ -683,15 +683,24 @@ _LOOSE = {}
 
 
 def _loose():
-    """The body as loose cloth lies over it: its forms blurred away, a couple
-    of centimetres out, and below the chest falling straight down from the
+    """An oversized top's cloth: two centimetres out, its forms well blurred,
+    the sleeves dropped a hand's width down the arm (see _drape)."""
+    return _drape(0.022, 0.02, 0.02, 0.014, 0.012, 0.1)
+
+
+def _drape(off_t, off_a, blur_t, blur_a, blur_after, drop):
+    """The body as cloth lies over it: its forms blurred away (`blur_t` on
+    the trunk, `blur_a` on the arms, `blur_after` again once hung), `off_t`
+    and `off_a` out, and below the chest falling straight down from the
     widest part above it, as cloth hangs. The trunk and the arms are made
-    apart and met at the armholes: blurred together, the cloth webbed from
-    the arm to the side like a bat's wing, and the web, half on the arm and
-    half on the chest, stretched into a fin whenever the arm came up. Made
-    once a fighter."""
-    if 'f' in _LOOSE:
-        return _LOOSE['f']
+    apart and met where the sleeve is set in, `drop` down the arm from the
+    shoulder joint: blurred together, the cloth webbed from the arm to the
+    side like a bat's wing, and the web, half on the arm and half on the
+    chest, stretched into a fin whenever the arm came up. Made once a
+    fighter for each cut."""
+    key = (off_t, off_a, blur_t, blur_a, blur_after, drop)
+    if key in _LOOSE:
+        return _LOOSE[key]
     T, A = _shell(0.0), _shell(0.0)
     away = np.float32(0.04)
     for sl, X, Y, Z in F._slabs():
@@ -702,18 +711,19 @@ def _loose():
             px, py, pz = X - S[0], Y - S[1], Z - S[2]
             t = px * u[0] + py * u[1] + pz * u[2]
             far = np.sqrt((px - t * u[0]) ** 2 + (py - t * u[1]) ** 2 + (pz - t * u[2]) ** 2)
-            # the arm's, a hand's width down from the shoulder (a dropped
-            # shoulder, as loose tops have: split at the joint, each sleeve
-            # was a puff set on a vest) and nearer its axis than the trunk's
-            arm |= (s * Y > 0.08) & (t > 0.1) & (far < 0.6 * np.sqrt(X ** 2 + Y ** 2))
+            # the arm's, past where the sleeve is set in (a loose top's is
+            # dropped a hand's width down: split at the joint, each of its
+            # sleeves was a puff set on a vest) and nearer its axis than the
+            # trunk's
+            arm |= (s * Y > 0.08) & (t > drop) & (far < 0.6 * np.sqrt(X ** 2 + Y ** 2))
         d = F.d[sl]
         T.d[sl] = np.where(arm, np.maximum(d, away), d)
         A.d[sl] = np.where(arm, d, np.maximum(d, away))
     every = lambda X, Y, Z: np.float32(1)
-    T.soften(0.02, every)
-    A.soften(0.014, every)
-    T.d -= np.float32(0.022)
-    A.d -= np.float32(0.02)
+    T.soften(blur_t, every)
+    A.soften(blur_a, every)
+    T.d -= np.float32(off_t)
+    A.d -= np.float32(off_a)
     # the hang: each column under the chest takes the widest the cloth is
     # above it, eased out toward the sides, then softened again: hung outright
     # and cut off at the sides, it was a box with an edge down each side
@@ -724,10 +734,10 @@ def _loose():
     y = np.abs(F.lo[1] + np.arange(j0, j1) * F.h)
     w = (1 - np.clip((y - 0.15) / 0.05, 0, 1) ** 2).astype(np.float32)[None, :, None]
     T.d[:, j0:j1, k0:k1] = blk + w * (hung - blk)
-    T.soften(0.012, every)
+    T.soften(blur_after, every)
     np.minimum(T.d, A.d, out=T.d)
     del A
-    _LOOSE['f'] = T
+    _LOOSE[key] = T
     return T
 
 
@@ -843,15 +853,157 @@ def hoodie_strings():
     return S
 
 
-def srgb(h):
-    """A palette hex as a glTF (linear) colour."""
-    return tuple(((int(h[i:i + 2], 16) / 255 + 0.055) / 1.055) ** 2.4 for i in (1, 3, 5)) + (1,)
+# A suit for a man who never takes it off (data/fighters.js `outfit:
+# 'pinstripe'`, Carl's): a dress shirt with a closed collar and a tie, under
+# a jacket buttoned over his paunch, its lapels in the suit's second colour,
+# the shirt showing in the V above the button and at the cuffs. The jacket
+# is the body as cloth lies over it, a centimetre out and its forms blurred
+# a little (_drape), its sleeves set in near the shoulder; it falls to cover
+# the seat. The pinstripes themselves are a pattern, which the toon renderer
+# has no way to paint yet: the cloth is the suit's colour.
+JACKET_HEM, BUTTON, LAPEL = 0.885, 1.2, 'suit*0.78'
+
+
+def _jacket():
+    """The jacket's cloth: the body as cloth lies over it (_drape), and never
+    nearer the body than a centimetre. Draped alone it dipped where the
+    sleeves are set in (each side blurred against the other's absence), and
+    the shirt showed through at the shoulders."""
+    if 'jacket' not in _LOOSE:
+        J = _shell(0.0085)
+        np.minimum(J.d, _drape(0.011, 0.01, 0.012, 0.008, 0.008, 0.04).d, out=J.d)
+        _LOOSE['jacket'] = J
+    return _LOOSE['jacket']
+_NECK_AXIS = -0.012                     # as _neck_cut's
+
+
+def _vee(Z):
+    """Half the width of the jacket's opening at height Z: shut at the button,
+    opening up to the base of the neck."""
+    return np.float32(0.01) + np.maximum(Z - np.float32(BUTTON), 0) * np.float32(0.26)
+
+
+def _front(X):
+    return np.float32(0.01) - X
+
+
+def dress_shirt():
+    """A dress shirt with a closed collar round the neck, long sleeves to the
+    wrists, tucked in."""
+    S = _shell(0.004)
+    d = S.d
+    _keep_above(d, SHIRT_HEM)
+    _cuff_cut(d, CUFF)
+    _keep_below(d, 1.6)
+    # the collar round the neck only: a band of the body's height, it ran out
+    # over the tops of the shoulders, too near the jacket there to be hidden
+    # under it, and showed through it in flecks
+    collar = _shell(0.007)
+    _keep_above(collar.d, 1.58)
+    _keep_below(collar.d, 1.655)
+    sl = _zslab(1.57, 1.67)
+    X, Y, Z = _grid(sl)
+    collar.d[sl] = np.maximum(collar.d[sl], np.sqrt((X - _NECK_AXIS) ** 2 + Y ** 2) - np.float32(0.115))
+    np.minimum(d, collar.d, out=d)
+    del collar
+    _neck_cut(d, 0.07, 1.6)
+    return S
+
+
+def jacket():
+    """The jacket: open in a V from the button to the base of the neck, its
+    collar standing round the back of the neck, and below the button its
+    fronts parting over the paunch, as the 2D jacket's do; sleeves stopping
+    short of the shirt's cuffs; the button at the bottom of the V."""
+    S = _shell(0.0)
+    S.d[:] = _jacket().d
+    d = S.d
+    _keep_above(d, JACKET_HEM)
+    _keep_below(d, 1.642)                   # under the shirt's collar
+    _cuff_cut(d, CUFF + 0.03)
+    _neck_cut(d, 0.092, 1.58)
+    sl = _zslab(JACKET_HEM - 0.02, 1.7)
+    X, Y, Z = _grid(sl)
+    vee = np.maximum(np.abs(Y) - _vee(Z), np.float32(BUTTON) - Z)
+    parted = np.maximum(np.abs(Y) - (np.float32(BUTTON - 0.03) - Z) * np.float32(0.11), Z - np.float32(BUTTON - 0.03))
+    opening = np.maximum(np.minimum(vee, parted), _front(X))
+    d[sl] = np.maximum(d[sl], -opening)
+    p = S.project(np.array([[0.16, 0.0, BUTTON - 0.016]]))[0]
+    S.add(sc.Ellipsoid(p, (0.004, 0.009, 0.009)), 0.002)
+    return S
+
+
+def jacket_lapels():
+    """The lapels and the collar: a band of the jacket's cloth a few
+    millimetres proud of it down each side of the V, widening from the button
+    to a notch under the collarbone, then the collar's narrower band on up
+    and round the back of the neck; in the suit's colour in shade (LAPEL), as
+    the 2D figure's are: in its second colour, nearly black on Carl, they
+    read as a black stand-up collar."""
+    J = jacket()                            # cut as it is: the cloth uncut ran on up the neck to the jaw
+    S = _shell(0.0)
+    S.d[:] = np.float32(1)
+    sl = _zslab(BUTTON - 0.01, 1.68)
+    X, Y, Z = _grid(sl)
+    v = _vee(Z)
+    w = np.where(Z < np.float32(1.5), np.float32(0.012) + (Z - np.float32(BUTTON)) * np.float32(0.16), np.float32(0.034))
+    lapel = np.maximum(np.maximum(v - np.abs(Y), np.abs(Y) - v - w),
+                       np.maximum(np.float32(BUTTON) - Z, _front(X)))
+    collar = np.maximum(np.float32(1.585) - Z, np.sqrt((X - _NECK_AXIS) ** 2 + Y ** 2) - np.float32(0.118))
+    S.d[sl] = np.maximum(J.d[sl] - np.float32(0.003), np.minimum(lapel, collar))
+    return S
+
+
+def tie():
+    """The tie: a knot at the collar and a blade widening down the shirt to
+    the button, lying on the shirt wherever it is, in a fine field of its own
+    (the body's samples are too coarse for it), kept thin so it stays under
+    the jacket where the V closes. The blade is swept down its middle line as
+    one ribbon: a chain of flattened capsules, each turned to the shirt under
+    it, stepped wherever the shirt turned over the paunch, and read as beads."""
+    H = _shell(0.004)
+    zs = np.linspace(1.632, BUTTON - 0.012, 40)
+    P = H.project(np.array([[0.14, 0.0, z] for z in zs]))
+    N = H.normal(P)
+    C = P + N * 0.0025
+    C[:, 1] = 0.0
+    lo, hi = C.min(0) - 0.03, C.max(0) + 0.03
+    lo[1], hi[1] = -0.04, 0.04
+    T = sc.Field(lo=lo, hi=hi, h=0.001)
+    ax = [T.lo[k] + np.arange(T.n[k]) * T.h for k in range(3)]
+    X, Z = ax[0][:, None], ax[2][None, :]
+    # the distance from the middle line, in the side view, and how far down it
+    # the nearest point is; the ribbon is then the same at every Y
+    near = np.full((len(ax[0]), len(ax[2])), np.inf)
+    along = np.zeros_like(near)
+    run = np.r_[0, np.cumsum(np.linalg.norm(np.diff(C[:, [0, 2]], axis=0), axis=1))]
+    for i in range(len(C) - 1):
+        (x0, z0), (x1, z1) = C[i, [0, 2]], C[i + 1, [0, 2]]
+        ex, ez = x1 - x0, z1 - z0
+        L2 = ex * ex + ez * ez
+        t = np.clip(((X - x0) * ex + (Z - z0) * ez) / L2, 0, 1)
+        dist = np.hypot(X - x0 - t * ex, Z - z0 - t * ez)
+        nearer = dist < near
+        near = np.where(nearer, dist, near)
+        along = np.where(nearer, run[i] + t * np.sqrt(L2), along)
+    th = 0.0026                                                       # half its thickness
+    w = np.interp(along / run[-1], [0, 1], [0.011, 0.03])             # half its width
+    a = np.abs(ax[1])[None, :, None] - (w - th)[:, None, :]
+    T.d = (np.sqrt(np.maximum(a, 0) ** 2 + near[:, None, :] ** 2) - th).astype(np.float32)
+    T.add(sc.Ellipsoid(C[0] + N[0] * 0.002, (0.008, 0.014, 0.012)), 0.003)    # the knot
+    return T
+
+
+def srgb(h, k=1.0):
+    """A palette hex as a glTF (linear) colour, darkened by k first as the
+    game darkens it (in sRGB)."""
+    return tuple(((k * int(h[i:i + 2], 16) / 255 + 0.055) / 1.055) ** 2.4 for i in (1, 3, 5)) + (1,)
 
 
 # Each outfit in the game (data/fighters.js `outfit`): its pieces, outermost
 # last, as (name, maker, material role, colour where the fighter's palette
-# has none), and which pieces cover which. Only Jeff's so far; each of the
-# others is added with the fighter who wears it.
+# has none), and which pieces cover which. Jeff's, Adam's and Carl's so far;
+# each of the others is added with the fighter who wears it.
 OUTFITS = {
     # a shirt under a quilted vest that hangs open at the front (figure.js)
     'vest': {
@@ -867,6 +1019,16 @@ OUTFITS = {
                    ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
         'skin': ['hoodie', 'rib', 'trousers', 'shoes'],
         'covers': {'hoodie': ['rib'], 'trousers': ['hoodie', 'rib', 'shoes']},
+        'loose': True,
+    },
+    # a buttoned suit over a shirt and tie (Carl's)
+    'pinstripe': {
+        'pieces': [('shirt', dress_shirt, 'shirt', '#f4f6ff'), ('tie', tie, 'accent', None),
+                   ('jacket', jacket, 'suit', None), ('lapels', jacket_lapels, LAPEL, None),
+                   ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['shirt', 'jacket', 'trousers', 'shoes'],
+        'covers': {'shirt': ['jacket', 'tie', 'trousers'], 'tie': ['jacket'], 'jacket': ['lapels'],
+                   'trousers': ['jacket', 'shoes']},
         'loose': True,
     },
     # Trousers and shoes and nothing above the waist: what a fighter wears
@@ -915,7 +1077,14 @@ def dressed(data):
     for n, over in O['covers'].items():
         hidden(objs[n], [pieces[o] for o in over])
     pal = data.get('c') or {}
-    return body, [(objs[n], role, srgb(pal.get(role) or own)) for n, _, role, own in O['pieces']]
+    return body, [(objs[n], role, role_colour(pal, role, own)) for n, _, role, own in O['pieces']]
+
+
+def role_colour(pal, role, own):
+    """A piece's colour from the palette by role, as the game's roleColour
+    (gl3d/toon.js) has it: 'suit*0.78' is the suit in shade."""
+    base, _, k = role.partition('*')
+    return srgb(pal.get(base) or own, float(k or 1))
 
 
 # ================================================================ eyewear
@@ -1067,7 +1236,7 @@ def export_rigged(data, spec, path, tris=44000):
     parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
     for ob, _, _ in parts:
         FR.warp_mesh(ob)
-    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'suit2': 0.1, 'accent': 0.02, 'pants': 0.17, 'shoe': 0.07}
+    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'suit2': 0.1, LAPEL: 0.1, 'accent': 0.02, 'pants': 0.17, 'shoe': 0.07}
     for ob, role, colour in parts:
         _decimate(ob, tris * budget[role])
         # materials by palette role (the renderer takes the fighter's colour for

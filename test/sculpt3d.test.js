@@ -1,11 +1,15 @@
-// The sculpted Jeff's model as built (lab/blender/fighter3d.py -- bozo --rig):
-// dressed in his clothes from the 2D game, bare fists (November 2026).
+// The sculpted models as built (lab/blender/fighter3d.py -- <id> --rig): each
+// dressed in his clothes from the 2D game, bare fists (November 2026). Jeff's
+// first.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { MODELS3D } from '../src/data/models3d.js';
+import { roleColour } from '../src/engine/gl3d/toon.js';
+import { getFighter } from '../src/data/fighters.js';
+import { mix } from '../src/engine/figure.js';
 
 const glb = readFileSync(new URL(`../${MODELS3D['sculpt:bozo'].url}`, import.meta.url));
 const model = extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength)));
@@ -62,4 +66,45 @@ test("Adam's fists are bare too: his cuffs end at the wrist", () => {
   const body = adam.primitives.filter((p) => p.name === 'body');
   const skin = reach(body.find((p) => p.role === 'skin'));
   for (const p of body.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.06, `${p.role} reaches over the hands`);
+});
+
+// Carl (`dex`), the third: his suit, a jacket buttoned over his paunch with
+// its lapels in the suit's colour in shade, the shirt and tie in the V, the
+// shirt's cuffs at the wrists; every piece in his own palette's roles.
+const carlGlb = readFileSync(new URL(`../${MODELS3D['sculpt:dex'].url}`, import.meta.url));
+const carl = extractModel(parseGLB(carlGlb.buffer.slice(carlGlb.byteOffset, carlGlb.byteOffset + carlGlb.byteLength)));
+const carlBody = carl.primitives.filter((p) => p.name === 'body');
+
+test('Carl wears his suit: shirt, tie, jacket, lapels, trousers and shoes', () => {
+  const roles = new Set(carlBody.map((p) => p.role));
+  for (const role of ['skin', 'shirt', 'accent', 'suit', 'suit*0.78', 'pants', 'shoe']) assert.ok(roles.has(role), `no ${role}`);
+});
+
+test("every piece of Carl's takes its colour from his palette, the shirt aside (white, as in 2D)", () => {
+  const { c } = getFighter('dex');
+  for (const p of carlBody.filter((q) => q.role !== 'shirt')) {
+    assert.notEqual(roleColour(c, p.role, null), null, `${p.role} is not in his palette`);
+  }
+  // the lapels as figure.js draws them: the suit mixed with black by 0.22
+  const lapel = roleColour(c, 'suit*0.78', null).map((v) => Math.round(v * 255));
+  const want = mix(c.suit, '#000000', 0.22).match(/\w\w/g).map((h) => parseInt(h, 16));
+  lapel.forEach((v, i) => assert.ok(Math.abs(v - want[i]) <= 1, `lapel ${lapel} against ${want}`));
+});
+
+test("Carl's fists are bare: his shirt's cuffs end at the wrist", () => {
+  const reach = (p) => {
+    let m = 0;
+    for (let i = 0; i < p.positions.length; i += 3) m = Math.max(m, Math.abs(p.positions[i + 2]));
+    return m;
+  };
+  const skin = reach(carlBody.find((p) => p.role === 'skin'));
+  for (const p of carlBody.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.06, `${p.role} reaches over the hands`);
+});
+
+test('a role in shade takes its palette colour darkened, and an unknown role keeps its own', () => {
+  const pal = { suit: '#4a4038' };
+  assert.deepEqual(roleColour(pal, 'suit', [1, 1, 1]), [0x4a / 255, 0x40 / 255, 0x38 / 255]);
+  assert.deepEqual(roleColour(pal, 'suit*0.5', [1, 1, 1]), [0x4a / 510, 0x40 / 510, 0x38 / 510]);
+  assert.deepEqual(roleColour(pal, 'shirt', [1, 1, 1]), [1, 1, 1]);
+  assert.deepEqual(roleColour(pal, 'suit2*0.5', [0, 0, 1]), [0, 0, 1]);
 });
