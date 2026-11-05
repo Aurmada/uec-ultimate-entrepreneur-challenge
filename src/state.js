@@ -13,7 +13,10 @@ import { currentUser } from './auth.js';
 const DEFAULTS = () => ({
   profile: null,           // { name, company, photo, baseId, c1, c2, special }
   stats: { wins: 0, losses: 0, kos: 0, streak: 0, bestStreak: 0, points: 0, matches: 0 },
-  settings: { volume: 80, music: true, sfx: true, graphics: 'classic' },   // graphics: 'classic' or '3d'
+  // graphics: '3d' or '2d' as the player chose, or null, not chosen: 3D
+  // wherever it can be drawn (graphics.js). v3.13 saved 'classic' as everyone's
+  // default, so it reads as not chosen too.
+  settings: { volume: 80, music: true, sfx: true, graphics: null },
   tutorialSeen: false,
   storySeen: false,        // the intro plays once, then lives under THE STORY
   lastSelf: 'custom',      // who you play AS (your founder, or a roster character)

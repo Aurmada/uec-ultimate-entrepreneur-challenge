@@ -71,6 +71,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.14: the game is 3D
+
+- 🎮 **3D for everyone.** The nine founders are 3D fighters now, each in their own fighting style, on rendered stages, wherever your browser can draw them. Prefer the original look? Open Settings and switch GRAPHICS to 2D, and the game remembers. Browsers without WebGL2 stay in 2D.
+- 📶 **A little more to download the first time.** Each founder's model is fetched the first time you see them, 1.5 to 2 MB each, so a first visit on mobile data takes a little longer. After that your browser keeps them.
+
 ## What's new in v3.13: 2D or 3D, your choice
 
 - 🕹️ **Pick 2D or 3D in Settings.** Switch GRAPHICS to 3D and the nine founders become 3D fighters on stages rendered in Blender, with the new hit effects. The game reloads once to switch, and you can go back to 2D any time. 3D needs a browser with WebGL2; without it you stay in 2D. It only changes how the fight looks, never what happens in it, so you can play anyone online either way. 3D is new, so it is still being tested.

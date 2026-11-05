@@ -6,13 +6,13 @@ Read in this order: `docs/HANDOFF.md` (where things stand, what is next, what th
 
 ## Branches
 
-- `main`: the live game (see `VERSION` in `src/config.js`; v3.13 in early November 2026). Since v3.10 it carries the 3D fighters, Blender-rendered stages and fighting-game effects, off by default: `?gl` or the Settings switch (2D or 3D, since v3.13) turns them on, and in 3D the roster wear their sculpted models and fight in their own forms. `docs/HANDOFF.md` lists the other branches and which are released.
+- `main`: the live game (see `VERSION` in `src/config.js`; v3.14 in early November 2026). It is 3D by default since v3.14: 3D fighters, Blender-rendered stages and fighting-game effects, the roster in their sculpted models fighting in their own forms. The classic 2D game is the Settings choice (2D or 3D), the fallback without WebGL2, and `?gl=0` in the address. `docs/HANDOFF.md` lists the other branches and which are released.
 - `live-3d` and `claude/game-review-enhance-29bffb`: the prototype's earlier branches, superseded by `main`. Work on the 3D path now branches from `main`.
 
 ## Run and test
 
 ```bash
-python3 dev-server.py 4173    # then http://localhost:4173/?debug=1  (add &gl for the 3D prototype)
+python3 dev-server.py 4173    # then http://localhost:4173/?debug=1  (3D by default; add &gl=0 for the 2D game)
 npm test                      # Node 21+, no npm install: there are no dependencies
 ```
 

@@ -1,7 +1,7 @@
 // Which renderer pieces a page load turns on (src/graphics.js): from the
-// address, as the lab always has, or from the player's Settings choice. The
-// one thing that must never move is the default: nothing in the address and
-// no choice made is the classic game, every flag off.
+// address, as the lab always has, or from the player's Settings choice. With
+// neither, the game is 3D (since v3.14) wherever the browser can draw it, and
+// otherwise the classic 2D game, every flag off; choosing 2D is that game too.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,17 +9,29 @@ import { graphicsFlags, withoutGraphicsParams } from '../src/graphics.js';
 
 const ALL_OFF = { gl: false, ids: [], sculpts: false, perf: false, sharp: false, stages: false, fx: false };
 
-test('with nothing asked for, the game is the classic one', () => {
-  assert.deepEqual(graphicsFlags('', {}), ALL_OFF);
-  assert.deepEqual(graphicsFlags('', { graphics: 'classic' }), ALL_OFF);
-  assert.deepEqual(graphicsFlags('?debug=1', { volume: 80 }), ALL_OFF);
-  assert.deepEqual(graphicsFlags(undefined, undefined), ALL_OFF);
+const ALL_3D = { gl: true, ids: [], sculpts: true, perf: false, sharp: true, stages: true, fx: true };
+
+test('with nothing asked for, the game is 3D, or the classic one without WebGL2', () => {
+  assert.deepEqual(graphicsFlags('', {}), ALL_3D);
+  assert.deepEqual(graphicsFlags('?debug=1', { volume: 80 }), ALL_3D);
+  assert.deepEqual(graphicsFlags(undefined, undefined), ALL_3D);
+  const none = { webgl2: false };
+  assert.deepEqual(graphicsFlags('', {}, none), ALL_OFF);
+  assert.deepEqual(graphicsFlags('?debug=1', { volume: 80 }, none), ALL_OFF);
+  assert.deepEqual(graphicsFlags(undefined, undefined, none), ALL_OFF);
 });
 
-test('choosing the 3D preview in Settings turns on what ?gl does', () => {
-  const chosen = graphicsFlags('', { graphics: '3d' });
-  assert.deepEqual(chosen, { ...graphicsFlags('?gl', {}), ids: [] });
-  assert.deepEqual(chosen, { gl: true, ids: [], sculpts: true, perf: false, sharp: true, stages: true, fx: true });
+test('choosing 2D in Settings is the classic game, and 3D is what ?gl does', () => {
+  // v3.13 saved 'classic' for everyone as the default: it is no choice
+  assert.deepEqual(graphicsFlags('', { graphics: 'classic' }), ALL_3D);
+  assert.deepEqual(graphicsFlags('', { graphics: null }), ALL_3D);
+  assert.deepEqual(graphicsFlags('', { graphics: '2d' }), ALL_OFF);
+  assert.deepEqual(graphicsFlags('?debug=1', { graphics: '2d' }), ALL_OFF);
+  assert.deepEqual(graphicsFlags('', { graphics: '3d' }), ALL_3D);
+  assert.deepEqual(graphicsFlags('', { graphics: '3d' }), { ...graphicsFlags('?gl', { graphics: '2d' }), ids: [] });
+  // the address turns 3D off for the lab whatever was chosen
+  assert.deepEqual(graphicsFlags('?gl=0', {}), ALL_OFF);
+  assert.deepEqual(graphicsFlags('?gl=0', { graphics: '3d' }), ALL_OFF);
 });
 
 test('the address still works as before, and wins where it names a piece', () => {
@@ -28,9 +40,9 @@ test('the address still works as before, and wins where it names a piece', () =>
   assert.equal(graphicsFlags('?gl&stages=0', {}).stages, false);
   assert.equal(graphicsFlags('?stages=0', { graphics: '3d' }).stages, false, 'the address lost to the setting');
   // one piece alone, with the 2D fighters
-  assert.deepEqual(graphicsFlags('?sharp', {}), { ...ALL_OFF, sharp: true });
-  assert.deepEqual(graphicsFlags('?fx', {}), { ...ALL_OFF, fx: true });
-  assert.deepEqual(graphicsFlags('?stages', {}), { ...ALL_OFF, stages: true });
+  assert.deepEqual(graphicsFlags('?gl=0&sharp', {}), { ...ALL_OFF, sharp: true });
+  assert.deepEqual(graphicsFlags('?fx', { graphics: '2d' }), { ...ALL_OFF, fx: true });
+  assert.deepEqual(graphicsFlags('?stages', {}, { webgl2: false }), { ...ALL_OFF, stages: true });
 });
 
 // In 3D the roster wear their sculpted models; the address can still put
@@ -40,7 +52,7 @@ test('3D is the sculpted roster, unless the address asks for another body', () =
   assert.equal(graphicsFlags('?gl&sculpts=0', {}).sculpts, false);
   assert.equal(graphicsFlags('?sculpts=0', { graphics: '3d' }).sculpts, false, 'the address lost to the setting');
   assert.equal(graphicsFlags('?gl&athlete', {}).sculpts, false, 'the sculpts hid the athlete bodies');
-  assert.equal(graphicsFlags('?sculpts', {}).sculpts, false, 'sculpts without 3D fighters');
+  assert.equal(graphicsFlags('?sculpts', { graphics: '2d' }).sculpts, false, 'sculpts without 3D fighters');
   assert.equal(graphicsFlags('?gl&athlete&sculpts', {}).sculpts, true);
 });
 

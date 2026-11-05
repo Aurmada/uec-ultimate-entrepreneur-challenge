@@ -6,10 +6,10 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.13 on GitHub Pages
+The game is live at v3.14 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-11-05: players choose 2D or 3D in Settings, and in 3D the nine
-founders are the sculpted cast below, each in their own fighting form (see
+on 2026-11-05: 3D by default, the nine founders the sculpted cast below, each
+in their own fighting form, and 2D a choice in Settings (see "v3.14" and
 "v3.13"). v3.12 was built on 2026-10-30 but never reached `main`; it went
 out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
@@ -49,7 +49,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.13 (`SIM_VERSION` 9): 2D or 3D in Settings, the sculpted cast in 3D | Deployed. A push here is a release. 536 tests pass. |
+| `main` | The live game, v3.14 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 538 tests pass. |
 | `claude/jeff-model` | The remodel of the cast, released as v3.13; `main` is this branch | Merged into `main` on 2026-11-05. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
@@ -863,6 +863,29 @@ Next: the owner's call on putting the sculpts in front of players.
   peek-a-boo (Kim) and tai chi (Cathie). Only the punch has a track of its
   own in each; the kicks, the launcher and the specials are still the shared
   ones.
+
+## v3.14, released 2026-11-05: 3D by default
+
+The owner, after playing v3.13: "there is a big difference between 2D and 3D.
+3D looks way better, it is not because of the graphics but the character
+models are built well on 3D", and "on the phone, the 3d works really
+work. so lets default to that".
+
+- **3D unless the player chooses 2D** (`graphics.js`): `Save.settings.graphics`
+  is `'3d'`, `'2d'` or not chosen, which is 3D wherever the browser has
+  WebGL2 (`hasWebGL2`) and the classic 2D game where it has not. v3.13 saved
+  `'classic'` as everyone's default, so it reads as not chosen: a player who
+  chose Classic in v3.13's few hours live is back in 3D and can switch again.
+  The switch now saves `'2d'`. `?gl=0` is the 2D game whatever was chosen.
+- **The first visit downloads more:** the founder model (1.3 MB, preloaded),
+  each sculpt the first time it is wanted (1.5 to 2 MB; the select screen's
+  portraits want all nine, about 15 MB), and the stages (1.9 MB). The models
+  could be made about half the size (quantized positions, normals and
+  weights, which the game's own GLB reader would have to learn), if the
+  owner wants it.
+- Checked in a browser: a new player, a v3.13 player and one who chose 3D
+  load in 3D; one who chose 2D, or `?gl=0`, in 2D; the switch goes to 2D,
+  saves `'2d'` and reloads. `test/graphics.test.js` pins each case.
 
 ## v3.13, released 2026-11-05: 2D or 3D
 

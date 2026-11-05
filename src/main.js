@@ -2,7 +2,7 @@
 
 import { STAGE, DEBUG, VERSION } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
-import { graphicsFlags } from './graphics.js';
+import { graphicsFlags, hasWebGL2 } from './graphics.js';
 import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter, toCharacter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
 import { audio, installAudioUnlock } from './engine/audio.js';
@@ -1172,7 +1172,7 @@ function boot() {
   // render.js), so the 3D is judged at its real sharpness; the arenas rendered
   // in Blender (engine/stage.js); and the fighting-game hit effects
   // (engine/vfx.js). Each defaults to off, which is the classic game.
-  const gfx = graphicsFlags(location.search, Save.settings);
+  const gfx = graphicsFlags(location.search, Save.settings, { webgl2: hasWebGL2() });
   // In 3D the roster wear their sculpted models and fight in their own forms;
   // ?gl&athlete puts them in the athlete bodies instead, on test (models3d.js).
   if (gfx.sculpts) sculpts3D(true);
