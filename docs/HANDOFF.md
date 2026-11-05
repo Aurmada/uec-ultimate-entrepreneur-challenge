@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash and signature special, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 546 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, steal and bomb, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 547 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1014,6 +1014,36 @@ nothing, the old computed swing.
   command normal of the same kind still plays the basic. Fails with the
   lookup reverted. Both pixel checks identical; real matches firing Kim's,
   Adam's and Cathie's run with no errors.
+
+### The steal and the bomb in each form (2026-11-05, not released)
+
+The owner, again: "not yet, keep going". The two moves every fighter has
+borrowed a basic in 3D: the energy steal the punch, the bomb the slap. A
+throw needed nothing: only Carl throws, HOSTILE TAKEOVER has its own track
+above, and his ASSET SEIZURE command grab plays his punch, which is already
+a seizure.
+
+- **By kind** (FORMS `moves`; `trackedAttackPose` looks for `kind:<kind>`
+  after a signature special and before the borrowed basic). A steal reaches
+  in at `STEAL.reach`, the hand closing on what it takes and bringing it
+  home; a bomb is lobbed, leaving the hand as the active window opens, which
+  is when `Game.spawnBomb` sends it.
+- **Each:** Jeff snatches it like a jab and lobs overhand from beside his ear;
+  Adam swipes across with his weight behind it and heaves overhand from a
+  big wind-up; Carl takes it with the reaching hand and tosses underhand,
+  the briefcase kept back; Steve lifts it and holds it up for the crowd, and
+  flips the bomb up showily; Elo swipes lazily up from the dropped hand and
+  flicks it sidearm; Scam's hand comes out of his pocket for both, and goes
+  straight back in; Lizbeth thrusts the open hand along her line and throws
+  like a dart; Kim darts in under it and flicks the bomb from her guard;
+  Cathie reaches slowly, palm up, as if accepting it, and releases the bomb
+  underhand.
+- Tests: every form has both, valid, from its guard and back with the lead
+  hand's shape, and neither is the borrowed basic in the middle. Fails with
+  the lookup reverted, and with Adam's first key left without its fist (an
+  unshaped first key takes the next key's open hand). Both pixel checks
+  identical; real matches with Adam and Scam stealing and throwing run with
+  no errors.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 

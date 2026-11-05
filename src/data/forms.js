@@ -927,6 +927,272 @@ const CALM_ROUND = {
   ]),
 };
 
+// ---------------------------------------------------------------- shared moves
+// The two moves every fighter has, in each form (FORMS `moves`, by kind):
+// the energy steal, which borrowed the punch, and the bomb, which borrowed the
+// slap. A steal reaches in at its own reach (STEAL.reach), the hand closing on
+// what it takes and bringing it home; a bomb is lobbed, leaving the hand as
+// the active window opens (Game.spawnBomb). From the guard and back.
+
+// He snatches it the way he jabs, and tucks it into his chest.
+const BOX_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: BOX_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 44, y: -166 }, bodyLean: 0.1, twist: -0.08 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 40, y: -164 }, twist: -0.1 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 108, y: -150 }, headX: 4, bodyLean: 0.2, twist: 0.18, hipTwist: 0.06 }, ease: 'outBack', smear: true },
+    { t: 1.6, hand: 'fist', joints: { armF: { x: 104, y: -150 } } },
+    { t: 2, hand: 'fist', joints: { armF: { x: 102, y: -150 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 40, y: -150 }, headX: 2, bodyLean: 0.1, twist: -0.04, hipTwist: 0 }, ease: 'outCubic' },
+    { t: 3, hand: 'fist', joints: BOX_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// An overhand lob from beside his ear.
+const BOX_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: BOX_AT },
+    { t: 0.55, hand: 'fist', joints: { armF: { x: 20, y: -200 }, bodyLean: 0.02, twist: -0.2 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'fist', joints: { armF: { x: 14, y: -206 }, twist: -0.24 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 90, y: -196 }, headX: 4, bodyLean: 0.2, twist: 0.22, hipTwist: 0.08 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armF: { x: 92, y: -190 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armF: { x: 64, y: -176 }, headX: 2, bodyLean: 0.14, twist: 0.04, hipTwist: 0 }, ease: 'outQuad' },
+    { t: 3, hand: 'fist', joints: BOX_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// A grabby swipe across, his weight thrown in after it.
+const BRAWL_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: BRAWL_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 40, y: -150 }, bodyLean: 0.1, twist: -0.15 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 34, y: -154 }, twist: -0.2 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 110, y: -128 }, headX: 6, bodyLean: 0.3, twist: 0.25, hipTwist: 0.1 }, ease: 'outBack', smear: true },
+    { t: 1.6, hand: 'fist', joints: { armF: { x: 100, y: -122 } } },
+    { t: 2, hand: 'fist', joints: { armF: { x: 98, y: -122 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 48, y: -118 }, headX: 2, bodyLean: 0.16, twist: 0.02, hipTwist: 0 }, ease: 'outCubic' },
+    { t: 3, hand: 'fist', joints: BRAWL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Heaved overhand, wound right back first, the step and the body behind it.
+const BRAWL_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: BRAWL_AT },
+    { t: 0.55, joints: { armF: { x: -10, y: -206 }, armB: { x: 50, y: -150 }, hipY: B_HIP - 4, bodyLean: -0.06, twist: -0.35, hipTwist: -0.15 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: -18, y: -212 }, twist: -0.4 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 100, y: -180 }, armB: { x: 20, y: -130 }, hipY: B_HIP, headX: 6, bodyLean: 0.34, twist: 0.35, hipTwist: 0.15, legF: { x: 44, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armF: { x: 100, y: -176 } }, hold: true },
+    { t: 2.5, hand: 'fist', joints: { armF: { x: 70, y: -138 }, armB: { x: 40, y: -134 }, headX: 3, bodyLean: 0.2, twist: 0.05, hipTwist: 0, legF: { x: 36, y: 0 } }, ease: 'outQuad' },
+    { t: 3, hand: 'fist', joints: BRAWL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The reaching hand takes it, the briefcase kept back.
+const GRAB_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: GRAB_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 50, y: -130 }, hipY: G_HIP + 4, bodyLean: 0.26, twist: -0.12 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 46, y: -128 }, twist: -0.15 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 112, y: -128 }, headX: 6, bodyLean: 0.36, twist: 0.2, hipTwist: 0.08 }, ease: 'outBack', smear: true },
+    { t: 1.6, hand: 'fist', joints: { armF: { x: 108, y: -126 } } },
+    { t: 2, hand: 'fist', joints: { armF: { x: 106, y: -126 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 50, y: -128 }, hipY: G_HIP, headX: 2, bodyLean: 0.22, twist: -0.06, hipTwist: 0 }, ease: 'outCubic' },
+    { t: 3, hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Tossed underhand, low to high, the hunch kept.
+const GRAB_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: GRAB_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 20, y: -96 }, hipY: G_HIP + 6, bodyLean: 0.3, twist: -0.12 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 12, y: -92 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 96, y: -158 }, hipY: G_HIP - 2, headX: 4, bodyLean: 0.2, twist: 0.14 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armF: { x: 96, y: -162 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armF: { x: 72, y: -142 }, hipY: G_HIP, headX: 2, bodyLean: 0.22, twist: 0.02 }, ease: 'outQuad' },
+    { t: 3, hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// He lifts it from you, then holds it up high for the crowd to see.
+const SHOW_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: SHOW_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 50, y: -160 }, bodyLean: -0.02, twist: -0.1 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 46, y: -158 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 110, y: -150 }, headX: 4, bodyLean: 0.1, twist: 0.2 }, ease: 'outBack', smear: true },
+    { t: 1.6, hand: 'fist', joints: { armF: { x: 106, y: -150 } } },
+    { t: 2, hand: 'fist', joints: { armF: { x: 104, y: -150 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 56, y: -224 }, headX: 0, bodyLean: -0.12, twist: -0.04 }, ease: 'outCubic' },
+    { t: 3, hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Flipped up and over with the presenting hand, a little showily.
+const SHOW_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: SHOW_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 58, y: -140 }, bodyLean: -0.04, twist: -0.06 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -134 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 84, y: -216 }, headX: 1, bodyLean: -0.1, twist: 0.12 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armF: { x: 82, y: -218 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armF: { x: 72, y: -184 }, headX: 2, bodyLean: -0.06, twist: 0.03 }, ease: 'outQuad' },
+    { t: 3, hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// A lazy swipe up from the dropped hand.
+const ROLL_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: ROLL_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 24, y: -108 }, bodyLean: 0.02, twist: -0.1 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 20, y: -106 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 106, y: -122 }, headX: 3, bodyLean: 0.14, twist: 0.18 }, ease: 'outBack', smear: true },
+    { t: 1.6, hand: 'fist', joints: { armF: { x: 100, y: -120 } } },
+    { t: 2, hand: 'fist', joints: { armF: { x: 98, y: -120 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 36, y: -110 }, headX: 2, bodyLean: -0.04, twist: 0 }, ease: 'outCubic' },
+    { t: 3, hand: 'fist', joints: ROLL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Flicked sidearm from the dropped hand.
+const ROLL_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: ROLL_AT },
+    { t: 0.55, hand: 'fist', joints: { armF: { x: 0, y: -116 }, bodyLean: -0.02, twist: -0.25 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'fist', joints: { armF: { x: -6, y: -118 }, twist: -0.3 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 96, y: -150 }, headX: 3, bodyLean: 0.1, twist: 0.22 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armF: { x: 94, y: -150 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armF: { x: 50, y: -122 }, headX: 2, bodyLean: -0.02, twist: 0.02 }, ease: 'outQuad' },
+    { t: 3, hand: 'fist', joints: ROLL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The hand comes out of the pocket for it, and goes back in with it.
+const FENCE_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: FENCE_AT },
+    { t: 0.55, hand: 'open', joints: { armB: { x: 6, y: -112 }, armF: { x: 58, y: -150 }, bodyLean: 0.06, twist: -0.15 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armB: { x: 10, y: -114 }, twist: -0.18 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armB: { x: 104, y: -128 }, armF: { x: 52, y: -140 }, headX: F_HEADX + 2, bodyLean: 0.16, twist: 0.3, hipTwist: 0.1 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armB: { x: 100, y: -128 } }, hold: true },
+    { t: 2.45, hand: 'open', joints: { armB: { x: 8, y: -108 }, armF: { x: 60, y: -146 }, headX: F_HEADX, bodyLean: 0.06, twist: 0.02, hipTwist: 0 }, ease: 'outCubic' },
+    { t: 3, hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Lobbed underhand by the pocket hand, which goes straight back in.
+const FENCE_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: FENCE_AT },
+    { t: 0.55, hand: 'open', joints: { armB: { x: -20, y: -98 }, twist: -0.12 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armB: { x: -26, y: -96 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armB: { x: 80, y: -160 }, headX: F_HEADX + 1, bodyLean: 0.1, twist: 0.2 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armB: { x: 80, y: -162 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armB: { x: 6, y: -108 }, headX: F_HEADX, bodyLean: 0.04, twist: 0.02 }, ease: 'outQuad' },
+    { t: 3, hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// A precise thrust of the open hand along her line, and back.
+const EN_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: EN_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 44, y: -140 }, bodyLean: 0 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 40, y: -140 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 112, y: -140 }, hipY: E_HIP + 4, headX: 4, bodyLean: 0.08, legF: { x: 34, y: 0 }, legB: { x: -22, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 1.6, hand: 'fist', joints: { armF: { x: 110, y: -140 } } },
+    { t: 2, hand: 'fist', joints: { armF: { x: 108, y: -140 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 50, y: -138 }, hipY: E_HIP, headX: 2, bodyLean: 0.02, legF: { x: 17, y: 0 }, legB: { x: -17, y: 0 } }, ease: 'outCubic' },
+    { t: 3, hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Thrown overhand like a dart, exactly.
+const EN_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: EN_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 36, y: -188 }, bodyLean: -0.02, twist: -0.12 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 32, y: -192 }, twist: -0.14 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 100, y: -176 }, headX: 3, bodyLean: 0.08, twist: 0.14 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armF: { x: 100, y: -174 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armF: { x: 70, y: -150 }, headX: 2, bodyLean: 0.02, twist: 0.02 }, ease: 'outQuad' },
+    { t: 3, hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// She darts in under it, swipes, and is back in her shell.
+const PEEK_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: PEEK_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 50, y: -146 }, hipY: K_HIP + 6, bodyLean: 0.26, twist: -0.1 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 48, y: -144 }, hipY: K_HIP + 8 }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 104, y: -136 }, headX: 6, bodyLean: 0.34, twist: 0.2, legF: { x: 32, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 1.6, hand: 'fist', joints: { armF: { x: 100, y: -136 } } },
+    { t: 2, hand: 'fist', joints: { armF: { x: 98, y: -136 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 56, y: -150 }, hipY: K_HIP + 2, headX: 2, bodyLean: 0.2, twist: 0, legF: { x: 22, y: 0 } }, ease: 'outCubic' },
+    { t: 3, hand: 'fist', joints: PEEK_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// A short flick from the guard, the other fist never leaving her jaw.
+const PEEK_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'fist', joints: PEEK_AT },
+    { t: 0.55, hand: 'fist', joints: { armF: { x: 46, y: -170 }, twist: -0.1 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'fist', joints: { armF: { x: 42, y: -174 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armF: { x: 94, y: -170 }, headX: 4, bodyLean: 0.24, twist: 0.16 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armF: { x: 92, y: -168 } }, hold: true },
+    { t: 2.5, hand: 'fist', joints: { armF: { x: 62, y: -156 }, headX: 2, bodyLean: 0.2, twist: 0.02 }, ease: 'outQuad' },
+    { t: 3, hand: 'fist', joints: PEEK_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// A slow reach, palm up, as if accepting it, and it goes to her chest.
+const CALM_STEAL = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: CALM_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 60, y: -136 }, bodyLean: -0.02 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 58, y: -134 } }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 108, y: -132 }, headX: 3, bodyLean: 0.06, twist: 0.1 }, ease: 'outCubic' },
+    { t: 2, hand: 'open', joints: { armF: { x: 106, y: -130 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armF: { x: 50, y: -150 }, headX: 2, bodyLean: -0.02, twist: 0 }, ease: 'outQuad' },
+    { t: 3, hand: 'open', joints: CALM_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Released underhand, slowly, palm up.
+const CALM_BOMB = {
+  own: true,
+  keys: carried([
+    { t: 0, hand: 'open', joints: CALM_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 50, y: -110 }, hipY: T_HIP + 2, bodyLean: -0.04 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 44, y: -104 } }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 98, y: -170 }, hipY: T_HIP, headX: 3, bodyLean: 0.02, twist: 0.08 }, ease: 'outCubic' },
+    { t: 2, hand: 'open', joints: { armF: { x: 100, y: -172 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armF: { x: 80, y: -150 }, headX: 2, bodyLean: -0.02, twist: 0.02 }, ease: 'outQuad' },
+    { t: 3, hand: 'open', joints: CALM_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -977,6 +1243,8 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { sameday: BOX_DELIVERY },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: BOX_STEAL, bomb: BOX_BOMB },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -1026,6 +1294,8 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { burnitall: BRAWL_BURN },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: BRAWL_STEAL, bomb: BRAWL_BOMB },
   },
   grappling: {
     stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
@@ -1080,6 +1350,8 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { takeover: GRAB_TAKEOVER },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: GRAB_STEAL, bomb: GRAB_BOMB },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -1128,6 +1400,8 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { pitchdeck: SHOW_DECK },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: SHOW_STEAL, bomb: SHOW_BOMB },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -1171,6 +1445,8 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { burnrate: ROLL_BLAST },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: ROLL_STEAL, bomb: ROLL_BOMB },
   },
   fence: {
     stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
@@ -1215,6 +1491,8 @@ export const FORMS = {
       drop: 10, lean: 0.3, legF: { x: 30, y: -8 }, legB: { x: -26, y: -6 },
       back: { drop: 2, lean: -0.06, legF: { x: 16, y: -4 }, legB: { x: -26, y: -6 } },
     },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: FENCE_STEAL, bomb: FENCE_BOMB },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -1263,6 +1541,8 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { pivot: EN_PIVOT },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: EN_STEAL, bomb: EN_BOMB },
   },
   peekaboo: {
     stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
@@ -1312,6 +1592,8 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { growthhack: PEEK_RUSH },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: PEEK_STEAL, bomb: PEEK_BOMB },
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -1364,5 +1646,7 @@ export const FORMS = {
     },
     // Its signature special, in its own form (above).
     specials: { fundinground: CALM_ROUND },
+    // The steal and the bomb everyone has, in its own way (above).
+    moves: { steal: CALM_STEAL, bomb: CALM_BOMB },
   },
 };

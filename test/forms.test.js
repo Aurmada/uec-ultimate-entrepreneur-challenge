@@ -692,3 +692,35 @@ test("every sculpt's signature special plays its own track, from its guard and b
   }
   assert.equal(own, 8, `${own} signature specials have their own track`);
 });
+
+// And the two moves everyone has, the energy steal and the bomb, which
+// borrowed the punch and the slap: each form's own, from its guard and back.
+test('every form steals and throws the bomb its own way, from its guard and back', async () => {
+  const { STEAL, BOMB } = await import('../src/config.js');
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const guard = computePose({ def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form);
+    for (const [kind, T] of [['steal', STEAL], ['bomb', BOMB]]) {
+      const track = form.moves?.[kind];
+      assert.ok(track, `${name} ${kind}s with its ${kind === 'steal' ? 'punch' : 'slap'}`);
+      assert.deepEqual(validateTrack(`${name}.${kind}`, track, { attack: true }), []);
+      const a = { kind, hasHit: false, startup: T.startup, active: T.active, recovery: T.recovery, reach: T.reach };
+      const at = (stateT, attack = a) => computePose({ def, state: 'attack', stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, attack }, 0, form);
+      for (const [k, stateT] of [[0, 0], [3, a.startup + a.active + a.recovery]]) {
+        const P = at(stateT), what = `${name}'s ${kind} at ${k}`;
+        for (const c of ['hipY', 'shoulderY', 'headY', 'headX', 'bodyLean', 'sx', 'sy']) {
+          assert.ok(Math.abs((P[c] ?? 0) - (guard[c] ?? 0)) < 1e-6, `${what}: ${c} ${P[c]} against the guard's ${guard[c]}`);
+        }
+        for (const l of ['armF', 'armB', 'legF', 'legB']) {
+          assert.ok(Math.hypot(P[l].x - guard[l].x, P[l].y - guard[l].y) < 1e-6, `${what}: ${l} leaves the guard`);
+        }
+        assert.equal(P.hand || 'fist', guard.hand || 'fist', `${what}: the lead hand`);
+      }
+      const mid = a.startup + a.active / 2;
+      const borrowed = at(mid, { ...a, kind: kind === 'steal' ? 'punch' : 'slap' });
+      const P = at(mid);
+      assert.notDeepEqual([P.armF, P.armB], [borrowed.armF, borrowed.armB], `${name}'s ${kind} is the borrowed basic`);
+    }
+  }
+});
