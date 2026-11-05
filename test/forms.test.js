@@ -14,9 +14,11 @@ import { figureFrame } from '../src/engine/figure.js';
 import { validateTrack } from '../src/engine/anim.js';
 import { FORMS } from '../src/data/forms.js';
 import { FIGHTERS, BASE_CHARACTERS, getFighter } from '../src/data/fighters.js';
-import { MODELS3D } from '../src/data/models3d.js';
+import { MODELS3D, FIGHTER_MODELS, DEFAULT_MODEL } from '../src/data/models3d.js';
 import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { buildRig, solvePose, transformPoint } from '../src/engine/gl3d/rig.js';
+import { ATTACKS, STYLES } from '../src/config.js';
+import { form3D } from '../src/engine/gl3d/index.js';
 
 const BOXING = FORMS.boxing;
 const jeff = getFighter('bozo');
@@ -415,4 +417,45 @@ test('the push is placed, not thrown: drawn in, out level with the hips still, a
   assert.ok(pushAt(1.6).armF.x > guard.armF.x + 35 && Math.abs(pushAt(1.6).armF.y - guard.armF.y) < 4, 'not placed out level');
   assert.ok(pushAt(1.6).bodyLean > guard.bodyLean + 0.05, 'her weight does not move behind it');
   for (const [name, track] of Object.entries(TAICHI.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});
+
+// Every form's punch leaves from the guard the fighter stands in and comes
+// back to it, at the reach the game gives it (the punch's, by the fighter's
+// style: only Jeff's straight was ever tested at the nominal 84). A wrong
+// first or last key, the reach re-scale moving the guard, or the rear hand
+// measured from the stock chin instead of the guard's each made the hands,
+// the head or the stance jump on the first frame of a punch and back on the
+// last. The idle's own motion (a form's roll) is left out: it moves anyway.
+test("every sculpt's punch leaves from its idle guard and comes back to it, at the game's reach", () => {
+  const ids = Object.keys(MODELS3D).filter((k) => k.startsWith('sculpt:') && MODELS3D[k].form).map((k) => k.slice(7));
+  assert.ok(ids.length >= 9, `only ${ids.length} sculpts have a form`);
+  for (const id of ids) {
+    const def = getFighter(id), form = FORMS[MODELS3D[`sculpt:${id}`].form];
+    const atk = { ...ATTACKS.punch, kind: 'punch', reach: ATTACKS.punch.reach * (STYLES[def.style] || STYLES.balanced).reach };
+    const at = (state, stateT, extra = {}) => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, 0, form);
+    const guard = at('idle', 0);
+    for (const [k, stateT] of [[0, 0], [3, atk.startup + atk.active + atk.recovery]]) {
+      const P = at('attack', stateT, { attack: atk });
+      for (const c of ['hipY', 'shoulderY', 'headY', 'headX', 'bodyLean', 'sx', 'sy']) {
+        assert.ok(Math.abs((P[c] ?? 0) - (guard[c] ?? 0)) < 1e-6, `${id} at ${k}: ${c} ${P[c]} against the guard's ${guard[c]}`);
+      }
+      for (const l of ['armF', 'armB', 'legF', 'legB']) {
+        assert.ok(Math.hypot(P[l].x - guard[l].x, P[l].y - guard[l].y) < 1e-6,
+          `${id} at ${k}: ${l} (${P[l].x.toFixed(2)}, ${P[l].y.toFixed(2)}) against the guard's (${guard[l].x.toFixed(2)}, ${guard[l].y.toFixed(2)})`);
+      }
+    }
+  }
+});
+
+// What keeps a form out of the 2D game is the model it belongs to (gl3d
+// form3D): a fighter takes one only while drawn in 3D, in a sculpt that names
+// it. The default model and the other bodies name none, nobody wears a sculpt
+// by default, and with nothing drawn in 3D no fighter has a form at all.
+test('a form reaches a fighter only through a sculpt drawn in 3D', () => {
+  for (const [id, spec] of Object.entries(MODELS3D)) {
+    if (spec.form) assert.ok(id.startsWith('sculpt:') && FORMS[spec.form], `${id} names a form`);
+  }
+  assert.equal(MODELS3D[DEFAULT_MODEL].form, undefined);
+  assert.deepEqual(Object.keys(FIGHTER_MODELS), [], 'a fighter wears a sculpt by default');
+  for (const def of [...FIGHTERS, ...BASE_CHARACTERS]) assert.equal(form3D(def), null, `${def.id} has a form with nothing drawn in 3D`);
 });

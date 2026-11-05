@@ -202,8 +202,9 @@ export const SCULPTED = {
     },
     form: 'showboating',
   },
-  // Elo (2026-11-04): the tallest, 1.28 times Jeff's height and as long in the
-  // leg, heavy-set, a small head for his size (lab/blender/fighters/elo.py):
+  // Elo (2026-11-04): the tallest of the men, 1.28 times Jeff's height and as
+  // long in the leg, heavy-set, a small head for his size
+  // (lab/blender/fighters/elo.py):
   // big eyes 0.034 out at 1.828 under a brow ridge set high, its painted line
   // at 1.855; a small mouth meeting at 1.7425. His 2D stance leans back, chin
   // up, so his sculpt adds no lean of its own. A shoulder roll (data/forms.js).
@@ -363,9 +364,12 @@ const CELLS = FACE_STATES.map((_, i) => [
 ]);
 export const faceCell = (state) => CELLS[Math.max(0, FACE_STATES.indexOf(state))];
 
-// Fighters whose painted faces match share one texture. drawFace reads only
-// the expression and the fighter's face values, and the painted look options
-// read nothing but themselves, so those are the key of a drawn face. A photo
+// Fighters whose painted faces match share one texture. A painter reads the
+// expression, the fighter's face values and the two palette colours a face is
+// drawn in (the hair for the brows and stubble, the skin for the lips, as the
+// sculpted heads' painter has them), and the painted look options read nothing
+// but themselves, so those are the key of a drawn face: keyed without the
+// colours, a recoloured fighter took whichever brows were painted first. A photo
 // founder's face is their photo, keyed by a short fingerprint of it (it is a
 // data URL); until it decodes they wear their drawn face, under its own key.
 const drawnKeys = new WeakMap();
@@ -373,7 +377,7 @@ export function drawnFaceKey(def) {
   if (!drawnKeys.has(def)) {
     const look = resolveLook3D(def);
     const painted = Object.entries(PAINTED_LOOKS).map(([slot, options]) => (options.includes(look[slot]) ? look[slot] : null));
-    drawnKeys.set(def, JSON.stringify([def.face || null, ...painted]));
+    drawnKeys.set(def, JSON.stringify([def.face || null, def.c?.hair || null, def.c?.skin || null, ...painted]));
   }
   return drawnKeys.get(def);
 }

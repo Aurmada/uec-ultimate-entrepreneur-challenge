@@ -797,8 +797,41 @@ moving behind it, no turn of the hips and hardly any of the shoulders, and
 back the way it went; the hand never closes. She turns the block aside with
 the briefcase. `test/forms.test.js`, `test/sculpt3d.test.js`.
 
-All nine are remodelled. Next: Jeff's parcel and Adam's mat, with their next
-look, then the owner's call on putting the sculpts in front of players.
+All nine are remodelled.
+
+**The review** (2026-11-04), once the cast was built: every sculpt in game in
+every state (idle, walk, crouch, jump, block, slap, punch, kick, launch,
+hitstun, a KO and victory), and the remodel's code read through by a
+separate reviewer. Nothing reaches the simulation and nothing is shared
+between fighters or builds; what it found, all fixed:
+
+- Every form's punch jumped on its first frame and back on its last. The rear
+  hand follows the head through a strike, measured from the stock guard
+  (REST) even for a form's track, which starts in the fighter's own: it is
+  now measured from the track's first key (`drawFighter.js` `trackStart`).
+  The reach re-scale moved a form's guard keys with the strike (Cathie's palm
+  11 px out on the first frame); for a form's track it now comes in over the
+  wind-up and goes over the recovery. Jeff's straight was keyed at the stock
+  height and lead foot, not his guard's (`GUARD_SY`), and Scam's slip had its
+  head 2 px back (`F_HEADX`). A test now holds every sculpt's punch to its
+  idle guard on its first and last frame, at the reach the game gives it
+  (the old ones compared a punch with its own first frame, at the nominal
+  reach, so none of this showed).
+- A recoloured fighter took the first one's painted brows and lips: the
+  face texture's key (`drawnFaceKey`) now holds the hair and skin colours the
+  painters read.
+- What keeps a form out of the 2D game is now tested where it lives, `form3D`.
+
+The last two props are made. Jeff's parcel (`parcel`) is clamped against
+his near side under the elbow, the rear arm his guard holds at his chin: in
+his rear hand, as his 2D karate stance has it at the hip, it would cover his
+face. Adam's mat (`mat`) is rolled and slung across his back from over the
+far shoulder to past the near hip, white, two straps in his accent and the
+spiral of the roll in each end. Both ride the chest and are placed where a
+ray first meets the clothes (`_hit`): projected onto cloth that hangs, the
+mat stood a hand's width off his back, which a test now catches.
+
+Next: the owner's call on putting the sculpts in front of players.
 
 **Gaps, now the whole cast is built:**
 
@@ -817,9 +850,11 @@ look, then the owner's call on putting the sculpts in front of players.
 - Accessories: shades, glasses, the visor, Kim's earrings and Cathie's
   brooch are made.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
-- Props. The block briefcase, Carl's case, Steve's device, Elo's booster,
-  Scam's paperclip, Lizbeth's vial, Kim's ring light and Cathie's tablet and
-  coat are made; Jeff's parcel and Adam's mat come with their next look.
+- Props. Every 2D part is made: the block briefcase, Jeff's parcel, Adam's
+  mat, Carl's case, Steve's device, Elo's booster, Scam's paperclip,
+  Lizbeth's vial, Kim's ring light and Cathie's tablet and coat. They are
+  rigid on their bones: Cathie's coat drops with her hips in a crouch and
+  stands out stiffly in a kick, where the 2D one trails.
 - Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
   (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth), the
   peek-a-boo (Kim) and tai chi (Cathie). Only the punch has a track of its

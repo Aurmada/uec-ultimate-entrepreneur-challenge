@@ -137,8 +137,8 @@ const top = (m, p, v) => {
 test('every sculpt raises the block briefcase on its lead grip, and carries its own prop where the 2D one is', () => {
   const CASE = ['case', 'frame', 'brass'];
   const carries = {
-    bozo: { 'prop:guard-case': ['grip.L', CASE] },
-    max: { 'prop:guard-case': ['grip.L', CASE] },
+    bozo: { 'prop:guard-case': ['grip.L', CASE], 'prop:parcel': ['chest', ['hair', 'shoe']] },     // taped
+    max: { 'prop:guard-case': ['grip.L', CASE], 'prop:mat': ['chest', ['shoe', 'accent']] },        // strapped
     dex: { 'prop:guard-case': ['grip.L', CASE], 'prop:case': ['grip.R', CASE] },
     kai: { 'prop:guard-case': ['grip.L', CASE], 'prop:device': ['grip.R', ['accent']] },   // his device in his palette's accent
     elo: { 'prop:guard-case': ['grip.L', CASE], 'prop:booster': ['chest', ['accent', 'frame']] },   // worn on his back
@@ -361,4 +361,31 @@ test('her coat hangs behind her and round her sides, open in front', () => {
     if (Math.abs(P[i + 2]) < 0.08) assert.ok(P[i] < 0, `the coat closes in front (${P[i].toFixed(3)}, ${P[i + 2].toFixed(3)})`);
   }
   assert.ok(behind > 0.6 * (P.length / 3), 'it is not behind her');
+});
+
+// Jeff's parcel and Adam's mat are carried on him, not beside him: each is
+// placed by where a ray first meets the clothes (fighter3d.py `_hit`), as
+// projected onto cloth that hangs, a point stopped short and the mat stood a
+// hand's width off Adam's back.
+test("Jeff's parcel is clamped at his near side and Adam's mat lies on his back, neither floating", () => {
+  const gap = (m, name) => {
+    const body = m.primitives.filter((p) => p.name === 'body').flatMap((p) => Array.from(p.positions));
+    const prop = m.primitives.filter((p) => p.name === name).flatMap((p) => Array.from(p.positions));
+    let best = Infinity;
+    for (let i = 0; i < prop.length; i += 9) {
+      for (let j = 0; j < body.length; j += 3) {
+        const d = (prop[i] - body[j]) ** 2 + (prop[i + 1] - body[j + 1]) ** 2 + (prop[i + 2] - body[j + 2]) ** 2;
+        if (d < best) best = d;
+      }
+    }
+    return Math.sqrt(best);
+  };
+  const centre = (m, name) => {
+    const P = m.primitives.filter((p) => p.name === name).flatMap((p) => Array.from(p.positions));
+    return [0, 1, 2].map((k) => { let a = 0; for (let i = k; i < P.length; i += 3) a += P[i]; return a / (P.length / 3); });
+  };
+  assert.ok(gap(model, 'prop:parcel') < 0.03, `the parcel floats ${gap(model, 'prop:parcel').toFixed(3)} off him`);
+  assert.ok(centre(model, 'prop:parcel')[2] > 0.1, 'the parcel is not at his near side, under the rear arm');
+  assert.ok(gap(adam, 'prop:mat') < 0.03, `the mat floats ${gap(adam, 'prop:mat').toFixed(3)} off his back`);
+  assert.ok(centre(adam, 'prop:mat')[0] < -0.1, 'the mat is not on his back');
 });

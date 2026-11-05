@@ -1855,6 +1855,134 @@ def coat(name, hip, fill, pal):
     return ob
 
 
+def _worn():
+    """The outside of the clothes as last dressed (DRESS), in one field on
+    the body's samples, for what is worn or carried on them (the pieces in
+    fine fields of their own, a zip or a tie, are too small to matter)."""
+    worn = _shell(0.0)
+    worn.d[:] = np.float32(1)
+    for f in DRESS.values():
+        if f.d.shape == worn.d.shape:
+            np.minimum(worn.d, f.d, out=worn.d)
+    return worn
+
+
+def _hit(field, starts, direction, far=0.5, step=0.001):
+    """Where rays from `starts` along `direction` first meet the solid of a
+    field: a cloth that hangs or is softened is no true distance field, and
+    projected onto it from any way off, a point stopped short of it."""
+    starts = np.atleast_2d(np.asarray(starts, float))
+    ts = np.arange(0, far, step)
+    out = []
+    for p in starts:
+        Q = p[None] + ts[:, None] * np.asarray(direction, float)[None]
+        inside = field.sample(Q) < 0
+        out.append(Q[np.argmax(inside)] if inside.any() else Q[-1])
+    return np.array(out)
+
+
+def _place(ob, c, axes):
+    """Moves a mesh built about the origin to c, its x, y and z turned to the
+    columns of axes: a long thing at a slant is built straight, in a field no
+    bigger than it, and set at its slant after."""
+    co = np.zeros(len(ob.data.vertices) * 3)
+    ob.data.vertices.foreach_get('co', co)
+    co = co.reshape(-1, 3) @ np.asarray(axes, float).T + np.asarray(c, float)
+    ob.data.vertices.foreach_set('co', co.ravel())
+    ob.data.update()
+
+
+def parcel(name, chest, fill, pal):
+    """Jeff's parcel, carried under the rear arm as the 2D part is
+    (`parcel`): a box clamped against his near side under the armpit and
+    behind the arm, which his guard holds at his chin (in his rear hand, as
+    the 2D karate stance has it at the hip, it would cover his face), a
+    little turned as the 2D one is, in the part's colour (`hair`, a palette
+    role), the tape round it in his `shoe`. Built in Jeff's space on the
+    clothes as last dressed (DRESS) and warped to his. It rides the chest,
+    wholly. One object, `name`."""
+    import bpy
+    # under the elbow: further back, it stood off his side behind him, and
+    # turned to the camera it hung behind his back
+    side = _hit(_worn(), [[0.04, -0.45, 1.21]], V(0, 1, 0))[0]
+    half = np.array([0.1, 0.055, 0.08])
+    a = 0.15
+    ax = np.stack([V(math.cos(a), 0, -math.sin(a)), V(0, 1, 0), V(math.sin(a), 0, math.cos(a))], axis=1)
+    c = side + V(0, -(half[1] + 0.006), 0)
+    lo, hi = c - 0.16, c + 0.16
+    box = sc.Field(lo=lo, hi=hi, h=0.0015)
+    box.add(sc.Box(c, half, 0.008, ax), 0.0)
+    tape = sc.Field(lo=lo, hi=hi, h=0.0012)
+    tape.add(sc.Box(c, half * np.array([0, 1, 1]) + np.array([0.016, 0.0015, 0.0015]), 0.002, ax), 0.0)
+    objs = []
+    role = fill if fill in (pal or {}) else 'hair'
+    for f, role, colour in ((box, role, role_colour(pal or {}, role, '#8a6a43')), (tape, 'shoe', role_colour(pal or {}, 'shoe', '#c9b48a'))):
+        ob = sc.to_blender(name, *f.mesh(), smooth=1)
+        FR.warp_mesh(ob)
+        ob.data.materials.append(material(role, colour))
+        objs.append(ob)
+    with bpy.context.temp_override(active_object=objs[0], selected_editable_objects=objs, selected_objects=objs):
+        bpy.ops.object.join()
+    objs[0].name = objs[0].data.name = name
+    return objs[0]
+
+
+def mat(name, chest, fill, pal):
+    """Adam's mat, rolled and slung across his back as the 2D part is
+    (`mat`, behind the shoulder): a roll standing off his back from over the
+    far shoulder down past the near hip, so both its ends leave his outline
+    (the 2D one is pushed clear of the shoulder for the same reason), in the
+    part's colour (`shoe`, white, a palette role), two straps round it in his
+    accent and the spiral of the rolled mat in each end. Built straight in a
+    field of its own and set at its slant (_place), in Jeff's space on the
+    clothes as last dressed (DRESS) and warped to his. It rides the chest,
+    wholly. One object, `name`."""
+    import bpy
+    R = 0.07
+    # its top end high enough to show past the far shoulder, turned to the
+    # camera, as the bottom one does past the near hip
+    top, foot = V(0, 0.22, 1.66), V(0, -0.22, 1.0)
+    # standing off the furthest back the clothes reach along its line: the
+    # hood on his upper back stands well off the shoulder blades
+    worn = _worn()
+    line = np.array([top + (foot - top) * t + V(-0.45, 0, 0) for t in np.linspace(0.1, 0.9, 9)])
+    back = _hit(worn, line, V(1, 0, 0))[:, 0].min()
+    top[0] = foot[0] = back - R - 0.012
+    u = sc.unit(top - foot)
+    e1 = sc.unit(np.cross(u, V(1, 0, 0)))
+    axes = np.stack([e1, np.cross(u, e1), u], axis=1)
+    L = float(np.linalg.norm(top - foot))
+    m = 0.02
+    roll = sc.Field(lo=(-R - m, -R - m, -L / 2 - m), hi=(R + m, R + m, L / 2 + m), h=0.0011)
+    X, Y, Z = _axes(roll)
+    rr = np.sqrt(X * X + Y * Y)
+    k = np.float32(0.01)
+    qx, qz = rr - np.float32(R) + k, np.abs(Z) - np.float32(L / 2) + k
+    d = np.minimum(np.maximum(qx, qz), 0) + np.sqrt(np.maximum(qx, 0) ** 2 + np.maximum(qz, 0) ** 2) - k
+    # the spiral of the rolled mat in each end, a turn every 1.1 cm
+    pitch = np.float32(0.011)
+    th = np.arctan2(Y, X)
+    sp = np.mod(rr - pitch * th / np.float32(2 * math.pi), pitch)
+    groove = np.maximum(np.minimum(sp, pitch - sp) - np.float32(0.0011),
+                        np.maximum(np.float32(L / 2 - 0.003) - np.abs(Z), rr - np.float32(R - 0.012)))
+    roll.d = np.maximum(d, -groove).astype(np.float32)
+    straps = sc.Field(lo=roll.lo, hi=roll.lo + (roll.n - 1) * roll.h, h=0.0011)
+    band = np.min([np.abs(Z - np.float32(L * f)) for f in (-0.28, 0.28)], axis=0) - np.float32(0.014)
+    straps.d = np.maximum(rr - np.float32(R + 0.004), band).astype(np.float32)
+    objs = []
+    role = fill if fill in (pal or {}) else 'shoe'
+    for f, role, colour in ((roll, role, role_colour(pal or {}, role, '#f5f5f5')), (straps, 'accent', role_colour(pal or {}, 'accent', '#ffd23f'))):
+        ob = sc.to_blender(name, *f.mesh(), smooth=1)
+        _place(ob, (top + foot) / 2, axes)
+        FR.warp_mesh(ob)
+        ob.data.materials.append(material(role, colour))
+        objs.append(ob)
+    with bpy.context.temp_override(active_object=objs[0], selected_editable_objects=objs, selected_objects=objs):
+        bpy.ops.object.join()
+    objs[0].name = objs[0].data.name = name
+    return objs[0]
+
+
 # What is worn on the clothes (fighters.js `accessory`), as (the bone it
 # rides, how it is made from the palette), each built in Jeff's space on the
 # clothes as last dressed (DRESS) and warped to the fighter's.
@@ -1864,11 +1992,7 @@ def brooch(pal):
     near lapel, where the 2D one is, lying on whatever is worn there, a stone
     standing proud in its middle, in the accent colour. Its own mesh
     (`accessory:brooch`), so it shows when the look says so."""
-    worn = _shell(0.0)
-    worn.d[:] = np.float32(1)
-    for f in DRESS.values():
-        if f.d.shape == worn.d.shape:
-            np.minimum(worn.d, f.d, out=worn.d)
+    worn = _worn()
     p = worn.project(np.array([[0.16, -0.108, 1.47]]))[0]
     n = worn.normal(p[None])[0]
     t1 = sc.unit(np.cross(n, V(0, 0, 1)))
@@ -1939,6 +2063,10 @@ PROPS = {
     # riding the hips
     'tablet': ('grip.R', tablet),
     'coat': ('hips', coat),
+    # Jeff's: the parcel clamped under his rear arm; Adam's: the mat slung
+    # across his back; both riding the chest
+    'parcel': ('chest', parcel),
+    'mat': ('chest', mat),
 }
 JOINT_OF = {'hips': 'hip'}                  # a bone named apart from the joint it starts at
 

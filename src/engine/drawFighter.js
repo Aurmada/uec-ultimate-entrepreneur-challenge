@@ -185,12 +185,18 @@ function trackedAttackPose(f, atk) {
   const k = nominal && atk.reach ? atk.reach / nominal : 1;
   if (Math.abs(k - 1) > 0.01) {
     const A = PHYS.HITBOX_LEAD;
+    // A track written in the fighter's own guard (a form's, data/forms.js)
+    // starts and ends in it, which the re-scale would move, so the re-scale
+    // comes in over the wind-up and goes over the recovery, whole only while
+    // the move can hit: scaled throughout, Cathie's open palm jumped 11 px
+    // out of her guard on the first frame of every push.
+    const w = !track.own ? 1 : t < 1 ? ease.smooth(Math.max(0, t)) : t > 2 ? 1 - ease.smooth(Math.min(1, t - 2)) : 1;
     for (const limb of ['armF', 'legF']) {
-      pose[limb].x = A + (pose[limb].x - A) * k;
+      if (w === 1) pose[limb].x = A + (pose[limb].x - A) * k;
+      else pose[limb].x += (A + (pose[limb].x - A) * k - pose[limb].x) * w;
     }
   }
-  // A track written in the fighter's own guard (a form's, data/forms.js)
-  // already starts and ends there.
+  // A track written in the fighter's own guard starts and ends there already.
   if (f.def?.stance && !track.own) {
     const G = guardOf(f.def, (STYLES[f.def.style] || STYLES.balanced).stance);
     const dy = REST.shoulderY - G.shoulder;
@@ -212,10 +218,19 @@ function trackedAttackPose(f, atk) {
   // The rear fist guards the chin, so it goes where the chin goes: a strike
   // drives the head forward through the shot, and a hand left behind ended up
   // on the face instead of beside it. (GL3D.HEAD_LEAN_PX is drawFighter's own
-  // head lean, which the 3D rig copies.)
+  // head lean, which the 3D rig copies.) As far as the head has moved from
+  // where the track starts: the stock guard (REST) for the shared tracks, the
+  // fighter's own for a form's, or measured from REST the rear hand left a
+  // form's guard by up to 4 px on the first frame and came back on the last.
   const head = (P) => P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX;
-  pose.armB.x += head(pose) - head(REST);
+  pose.armB.x += head(pose) - head(track.own ? trackStart(track) : REST);
   return pose;
+}
+
+const TRACK_START = new WeakMap();
+function trackStart(track) {
+  if (!TRACK_START.has(track)) TRACK_START.set(track, samplePose(track, 0));
+  return TRACK_START.get(track);
 }
 
 // How this character throws a punch, as opposed to which punch they throw.

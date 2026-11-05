@@ -24,6 +24,10 @@ import { carried } from './tracks.js';
 const GUARD_F = { x: 50, y: -172 };
 const GUARD_B = { x: 32, y: -162 };   // at the jaw, under the mouth, so the camera still sees it
 const HIP = -82, SHOULDER = -148, HEAD = -176;   // REST lowered by the stance
+// as tall as Jeff's style stands him (drawFighter.js STANCES, `poised`), which
+// the boxing stance keeps: keyed at 1, he dropped 2% on the first frame of
+// every straight and stood back up on the last
+const GUARD_SY = 1.02;
 
 // The lead straight, thrown from the guard and back to it along the same line.
 // No wind-up of the fist: a boxer who draws his hand back before he punches
@@ -36,7 +40,7 @@ const HIP = -82, SHOULDER = -148, HEAD = -176;   // REST lowered by the stance
 const LEAD_STRAIGHT = {
   own: true,
   keys: carried([
-    { t: 0,    joints: { armF: GUARD_F, armB: GUARD_B, hipY: HIP, shoulderY: SHOULDER, headY: HEAD, headX: 2, bodyLean: 0.12, twist: 0, hipTwist: 0, sx: 1, sy: 1, legB: { x: -30, y: 0 } } },
+    { t: 0,    joints: { armF: GUARD_F, armB: GUARD_B, hipY: HIP, shoulderY: SHOULDER, headY: HEAD, headX: 2, bodyLean: 0.12, twist: 0, hipTwist: 0, sx: 1, sy: GUARD_SY, legF: { x: 24, y: 0 }, legB: { x: -30, y: 0 } } },
     // load: sink a little and turn away, the fist staying home
     { t: 0.6,  joints: { armF: { x: 46, y: -170 }, hipY: HIP + 2, bodyLean: 0.1, twist: -0.12, hipTwist: -0.1, sx: 1.03, sy: 0.97 }, ease: 'outCubic' },
     { t: 0.95, joints: { armF: { x: 44, y: -169 }, hipY: HIP + 3, bodyLean: 0.09, twist: -0.16, hipTwist: -0.12, sx: 1.04, sy: 0.96 }, ease: 'outQuad' },
@@ -45,7 +49,7 @@ const LEAD_STRAIGHT = {
     { t: 2,    joints: { armF: { x: 100, y: -164 }, hipY: HIP - 1, headX: 5, bodyLean: 0.2, twist: 0.23, hipTwist: 0.13, sx: 0.97, sy: 1.03, legB: { x: -27, y: 0 } }, hold: true },
     // straight back to the guard, the body turning back with it
     { t: 2.4,  joints: { armF: { x: 66, y: -170 }, hipY: HIP, headX: 3, bodyLean: 0.14, twist: 0.06, hipTwist: 0.03, sx: 1, sy: 1 }, ease: 'outQuad' },
-    { t: 3,    joints: { armF: GUARD_F, headX: 2, bodyLean: 0.12, twist: 0, hipTwist: 0, legB: { x: -30, y: 0 } }, ease: 'inOutCubic' },
+    { t: 3,    joints: { armF: GUARD_F, headX: 2, bodyLean: 0.12, twist: 0, hipTwist: 0, sy: GUARD_SY, legB: { x: -30, y: 0 } }, ease: 'inOutCubic' },
   ]),
 };
 
@@ -176,6 +180,9 @@ const WHIP = {
 const FENCE_F = { x: 60, y: -146 };
 const FENCE_B = { x: -6, y: -104 };
 const F_HIP = -84, F_SHOULDER = -154, F_HEAD = -178;   // REST, the shoulders raised by the stance
+// the head as far forward as the stance puts it, its own 3 on top of REST's 2
+// (keyed at 3, it jumped 2 px back on the first frame of every slip)
+const F_HEADX = 5;
 
 // The slip: understated on the way in, lingering on the way out. The open
 // hand barely draws in, so it reads as less than it is, closes only as it
@@ -184,16 +191,16 @@ const F_HIP = -84, F_SHOULDER = -154, F_HEAD = -178;   // REST, the shoulders ra
 const SLIP = {
   own: true,
   keys: carried([
-    { t: 0,    hand: 'open', joints: { armF: FENCE_F, armB: FENCE_B, hipY: F_HIP, shoulderY: F_SHOULDER, headY: F_HEAD, headX: 3, bodyLean: 0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -17, y: 0 } } },
+    { t: 0,    hand: 'open', joints: { armF: FENCE_F, armB: FENCE_B, hipY: F_HIP, shoulderY: F_SHOULDER, headY: F_HEAD, headX: F_HEADX, bodyLean: 0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -17, y: 0 } } },
     // barely any wind-up
     { t: 0.6,  hand: 'open', joints: { armF: { x: 56, y: -147 }, bodyLean: 0.03, twist: -0.04 }, ease: 'outQuad' },
     { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -148 }, bodyLean: 0.03, twist: -0.06, hipTwist: -0.03 }, ease: 'outQuad' },
     // the hand closing as it lands
-    { t: 1.15, hand: 'fist', joints: { armF: { x: 100, y: -150 }, headX: 5, bodyLean: 0.12, twist: 0.2, hipTwist: 0.08, legB: { x: -15, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 1.15, hand: 'fist', joints: { armF: { x: 100, y: -150 }, headX: F_HEADX + 2, bodyLean: 0.12, twist: 0.2, hipTwist: 0.08, legB: { x: -15, y: 0 } }, ease: 'outBack', smear: true },
     { t: 2,    hand: 'fist', joints: { armF: { x: 98, y: -150 }, bodyLean: 0.11, twist: 0.18 }, hold: true },
     // and lingering out there
-    { t: 2.6,  hand: 'fist', joints: { armF: { x: 90, y: -149 }, headX: 4, bodyLean: 0.08, twist: 0.12, hipTwist: 0.05 }, ease: 'outQuad' },
-    { t: 3,    hand: 'open', joints: { armF: FENCE_F, headX: 3, bodyLean: 0.04, twist: 0, hipTwist: 0, legB: { x: -17, y: 0 } }, ease: 'inOutCubic' },
+    { t: 2.6,  hand: 'fist', joints: { armF: { x: 90, y: -149 }, headX: F_HEADX + 1, bodyLean: 0.08, twist: 0.12, hipTwist: 0.05 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: { armF: FENCE_F, headX: F_HEADX, bodyLean: 0.04, twist: 0, hipTwist: 0, legB: { x: -17, y: 0 } }, ease: 'inOutCubic' },
   ]),
 };
 
@@ -382,7 +389,7 @@ export const FORMS = {
     // The fence hand out in front of the middle of his chest, the pocket hand
     // at his side.
     handDepth: { F: 0.75, B: 1 },
-    // The pocket hand does not follow the chest round.
+    // The pocket hand follows the chest round only a little.
     guardTurn: 0.3,
     // The slip is written whole; nothing about it should look heavy.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
@@ -434,7 +441,7 @@ export const FORMS = {
     // The palm out in front of the middle of her chest, the tablet at her
     // side.
     handDepth: { F: 0.6, B: 0.95 },
-    // The tablet hand does not follow the chest round.
+    // The tablet hand follows the chest round only a little.
     guardTurn: 0.3,
     // Nothing thrown, the hips barely moving.
     motion: { windup: 1, follow: 1, drop: 1, squash: 0.02, brace: 0, thrust: 1 },

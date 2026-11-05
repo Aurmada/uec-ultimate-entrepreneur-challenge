@@ -215,6 +215,9 @@ test('fighters share a face texture exactly when their painted faces match', () 
   assert.equal(faceKey({ ...a, name: 'someone else' }), faceKey(a), 'the key reads more than the face');
   const adam = FIGHTERS.find((f) => f.id === 'max');
   assert.notEqual(faceKey(adam), faceKey({ ...adam, accessory: null }), 'stubble is painted, so it is in the key');
+  // the brows and stubble are painted in the hair colour, the lips in the skin's
+  assert.notEqual(faceKey(a), faceKey({ ...a, c: { ...a.c, hair: '#123456' } }), 'a recoloured fighter shares the first one\'s brows');
+  assert.notEqual(faceKey(a), faceKey({ ...a, c: { ...a.c, skin: '#654321' } }), 'a recoloured fighter shares the first one\'s lips');
   const one = 'data:image/jpeg;base64,' + 'A'.repeat(90000) + 'one';
   const two = 'data:image/jpeg;base64,' + 'A'.repeat(90000) + 'two';
   assert.notEqual(faceKey({ ...a, photo: one }), faceKey(a), 'a photo face is not the drawn face');
