@@ -3,7 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE, GL3D, PHYS, UNICORN } from '../config.js';
+import { STYLES, STYLIZE, GL3D, PHYS, UNICORN, ROUND } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
@@ -380,7 +380,9 @@ function carryGuard(P, G, lift = 0) {
 // `form` is a fighting form (data/forms.js) the fighter is drawn in, which
 // stands in for their own stance, motion and attack tracks. Only a 3D model
 // carries one for now (gl3d form3D), so the 2D fighters never see it.
-export function computePose(f, t, form = null) {
+// `intro` is how far into the round's start (ROUND and FIGHT!) the game is,
+// in seconds, or null once the round is live (setRoundStart).
+export function computePose(f, t, form = null, intro = null) {
   if (!form) return basePose(f, t);
   const def = { ...f.def, stance: form.stance, motion: form.motion ?? f.def?.motion,
     animOverrides: { ...f.def?.animOverrides, ...form.tracks, ...specialTracks(form) } };
@@ -426,6 +428,22 @@ export function computePose(f, t, form = null) {
     const S = samplePose(V, (t * V.rate) % 1);
     for (const j of Object.keys(V.keys[0].joints)) P[j] = typeof S[j] === 'object' ? { ...S[j] } : S[j];
     if (S.hand) P.hand = S.hand;
+  }
+  // The round's start (forms.js `intro`): the fighters stand locked through
+  // ROUND and FIGHT!, and each form spends it on a gesture of its own, which
+  // ends in the guard and hands over to the live idle by the time the round
+  // goes live.
+  if (intro !== null && f.state === 'idle' && form.intro) {
+    const k = Math.min(1, intro / (ROUND.INTRO_ROUND_T + ROUND.INTRO_FIGHT_T));
+    const w = k < 0.85 ? 1 : 1 - ease.smooth((k - 0.85) / 0.15);
+    if (w > 0) {
+      const S = samplePose(form.intro, k);
+      const mix = (a, b) => a * (1 - w) + b * w;
+      for (const j of Object.keys(form.intro.keys[0].joints)) {
+        P[j] = typeof S[j] === 'object' ? { x: mix(P[j].x, S[j].x), y: mix(P[j].y, S[j].y) } : mix(P[j] ?? 0, S[j]);
+      }
+      if (S.hand && w > 0.5) P.hand = S.hand;
+    }
   }
   if (f.state === 'walk' && form.walk) Object.assign(P, formWalk({ ...f, def }, form.walk));
   if (f.state === 'jump' && form.jump) Object.assign(P, formJump({ ...f, def }, form.jump));
@@ -1576,11 +1594,17 @@ function drawSmear(g, P, f, c, shFx, shFy, hipFx, hipFy) {
 const lastPoses = new WeakMap();
 export const poseOf = (f) => lastPoses.get(f);
 
+// How far into the round's start the game being drawn is, in seconds, or
+// null once it is live: set by the render loop before it draws the fighters,
+// as setClock3D is, so a form can open the round in its own way.
+let roundStart = null;
+export function setRoundStart(sec) { roundStart = sec; }
+
 export function drawFighter(ctx, f, t) {
   const tDraw = timing3D() ? performance.now() : 0;
   const def = f.def;
   const body = f.body || clampBody(def.body);
-  const P = applyProportions(computePose(f, t, form3D(def)), body);
+  const P = applyProportions(computePose(f, t, form3D(def), roundStart), body);
   if (FX_STYLE.impact) lastPoses.set(f, { P, t });
   const c = def.c;
   ctx.save();

@@ -1339,6 +1339,118 @@ const CALM_CONVICTION = {
   ]),
 };
 
+// ---------------------------------------------------------------- round start
+// What each form does while the round starts (FORMS `intro`), through ROUND
+// and FIGHT!, when the fighters stand locked: a gesture of its own, from 0 to
+// 1 across the two, ending in the guard by 0.85, after which computePose hands
+// over to the live idle.
+
+// He taps his gloves together twice in front of him and puts them up.
+const BOX_INTRO = {
+  keys: carried([
+    { t: 0, joints: { ...BOX_AT, armF: { x: 40, y: -150 }, armB: { x: 34, y: -150 }, bodyLean: 0.08 } },
+    { t: 0.2, joints: { armF: { x: 44, y: -160 }, armB: { x: 38, y: -160 } }, ease: 'inOutCubic' },
+    { t: 0.3, joints: { armF: { x: 52, y: -150 }, armB: { x: 30, y: -150 } }, ease: 'inOutCubic' },
+    { t: 0.42, joints: { armF: { x: 44, y: -160 }, armB: { x: 38, y: -160 } }, ease: 'inOutCubic' },
+    { t: 0.6, joints: { armF: { x: 52, y: -150 }, armB: { x: 30, y: -150 } }, ease: 'inOutCubic' },
+    { t: 0.85, joints: BOX_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// He slaps his chest twice, the head back, and squares up.
+const BRAWL_INTRO = {
+  keys: carried([
+    { t: 0, joints: { ...BRAWL_AT, armF: { x: 34, y: -156 }, armB: { x: 20, y: -146 }, headX: -2, bodyLean: 0.04 } },
+    { t: 0.15, joints: { armF: { x: 16, y: -150 } }, ease: 'inOutCubic' },
+    { t: 0.3, joints: { armF: { x: 44, y: -162 } }, ease: 'inOutCubic' },
+    { t: 0.45, joints: { armF: { x: 16, y: -148 } }, ease: 'inOutCubic' },
+    { t: 0.6, joints: { armF: { x: 44, y: -160 }, headX: 0 }, ease: 'inOutCubic' },
+    { t: 0.85, joints: BRAWL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// He stands up straight to fix a cufflink, then settles into his hunch.
+const GRAB_INTRO = {
+  keys: carried([
+    { t: 0, hand: 'open', joints: { ...GRAB_AT, armF: { x: 36, y: -122 }, armB: { x: 34, y: -120 }, hipY: -80, shoulderY: -150, headY: -176, headX: 2, bodyLean: 0.02, sx: 1, sy: 1 } },
+    { t: 0.3, hand: 'open', joints: { armF: { x: 38, y: -124 } }, ease: 'inOutCubic' },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 34, y: -120 } }, ease: 'inOutCubic' },
+    { t: 0.85, hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// He waves to the crowd with the presenting hand high.
+const SHOW_INTRO = {
+  keys: carried([
+    { t: 0, hand: 'open', joints: { ...SHOW_AT, armF: { x: 50, y: -206 }, bodyLean: -0.08, twist: -0.1 } },
+    { t: 0.15, hand: 'open', joints: { armF: { x: 66, y: -210 } }, ease: 'inOutCubic' },
+    { t: 0.3, hand: 'open', joints: { armF: { x: 44, y: -206 } }, ease: 'inOutCubic' },
+    { t: 0.45, hand: 'open', joints: { armF: { x: 66, y: -210 } }, ease: 'inOutCubic' },
+    { t: 0.6, hand: 'open', joints: { armF: { x: 50, y: -200 }, twist: -0.04 }, ease: 'inOutCubic' },
+    { t: 0.85, hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// He beckons you on with the lead hand, twice, then drops it.
+const ROLL_INTRO = {
+  keys: carried([
+    { t: 0, hand: 'open', joints: { ...ROLL_AT, armF: { x: 60, y: -140 }, bodyLean: -0.06 } },
+    { t: 0.2, hand: 'open', joints: { armF: { x: 44, y: -150 } }, ease: 'inOutCubic' },
+    { t: 0.35, hand: 'open', joints: { armF: { x: 62, y: -140 } }, ease: 'inOutCubic' },
+    { t: 0.5, hand: 'open', joints: { armF: { x: 44, y: -150 } }, ease: 'inOutCubic' },
+    { t: 0.65, hand: 'open', joints: { armF: { x: 56, y: -134 } }, ease: 'inOutCubic' },
+    { t: 0.85, hand: 'fist', joints: ROLL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Both hands in his pockets, rocking on his heels, until he has to take
+// one out.
+const FENCE_INTRO = {
+  keys: carried([
+    { t: 0, hand: 'open', joints: { ...FENCE_AT, armF: { x: 6, y: -104 }, bodyLean: -0.04 } },
+    { t: 0.25, hand: 'open', joints: { bodyLean: 0.05 }, ease: 'inOutCubic' },
+    { t: 0.5, hand: 'open', joints: { bodyLean: -0.05 }, ease: 'inOutCubic' },
+    { t: 0.7, hand: 'open', joints: { armF: { x: 40, y: -130 }, bodyLean: 0.02 }, ease: 'inOutCubic' },
+    { t: 0.85, hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// A fencer's salute: the hand raised before her face, then swept down and
+// out, then en garde.
+const EN_INTRO = {
+  keys: carried([
+    { t: 0, hand: 'open', joints: { ...EN_AT, armF: { x: 40, y: -150 }, bodyLean: 0 } },
+    { t: 0.2, hand: 'open', joints: { armF: { x: 30, y: -190 }, sy: 1.04 }, ease: 'inOutCubic' },
+    { t: 0.45, hand: 'open', joints: { armF: { x: 30, y: -192 } }, ease: 'inOutCubic' },
+    { t: 0.62, hand: 'open', joints: { armF: { x: 80, y: -110 }, sy: 1.02 }, ease: 'inOutCubic' },
+    { t: 0.85, hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Standing tall, she waves up and out at the camera, then drops into her
+// shell (the hand kept clear of her face).
+const PEEK_INTRO = {
+  keys: carried([
+    { t: 0, hand: 'open', joints: { ...PEEK_AT, armF: { x: 60, y: -196 }, hipY: -78, shoulderY: -148, headY: -172, bodyLean: 0.04 } },
+    { t: 0.15, hand: 'open', joints: { armF: { x: 72, y: -200 } }, ease: 'inOutCubic' },
+    { t: 0.3, hand: 'open', joints: { armF: { x: 58, y: -196 } }, ease: 'inOutCubic' },
+    { t: 0.45, hand: 'open', joints: { armF: { x: 72, y: -200 } }, ease: 'inOutCubic' },
+    { t: 0.6, hand: 'open', joints: { armF: { x: 60, y: -186 } }, ease: 'inOutCubic' },
+    { t: 0.85, hand: 'fist', joints: PEEK_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The opening of a tai chi form: the arms float up to her shoulders, press
+// down as the knees sink, and come round into her guard.
+const CALM_INTRO = {
+  keys: carried([
+    { t: 0, hand: 'open', joints: { ...CALM_AT, armF: { x: 50, y: -110 }, armB: { x: 36, y: -108 } } },
+    { t: 0.35, hand: 'open', joints: { armF: { x: 72, y: -150 }, armB: { x: 56, y: -148 } }, ease: 'inOutCubic' },
+    { t: 0.6, hand: 'open', joints: { armF: { x: 64, y: -120 }, armB: { x: 50, y: -118 }, hipY: -84 }, ease: 'inOutCubic' },
+    { t: 0.85, hand: 'open', joints: CALM_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -1396,6 +1508,8 @@ export const FORMS = {
     // UNICORN MODE going on. He goes into his super with a roar, the fists
     // clenched down at his sides and the chest out.
     super: { fade: 0.3, joints: { armF: { x: 28, y: -118 }, armB: { x: 10, y: -116 }, hipY: -84, shoulderY: -152, headY: -180, headX: -2, bodyLean: -0.1, sx: 1.02, sy: 1.04 } },
+    // How it opens the round (above).
+    intro: BOX_INTRO,
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -1453,6 +1567,8 @@ export const FORMS = {
     // shoulders and the head back. (Kept below the head: the super's banner
     // covers the screen above it for longer than the pose lasts.)
     super: { fade: 0.3, joints: { armF: { x: 64, y: -170 }, armB: { x: -36, y: -166 }, hipY: -74, shoulderY: -150, headY: -172, headX: -4, bodyLean: -0.06, sx: 1.1, sy: 1 } },
+    // How it opens the round (above).
+    intro: BRAWL_INTRO,
   },
   grappling: {
     stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
@@ -1512,6 +1628,8 @@ export const FORMS = {
     // UNICORN MODE going on. He straightens up to his full height for once,
     // the briefcase raised beside him.
     super: { fade: 0.3, hand: 'open', joints: { armF: { x: 70, y: -150 }, armB: { x: 20, y: -170 }, hipY: -80, shoulderY: -150, headY: -176, headX: 0, bodyLean: 0, sx: 1, sy: 1 } },
+    // How it opens the round (above).
+    intro: GRAB_INTRO,
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -1567,6 +1685,8 @@ export const FORMS = {
     // UNICORN MODE going on. He takes a showman's bow, the presenting hand
     // swept low across him and the tablet held out behind.
     super: { fade: 0.3, hand: 'open', joints: { armF: { x: 60, y: -110 }, armB: { x: -20, y: -140 }, hipY: -84, shoulderY: -150, headY: -178, headX: 8, bodyLean: 0.45, sy: 1.02 } },
+    // How it opens the round (above).
+    intro: SHOW_INTRO,
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -1617,6 +1737,8 @@ export const FORMS = {
     // UNICORN MODE going on. He opens up, arms flung out and the chest
     // forward.
     super: { fade: 0.3, hand: 'open', joints: { armF: { x: 50, y: -170 }, armB: { x: -30, y: -170 }, hipY: -84, shoulderY: -152, headY: -182, headX: -2, bodyLean: -0.14, sy: 1.02 } },
+    // How it opens the round (above).
+    intro: ROLL_INTRO,
   },
   fence: {
     stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
@@ -1668,6 +1790,8 @@ export const FORMS = {
     // UNICORN MODE going on. Both hands out of his pockets at last, palms up,
     // and a shrug: trust me.
     super: { fade: 0.3, hand: 'open', joints: { armF: { x: 44, y: -132 }, armB: { x: 26, y: -134 }, hipY: -84, shoulderY: -158, headY: -178, headX: 3, bodyLean: 0 } },
+    // How it opens the round (above).
+    intro: FENCE_INTRO,
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -1723,6 +1847,8 @@ export const FORMS = {
     // UNICORN MODE going on. A hand on her hip and the other raised palm up at
     // her shoulder, unveiling it.
     super: { fade: 0.3, hand: 'open', joints: { armF: { x: 64, y: -178 }, armB: { x: 6, y: -112 }, hipY: -84, shoulderY: -152, headY: -183, headX: 0, bodyLean: -0.04, sy: 1.04 } },
+    // How it opens the round (above).
+    intro: EN_INTRO,
   },
   peekaboo: {
     stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
@@ -1779,6 +1905,8 @@ export const FORMS = {
     // UNICORN MODE going on. She coils lower behind her forearms crossed in
     // front of her, and comes out of it as it fades.
     super: { fade: 0.3, joints: { armF: { x: 22, y: -146 }, armB: { x: 32, y: -144 }, hipY: -64, shoulderY: -136, headY: -158, headX: 4, bodyLean: 0.22, sy: 0.96 } },
+    // How it opens the round (above).
+    intro: PEEK_INTRO,
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -1838,5 +1966,7 @@ export const FORMS = {
     // UNICORN MODE going on. The arms opening wide, palms up, the chin raised,
     // and slower out of it than anyone.
     super: { fade: 0.45, hand: 'open', joints: { armF: { x: 70, y: -176 }, armB: { x: -10, y: -150 }, hipY: -90, shoulderY: -154, headY: -186, headX: -1, bodyLean: -0.08, sy: 1.05 } },
+    // How it opens the round (above).
+    intro: CALM_INTRO,
   },
 };

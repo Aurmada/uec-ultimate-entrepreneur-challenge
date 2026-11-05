@@ -793,3 +793,27 @@ test('every form strikes its own pose as its super goes on, and lets it go', asy
     assert.deepEqual(pose('attack', UNICORN.DURATION, { attack: atk, stateT: 0.06 }), pose('attack', 0, { attack: atk, stateT: 0.06 }), `${name} strikes its super pose over a punch`);
   }
 });
+
+// Each form opens the round its own way, through ROUND and FIGHT!, where the
+// fighters stood idle and locked: from its gesture to the live idle exactly by
+// the time the round goes live, and only while the round is starting.
+test('every form opens the round its own way and is in its live idle by FIGHT!', async () => {
+  const { ROUND } = await import('../src/config.js');
+  const total = ROUND.INTRO_ROUND_T + ROUND.INTRO_FIGHT_T;
+  for (const [name, form] of Object.entries(FORMS)) {
+    assert.ok(form.intro, `${name} stands idle through the round's start`);
+    assert.deepEqual(validateTrack(`${name}.intro`, form.intro), []);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const pose = (intro, state = 'idle', t = 0.7) => computePose({ def, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, t, form, intro);
+    const first = form.intro.keys[0].joints, start = pose(0);
+    const near = (a, b) => typeof a === 'object' ? Math.hypot(a.x - b.x, a.y - b.y) < 1e-9 : Math.abs(a - b) < 1e-9;
+    for (const j of ['armF', 'armB', 'hipY', 'bodyLean']) assert.ok(near(start[j], first[j]), `${name}'s ${j} as the round starts`);
+    assert.notDeepEqual([pose(total * 0.3).armF, pose(total * 0.3).armB], [pose(null).armF, pose(null).armB], `${name} stands idle through the round's start`);
+    assert.deepEqual(pose(total), pose(null), `${name} is not in its live idle by FIGHT!`);
+    assert.deepEqual(pose(0, 'walk'), pose(null, 'walk'), `${name}'s round start reaches past the idle`);
+    // and never in 2D
+    assert.deepEqual(computePose({ def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0.7, null, 0),
+      computePose({ def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0.7));
+  }
+});

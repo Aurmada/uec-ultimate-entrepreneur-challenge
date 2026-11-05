@@ -2,7 +2,7 @@
 // → projectiles → particles/popups → full-screen flashes.
 
 import { STAGE, GL3D } from '../config.js';
-import { drawFighter } from './drawFighter.js';
+import { drawFighter, setRoundStart } from './drawFighter.js';
 import { stageFor, drawStage } from './stage.js';
 import { drawBursts, drawTrail, drawAura, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
 import { setLight3D, setClock3D, has3D, layerCanvas3D, beginLayer3D, endLayer3D } from './gl3d/index.js';
@@ -728,6 +728,7 @@ function renderSharp(ctx, game, t, c) {
   toScreen();
   setLight3D(stage?.arena.stage.light);    // 3D fighters take the stage's light
   setClock3D(game.simT);                   // and sway on the match's clock
+  setRoundStart(game.state === 'intro' ? game.stateT : null);   // and open the round their own way
   for (const f of order) {
     drawAura(ctx, f, t);
     drawFighter(ctx, f, t);
@@ -790,6 +791,7 @@ function renderLayered(ctx, L, game, t, c) {
   toScreen();
   setLight3D(stage?.arena.stage.light);
   setClock3D(game.simT);
+  setRoundStart(game.state === 'intro' ? game.stateT : null);
   const world = ctx.getTransform();
   let over = false, trails = false;
   for (const f of order) {
@@ -848,6 +850,7 @@ function renderWorld(ctx, game, t, cam = null) {
   renderBehind(ctx, game, t, false, cam);
   setLight3D(stageFor(game.arena)?.arena.stage.light);
   setClock3D(game.simT);
+  setRoundStart(game.state === 'intro' ? game.stateT : null);
   for (const f of fighterOrder(game)) {
     drawAura(ctx, f, t);
     drawFighter(ctx, f, t);

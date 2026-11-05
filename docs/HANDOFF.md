@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, command moves, steal, bomb and super pose, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 549 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, command moves, steal, bomb, super pose and round start, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 550 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1102,9 +1102,35 @@ banner, and the fighter stood frozen in whatever they were doing.
 - Tests: the pose at a full timer, gone after `fade`, never over a punch,
   the hands below the head. Fails with the pose switched off. Both pixel
   checks identical; UNICORN MODE in two real matches runs with no errors.
-- Not done: the round-start pose. The fighters stand idle through ROUND and
-  FIGHT, and the renderer is not told the round is starting (it would need
-  the game's state passed to `drawFighter`).
+
+### Opening the round in each form (2026-11-05, not released, not pushed)
+
+The fighters stood idle and locked through ROUND and FIGHT! (1.55 s,
+`ROUND.INTRO_ROUND_T` and `INTRO_FIGHT_T`), and the renderer was not told
+the round was starting.
+
+- **The round's start reaches the pose** as `setClock3D` reaches the 3D rig:
+  the render loop calls `setRoundStart(game.state === 'intro' ? game.stateT
+  : null)` before it draws the fighters (all three of `renderSharp`,
+  `renderLayered`, `renderWorld`), and `drawFighter` passes it to
+  `computePose` as its new last argument, `intro`. A form's `intro` track
+  runs from 0 to 1 across the two, ends in the guard by 0.85 and hands over
+  to the live idle by 1, so FIGHT! begins exactly as before. Only standing
+  idle, only with a form: the 2D game never sees it.
+- **Each:** Jeff taps his gloves together twice; Adam slaps his chest twice,
+  head back; Carl stands straight to fix a cufflink, then hunches; Steve
+  waves to the crowd; Elo beckons you on; Scam rocks on his heels with both
+  hands in his pockets; Lizbeth gives a fencer's salute; Kim waves up and out
+  at the camera, then drops into her shell; Cathie opens a tai chi form, the
+  arms floating up and pressing down.
+- The big ROUND text covers the fighters' upper bodies for its first second,
+  so in play the gestures show around it more than under it; retiming them
+  into FIGHT! is the lever if that matters.
+- Tests: each form's gesture at the round's first frame, different from the
+  idle part way, the live idle exactly by FIGHT!, nothing in a walk, nothing
+  in 2D. Fails with the gesture switched off. Both pixel checks identical
+  (their frames are mid-round); a real match through the round's start runs
+  with no errors.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 
