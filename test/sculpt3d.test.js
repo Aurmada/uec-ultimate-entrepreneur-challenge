@@ -118,7 +118,9 @@ const steveGlb = readFileSync(new URL(`../${MODELS3D['sculpt:kai'].url}`, import
 const steve = extractModel(parseGLB(steveGlb.buffer.slice(steveGlb.byteOffset, steveGlb.byteOffset + steveGlb.byteLength)));
 const eloGlb = readFileSync(new URL(`../${MODELS3D['sculpt:elo'].url}`, import.meta.url));
 const elo = extractModel(parseGLB(eloGlb.buffer.slice(eloGlb.byteOffset, eloGlb.byteOffset + eloGlb.byteLength)));
-const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo };
+const scamGlb = readFileSync(new URL(`../${MODELS3D['sculpt:scam'].url}`, import.meta.url));
+const scam = extractModel(parseGLB(scamGlb.buffer.slice(scamGlb.byteOffset, scamGlb.byteOffset + scamGlb.byteLength)));
+const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo, scam };
 const top = (m, p, v) => {
   let best = -1, joint = 0;
   for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
@@ -133,6 +135,7 @@ test('every sculpt raises the block briefcase on its lead grip, and carries its 
     dex: { 'prop:guard-case': ['grip.L', CASE], 'prop:case': ['grip.R', CASE] },
     kai: { 'prop:guard-case': ['grip.L', CASE], 'prop:device': ['grip.R', ['accent']] },   // his device in his palette's accent
     elo: { 'prop:guard-case': ['grip.L', CASE], 'prop:booster': ['chest', ['accent', 'frame']] },   // worn on his back
+    scam: { 'prop:guard-case': ['grip.L', CASE], 'prop:clip': ['chest', ['shoe']] },                  // and his, the 2D part's fill
   };
   for (const [id, props] of Object.entries(carries)) {
     const m = sculpts[id];
@@ -219,4 +222,22 @@ test('Elo wears his tee, its rib and its red diamond, his trousers, shoes and bu
   };
   const skin = reach(body.find((p) => p.role === 'skin'));
   for (const p of body.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.2, `${p.role} reaches past his short sleeves`);
+});
+
+// Scam (`scam`), the sixth: his oversized henley with its ribbed neckline,
+// placket and buttons, baggy trousers and shoes, his fists bare below the
+// cuffs, his curly mop, all in his palette's roles (the buttons white, as
+// the 2D figure draws them).
+test('Scam wears his henley, its trim and buttons, his trousers, shoes and curly mop', () => {
+  const body = scam.primitives.filter((p) => p.name === 'body');
+  const roles = new Set(body.map((p) => p.role));
+  for (const role of ['skin', 'suit', 'suit2', 'button', 'pants', 'shoe']) assert.ok(roles.has(role), `no ${role}`);
+  assert.deepEqual(new Set(scam.primitives.filter((p) => p.name === 'hair:curly').map((p) => p.role)), new Set(['hair']));
+  const reach = (p) => {
+    let m = 0;
+    for (let i = 0; i < p.positions.length; i += 3) m = Math.max(m, Math.abs(p.positions[i + 2]));
+    return m;
+  };
+  const skin = reach(body.find((p) => p.role === 'skin'));
+  for (const p of body.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.06, `${p.role} reaches over the hands`);
 });

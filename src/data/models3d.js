@@ -221,6 +221,26 @@ export const SCULPTED = {
     },
     form: 'shoulderRoll',
   },
+  // Scam (2026-11-04): Jeff's height or a little more, soft all over, his head
+  // a little bigger than Jeff's (lab/blender/fighters/scam.py): eyes 0.034 out
+  // at 1.826 at an even depth, a low soft brow ridge, its painted line at
+  // 1.851; a small even mouth meeting at 1.744. Unbothered, he stands easy,
+  // so his sculpt adds no lean of its own. He fences (data/forms.js).
+  scam: {
+    leaf: { forearm: 0.3909, head: 0.2619, foot: [0.1917, -0.0664, 0] },
+    skull: 0.1643,
+    fit: { shoulderHalf: 0.2024, hipHalf: 0.1012, legs: 1.0217, lean: 0 },
+    face: {
+      at: [0, 1.858], px: [0.003595, 0.003595],
+      layout: {
+        eye: { x: 9.7, y: -10.3, w: 4.0 },
+        brow: { y: -17.4, inner: 3.4, outer: 15.7 },
+        mouth: { y: 13.1, w: 5.1 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+    form: 'fence',
+  },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
   MODELS3D[`sculpt:${id}`] = {

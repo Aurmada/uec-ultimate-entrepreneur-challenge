@@ -271,3 +271,41 @@ test('the whip winds up hugely, holds only while it can hit, and snaps straight 
   assert.ok(punchAt(2.3).armF.x > posed('idle').armF.x + 10, 'the boxer is home as fast');
   for (const [name, track] of Object.entries(ROLL.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
 });
+
+// Scam (`scam`), the sixth: the fence, one hand in his pocket and the other
+// open in front of his chest, and the slip: barely any wind-up, the hand
+// closing only as it lands, lingering out after.
+const scamDef = getFighter('scam');
+const FENCE = FORMS.fence;
+const scamAt = (state, extra = {}, t = 0) => computePose(
+  { def: scamDef, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, FENCE);
+const slipAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return scamAt('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Scam fences from the guard his 2D figure stands in, the hand open, the other pocketed', () => {
+  assert.equal(MODELS3D['sculpt:scam'].form, 'fence');
+  const own = applyProportions(computePose({ def: scamDef, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(scamDef.body));
+  const fence = applyProportions(scamAt('idle'), clampBody(scamDef.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(fence[k], own[k], `his ${k} is not where his 2D guard holds it`);
+  assert.ok(fence.armB.x < 0, 'the pocket hand is out in front');
+  for (const [state, extra] of [['idle', {}], ['walk', { walkPhase: 2.1 }]]) assert.equal(scamAt(state, extra).hand, 'open', `${state}: the fence hand is closed`);
+  assert.equal(scamAt('block').hand, undefined, 'blocking, his fence hand holds the briefcase: a fist');
+});
+
+test('the slip barely winds up, closes only as it lands and lingers out after', () => {
+  const guard = slipAt(0);
+  assert.ok(Math.abs(slipAt(0.95).armF.x - guard.armF.x) < 10 && slipAt(0.95).twist > -0.1, 'it telegraphs');
+  assert.equal(slipAt(0.95).hand, 'open', 'the hand closes before it lands');
+  assert.equal(slipAt(1.6).hand, 'fist');
+  assert.ok(slipAt(2.6).armF.x > guard.armF.x + 25, 'it does not linger');
+  assert.equal(slipAt(3).hand, 'open', 'he does not open the hand again');
+  // the pocket hand stays at his side; it only goes with the body as he leans
+  // into the hit (the rear hand follows the head, see trackedAttackPose)
+  for (const k of [0, 1.15, 2.6]) {
+    const B = slipAt(k).armB;
+    assert.ok(B.y === guard.armB.y && Math.abs(B.x - guard.armB.x) < 8, `at ${k} the pocket hand comes out (${B.x}, ${B.y})`);
+  }
+  for (const [name, track] of Object.entries(FENCE.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});

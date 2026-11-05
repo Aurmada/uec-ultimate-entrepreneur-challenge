@@ -1,8 +1,8 @@
 // Fighting forms: how a fighter stands, guards and throws, as a martial art
 // rather than as a personality. Boxing first (November 2026), for the
 // sculpted Jeff, then brawling, for Adam, grappling, for Carl, showboating,
-// for Steve, and the shoulder roll, for Elo; karate, kung fu and the rest are
-// each their own when a fighter takes them up.
+// for Steve, the shoulder roll, for Elo, and the fence, for Scam; karate,
+// kung fu and the rest are each their own when a fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -169,6 +169,33 @@ const WHIP = {
   ]),
 };
 
+// The fence, Scam's from 2D: one hand in his pocket, the other up open-palmed
+// in front of his chest, the placating gesture of a man explaining why it
+// was fine, and also, quietly, a fence that keeps you at arm's length.
+const FENCE_F = { x: 60, y: -146 };
+const FENCE_B = { x: -6, y: -104 };
+const F_HIP = -84, F_SHOULDER = -154, F_HEAD = -178;   // REST, the shoulders raised by the stance
+
+// The slip: understated on the way in, lingering on the way out. The open
+// hand barely draws in, so it reads as less than it is, closes only as it
+// lands, and stays out after the hit, unhurried, before it opens again
+// into the same placating hand. The other hand never leaves his pocket.
+const SLIP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: { armF: FENCE_F, armB: FENCE_B, hipY: F_HIP, shoulderY: F_SHOULDER, headY: F_HEAD, headX: 3, bodyLean: 0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -17, y: 0 } } },
+    // barely any wind-up
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 56, y: -147 }, bodyLean: 0.03, twist: -0.04 }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -148 }, bodyLean: 0.03, twist: -0.06, hipTwist: -0.03 }, ease: 'outQuad' },
+    // the hand closing as it lands
+    { t: 1.15, hand: 'fist', joints: { armF: { x: 100, y: -150 }, headX: 5, bodyLean: 0.12, twist: 0.2, hipTwist: 0.08, legB: { x: -15, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'fist', joints: { armF: { x: 98, y: -150 }, bodyLean: 0.11, twist: 0.18 }, hold: true },
+    // and lingering out there
+    { t: 2.6,  hand: 'fist', joints: { armF: { x: 90, y: -149 }, headX: 4, bodyLean: 0.08, twist: 0.12, hipTwist: 0.05 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: { armF: FENCE_F, headX: 3, bodyLean: 0.04, twist: 0, hipTwist: 0, legB: { x: -17, y: 0 } }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -257,5 +284,22 @@ export const FORMS = {
     // The coil and the snap back are written into the whip itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.06, brace: 6, thrust: 4 },
     tracks: { punch: WHIP },
+  },
+  fence: {
+    stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
+    // The fence hand open wherever he is not hitting or holding the block
+    // briefcase in it.
+    open: ['idle', 'walk', 'dash', 'crouch', 'jump'],
+    // He brings the briefcase in front of his chest in the fence hand and
+    // turns a little away; the other hand stays in the pocket.
+    block: { armF: { x: -6, y: -8 }, armB: { x: 0, y: 0 }, twist: -0.1 },
+    // The fence hand out in front of the middle of his chest, the pocket hand
+    // at his side.
+    handDepth: { F: 0.75, B: 1 },
+    // The pocket hand does not follow the chest round.
+    guardTurn: 0.3,
+    // The slip is written whole; nothing about it should look heavy.
+    motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
+    tracks: { punch: SLIP },
   },
 };

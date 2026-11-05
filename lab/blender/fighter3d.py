@@ -1136,6 +1136,53 @@ def tee_mark():
     return S
 
 
+# An oversized henley (data/fighters.js `outfit: 'henley'`, Scam's): the
+# hoodie's loose cloth (_loose), long in the hem as his 2D costume has it,
+# long sleeves, a ribbed neckline close round the neck and a placket down
+# the front in the second colour, with three buttons, as the 2D figure draws
+# them.
+HENLEY_HEM = 0.93
+
+
+def henley():
+    """The henley's body and sleeves, cut at the hem, the cuffs and the
+    neck (see the hoodie's for why each where it is)."""
+    S = _shell(0.0)
+    S.d[:] = _loose().d
+    d = S.d
+    _keep_above(d, HENLEY_HEM)
+    _keep_below(d, 1.645)
+    _cuff_cut(d, CUFF + 0.025)
+    _neck_cut(d, 0.088, 1.55)
+    return S
+
+
+def henley_trim():
+    """The ribbed neckline round the neck opening and the placket down from
+    it, a few millimetres proud of the cloth."""
+    L = _loose()
+    S = _shell(0.0)
+    S.d[:] = np.float32(1)
+    sl = _zslab(1.4, 1.66)
+    X, Y, Z = _grid(sl)
+    r = np.sqrt((X - np.float32(_NECK_AXIS)) ** 2 + Y ** 2)
+    rib = np.maximum(np.maximum(np.float32(0.086) - r, r - np.float32(0.108)), np.float32(1.55) - Z)
+    placket = np.maximum(np.maximum(np.abs(Y) - np.float32(0.016), np.float32(1.44) - Z), np.float32(0.02) - X)
+    S.d[sl] = np.maximum(np.maximum(L.d[sl] - np.float32(0.003), np.minimum(rib, placket)), Z - np.float32(1.645))
+    return S
+
+
+def henley_buttons():
+    """Three buttons down the placket, lying on it wherever it is."""
+    L = _loose()
+    S = sc.Field(lo=(0.0, -0.05, 1.4), hi=(0.3, 0.05, 1.65), h=0.001)
+    P = L.project(np.array([[0.2, 0.0, z] for z in (1.575, 1.53, 1.485)]))
+    N = L.normal(P)
+    for p, n in zip(P, N):
+        S.add(sc.Ellipsoid(p + n * 0.004, (0.0045, 0.0045, 0.0045)), 0.0)
+    return S
+
+
 def srgb(h, k=1.0):
     """A palette hex as a glTF (linear) colour, darkened by k first as the
     game darkens it (in sRGB)."""
@@ -1187,6 +1234,15 @@ OUTFITS = {
                    ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
         'skin': ['tee', 'rib', 'trousers', 'shoes'],
         'covers': {'tee': ['rib', 'mark'], 'trousers': ['tee', 'shoes']},
+    },
+    # an oversized henley over baggy trousers (Scam's)
+    'henley': {
+        'pieces': [('henley', henley, 'suit', None), ('trim', henley_trim, 'suit2', None),
+                   ('buttons', henley_buttons, 'button', '#eef0f4'),
+                   ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['henley', 'trim', 'trousers', 'shoes'],
+        'covers': {'henley': ['trim'], 'trousers': ['henley', 'shoes']},
+        'loose': True,
     },
     # Trousers and shoes and nothing above the waist: what a fighter wears
     # until their own outfit is made, so their head and face can be judged in
@@ -1370,8 +1426,8 @@ def glasses(lens_c, lens_half, lens_turn, bridge, arm_from, arm_to, rad=0.0055, 
 # but faces the way the body faces (rig.js), as a 2D part is an unrotated
 # offset from the hand. Built in the fighter's own space at their grip joint
 # and sized with them. The block briefcase every fighter raises is here, and
-# Carl's case, Steve's device and Elo's booster; each other fighter's prop
-# comes with their remodel.
+# Carl's case, Steve's device, Elo's booster and Scam's paperclip; each other
+# fighter's prop comes with their remodel.
 FRAME_C, BRASS_C = '#1b1a22', '#c9a03c'
 
 
@@ -1482,6 +1538,42 @@ def booster(name, chest, fill, pal):
     return objs[0]
 
 
+def paperclip(name, chest, fill, pal):
+    """Scam's paperclip, one enormous one on his back as the 2D part is
+    (`clip`, behind the shoulder): bent wire, three legs side by side and
+    the bends between them, standing off his back face on to the side the
+    game's camera sees, as the 2D one is drawn flat behind him (laid flat
+    across his back, the camera saw it edge on, a white line), in the part's
+    colour (`shoe`, a palette role). It rides the chest, wholly. One object,
+    `name`."""
+    s = FR.size
+    back = F.project(np.array([[-0.17, 0.0, 1.38]]))[0]                # his back, in Jeff's space
+    o = FR.warp(back + V(-0.1, 0, 0))
+    # the wire in the clip's own plane, back from him (x) and up (z), from
+    # the inner end round the bends to the outer one
+    pts = [(-0.025, -0.13)]
+    def bend(cu, cv, r, a0, a1):
+        for k in range(1, 9):
+            a = a0 + (a1 - a0) * k / 8
+            pts.append((cu + r * math.cos(a), cv + r * math.sin(a)))
+    pts.append((-0.025, 0.2))
+    bend(0.0, 0.2, 0.025, math.pi, 0.0)                                 # over the top, to the middle leg
+    pts.append((0.025, -0.25))
+    bend(-0.0175, -0.25, 0.0425, 0.0, -math.pi)                         # round the foot, to the outer leg
+    pts.append((-0.06, 0.26))
+    bend(0.0, 0.26, 0.06, math.pi, 0.0)                                 # over the top, to the last leg
+    pts.append((0.06, -0.06))
+    P = [o + V(u * s, 0, v * s) for u, v in pts]
+    lo, hi = np.min(P, 0) - 0.03, np.max(P, 0) + 0.03
+    W = sc.Field(lo=lo, hi=hi, h=0.0015)
+    for a, b in zip(P, P[1:]):
+        W.add(sc.RoundCone(a, b, 0.011 * s, 0.011 * s), 0.0)
+    ob = sc.to_blender(name, *W.mesh(), smooth=1)
+    role = fill if fill in (pal or {}) else 'shoe'
+    ob.data.materials.append(material(role, role_colour(pal or {}, role, '#f0f0f0')))
+    return ob
+
+
 # Each prop: the bone it rides (a grip, or the chest for what is worn on the
 # back), and how it is made from (name, that bone's joint, the 2D part's
 # fill, the palette). The cases hang with the handle in the
@@ -1496,6 +1588,8 @@ PROPS = {
     'device': ('grip.R', device),
     # Elo's: the booster on his back, riding the chest
     'booster': ('chest', booster),
+    # Scam's: the paperclip on his back, riding the chest
+    'clip': ('chest', paperclip),
 }
 
 
@@ -1629,7 +1723,8 @@ def export_rigged(data, spec, path, tris=44000):
     parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
     for ob, _, _ in parts:
         FR.warp_mesh(ob)
-    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'suit2': 0.1, LAPEL: 0.1, 'accent': 0.02, 'pants': 0.17, 'shoe': 0.07}
+    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'suit2': 0.1, LAPEL: 0.1, 'accent': 0.02, 'button': 0.01,
+              'pants': 0.17, 'shoe': 0.07}
     for ob, role, colour in parts:
         _decimate(ob, tris * budget[role])
         # materials by palette role (the renderer takes the fighter's colour for

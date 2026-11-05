@@ -637,8 +637,38 @@ out at the head, held only while it can hit and snapped straight home. He
 blocks by rolling the shot off the lead shoulder, turned well away.
 `test/forms.test.js`, `test/sculpt3d.test.js`.
 
-Next: the owner's look at Elo. Then Scam, the last man, or the women's
-base.
+**Scam** (`scam`, 2026-11-04, after Elo, the last of the men). His body came
+out of the pipeline as it is: about Jeff's height, soft all over, round
+shoulders, a belly and nothing in the arms, his head a little bigger than
+Jeff's. His head (`lab/blender/fighters/scam.py`): an original face for
+"reasonable", the mildest in the cast, young, soft and rounded, a smooth
+forehead, a low soft brow, eyes at an even depth under plain lids, round
+cheeks, a short small nose, a small even mouth and a round chin. His brown
+hair is a curly mop (`headwear`): a cap of his head's surface and over it
+puffs laid evenly round the skull and brought down onto it, fullest on top,
+big and run together as the 2D puffs are (small and apart, they read as a
+bunch of grapes). His sculpt adds no lean of its own. Registered as
+`sculpt:scam`.
+
+His clothes (`OUTFITS.henley`): an oversized grey henley of the hoodie's
+loose cloth, long in the hem as his 2D costume has it, long sleeves, a ribbed
+neckline close round the neck and a placket down the front in the second
+colour, with three white buttons (`button`, a role of their own, white as the
+2D figure draws them); baggy trousers and white shoes. His paperclip
+(`paperclip`): one enormous bent wire, three legs and the bends between
+them, standing off his back face on to the camera's side, as the 2D one is
+drawn flat behind him (laid flat across his back, the camera saw it edge on,
+a white line), riding the chest.
+
+His form (`fence`, `data/forms.js`), from his 2D guard: one hand in his
+pocket, the other up open-palmed in front of his chest, placating and keeping
+you at arm's length. His punch is the slip: barely any wind-up, the hand
+closing only as it lands, lingering out after before it opens again; the
+pocket hand stays at his side, going only with his lean. He blocks with the
+briefcase in the fence hand. `test/forms.test.js`, `test/sculpt3d.test.js`.
+
+All six men are now remodelled. Next: the owner's look, then the women's
+base (Lizbeth, Kim, Cathie).
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -647,22 +677,23 @@ base.
 - The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
   as the 2D figure and the athlete bodies have, with `figure.hips`, and its
   own fat pattern (`FAT_M` is a man's).
-- Outfits. Jeff's vest, Adam's hoodie, Carl's suit, Steve's turtleneck and
-  Elo's tee. The rest: henley (Scam, which can start from the tee), blazer
-  (Ava), bomber (Zara), suit (Eleanor); the blazer and Eleanor's suit can
-  start from Carl's jacket. Most are the same shells with other edges; the 2D
+- Outfits. Jeff's vest, Adam's hoodie, Carl's suit, Steve's turtleneck,
+  Elo's tee and Scam's henley. The rest, all the women's: blazer (Ava),
+  bomber (Zara), suit (Eleanor); the blazer and Eleanor's suit can start
+  from Carl's jacket, the bomber from the hoodie's loose cloth. Most are the same shells with other edges; the 2D
   `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)
   says how far each stands off the body and how the trousers fall.
-- Hair and headwear. Adam's cap, Carl's slick, Steve's quiff and Elo's buzz
-  are made; every other style needs a maker (ponytail, puffs, bob, curly).
+- Hair and headwear. Adam's cap, Carl's slick, Steve's quiff, Elo's buzz and
+  Scam's curly mop are made; the women's styles need makers (ponytail,
+  puffs, bob).
 - Eyewear beyond shades and glasses (Ava's visor), the earrings and
   brooch.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
-- Props. The block briefcase, Carl's case, Steve's device and Elo's booster
-  are made; Jeff's parcel and Adam's mat come with their next look (the 2D
-  props of the women and Scam with their remodels).
+- Props. The block briefcase, Carl's case, Steve's device, Elo's booster and
+  Scam's paperclip are made; Jeff's parcel and Adam's mat come with their
+  next look (the women's with their remodels).
 - Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
-  (Steve) and the shoulder roll (Elo). Each fighter's own fighting style
+  (Steve), the shoulder roll (Elo) and the fence (Scam). Each fighter's own fighting style
   is its own stage, after their model.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
