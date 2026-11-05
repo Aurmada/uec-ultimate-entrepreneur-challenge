@@ -3,7 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE, GL3D, PHYS } from '../config.js';
+import { STYLES, STYLIZE, GL3D, PHYS, UNICORN } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
@@ -436,6 +436,23 @@ export function computePose(f, t, form = null) {
     const D = form.dash, away = f.dashDir !== undefined && f.dashDir !== f.facing;
     Object.assign(P, fromGuard(restingGuard({ ...f, def }), away && D.back ? { ...D, ...D.back } : D));
   }
+  // The super going on (forms.js `super`): the game freezes for
+  // UNICORN.POP_FREEZE as it does, and the fighter froze in whatever they were
+  // doing. A form strikes its own pose instead, held while the super's timer is
+  // full (it stands still through the freeze) and eased out over `fade`
+  // seconds as it starts to run, from wherever they could press it on the
+  // ground. Read from the timer, never written: render-only.
+  if (form.super && f.unicornT > 0 && SUPER_STATES.includes(f.state)) {
+    const S = form.super;
+    const w = ease.smooth(Math.max(0, Math.min(1, (f.unicornT - (UNICORN.DURATION - S.fade)) / S.fade)));
+    if (w > 0) {
+      for (const [j, v] of Object.entries(S.joints)) {
+        const mix = (a, b) => a * (1 - w) + b * w;   // exactly the pose at full weight
+        P[j] = typeof v === 'object' ? { x: mix(P[j].x, v.x), y: mix(P[j].y, v.y) } : mix(P[j] ?? 0, v);
+      }
+      if (S.hand && w > 0.5) P.hand = S.hand;
+    }
+  }
   P.handDepth = form.handDepth;
   P.guardTurn = form.guardTurn;
   // The lead hand's shape, for a model that has more than a fist: what the
@@ -447,6 +464,10 @@ export function computePose(f, t, form = null) {
   }
   return P;
 }
+
+// The states a super can go on from, standing (Fighter.update's actionable
+// ones on the ground; an attack it cancels has become idle by the next draw).
+const SUPER_STATES = ['idle', 'walk', 'crouch'];
 
 // A form's walk and jump are written from the fighter's idle guard, its
 // first frame (no breathing, no roll): the shared walk and jump start from the

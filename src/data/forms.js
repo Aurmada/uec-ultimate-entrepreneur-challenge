@@ -1393,6 +1393,9 @@ export const FORMS = {
     moves: { steal: BOX_STEAL, bomb: BOX_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+kick': BOX_UNDERCUT },
+    // UNICORN MODE going on. He goes into his super with a roar, the fists
+    // clenched down at his sides and the chest out.
+    super: { fade: 0.3, joints: { armF: { x: 28, y: -118 }, armB: { x: 10, y: -116 }, hipY: -84, shoulderY: -152, headY: -180, headX: -2, bodyLean: -0.1, sx: 1.02, sy: 1.04 } },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -1446,6 +1449,10 @@ export const FORMS = {
     moves: { steal: BRAWL_STEAL, bomb: BRAWL_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+punch': BRAWL_BLITZ },
+    // UNICORN MODE going on. He roars with his arms thrown wide at his
+    // shoulders and the head back. (Kept below the head: the super's banner
+    // covers the screen above it for longer than the pose lasts.)
+    super: { fade: 0.3, joints: { armF: { x: 64, y: -170 }, armB: { x: -36, y: -166 }, hipY: -74, shoulderY: -150, headY: -172, headX: -4, bodyLean: -0.06, sx: 1.1, sy: 1 } },
   },
   grappling: {
     stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
@@ -1502,6 +1509,9 @@ export const FORMS = {
     specials: { takeover: GRAB_TAKEOVER },
     // The steal and the bomb everyone has, in its own way (above).
     moves: { steal: GRAB_STEAL, bomb: GRAB_BOMB },
+    // UNICORN MODE going on. He straightens up to his full height for once,
+    // the briefcase raised beside him.
+    super: { fade: 0.3, hand: 'open', joints: { armF: { x: 70, y: -150 }, armB: { x: 20, y: -170 }, hipY: -80, shoulderY: -150, headY: -176, headX: 0, bodyLean: 0, sx: 1, sy: 1 } },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -1554,6 +1564,9 @@ export const FORMS = {
     moves: { steal: SHOW_STEAL, bomb: SHOW_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+launch': SHOW_ONEMORE },
+    // UNICORN MODE going on. He takes a showman's bow, the presenting hand
+    // swept low across him and the tablet held out behind.
+    super: { fade: 0.3, hand: 'open', joints: { armF: { x: 60, y: -110 }, armB: { x: -20, y: -140 }, hipY: -84, shoulderY: -150, headY: -178, headX: 8, bodyLean: 0.45, sy: 1.02 } },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -1601,6 +1614,9 @@ export const FORMS = {
     moves: { steal: ROLL_STEAL, bomb: ROLL_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+kick': ROLL_PLATFORM },
+    // UNICORN MODE going on. He opens up, arms flung out and the chest
+    // forward.
+    super: { fade: 0.3, hand: 'open', joints: { armF: { x: 50, y: -170 }, armB: { x: -30, y: -170 }, hipY: -84, shoulderY: -152, headY: -182, headX: -2, bodyLean: -0.14, sy: 1.02 } },
   },
   fence: {
     stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
@@ -1649,6 +1665,9 @@ export const FORMS = {
     moves: { steal: FENCE_STEAL, bomb: FENCE_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+slap': FENCE_MEMO },
+    // UNICORN MODE going on. Both hands out of his pockets at last, palms up,
+    // and a shrug: trust me.
+    super: { fade: 0.3, hand: 'open', joints: { armF: { x: 44, y: -132 }, armB: { x: 26, y: -134 }, hipY: -84, shoulderY: -158, headY: -178, headX: 3, bodyLean: 0 } },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -1701,6 +1720,9 @@ export const FORMS = {
     moves: { steal: EN_STEAL, bomb: EN_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+slap': EN_DEMO },
+    // UNICORN MODE going on. A hand on her hip and the other raised palm up at
+    // her shoulder, unveiling it.
+    super: { fade: 0.3, hand: 'open', joints: { armF: { x: 64, y: -178 }, armB: { x: 6, y: -112 }, hipY: -84, shoulderY: -152, headY: -183, headX: 0, bodyLean: -0.04, sy: 1.04 } },
   },
   peekaboo: {
     stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
@@ -1754,6 +1776,9 @@ export const FORMS = {
     moves: { steal: PEEK_STEAL, bomb: PEEK_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+punch': PEEK_PUMP, 'fwd+kick': PEEK_RUG },
+    // UNICORN MODE going on. She coils lower behind her forearms crossed in
+    // front of her, and comes out of it as it fades.
+    super: { fade: 0.3, joints: { armF: { x: 22, y: -146 }, armB: { x: 32, y: -144 }, hipY: -64, shoulderY: -136, headY: -158, headX: 4, bodyLean: 0.22, sy: 0.96 } },
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -1810,5 +1835,8 @@ export const FORMS = {
     moves: { steal: CALM_STEAL, bomb: CALM_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+launch': CALM_CONVICTION },
+    // UNICORN MODE going on. The arms opening wide, palms up, the chin raised,
+    // and slower out of it than anyone.
+    super: { fade: 0.45, hand: 'open', joints: { armF: { x: 70, y: -176 }, armB: { x: -10, y: -150 }, hipY: -90, shoulderY: -154, headY: -186, headX: -1, bodyLean: -0.08, sy: 1.05 } },
   },
 };

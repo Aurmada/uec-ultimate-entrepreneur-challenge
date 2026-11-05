@@ -769,3 +769,27 @@ test("every sculpt's command moves play their own track, from its guard and back
   }
   assert.equal(own, 9, `${own} command moves have their own track`);
 });
+
+// Each form strikes its own pose as its super goes on: the game freezes for
+// UNICORN.POP_FREEZE, and the fighter stood frozen in whatever they were
+// doing. Held while the super's timer is full, gone `fade` seconds after it
+// starts to run, and never over a swing.
+test('every form strikes its own pose as its super goes on, and lets it go', async () => {
+  const { UNICORN } = await import('../src/config.js');
+  for (const [name, form] of Object.entries(FORMS)) {
+    const S = form.super;
+    assert.ok(S && S.fade > 0 && S.fade < 1, `${name} goes into its super as it stood`);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const pose = (state, unicornT, extra = {}) => computePose({ def, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, unicornT, ...extra }, 0, form);
+    const on = pose('idle', UNICORN.DURATION), after = pose('idle', UNICORN.DURATION - S.fade - 0.01), plain = pose('idle', 0);
+    for (const [j, v] of Object.entries(S.joints)) assert.deepEqual(on[j], v, `${name}'s ${j} as the super goes on`);
+    // the hands no higher than the head: the super's banner (FX_ART.CUTIN)
+    // covers the screen above it for longer than the pose lasts
+    for (const l of ['armF', 'armB']) assert.ok(on[l].y >= on.headY - 6, `${name}'s ${l} goes up under the super's banner`);
+    if (S.hand) assert.equal(on.hand, S.hand);
+    assert.deepEqual(after, plain, `${name} is still in its super pose ${S.fade} s on`);
+    const atk = { ...ATTACKS.punch, kind: 'punch', hasHit: false };
+    assert.deepEqual(pose('attack', UNICORN.DURATION, { attack: atk, stateT: 0.06 }), pose('attack', 0, { attack: atk, stateT: 0.06 }), `${name} strikes its super pose over a punch`);
+  }
+});

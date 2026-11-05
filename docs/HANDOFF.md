@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, command moves, steal and bomb, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 548 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, command moves, steal, bomb and super pose, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 549 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1072,6 +1072,39 @@ the floor, her kick; Adam's BLITZSCALE rush one haymaker held for the run.
   borrowed basic in the middle. Fails with the lookup reverted. Both pixel
   checks identical; real matches firing Kim's RUG PULL, Jeff's UNDERCUT and
   Lizbeth's THE DEMO run with no errors.
+
+### Going into the super in each form (2026-11-05, not released, not pushed)
+
+The owner: "keep going without pushing", so from here the branch is
+committed locally and not pushed until the owner says.
+
+UNICORN MODE freezes the game for `UNICORN.POP_FREEZE` (0.45 s) with a
+banner, and the fighter stood frozen in whatever they were doing.
+
+- **Each form's own pose** (`super` in `forms.js`), held while the super's
+  timer (`unicornT`) is full, which it is through the freeze, and eased out
+  over `fade` seconds as it starts to run; only standing (idle, walk,
+  crouch), never over a swing. Read from the timer, never written. The blend
+  lands exactly on the pose at full weight (`a * (1 - w) + b * w`; the other
+  form left Lizbeth's lean 1e-17 off).
+- **Below the head.** The banner (`FX_ART.CUTIN.SUPER_DUR`, 1.1 s) covers the
+  screen above the fighters' heads for longer than the pose lasts, so the
+  first versions with the arms thrown up (Adam, Steve, Kim) showed nothing
+  but a body. Every pose keeps the hands at or below the head, and a test
+  holds it there. Adam still loses his head under the banner, being tallest.
+- **Each:** Jeff roars, fists clenched at his sides and chest out; Adam roars
+  with his arms wide at his shoulders; Carl straightens up for once, the
+  briefcase raised beside him; Steve takes a showman's bow; Elo opens up,
+  arms flung out; Scam takes both hands out of his pockets, palms up, and
+  shrugs; Lizbeth puts a hand on her hip and unveils with the other; Kim
+  coils lower behind crossed forearms; Cathie opens her arms, palms up, and
+  comes out of it slowest.
+- Tests: the pose at a full timer, gone after `fade`, never over a punch,
+  the hands below the head. Fails with the pose switched off. Both pixel
+  checks identical; UNICORN MODE in two real matches runs with no errors.
+- Not done: the round-start pose. The fighters stand idle through ROUND and
+  FIGHT, and the renderer is not told the round is starting (it would need
+  the game's state passed to `drawFighter`).
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 
