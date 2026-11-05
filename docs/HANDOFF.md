@@ -6,12 +6,13 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.16 on GitHub Pages
+The game is live at v3.17 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
 on 2026-11-05: 3D by default, the nine founders the sculpted cast below, each
-in their own fighting form for every basic move and every reaction (hit, KO,
-victory), and 2D a choice in Settings (see "v3.16", "v3.15", "v3.14" and
-"v3.13"). v3.12 was built on 2026-10-30 but never reached `main`; it went
+in their own fighting form for everything they do (every move, special and
+reaction, how they move, start a round and go into their super), and 2D a
+choice in Settings (see "v3.17" back to "v3.13"). v3.17 also fixed the dash
+(`SIM_VERSION` 10). v3.12 was built on 2026-10-30 but never reached `main`; it went
 out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
@@ -50,8 +51,8 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special (Scam's stance switch included), command moves, steal, bomb, super pose, round start and moves thrown from a crouch and in the air, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 553 tests pass. |
+| `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17; `main` is this branch | Merged into `main` on 2026-11-05. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -883,7 +884,15 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## Walk, jump, crouch and dash in each form (2026-11-05, on `claude/jeff-model`, not released)
+## v3.17, released 2026-11-05: every move in each form, and the dash fixed
+
+The owner, after the round start and the moves from a crouch and in the air:
+"Push it live and continue". Everything below, to the v3.16 heading, went out
+together, the dash fix with it (`SIM_VERSION` 10, so a v3.16 tab and a v3.17
+tab cannot play each other online). The sections were written as each piece
+was built.
+
+### Walk, jump, crouch and dash in each form
 
 The owner, offered each fighter's own walk and jump after v3.16: "yes, let's
 keep going". The shared walk was one shuffle for all nine, and it stood every
@@ -958,7 +967,7 @@ walks: the last of a fighter's moving states in the shared shapes.
   crouching, dashing back and in, and through a KO (Adam against Lizbeth,
   Cathie against Jeff) run with no errors.
 
-### A dash with a direction held runs (`SIM_VERSION` 10, awaiting the owner)
+### A dash with a direction held runs (`SIM_VERSION` 10)
 
 Found while driving the dashes in a real match: a dash pressed with a
 direction held never ran. `startDash` set the dash, then the walk code in the
@@ -980,9 +989,9 @@ since v1.0.
 - The 2D pixel check differs on every frame with it, and only with it: the
   seeded matches play out differently once the AI's dashes run. Without it,
   both checks are identical.
-- It is its own commit, so it can be left out of a release.
+- It was its own commit, so it could have been left out; the owner released it.
 
-### Each fighter's signature special in their form (2026-11-05, not released)
+### Each fighter's signature special in their form
 
 The owner, asked whether to release the moves and the dash fix: "not yet,
 keep going". In 3D every special played the basic its kind borrows
@@ -1015,7 +1024,7 @@ nothing, the old computed swing.
   lookup reverted. Both pixel checks identical; real matches firing Kim's,
   Adam's and Cathie's run with no errors.
 
-### The steal and the bomb in each form (2026-11-05, not released)
+### The steal and the bomb in each form
 
 The owner, again: "not yet, keep going". The two moves every fighter has
 borrowed a basic in 3D: the energy steal the punch, the bomb the slap. A
@@ -1045,7 +1054,7 @@ a seizure.
   identical; real matches with Adam and Scam stealing and throwing run with
   no errors.
 
-### The command moves in each form (2026-11-05, not released)
+### The command moves in each form
 
 "Not yet, keep going", once more. Each fighter's command moves (forward and a
 basic) borrowed the form's basic for that button: Lizbeth's THE DEMO, a
@@ -1073,7 +1082,7 @@ the floor, her kick; Adam's BLITZSCALE rush one haymaker held for the run.
   checks identical; real matches firing Kim's RUG PULL, Jeff's UNDERCUT and
   Lizbeth's THE DEMO run with no errors.
 
-### Going into the super in each form (2026-11-05, not released, not pushed)
+### Going into the super in each form
 
 The owner: "keep going without pushing", so from here the branch is
 committed locally and not pushed until the owner says.
@@ -1103,7 +1112,7 @@ banner, and the fighter stood frozen in whatever they were doing.
   the hands below the head. Fails with the pose switched off. Both pixel
   checks identical; UNICORN MODE in two real matches runs with no errors.
 
-### Opening the round in each form (2026-11-05, not released, not pushed)
+### Opening the round in each form
 
 The fighters stood idle and locked through ROUND and FIGHT! (1.55 s,
 `ROUND.INTRO_ROUND_T` and `INTRO_FIGHT_T`), and the renderer was not told
@@ -1132,7 +1141,7 @@ the round was starting.
   (their frames are mid-round); a real match through the round's start runs
   with no errors.
 
-### Scam's ALIGNMENT SHIFT shows (2026-11-05, not released, not pushed)
+### Scam's ALIGNMENT SHIFT shows
 
 The one signature special left without a pose: a stance switch never
 becomes an attack (`Fighter.startSpecial` switches and goes back to idle),
@@ -1150,7 +1159,7 @@ so there was nothing to draw.
   form with one. Fails with the pose switched off. Both pixel checks
   identical; the switch in a real match runs with no errors.
 
-### Moves thrown from a crouch, thrown low (2026-11-05, not released, not pushed)
+### Moves thrown from a crouch, thrown low
 
 Holding down and attacking keeps the hurtbox crouched through the move
 (`Fighter.crouching` is only cleared by a block), but the pose played the
@@ -1168,7 +1177,7 @@ them as a crouching one.
   and a crouching kick rises no higher above the hips than a standing one.
   Fails with the change switched off. Both pixel checks identical.
 
-### Moves thrown in the air, from each form's jump (2026-11-05, not released, not pushed)
+### Moves thrown in the air, from each form's jump
 
 A move in the air played the standing move with the legs tucked by the same
 18 and 12 px for everyone, whatever their own jump looked like.

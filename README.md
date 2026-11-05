@@ -71,6 +71,14 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.17: every move is theirs
+
+- 🕺 **They move their own way.** In 3D each founder now walks, jumps, crouches and dashes in their own style, keeping their own stance as they go: Jeff bounces in on the balls of his feet, Adam swaggers, Carl stalks you hunched over, Steve struts, Lizbeth advances like a fencer, Kim bobs and weaves, Cathie glides.
+- ✨ **Every special is theirs.** Each signature special, command move, steal and bomb has its own animation: Kim's GROWTH HACK is a real flurry, Carl lunges and hauls you in for a HOSTILE TAKEOVER, Lizbeth turns away before her PIVOT PUNCH, Scam does his dirty work with the hand he keeps in his pocket.
+- 🦄 **Going into UNICORN MODE** each founder strikes a pose of their own, and each one opens the round with a gesture of their own: Jeff taps his gloves, Steve waves to the crowd, Lizbeth salutes.
+- 🦵 **Low and high.** Attacks from a crouch now stay low (a crouching kick goes for the shins), and attacks in the air keep each founder's own jump.
+- 🏃 **Dash fixed.** Pressing dash while holding a direction now dashes that way, back dashes included. It used to spend the cooldown and only walk, for players and the computer alike, so the computer dashes more now too. Online, both players need this version to play each other.
+
 ## What's new in v3.16: they win and lose their own way too
 
 - 🏆 **Every reaction is theirs.** In 3D each founder now takes a hit, goes down and celebrates in their own style. Jeff Bozo covers up, stays down with his guard still up, and wins with both fists over his head. Adam Weumann gets thrown about, lands like a starfish and flexes both arms. Carl Icahnt barely moves when hit and wins straightening his tie, briefcase at his side. Steve Nojobs sells every hit and wins presenting himself to the crowd. Elo Ma crosses his arms. Scam Alt keeps a hand in his pocket throughout and shrugs. Lizbeth Holmez goes down stiff as a board and wins standing quite still, staring. Kim Koindashian checks her nails. Cathie Woodz goes down composed and wins breathing slowly, palms up. What happens in the fight is unchanged.
