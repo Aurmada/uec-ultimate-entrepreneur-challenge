@@ -1474,7 +1474,8 @@ export const FORMS = {
     // less than most. Out cold, his guard is still up. He wins with both fists
     // over his head, up on his toes.
     hit: { lean: 0.8, armF: { x: 42, y: -160 }, armB: { x: 30, y: -160 } },
-    ko: { armF: { x: 34, y: -150 }, armB: { x: 22, y: -148 } },
+    // The fall: he goes over like a felled tree, the guard still up.
+    ko: { armF: { x: 34, y: -150 }, armB: { x: 22, y: -148 }, fall: { time: 0.5, rot: -1.5, ease: 'inQuad' } },
     victory: {
       rate: 1.6,
       keys: carried([
@@ -1532,7 +1533,8 @@ export const FORMS = {
     // Hit, he is thrown about, the arms flung out. He goes down spread out
     // like a starfish, and wins flexing both arms, roaring.
     hit: { lean: 1.3, armF: { x: 54, y: -130 }, armB: { x: -10, y: -150 } },
-    ko: { armF: { x: 60, y: -160 }, armB: { x: -48, y: -160 }, legF: { x: 40, y: -6 }, legB: { x: -34, y: -4 } },
+    // The fall: he crashes down hard and fast.
+    ko: { armF: { x: 60, y: -160 }, armB: { x: -48, y: -160 }, legF: { x: 40, y: -6 }, legB: { x: -34, y: -4 }, fall: { time: 0.4, rot: -1.55, ease: 'outQuad' } },
     victory: {
       rate: 1.2,
       keys: carried([
@@ -1594,7 +1596,8 @@ export const FORMS = {
     // hanging at his side: dusting off his hands, the case came up between
     // them and he seemed to be clapping it.
     hit: { lean: 0.6, armF: { x: 50, y: -120 }, armB: { x: 36, y: -116 }, hand: 'open' },
-    ko: { armF: { x: 26, y: -112 }, armB: { x: -10, y: -110 }, hand: 'open' },
+    // The fall: he topples slowly, all his weight going at once.
+    ko: { armF: { x: 26, y: -112 }, armB: { x: -10, y: -110 }, hand: 'open', fall: { time: 0.7, rot: -1.5, ease: 'inQuad' } },
     victory: {
       rate: 0.8,
       keys: carried([
@@ -1651,7 +1654,8 @@ export const FORMS = {
     // over his head, and wins presenting himself to the crowd, chin up, the
     // presenting hand sweeping up.
     hit: { lean: 1.2, armF: { x: 50, y: -176 }, armB: { x: 14, y: -166 }, hand: 'open' },
-    ko: { armF: { x: 24, y: -210 }, armB: { x: -20, y: -200 }, hand: 'open' },
+    // The fall: he sells it, going over too far and bouncing back.
+    ko: { armF: { x: 24, y: -210 }, armB: { x: -20, y: -200 }, hand: 'open', fall: { time: 0.55, rot: -1.5, ease: 'outBack' } },
     victory: {
       rate: 0.8,
       keys: carried([
@@ -1704,7 +1708,8 @@ export const FORMS = {
     // Hit, he takes it badly, both hands to his face. He goes down with one
     // arm flung up, and wins with his arms crossed and his chin up, swaying.
     hit: { lean: 1.3, armF: { x: 36, y: -164 }, armB: { x: 30, y: -168 } },
-    ko: { armF: { x: 40, y: -190 }, armB: { x: -30, y: -120 } },
+    // The fall: he drops quickly.
+    ko: { armF: { x: 40, y: -190 }, armB: { x: -30, y: -120 }, fall: { time: 0.38, rot: -1.45, ease: 'outQuad' } },
     victory: {
       rate: 0.6,
       keys: carried([
@@ -1759,7 +1764,8 @@ export const FORMS = {
     // Hit, he gives with it, the hand still in his pocket. He goes down with
     // it there too, and wins with both hands in his pockets and a shrug.
     hit: { lean: 0.8, armF: { x: 44, y: -136 }, armB: { x: -6, y: -104 }, hand: 'open' },
-    ko: { armF: { x: 30, y: -112 }, armB: { x: -6, y: -104 }, hand: 'open' },
+    // The fall: he slumps rather than falls, never quite flat.
+    ko: { armF: { x: 30, y: -112 }, armB: { x: -6, y: -104 }, hand: 'open', fall: { time: 0.5, rot: -1.3, ease: 'outQuad' } },
     victory: {
       rate: 0.7,
       keys: carried([
@@ -1820,7 +1826,8 @@ export const FORMS = {
     // board, and wins standing quite still, hands clasped in front of her,
     // staring.
     hit: { lean: 0.5, armF: { x: 46, y: -132 }, armB: { x: 36, y: -138 }, hand: 'open' },
-    ko: { armF: { x: 12, y: -106 }, armB: { x: -8, y: -106 }, legF: { x: 12, y: -2 }, legB: { x: -10, y: -2 }, hand: 'open' },
+    // The fall: stiff as a board, slow to start and then all the way flat.
+    ko: { armF: { x: 12, y: -106 }, armB: { x: -8, y: -106 }, legF: { x: 12, y: -2 }, legB: { x: -10, y: -2 }, hand: 'open', fall: { time: 0.6, rot: -1.57, ease: 'inQuad' } },
     victory: {
       rate: 0.4,
       keys: carried([
@@ -1881,7 +1888,8 @@ export const FORMS = {
     // (the nails held out in front of her chest: up by her face, the hand
     // hid it).
     hit: { lean: 0.7, armF: { x: 52, y: -150 }, armB: { x: 42, y: -154 } },
-    ko: { armF: { x: 50, y: -150 }, armB: { x: 40, y: -154 } },
+    // The fall: she crumples inside her shell.
+    ko: { armF: { x: 50, y: -150 }, armB: { x: 40, y: -154 }, fall: { time: 0.42, rot: -1.4, ease: 'outQuad' } },
     victory: {
       rate: 0.5,
       keys: carried([
@@ -1939,7 +1947,8 @@ export const FORMS = {
     // palm on her chest, and wins breathing slowly, the arms opening palms up
     // and closing again.
     hit: { lean: 0.5, armF: { x: 56, y: -136 }, armB: { x: 38, y: -116 }, hand: 'open' },
-    ko: { armF: { x: 28, y: -140 }, armB: { x: 16, y: -122 }, hand: 'open' },
+    // The fall: she settles to the floor slowly, as if choosing to.
+    ko: { armF: { x: 28, y: -140 }, armB: { x: 16, y: -122 }, hand: 'open', fall: { time: 0.85, rot: -1.45, ease: 'smooth' } },
     victory: {
       rate: 0.35,
       keys: carried([

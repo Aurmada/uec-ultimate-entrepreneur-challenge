@@ -888,3 +888,20 @@ test('every form throws a move in the air from its own jump', () => {
     }
   }
 });
+
+// Each form goes down its own way: how long the fall takes, how far over and
+// how, where everyone fell the same 0.45 s along the same curve.
+test('every form falls its own way when it is knocked out', () => {
+  const curves = new Set();
+  for (const [name, form] of Object.entries(FORMS)) {
+    const F = form.ko?.fall;
+    assert.ok(F && F.time > 0.2 && F.time < 1 && F.rot < -1 && F.rot > -1.7, `${name} falls the shared fall`);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const rot = (stateT) => computePose({ def, state: 'ko', stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form).rot;
+    assert.ok(Math.abs(rot(F.time) - F.rot) < 1e-9 && Math.abs(rot(F.time + 2) - F.rot) < 1e-9, `${name} does not end at ${F.rot}`);
+    assert.ok(Math.abs(rot(0)) < 1e-9, `${name} starts its fall already over`);
+    curves.add([F.time, F.rot, F.ease].join());
+  }
+  assert.ok(curves.size >= 8, `only ${curves.size} different falls`);
+});

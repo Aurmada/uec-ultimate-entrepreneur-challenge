@@ -52,7 +52,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17; `main` is this branch | Merged into `main` on 2026-11-05. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus each form's own knockout fall (below) | v3.17 merged into `main` on 2026-11-05; the falls are not released and not pushed. 554 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -884,6 +884,23 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
+## Each form's own knockout fall (2026-11-05, on `claude/jeff-model`, not released)
+
+The owner, releasing v3.17: "Push it live and continue". A knocked-out
+fighter's arms and legs were each form's own (v3.16), but everyone went over
+in the same 0.45 s along the same curve (`basePose`, `P.rot`).
+
+- **`ko.fall`** in `forms.js`: how long the fall takes, how far over, and
+  how, by one of `drawFighter.js`'s eases: `inQuad` for a plank that topples
+  (Jeff, Carl, Lizbeth), `outQuad` for a crash (Adam, Elo, Scam, Kim),
+  `outBack` for Steve, who goes over too far and bounces back, `smooth` for
+  Cathie, who settles slowly as if choosing to. Scam slumps rather than
+  falls, never quite flat.
+- Tests: every form has one, starts upright, ends at its own angle and stays
+  there, and they all differ. Fails with the fall switched off. Both pixel
+  checks identical; knockouts of Lizbeth and Cathie in real matches show the
+  falls with no errors.
+
 ## v3.17, released 2026-11-05: every move in each form, and the dash fixed
 
 The owner, after the round start and the moves from a crouch and in the air:
@@ -1687,10 +1704,10 @@ not read it), which the determinism and effects tests check.
    history. Settled on 2026-10-29: the prototype merged into `main` as v3.10,
    dark, after the phone check. (Also settled on 2026-10-28: the owner set
    Supabase's Site URL and Redirect URLs to the new address.)
-1. **Whether 3D becomes the default.** It runs well on the owner's iPhone; a
-   mid-range phone is the remaining check (Next steps, step 1). The 2D rig has to
-   stay either way: it is the fallback without WebGL2 and when the GPU context is
-   lost.
+1. **Whether 3D becomes the default.** Settled: the owner made it the default
+   in v3.14, on how it ran on his iPhone. A mid-range phone is still unmeasured
+   (Next steps, step 1). The 2D rig stays either way: it is the fallback without
+   WebGL2 and when the GPU context is lost, and the Settings choice.
 2. **The aura in front.** On the 3D layer an aura drawn by the fighter in front
    (Unicorn Mode's glow, a stance ring) no longer washes over a 3D fighter
    behind it, as it did when everything was painted onto one canvas. It reads
@@ -1728,7 +1745,8 @@ not read it), which the determinism and effects tests check.
    OBJECTIONs (on a strike and on a steal) push the victim away. It reads like a
    slip of sign, but it may have been meant to let the victim punish a grabber
    stuck in a long recovery. Flipping it is one sign, but it changes what a live
-   match computes, so it needs `SIM_VERSION` 10; left as it is.
+   match computes, so it needs a `SIM_VERSION` bump (to 11: v3.17's dash fix
+   took 10); left as it is.
 
 ## Next steps, in the order they pay off
 

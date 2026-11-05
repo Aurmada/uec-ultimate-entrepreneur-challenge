@@ -422,6 +422,11 @@ export function computePose(f, t, form = null, intro = null) {
   if (f.state === 'ko' && form.ko) {
     for (const k of ['armF', 'armB', 'legF', 'legB']) if (form.ko[k]) P[k] = { ...form.ko[k] };
     if (form.ko.hand) P.hand = form.ko.hand;
+    // and goes down its own way (`fall`): how long the fall takes, how far
+    // over, and how (an ease of ours: in for a plank that topples, out for a
+    // crash, back for one that bounces), where everyone fell the same 0.45 s.
+    const F = form.ko.fall;
+    if (F) P.rot = F.rot * ease[F.ease || 'outQuad'](Math.min(1, f.stateT / F.time));
   }
   if (f.state === 'victory' && form.victory) {
     const V = form.victory;
