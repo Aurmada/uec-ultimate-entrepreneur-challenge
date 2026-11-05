@@ -402,6 +402,13 @@ export function computePose(f, t, form = null) {
   }
   if (f.state === 'walk' && form.walk) Object.assign(P, formWalk({ ...f, def }, form.walk));
   if (f.state === 'jump' && form.jump) Object.assign(P, formJump({ ...f, def }, form.jump));
+  if (f.state === 'crouch' && form.crouch) Object.assign(P, fromGuard(restingGuard({ ...f, def }), form.crouch));
+  if (f.state === 'dash' && form.dash) {
+    // The shared dash leans into a charge whichever way it goes, so a dash
+    // back came out as a fighter charging while being dragged backwards.
+    const D = form.dash, away = f.dashDir !== undefined && f.dashDir !== f.facing;
+    Object.assign(P, fromGuard(restingGuard({ ...f, def }), away && D.back ? { ...D, ...D.back } : D));
+  }
   P.handDepth = form.handDepth;
   P.guardTurn = form.guardTurn;
   // The lead hand's shape, for a model that has more than a fist: what the
@@ -471,6 +478,27 @@ function formJump(f, J) {
     bodyLean: lean(U) + (lean(D) - lean(U)) * k,
     sx: G.sx * (1 - 0.08 * s * rise), sy: G.sy * (1 + 0.10 * s * rise),
     twist: 0, hipTwist: 0,
+  };
+}
+
+// A form's own crouch or dash (forms.js `crouch`, `dash`), a held shape
+// written from the guard G: the hips, shoulders and head dropped below it
+// (`hip`, `shoulder`, `head`, or all three by `drop`), the lean, the feet
+// (else the guard's), and the hands as the guard carried down with the
+// shoulders, moved by `armF`, `armB` from there (as a form's block moves
+// them), so whatever a hand holds stays in it. The shared crouch drops
+// everyone from the stock rest height, so a fighter already low in their
+// guard, Carl or Kim, hardly went down.
+function fromGuard(G, S) {
+  const d = S.drop ?? 0;
+  const shoulderY = G.shoulderY + (S.shoulder ?? d);
+  const arm = (g, o) => ({ x: g.x + (o?.x ?? 0), y: g.y + shoulderY - G.shoulderY + (o?.y ?? 0) });
+  return {
+    hipY: G.hipY + (S.hip ?? d), shoulderY, headY: G.headY + (S.head ?? d),
+    headX: G.headX + (S.headX ?? 0), bodyLean: S.lean ?? G.bodyLean,
+    sx: S.sx ?? G.sx, sy: S.sy ?? G.sy, twist: S.twist ?? 0, hipTwist: 0,
+    legF: { ...(S.legF ?? G.legF) }, legB: { ...(S.legB ?? G.legB) },
+    armF: arm(G.armF, S.armF), armB: arm(G.armB, S.armB),
   };
 }
 

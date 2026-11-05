@@ -823,6 +823,14 @@ export const FORMS = {
       up: { legF: { x: 20, y: -34 }, legB: { x: -6, y: -26 } },
       down: { legF: { x: 22, y: -14 }, legB: { x: -22, y: -10 } },
     },
+    // He crouches as a boxer ducks: knees deep, the gloves still at his face,
+    // chin tucked over them. He dashes in low behind the gloves, and pulls
+    // straight back out, upright, the gloves still up.
+    crouch: { hip: 24, shoulder: 24, head: 26, headX: 4, lean: 0.22, sx: 1.04, sy: 0.94, legF: { x: 30, y: 0 }, legB: { x: -32, y: 0 } },
+    dash: {
+      drop: 8, lean: 0.3, headX: 2, legF: { x: 38, y: -4 }, legB: { x: -34, y: -8 },
+      back: { drop: 2, lean: -0.08, headX: 0, legF: { x: 22, y: -8 }, legB: { x: -36, y: -2 } },
+    },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -861,6 +869,14 @@ export const FORMS = {
     jump: {
       up: { legF: { x: 38, y: -30 }, legB: { x: -34, y: -22 }, armF: { x: 50, y: -196 }, armB: { x: -14, y: -190 }, lean: -0.06 },
       down: { legF: { x: 32, y: -10 }, legB: { x: -30, y: -8 } },
+    },
+    // He squats sumo-wide, the fists dropping in front of him. He charges
+    // head down, the lead shoulder first and the fists low, and stumbles back
+    // with his arms flung out.
+    crouch: { hip: 20, shoulder: 22, head: 22, lean: 0.12, sx: 1.14, sy: 0.9, legF: { x: 40, y: 0 }, legB: { x: -38, y: 0 }, armF: { x: -4, y: 8 }, armB: { x: -2, y: 8 } },
+    dash: {
+      drop: 10, lean: 0.5, twist: 0.25, legF: { x: 42, y: -10 }, legB: { x: -36, y: -4 }, armF: { x: -10, y: 16 }, armB: { x: -6, y: 12 },
+      back: { drop: 4, lean: -0.16, twist: 0, legF: { x: 24, y: -12 }, legB: { x: -38, y: -2 }, armF: { x: 8, y: -20 }, armB: { x: -20, y: -16 } },
     },
   },
   grappling: {
@@ -906,6 +922,14 @@ export const FORMS = {
       down: { legF: { x: 30, y: -8 }, legB: { x: -26, y: -6 }, lean: 0.28 },
       stretch: 0.5,
     },
+    // He crouches as a wrestler changes level, hunched further over, the open
+    // hand reaching low for the legs. He shoots in for the takedown lower
+    // still, and steps back heavily, still hunched.
+    crouch: { hip: 18, shoulder: 20, head: 20, lean: 0.34, sx: 1.08, sy: 0.92, legF: { x: 38, y: 0 }, legB: { x: -32, y: 0 }, armF: { x: 6, y: 14 } },
+    dash: {
+      drop: 16, lean: 0.46, legF: { x: 42, y: -4 }, legB: { x: -36, y: -2 }, armF: { x: 16, y: 12 },
+      back: { drop: 6, lean: 0.14, legF: { x: 24, y: -4 }, legB: { x: -36, y: -4 }, armF: { x: 0, y: 0 } },
+    },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -944,6 +968,14 @@ export const FORMS = {
       up: { legF: { x: 46, y: -36 }, legB: { x: -42, y: -30 }, armF: { x: 60, y: -214 }, lean: -0.1 },
       down: { legF: { x: 22, y: -20 }, legB: { x: -14, y: -14 }, lean: -0.06 },
     },
+    // He goes down as if taking a knee for the crowd, deep and upright. He
+    // sweeps in chest first, the presenting hand out in front, and glides
+    // back, leaning away.
+    crouch: { hip: 32, shoulder: 30, head: 31, lean: -0.04, sx: 1.04, sy: 0.94, legF: { x: 30, y: 0 }, legB: { x: -34, y: 0 }, armF: { x: 0, y: -6 } },
+    dash: {
+      drop: 2, lean: -0.06, legF: { x: 34, y: -16 }, legB: { x: -30, y: 0 }, armF: { x: 8, y: -12 },
+      back: { drop: 0, lean: -0.14, legF: { x: 14, y: 0 }, legB: { x: -24, y: -8 }, armF: { x: 0, y: 0 } },
+    },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -977,6 +1009,13 @@ export const FORMS = {
     jump: {
       up: { legF: { x: 26, y: -40 }, legB: { x: -14, y: -6 } },
       down: { legF: { x: 22, y: -16 }, legB: { x: -18, y: -4 } },
+    },
+    // He sinks with his weight back, the lead hand still low. He slides in
+    // low and easy, and leans back out of range as he goes.
+    crouch: { hip: 24, shoulder: 24, head: 26, headX: -2, lean: 0, sx: 1.08, sy: 0.92, legF: { x: 30, y: 0 }, legB: { x: -22, y: 0 } },
+    dash: {
+      drop: 8, lean: 0.22, legF: { x: 36, y: -4 }, legB: { x: -32, y: -6 },
+      back: { drop: 4, lean: -0.22, twist: -0.1, legF: { x: 26, y: -2 }, legB: { x: -30, y: -6 } },
     },
   },
   fence: {
@@ -1015,6 +1054,13 @@ export const FORMS = {
       up: { legF: { x: 8, y: -10 }, legB: { x: -4, y: -8 } },
       down: { legF: { x: 6, y: -4 }, legB: { x: -4, y: -3 } },
     },
+    // He squats, knees out, the hand still in his pocket. He scurries in
+    // hunched, and backs off as if he had never been there.
+    crouch: { hip: 30, shoulder: 26, head: 26, lean: 0.1, sx: 1.1, sy: 0.9, legF: { x: 26, y: 0 }, legB: { x: -22, y: 0 } },
+    dash: {
+      drop: 10, lean: 0.3, legF: { x: 30, y: -8 }, legB: { x: -26, y: -6 },
+      back: { drop: 2, lean: -0.06, legF: { x: 16, y: -4 }, legB: { x: -26, y: -6 } },
+    },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -1052,6 +1098,14 @@ export const FORMS = {
       up: { legF: { x: 10, y: -6 }, legB: { x: -10, y: -6 } },
       down: { legF: { x: 28, y: -8 }, legB: { x: -20, y: -10 } },
       stretch: 0.3,
+    },
+    // She sinks into a low en garde, the feet long apart and the back
+    // straight. She dashes in a lunge, the lead hand going out with it, and
+    // retreats as a fencer does, upright.
+    crouch: { hip: 26, shoulder: 26, head: 26, lean: 0.02, sx: 1.06, sy: 0.94, legF: { x: 36, y: 0 }, legB: { x: -34, y: 0 } },
+    dash: {
+      drop: 10, lean: 0.1, legF: { x: 52, y: -2 }, legB: { x: -40, y: 0 }, armF: { x: 22, y: 0 },
+      back: { drop: 6, lean: 0.02, legF: { x: 22, y: 0 }, legB: { x: -34, y: -6 }, armF: { x: 0, y: 0 } },
     },
   },
   peekaboo: {
@@ -1092,6 +1146,13 @@ export const FORMS = {
     jump: {
       up: { legF: { x: 18, y: -48 }, legB: { x: 4, y: -42 }, lean: 0.24 },
       down: { legF: { x: 22, y: -18 }, legB: { x: -16, y: -14 } },
+    },
+    // She ducks deep, tight behind the fists, the head forward over them. She
+    // darts in low, the head moved off the line, and pulls straight back.
+    crouch: { hip: 22, shoulder: 26, head: 27, headX: 4, lean: 0.32, sx: 1.04, sy: 0.92, legF: { x: 28, y: 0 }, legB: { x: -24, y: 0 } },
+    dash: {
+      drop: 14, lean: 0.34, twist: 0.12, legF: { x: 34, y: -6 }, legB: { x: -30, y: -4 },
+      back: { drop: 8, lean: -0.06, twist: 0, legF: { x: 20, y: -4 }, legB: { x: -32, y: -6 } },
     },
   },
   taiChi: {
@@ -1134,6 +1195,14 @@ export const FORMS = {
       up: { legF: { x: 22, y: -58 }, legB: { x: -6, y: -2 }, armF: { x: 70, y: -176 } },
       down: { legF: { x: 20, y: -30 }, legB: { x: -10, y: -4 } },
       stretch: 0.5,
+    },
+    // She sinks low over the rear foot with the lead leg stretched out long in
+    // front of her, the lead hand following it down. She glides in and out,
+    // level, as she walks.
+    crouch: { hip: 34, shoulder: 30, head: 32, lean: 0.06, sx: 1.06, sy: 0.94, legF: { x: 46, y: 0 }, legB: { x: -20, y: 0 }, armF: { x: 6, y: 10 } },
+    dash: {
+      drop: 4, lean: 0.02, legF: { x: 34, y: -4 }, legB: { x: -30, y: -2 }, armF: { x: 10, y: -4 },
+      back: { drop: 4, lean: -0.04, legF: { x: 18, y: -2 }, legB: { x: -32, y: -4 }, armF: { x: 0, y: 0 } },
     },
   },
 };

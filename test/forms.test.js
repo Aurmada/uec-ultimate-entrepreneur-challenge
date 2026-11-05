@@ -604,3 +604,49 @@ test('every form jumps its own way, from its own shape going up to its own comin
     }
   }
 });
+
+// Each form crouches its own way and clearly lower than it stands: the shared
+// crouch dropped everyone from the stock rest height, so a fighter already
+// low in their guard (Carl, Kim) hardly went down. The hands come down with
+// the shoulders, so whatever they hold stays in them.
+test('every form crouches its own way, well below its guard, the hands carried down', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const C = form.crouch;
+    assert.ok(C, `${name} crouches the shared crouch`);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const pose = (state) => computePose({ def, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching: state === 'crouch', movingBack: false }, 0, form);
+    const guard = pose('idle'), P = pose('crouch');
+    assert.ok(P.headY > guard.headY + 18, `${name} crouches ${(P.headY - guard.headY).toFixed(1)} px below the guard`);
+    assert.ok(P.hipY > guard.hipY + 15, `${name}'s hips go down ${(P.hipY - guard.hipY).toFixed(1)} px`);
+    assert.equal(P.bodyLean, C.lean ?? guard.bodyLean);
+    for (const l of ['legF', 'legB']) assert.equal(P[l].y, 0, `${name}'s ${l} is off the floor in a crouch`);
+    assert.ok(P.legF.x - P.legB.x >= 20, `${name}'s feet meet in a crouch`);
+    for (const a of ['armF', 'armB']) {
+      const o = C[a] ?? { x: 0, y: 0 };
+      assert.ok(Math.abs(P[a].x - guard[a].x - o.x) < 1e-9 && Math.abs((P[a].y - P.shoulderY) - (guard[a].y - guard.shoulderY) - o.y) < 1e-9,
+        `${name}'s ${a} leaves the guard in a crouch`);
+    }
+  }
+});
+
+// And dashes its own way, with a dash back of its own: the shared dash leans
+// into a charge whichever way it goes, so a dash back was a charge dragged
+// backwards.
+test('every form dashes its own way, leaning out of a dash back', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const D = form.dash;
+    assert.ok(D && D.back, `${name} dashes the shared dash`);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const pose = (dashDir) => computePose({ def, state: 'dash', stateT: 0.08, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, facing: 1, dashDir }, 0, form);
+    const guard = computePose({ def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form);
+    const into = pose(1), away = pose(-1);
+    assert.equal(into.bodyLean, D.lean ?? guard.bodyLean, `${name} dashes in at the shared lean`);
+    assert.equal(away.bodyLean, D.back.lean ?? D.lean ?? guard.bodyLean, `${name} dashes back at the shared lean`);
+    assert.ok(away.bodyLean < into.bodyLean - 0.05, `${name} leans into a dash back (${away.bodyLean} against ${into.bodyLean})`);
+    assert.deepEqual(into.legF, D.legF);
+    assert.deepEqual(away.legF, D.back.legF ?? D.legF);
+    for (const P of [into, away]) assert.ok(P.legF.x - P.legB.x >= 20, `${name}'s feet meet in a dash`);
+  }
+});
