@@ -656,6 +656,9 @@ LEG_CUTS = {
     'baggy': dict(top=0.1, mid=0.118, knee=0.106, hem=0.092, side=0.33, k=0.0),
     # under the leg's own shell, so they hug it, narrowing to the ankle
     'skinny': dict(top=0.08, knee=0.056, hem=0.048, side=0.22, k=0.03),
+    # hugging the thigh to the knee, then flaring out to a wide hem that falls
+    # past the ankle (`low`) over the top of the shoe
+    'flared': dict(top=0.08, knee=0.056, hem=0.1, side=0.24, k=0.03, low=0.045),
 }
 
 
@@ -669,6 +672,7 @@ def trousers():
     # them whenever the legs moved apart.
     cut = LEG_CUTS.get(((GAME.get('figure') or {}).get('costume') or {}).get('legs'), LEG_CUTS['suit'])
     top, knee, hem, side = cut['top'], cut['knee'], cut['hem'], cut['side']
+    low = cut.get('low', ANKLE)
     S = _shell(0.004)
     for s in (1, -1):
         Hj, K, A = LEG[s]
@@ -680,7 +684,7 @@ def trousers():
             leg.add(sc.RoundCone(M, K + out, cut['mid'], knee), cut['k'])
         else:
             leg.add(sc.RoundCone(Hj + out + V(0, 0, -0.01), K + out, top, knee), 0.03)
-        leg.add(sc.RoundCone(K + out, V(A[0], A[1] + out[1], ANKLE), knee, hem), cut['k'])
+        leg.add(sc.RoundCone(K + out, V(A[0], A[1] + out[1], low), knee, hem), cut['k'])
         np.minimum(S.d, leg.d, out=S.d)
         del leg
     # a waistband standing clear of the shirt tucked into it: at the same
@@ -694,7 +698,7 @@ def trousers():
     S.d[sl] = np.maximum(S.d[sl], np.float32(0.004) - np.abs(Y))
     d = S.d
     _keep_below(d, WAIST)
-    _keep_above(d, ANKLE - 0.004)
+    _keep_above(d, low - 0.004)
     X, Y, Z = _grid()
     np.maximum(d, np.abs(Y) - np.float32(side), out=d)
     return S
@@ -1228,6 +1232,98 @@ def henley_buttons():
     return S
 
 
+# A bomber jacket (data/fighters.js `outfit: 'bomber'`, Kim's): short, to the
+# waist, roomy through the body and the sleeves and gathered into a ribbed
+# band at the hem and ribbed cuffs (down at the top of the hips, the band was
+# as wide as the hips and the jacket hung straight to it, a sweatshirt), a ribbed collar standing round the
+# neck, and zipped up the front, as the 2D figure draws it: the cloth in the
+# suit's colour, the collar and the cuffs in the second, the band in the
+# accent, and the zip a dark line of the second colour.
+BOMBER_HEM, BOMBER_BAND, ZIP = 1.04, 0.995, 'suit2*0.8'
+
+
+def _bomber():
+    """The bomber's cloth: the body as cloth lies over it (_drape), never
+    nearer it than a centimetre (see the jacket's), and over its last hand's
+    width gathered in to the band, as a bomber blouses over its band. Made
+    once a fighter."""
+    if 'bomber' not in _LOOSE:
+        S = _shell(0.011)
+        np.minimum(S.d, _drape(0.015, 0.013, 0.016, 0.012, 0.01, 0.07).d, out=S.d)
+        sl = _zslab(BOMBER_BAND - 0.01, BOMBER_HEM + 0.09)
+        _, Y, Z = _grid(sl)
+        t = np.clip((np.float32(BOMBER_HEM + 0.08) - Z) / np.float32(0.08), 0, 1)
+        # the trunk only: the arms hang beside it at that height in the rest pose
+        w = t * t * (3 - 2 * t) * np.clip((np.float32(0.26) - np.abs(Y)) / np.float32(0.04), 0, 1)
+        S.d[sl] = S.d[sl] + w * (F.d[sl] - np.float32(0.016) - S.d[sl])
+        _LOOSE['bomber'] = S
+    return _LOOSE['bomber']
+
+
+def bomber():
+    """The bomber's body and sleeves, cut at the band, the cuffs and the
+    collar (see the hoodie's for why each where it is), the neckline cut
+    close enough to run on under the collar."""
+    S = _shell(0.0)
+    S.d[:] = _bomber().d
+    d = S.d
+    _keep_above(d, BOMBER_HEM)
+    _keep_below(d, 1.645)
+    _cuff_cut(d, CUFF + 0.045)
+    _neck_cut(d, 0.08, 1.55)
+    return S
+
+
+def bomber_rib():
+    """The ribbed collar and cuffs. The collar a short tube sized to the
+    neck, as the turtleneck's roll is (see there for why a tube), wide at
+    its foot over the edge of the neckline and standing from the shoulders
+    to under the jaw, higher behind, its top rounded (as close to the neck as
+    the turtleneck's, the cloth rising round the neckline buried it but for
+    a sliver behind); the cuffs a little proud of the arm, the sleeves gathered into
+    them."""
+    n = B.neck
+    S = sc.Field(F.lo, F.lo + (F.n - 1) * F.h, F.h)
+    S.add(sc.RoundCone(V(-0.014, 0, 1.55), V(-0.012, 0, 1.7), 0.078 * n + 0.042, 0.07 * n + 0.026), 0.0)
+    sl = _zslab(1.53, 1.72)
+    X, Y, Z = _grid(sl)
+    behind = np.clip(-X / np.float32(0.07), 0, 1)
+    d = sc.smax(S.d[sl], Z - (np.float32(1.664) + np.float32(0.03) * behind), 0.008)
+    S.d[:] = np.float32(1)
+    S.d[sl] = np.maximum(d, np.float32(1.56) + np.float32(0.04) * behind - Z).astype(np.float32)
+    cuffs = _shell(0.013)
+    _cuff_cut(cuffs.d, CUFF)
+    _cuff_cut(cuffs.d, CUFF + 0.05, keep_wrist_side=True)
+    np.minimum(S.d, cuffs.d, out=S.d)
+    return S
+
+
+def bomber_band():
+    """The ribbed band at the hem, round the waist, a few
+    millimetres proud of the cloth gathered into it."""
+    S = _shell(0.019)
+    S.soften(0.006, lambda X, Y, Z: np.float32(1))
+    d = S.d
+    _keep_above(d, BOMBER_BAND)
+    _keep_below(d, BOMBER_HEM + 0.008)
+    # round the trunk only: the hands hang at the waist's height in the rest
+    # pose, and the band took them in too
+    np.maximum(d, np.abs(_grid()[1]) - np.float32(0.24), out=d)
+    return S
+
+
+def bomber_zip():
+    """The zip, a dark line up the middle of the front from the band to the
+    collar, lying on the cloth wherever it is, in a fine field of its own
+    (see the hoodie's strings: the body's samples are too coarse for it)."""
+    L = _bomber()
+    P = L.project(np.array([[0.2, 0.0, z] for z in np.linspace(BOMBER_HEM + 0.004, 1.575, 40)]))
+    P = P + L.normal(P) * 0.0015
+    S = sc.Field(lo=P.min(0) - 0.02, hi=P.max(0) + 0.02, h=0.001)
+    S.add(sc.Union(sc.RoundCone(a, b, 0.0028, 0.0028) for a, b in zip(P, P[1:])), 0.0)
+    return S
+
+
 def srgb(h, k=1.0):
     """A palette hex as a glTF (linear) colour, darkened by k first as the
     game darkens it (in sRGB)."""
@@ -1299,6 +1395,15 @@ OUTFITS = {
                    ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
         'skin': ['shirt', 'jacket', 'trousers', 'shoes'],
         'covers': {'shirt': ['jacket', 'trousers'], 'jacket': ['lapels'], 'trousers': ['jacket', 'shoes']},
+        'loose': True,
+    },
+    # a bomber jacket, zipped, over flared trousers (Kim's)
+    'bomber': {
+        'pieces': [('bomber', bomber, 'suit', None), ('rib', bomber_rib, 'suit2', None),
+                   ('band', bomber_band, 'accent', None), ('zip', bomber_zip, ZIP, None),
+                   ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['bomber', 'rib', 'band', 'trousers', 'shoes'],
+        'covers': {'bomber': ['rib', 'band'], 'trousers': ['bomber', 'band', 'shoes']},
         'loose': True,
     },
     # Trousers and shoes and nothing above the waist: what a fighter wears
@@ -1679,6 +1784,37 @@ def vial(name, hip, fill, pal):
     return objs[0]
 
 
+# The head is posed turned toward the camera by GL3D.YAW + GL3D.HEAD_YAW
+# (src/config.js): change those two constants and this must follow, as the
+# founder's must (build_founder.py).
+HEAD_TURN = 0.92
+
+
+def ringlight(name, head, fill, pal):
+    """Kim's ring light, haloing her head as the 2D part is (`ringlight`,
+    behind the head): a flat ring a little wider than her head and hair,
+    standing a hand's width behind it, in the part's colour (`accent`, a
+    palette role). Built square to the body, it turned with her head and the
+    camera saw it nearly edge on, so it is built pre-turned by the head's
+    turn (HEAD_TURN), as the founder's is. It rides the head, wholly. One
+    object, `name`."""
+    s = FR.head
+    away = V(-math.sin(HEAD_TURN), math.cos(HEAD_TURN), 0)          # away from the camera once posed
+    across = V(math.cos(HEAD_TURN), math.sin(HEAD_TURN), 0)
+    c = FR.warp(V(-0.012, 0, 1.85)) + away * 0.13 * s
+    R, a, b = 0.2 * s, 0.02 * s, 0.009 * s     # its radius, and its band's half width and half thickness
+    f = sc.Field(lo=c - (R + a + 0.02), hi=c + (R + a + 0.02), h=0.002)
+    X, Y, Z = _axes(f)
+    u = (X - c[0]) * across[0] + (Y - c[1]) * across[1]
+    w = (X - c[0]) * away[0] + (Y - c[1]) * away[1]
+    rho = np.sqrt(u * u + (Z - c[2]) ** 2) - np.float32(R)
+    f.d = (np.sqrt(rho * rho + (w * np.float32(a / b)) ** 2) - np.float32(a)).astype(np.float32)
+    ob = sc.to_blender(name, *f.mesh(), smooth=1)
+    role = fill if fill in (pal or {}) else 'accent'
+    ob.data.materials.append(material(role, role_colour(pal or {}, role, '#57ff8a')))
+    return ob
+
+
 # Each prop: the bone it rides (a grip, or the chest for what is worn on the
 # back), and how it is made from (name, that bone's joint, the 2D part's
 # fill, the palette). The cases hang with the handle in the
@@ -1697,6 +1833,8 @@ PROPS = {
     'clip': ('chest', paperclip),
     # Lizbeth's: the vial at her hip, riding the hips
     'vial': ('hips', vial),
+    # Kim's: the ring light behind her head, riding it
+    'ringlight': ('head', ringlight),
 }
 JOINT_OF = {'hips': 'hip'}                  # a bone named apart from the joint it starts at
 
@@ -1831,7 +1969,7 @@ def export_rigged(data, spec, path, tris=44000):
     parts = [(obj, 'skin', (0.75, 0.42, 0.25, 1))] + clothes
     for ob, _, _ in parts:
         FR.warp_mesh(ob)
-    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'suit2': 0.1, LAPEL: 0.1, 'accent': 0.02, 'button': 0.01,
+    budget = {'skin': 0.3, 'shirt': 0.22, 'suit': 0.24, 'suit2': 0.1, LAPEL: 0.1, 'accent': 0.02, 'button': 0.01, ZIP: 0.01,
               'pants': 0.17, 'shoe': 0.07}
     for ob, role, colour in parts:
         _decimate(ob, tris * budget[role])

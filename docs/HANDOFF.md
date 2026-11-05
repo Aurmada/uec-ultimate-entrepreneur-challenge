@@ -720,32 +720,73 @@ the hips, and straight back; the hand never closes. She parries with the
 briefcase. `test/forms.test.js`, `test/sculpt3d.test.js` (her frame: narrower
 in the shoulder against the hip than any man).
 
-Next: Kim (`zara`) and Cathie (`eleanor`).
+The owner: "good, continue".
+
+**Kim** (`zara`, 2026-11-04), the second woman: the women's base at her
+size, 0.98 times Jeff's height, curvy, her head oversized for her size. Her
+head (`lab/blender/fighters/zara.py`): an original face for "bored of you", a
+soft rounded face, a light flat brow, almond eyes under the heaviest lids in
+the cast (carved heavy, as Steve's are), full round cheeks, a small nose, a
+tiny mouth with full lips and a soft round chin. Her black hair is pulled up
+into two puffs set back and low on the crown and run into the hair (high and
+round on either side, they read from the front as a pair of cartoon ears),
+and she wears round earrings in her accent (`accessory:earrings`, shown when
+her look says so). Registered as `sculpt:zara`.
+
+Her clothes (`OUTFITS.bomber`): a bomber in her pink, roomy through the body
+and the sleeves (`_drape`, floored a centimetre off the body as the jacket's
+is) and gathered over its last hand's width into a ribbed band in her green
+accent at the waist (down at the top of the hips, the band was as wide as the
+hips and the jacket hung straight to it, a sweatshirt; the band is kept to the
+trunk, as the hands hang at its height in the rest pose and it took them in);
+ribbed cuffs and a ribbed collar in the second colour, the collar a short
+tube wide at its foot over the neckline (as close as the turtleneck's, the
+cloth rising round the neckline buried it); a zip up the front, a dark line
+of the second colour (`suit2*0.8`) in a fine field of its own. Flared
+trousers (`LEG_CUTS.flared`): hugging the thigh to the knee, then flaring to
+a wide hem that falls past the ankle (`low`) over the top of her green
+sneakers. Her ring light (`ringlight`): a flat ring a little wider than her
+head and hair, a hand's width behind it, in her accent, riding the head; built
+square to the body it turned with her head and was seen nearly edge on, so it
+is built pre-turned by the head's posed turn (`HEAD_TURN`, GL3D.YAW +
+GL3D.HEAD_YAW, as the founder's is; the test checks the two agree).
+
+Her form (`peekaboo`, `data/forms.js`), from her 2D guard: crouched in and
+leaning forward, both fists high and tight in front of the jaw, her face just
+above them, the shoulders weaving at rest over her own two bounces a breath.
+Her punch is the snap: she bobs under the line, the fists staying at the jaw,
+comes up with the jab already out, and has it home by 2.25 of the track, the
+fastest reset in the game, the head slipping off the line as it comes back.
+`test/forms.test.js`, `test/sculpt3d.test.js`.
+
+Next: Cathie (`eleanor`).
 
 **Gaps, before the rest of the cast can be built:**
 
 - `body.reach` is not read: the arms are as long as the fighter's height
   makes them, and the rig reaches them to the 2D fists.
-- The women. Their base is built (frame 'f', `hips`, `FAT_F`); each still
-  needs her head, hair, outfit, prop and form.
+- The women. Their base is built (frame 'f', `hips`, `FAT_F`); Cathie still
+  needs her head, hair, outfit, props and form.
 - Outfits. Jeff's vest, Adam's hoodie, Carl's suit, Steve's turtleneck,
-  Elo's tee, Scam's henley and Lizbeth's blazer. The rest: bomber (Kim,
-  from the hoodie's loose cloth), suit (Cathie, from Carl's jacket). Most are the same shells with other edges; the 2D
-  `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)
-  says how far each stands off the body and how the trousers fall.
+  Elo's tee, Scam's henley, Lizbeth's blazer and Kim's bomber. The rest:
+  suit (Cathie, from Carl's jacket). Most are the same shells with other
+  edges; the 2D `costume` (`fit` tight to oversized, `legs` suit, skinny,
+  baggy, flared) says how far each stands off the body and how the trousers
+  fall.
 - Hair and headwear. Adam's cap, Carl's slick, Steve's quiff, Elo's buzz,
-  Scam's curly mop and Lizbeth's ponytail are made; Kim's puffs and Cathie's
-  bob need makers.
-- The earrings (Kim) and the brooch (Cathie); shades, glasses and the visor
-  are made.
+  Scam's curly mop, Lizbeth's ponytail and Kim's puffs are made; Cathie's bob
+  needs a maker.
+- The brooch (Cathie); shades, glasses, the visor and Kim's earrings are
+  made.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
 - Props. The block briefcase, Carl's case, Steve's device, Elo's booster,
-  Scam's paperclip and Lizbeth's vial are made; Kim's ring light and
-  Cathie's tablet and coat come with their remodels, Jeff's parcel and
-  Adam's mat with their next look.
+  Scam's paperclip, Lizbeth's vial and Kim's ring light are made; Cathie's
+  tablet and coat come with her remodel, Jeff's parcel and Adam's mat with
+  their next look.
 - Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
-  (Steve), the shoulder roll (Elo), the fence (Scam) and fencing (Lizbeth). Each fighter's own fighting style
-  is its own stage, after their model.
+  (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth) and
+  the peek-a-boo (Kim). Each fighter's own fighting style is its own stage,
+  after their model.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 

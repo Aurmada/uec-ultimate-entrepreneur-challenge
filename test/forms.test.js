@@ -340,3 +340,42 @@ test('the thrust goes straight out along its line, the foot after it, and the ha
   assert.ok(Math.abs(thrustAt(1.6).hipTwist) < 1e-9, 'there is weight in her hips');
   for (const [name, track] of Object.entries(FENCING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
 });
+
+// Kim (`zara`), the eighth: the peek-a-boo, the most compact guard in the
+// game, both fists high and tight in front of the jaw; the snap bobs under
+// the line, comes up with the jab already out and has it home before anyone
+// else's is.
+const zaraDef = getFighter('zara');
+const PEEKABOO = FORMS.peekaboo;
+const zaraAt = (state, extra = {}, t = 0) => computePose(
+  { def: zaraDef, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, PEEKABOO);
+const snapAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return zaraAt('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Kim stands in a peek-a-boo, the guard her 2D figure stands in, the fists at her jaw', () => {
+  assert.equal(MODELS3D['sculpt:zara'].form, 'peekaboo');
+  const own = applyProportions(computePose({ def: zaraDef, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(zaraDef.body));
+  const guard = applyProportions(zaraAt('idle'), clampBody(zaraDef.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(guard[k], own[k], `her ${k} is not where her 2D guard holds it`);
+  const P = zaraAt('idle');
+  for (const k of ['armF', 'armB']) {
+    assert.ok(P[k].y < P.shoulderY && P[k].y > P.headY, `her ${k} is not up in front of the jaw, below the face (${P[k].y} between ${P.headY} and ${P.shoulderY})`);
+  }
+  assert.ok(PEEKABOO.handDepth.F < 0.5 && PEEKABOO.handDepth.B < 0.6, 'her fists are not tight in on her centre line');
+  assert.equal(P.hand, undefined, 'she fights with her fists closed');
+});
+
+test('the snap bobs under the line, the fists at the jaw, then jabs and is home first', () => {
+  const guard = snapAt(0);
+  const bob = snapAt(0.95);
+  assert.ok(bob.headY > guard.headY + 6 && bob.hipY > guard.hipY + 4, 'she does not bob under the line');
+  assert.ok(bob.armF.x > guard.armF.x - 6, 'the fist is drawn back: there is no wind-up in a snap');
+  assert.ok(snapAt(1.6).armF.x > guard.armF.x + 40, 'the jab is not out while it can hit');
+  // home by 2.25, before the whip, the fastest reset after hers, is
+  assert.ok(Math.abs(snapAt(2.25).armF.x - guard.armF.x) < 6, 'the jab is not snapped back');
+  assert.ok(snapAt(2.25).headX < guard.headX, 'her head does not slip off the line as it comes home');
+  assert.ok(Math.abs(snapAt(2.25).armB.x - guard.armB.x) < 8 && snapAt(2.25).armB.y === guard.armB.y, 'the rear fist leaves her jaw');
+  for (const [name, track] of Object.entries(PEEKABOO.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});

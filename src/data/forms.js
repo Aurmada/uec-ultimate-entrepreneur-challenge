@@ -1,9 +1,9 @@
 // Fighting forms: how a fighter stands, guards and throws, as a martial art
 // rather than as a personality. Boxing first (November 2026), for the
 // sculpted Jeff, then brawling, for Adam, grappling, for Carl, showboating,
-// for Steve, the shoulder roll, for Elo, the fence, for Scam, and fencing,
-// for Lizbeth; karate, kung fu and the rest are each their own when a
-// fighter takes them up.
+// for Steve, the shoulder roll, for Elo, the fence, for Scam, fencing, for
+// Lizbeth, and the peek-a-boo, for Kim; karate, kung fu and the rest are each
+// their own when a fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -223,6 +223,36 @@ const THRUST = {
   ]),
 };
 
+// A peek-a-boo guard, Kim's from 2D, the most compact outline in the game:
+// crouched in and leaning forward, both fists high and tight in front of the
+// jaw with the elbows tucked, the face just above them (over the face, the
+// fists hid the one thing her character is about).
+const PEEK_F = { x: 54, y: -150 };
+const PEEK_B = { x: 43, y: -154 };
+const K_HIP = -70, K_SHOULDER = -142, K_HEAD = -165;   // REST lowered by the coiled stance and hers
+
+// The snap: the shortest wind-up and the fastest reset in the game. She dips
+// under the line first, the head and the knees bobbing down together and
+// the fists staying at the jaw, then comes up out of the dip with the jab
+// already out, straight from the chin, and has it back at the jaw before you
+// have registered it left, the head slipping off the line again as it
+// comes home.
+const SNAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: { armF: PEEK_F, armB: PEEK_B, hipY: K_HIP, shoulderY: K_SHOULDER, headY: K_HEAD, headX: 2, bodyLean: 0.18, twist: 0, hipTwist: 0, sx: 0.97, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -20, y: 0 } } },
+    // the bob, under the line, the fists going down with the head
+    { t: 0.6,  joints: { armF: { x: 52, y: -146 }, armB: { x: 42, y: -150 }, hipY: K_HIP + 5, shoulderY: K_SHOULDER + 5, headY: K_HEAD + 7, headX: 0, bodyLean: 0.24, twist: -0.06, hipTwist: -0.03, sx: 1, sy: 0.97 }, ease: 'outQuad' },
+    { t: 0.95, joints: { armF: { x: 51, y: -145 }, armB: { x: 42, y: -149 }, hipY: K_HIP + 6, shoulderY: K_SHOULDER + 6, headY: K_HEAD + 9, bodyLean: 0.25, twist: -0.08, hipTwist: -0.04, sx: 1.01, sy: 0.96 }, ease: 'outQuad' },
+    // up out of it with the jab already there
+    { t: 1.15, joints: { armF: { x: 102, y: -158 }, armB: PEEK_B, hipY: K_HIP - 1, shoulderY: K_SHOULDER, headY: K_HEAD + 2, headX: 4, bodyLean: 0.24, twist: 0.22, hipTwist: 0.1, sx: 0.96, sy: 1.03, legB: { x: -18, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 100, y: -158 }, bodyLean: 0.23, twist: 0.2, hipTwist: 0.09 }, hold: true },
+    // back at the jaw at once, the head slipping off the line
+    { t: 2.25, joints: { armF: { x: 58, y: -151 }, hipY: K_HIP + 1, headY: K_HEAD + 3, headX: -1, bodyLean: 0.2, twist: -0.05, hipTwist: -0.02, sx: 0.98, sy: 1, legB: { x: -20, y: 0 } }, ease: 'outCubic' },
+    { t: 3,    joints: { armF: PEEK_F, hipY: K_HIP, headY: K_HEAD, headX: 2, bodyLean: 0.18, twist: 0, hipTwist: 0, sx: 0.97 }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -343,5 +373,23 @@ export const FORMS = {
     // Nothing in the hips, nothing that admits effort.
     motion: { windup: 1, follow: 1, drop: 0, squash: 0.02, brace: 0, thrust: 1 },
     tracks: { punch: THRUST },
+  },
+  peekaboo: {
+    stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
+      legF: { x: 22 }, legB: { x: -20 }, sx: 0.97 },
+    // The weave: the shoulders rolling a little from side to side at rest, the
+    // hips a beat behind, quicker than anyone else's, on top of her own 2D
+    // idle's two bounces a breath, which the form keeps.
+    roll: { twist: 0.07, hip: 0.03, rate: 3.2 },
+    // She shells up tighter still: both gloves up to the cheeks, the forearms
+    // in front of the chin, turning a little into the hit.
+    block: { armF: { x: -6, y: -10 }, armB: { x: -2, y: -8 }, twist: 0.06 },
+    // Both fists in on her centre line in front of the jaw, the lead one a
+    // little further out than the rear.
+    handDepth: { F: 0.35, B: 0.5 },
+    guardTurn: 1,
+    // The bob and the snap back are written into the jab itself.
+    motion: { windup: 1, follow: 1, drop: 2, squash: 0.05, brace: 4, thrust: 2 },
+    tracks: { punch: SNAP },
   },
 };

@@ -263,6 +263,28 @@ export const SCULPTED = {
     },
     form: 'fencing',
   },
+  // Kim (zara, 2026-11-04), the second woman: small, 0.98 times Jeff's height,
+  // curvy, her head oversized for her size (lab/blender/fighters/zara.py):
+  // almond eyes 0.034 out at 1.826 under the heaviest lids, a light flat
+  // brow, its painted line at 1.851; a tiny mouth meeting at 1.744. A bomber
+  // zipped over flared trousers, the ring light behind her head (fighter3d.py
+  // `bomber`, `ringlight`). Her guard is already crouched in, so her sculpt
+  // adds no lean of its own; she fights from a peek-a-boo (forms.js).
+  zara: {
+    leaf: { forearm: 0.3421, head: 0.2472, foot: [0.1591, -0.0622, 0] },
+    skull: 0.1551,
+    fit: { shoulderHalf: 0.133, hipHalf: 0.0948, legs: 0.9565, lean: 0 },
+    face: {
+      at: [0, 1.7287], px: [0.003393, 0.003393],
+      layout: {
+        eye: { x: 9.7, y: -10.3, w: 4.1 },
+        brow: { y: -17.4, inner: 3.4, outer: 15.7 },
+        mouth: { y: 13.1, w: 4.1 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+    form: 'peekaboo',
+  },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
   MODELS3D[`sculpt:${id}`] = {

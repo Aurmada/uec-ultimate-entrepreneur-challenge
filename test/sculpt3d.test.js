@@ -12,6 +12,7 @@ import { getFighter } from '../src/data/fighters.js';
 import { mix } from '../src/engine/figure.js';
 import { buildRig, solvePose, transformPoint } from '../src/engine/gl3d/rig.js';
 import { restPose } from '../src/engine/anim.js';
+import { GL3D } from '../src/config.js';
 
 const glb = readFileSync(new URL(`../${MODELS3D['sculpt:bozo'].url}`, import.meta.url));
 const model = extractModel(parseGLB(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength)));
@@ -122,7 +123,9 @@ const scamGlb = readFileSync(new URL(`../${MODELS3D['sculpt:scam'].url}`, import
 const scam = extractModel(parseGLB(scamGlb.buffer.slice(scamGlb.byteOffset, scamGlb.byteOffset + scamGlb.byteLength)));
 const avaGlb = readFileSync(new URL(`../${MODELS3D['sculpt:ava'].url}`, import.meta.url));
 const lizbeth = extractModel(parseGLB(avaGlb.buffer.slice(avaGlb.byteOffset, avaGlb.byteOffset + avaGlb.byteLength)));
-const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo, scam, ava: lizbeth };
+const zaraGlb = readFileSync(new URL(`../${MODELS3D['sculpt:zara'].url}`, import.meta.url));
+const kim = extractModel(parseGLB(zaraGlb.buffer.slice(zaraGlb.byteOffset, zaraGlb.byteOffset + zaraGlb.byteLength)));
+const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo, scam, ava: lizbeth, zara: kim };
 const top = (m, p, v) => {
   let best = -1, joint = 0;
   for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
@@ -139,6 +142,7 @@ test('every sculpt raises the block briefcase on its lead grip, and carries its 
     elo: { 'prop:guard-case': ['grip.L', CASE], 'prop:booster': ['chest', ['accent', 'frame']] },   // worn on his back
     scam: { 'prop:guard-case': ['grip.L', CASE], 'prop:clip': ['chest', ['shoe']] },                  // and his, the 2D part's fill
     ava: { 'prop:guard-case': ['grip.L', CASE], 'prop:vial': ['hips', ['accent', 'shoe']] },          // at her hip, a white cap
+    zara: { 'prop:guard-case': ['grip.L', CASE], 'prop:ringlight': ['head', ['accent']] },           // haloing her head
   };
   for (const [id, props] of Object.entries(carries)) {
     const m = sculpts[id];
@@ -249,11 +253,14 @@ test('Scam wears his henley, its trim and buttons, his trousers, shoes and curly
 // shoulders, a wider pelvis) out of the same pipeline; her blazer worn open
 // over a shirt, skinny trousers and shoes; her visor, cyan glass the painted
 // eyes show through; her ponytail.
-test("Lizbeth is built on a woman's frame: narrower in the shoulder against the hip than any man", () => {
+test("the women are built on a woman's frame: narrower in the shoulder against the hip than any man", () => {
   const ratio = (id) => MODELS3D[`sculpt:${id}`].fit.shoulderHalf / MODELS3D[`sculpt:${id}`].fit.hipHalf;
-  for (const id of Object.keys(sculpts)) {
-    if (getFighter(id).figure?.frame === 'f') continue;
-    assert.ok(ratio('ava') < ratio(id) - 0.2, `her shoulders against her hips (${ratio('ava').toFixed(2)}) are a man's, as ${id}'s (${ratio(id).toFixed(2)})`);
+  const woman = (id) => getFighter(id).figure?.frame === 'f';
+  for (const her of Object.keys(sculpts).filter(woman)) {
+    for (const id of Object.keys(sculpts)) {
+      if (woman(id)) continue;
+      assert.ok(ratio(her) < ratio(id) - 0.2, `${her}'s shoulders against her hips (${ratio(her).toFixed(2)}) are a man's, as ${id}'s (${ratio(id).toFixed(2)})`);
+    }
   }
 });
 
@@ -264,4 +271,58 @@ test('Lizbeth wears her blazer open over a shirt, her trousers and shoes, her vi
   assert.deepEqual(new Set(lizbeth.primitives.filter((p) => p.name === 'eyewear:visor').map((p) => p.role)), new Set(['visor']));
   assert.ok(MODELS3D['sculpt:ava'].glass.visor > 0 && MODELS3D['sculpt:ava'].glass.visor < 0.6, 'the visor is not glass the eyes show through');
   assert.deepEqual(new Set(lizbeth.primitives.filter((p) => p.name === 'hair:ponytail').map((p) => p.role)), new Set(['hair']));
+});
+
+// Kim (`zara`), the eighth and the second woman: her bomber, zipped, with its
+// ribbed collar and cuffs and the band at the hem in her accent, over flared
+// trousers and shoes; her puffs and earrings; and her ring light, turned to
+// face the camera as her head is posed, behind her head.
+test('Kim wears her bomber, its rib, band and zip, flared trousers, shoes, puffs and earrings', () => {
+  const body = kim.primitives.filter((p) => p.name === 'body');
+  const roles = new Set(body.map((p) => p.role));
+  for (const role of ['skin', 'suit', 'suit2', 'accent', 'suit2*0.8', 'pants', 'shoe']) assert.ok(roles.has(role), `no ${role}`);
+  assert.deepEqual(new Set(kim.primitives.filter((p) => p.name === 'hair:puffs').map((p) => p.role)), new Set(['hair']));
+  assert.deepEqual(new Set(kim.primitives.filter((p) => p.name === 'accessory:earrings').map((p) => p.role)), new Set(['accent']));
+  // nothing she wears reaches over her hands: they hang at the band's height
+  // in the rest pose, and the band once took them in
+  const reach = (p) => {
+    let m = 0;
+    for (let i = 0; i < p.positions.length; i += 3) m = Math.max(m, Math.abs(p.positions[i + 2]));
+    return m;
+  };
+  const skin = reach(body.find((p) => p.role === 'skin'));
+  for (const p of body.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.06, `${p.role} reaches over the hands`);
+  // the flare: the legs wider at the hem than at the knee, front to back
+  const pants = body.find((p) => p.role === 'pants').positions;
+  const depth = (y0, y1) => {
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < pants.length; i += 3) {
+      if (pants[i + 1] >= y0 && pants[i + 1] <= y1) { lo = Math.min(lo, pants[i]); hi = Math.max(hi, pants[i]); }
+    }
+    return hi - lo;
+  };
+  assert.ok(depth(0.04, 0.08) > depth(0.42, 0.46) + 0.03, `no flare: ${depth(0.04, 0.08).toFixed(3)} at the hem against ${depth(0.42, 0.46).toFixed(3)} at the knee`);
+});
+
+test('her ring light stands behind her head, turned as her head is posed so the camera sees it whole', () => {
+  const P = kim.primitives.filter((p) => p.name === 'prop:ringlight').flatMap((p) => Array.from(p.positions));
+  const n = P.length / 3;
+  const c = [0, 1, 2].map((k) => P.filter((_, i) => i % 3 === k).reduce((a, v) => a + v, 0) / n);
+  // its plane's normal: the direction it is thinnest in, out of the horizontal
+  // ones (it stands upright)
+  let thin = Infinity, normal = 0;
+  for (let a = 0; a < Math.PI; a += 0.005) {
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < P.length; i += 3) {
+      const d = (P[i] - c[0]) * Math.cos(a) + (P[i + 2] - c[2]) * Math.sin(a);
+      lo = Math.min(lo, d); hi = Math.max(hi, d);
+    }
+    if (hi - lo < thin) { thin = hi - lo; normal = a; }
+  }
+  // glTF's z is the body's right: square to the body, the normal would be
+  // along it; turned by the head's posed turn, it is that far round from it
+  const turn = Math.abs(Math.PI / 2 - normal);
+  assert.ok(Math.abs(turn - (GL3D.YAW + GL3D.HEAD_YAW)) < 0.03, `turned ${turn.toFixed(3)}, the head ${GL3D.YAW + GL3D.HEAD_YAW}`);
+  assert.ok(thin < 0.03, `not a flat ring (${thin.toFixed(3)} thick)`);
+  assert.ok(c[0] < -0.08 && c[1] > 1.75, `not behind her head (${c.map((v) => v.toFixed(3))})`);
 });
