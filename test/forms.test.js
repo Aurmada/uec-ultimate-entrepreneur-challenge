@@ -541,3 +541,66 @@ test("Kim's celebration keeps her face clear", () => {
     assert.ok(P.armF.y > P.headY + 15, `at ${t} her hand is at her face (${P.armF.y} against ${P.headY})`);
   }
 });
+
+// Each form walks its own way, and in its own stance: the shared walk stood
+// every fighter up to the stock rest height at the shared lean the moment
+// they moved (Carl's hunch and Kim's crouch gone until they stopped). The
+// feet stay apart and never cross, and the lifted foot is always the one
+// travelling, backing off too (the shared walk lifted the planted one).
+test('every form walks its own way, in its own stance, the feet apart and the lifted one travelling', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const W = form.walk;
+    assert.ok(W && W.stride > 0 && (W.rate ?? 1) > 0 && (W.lift ?? 0) >= 0, `${name} walks the shared walk`);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const pose = (state, extra = {}) => computePose({ def, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, 0, form);
+    const guard = pose('idle');
+    const most = (W.low ?? 0) + (W.bob ?? 0) + 1e-6;
+    for (const movingBack of [false, true]) {
+      const lean = movingBack ? (W.back ?? guard.bodyLean) : (W.lean ?? guard.bodyLean);
+      for (let i = 0; i < 48; i++) {
+        const walkPhase = i * Math.PI / 12;
+        const P = pose('walk', { walkPhase, movingBack });
+        const what = `${name} at ${walkPhase.toFixed(2)}${movingBack ? ' backing off' : ''}`;
+        for (const c of ['hipY', 'shoulderY', 'headY']) {
+          const d = P[c] - guard[c];
+          assert.ok(d >= -1e-6 && d <= most, `${what}: ${c} ${P[c].toFixed(1)} against the guard's ${guard[c]}`);
+        }
+        assert.equal(P.bodyLean, lean, `${what}: leans ${P.bodyLean}`);
+        assert.equal(P.sy, guard.sy);
+        assert.ok(P.legF.x - P.legB.x >= 20 - 1e-6, `${what}: the feet are ${(P.legF.x - P.legB.x).toFixed(1)} apart`);
+        const next = pose('walk', { walkPhase: walkPhase + 0.01, movingBack });
+        for (const l of ['legF', 'legB']) {
+          assert.ok(P[l].y <= 1e-9, `${what}: ${l} is under the floor`);
+          if (P[l].y < -0.5) {
+            const dx = next[l].x - P[l].x;
+            assert.ok(movingBack ? dx < 0 : dx > 0, `${what}: ${l} is lifted while it is planted`);
+          }
+        }
+      }
+    }
+  }
+});
+
+// And jumps its own way: leaving the floor in one shape and coming down in
+// another, at the guard's height, the feet off the floor throughout.
+test('every form jumps its own way, from its own shape going up to its own coming down', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const J = form.jump;
+    assert.ok(J && J.up, `${name} jumps the shared tuck`);
+    const D = J.down ?? J.up;
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const pose = (state, vy = 0) => computePose({ def, state, stateT: 0, walkPhase: 0, side: 0, vy, airborne: state === 'jump', movingBack: false }, 0, form);
+    const guard = pose('idle');
+    const up = pose('jump', -760), down = pose('jump', 760);
+    assert.deepEqual([up.legF, up.legB], [J.up.legF, J.up.legB], `${name} leaves the floor in the shared tuck`);
+    assert.deepEqual([down.legF, down.legB], [D.legF, D.legB], `${name} comes down in the shared tuck`);
+    if (J.up.armF) assert.deepEqual(up.armF, J.up.armF);
+    for (let vy = -760; vy <= 760; vy += 40) {
+      const P = pose('jump', vy);
+      assert.equal(P.hipY, guard.hipY, `${name}'s hips in the air at ${vy}`);
+      for (const l of ['legF', 'legB']) assert.ok(P[l].y < 0, `${name}'s ${l} on the floor in the air at ${vy}`);
+    }
+  }
+});

@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16; `main` is this branch | Merged into `main` on 2026-11-05. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk and jump (below) | v3.16 merged into `main` on 2026-11-05; the walks and jumps are not released yet. 542 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -880,8 +880,54 @@ at the middle while it can hit.
   its own in each: punch, kick, slap and launcher (the command normals and
   specials that borrow those tracks through `ATTACK_TRACK`, such as Kim's RUG
   PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
-  Block is each form's own, and since the reactions below, so are hit stun,
-  the KO and victory.
+  Block is each form's own, and since the reactions and the walks below, so
+  are hit stun, the KO, victory, the walk and the jump.
+
+## Walk and jump in each form (2026-11-05, on `claude/jeff-model`, not released)
+
+The owner, offered each fighter's own walk and jump after v3.16: "yes, let's
+keep going". The shared walk was one shuffle for all nine, and it stood every
+fighter up to the stock rest height at one lean the moment they moved (Carl's
+hunch and Kim's crouch were gone until they stopped); the shared jump was one
+tuck for all nine.
+
+- **Written from the guard.** A form's `walk` and `jump` (`forms.js`) start
+  from the fighter's idle guard (`restingGuard` in `drawFighter.js`: the idle
+  pose's first frame), so the stance's height, lean and hands go with them.
+- **The walk** is a few numbers on one gait (`formWalk`): cadence (`rate` on
+  the walk phase, render-only), stride (capped so the feet stay 20 px apart),
+  how far the rear foot lags the lead (half a cycle is a walk, a quarter a
+  step-and-follow), foot lift, a dip with each step, the shoulders rolling
+  against the hips, arm swing, a nod of the head, and the lead hand keeping
+  time. Backing off, the cycle runs the other way, so the lifted foot is the
+  travelling one (the shared walk lifts the planted one backing off; the 2D
+  game still does).
+- **The jump** (`formJump`) eases from the shape a form leaves the floor in
+  (`up`) to the one it comes down in (`down`) as the rise turns to a fall:
+  the legs, the lean and, where a form throws them, the arms. The shared
+  stretch and squash stay, scaled by the form's `stretch`.
+- **Each fighter:** Jeff a boxer's step-and-follow with a bounce, a tight
+  tuck; Adam a heavy swagger, flinging himself up with his arms up and
+  stomping down; Carl stalking, slow and hunched, and a heavy hop that barely
+  leaves the floor; Steve a strut with high knees and a split leap, the
+  presenting hand thrown up; Elo an unhurried glide, one knee up in the air;
+  Scam a sliding sidle, a lazy two-footed hop; Lizbeth a fencer's advance,
+  upright and level, straight up with the legs together and the lead foot
+  reaching for the landing; Kim bobbing and weaving in, a tight ball in the
+  air; Cathie a slow, level glide, and the crane in the air.
+- Tests (`test/forms.test.js`): every form walks at its guard's height (within
+  its own dip), at its own lean, the feet never within 20 px, never under the
+  floor, and the lifted foot always the one travelling, forward and backing
+  off; every jump leaves the floor in its `up` shape and lands in its `down`,
+  at the guard's height, the feet off the floor throughout. Both fail with the
+  `computePose` change reverted, and the backing-off check fails with only the
+  reversed cycle reverted.
+- Render-only, 3D only: `SIM_VERSION` stays 9, and both pixel checks are
+  identical. Two real matches in the page (Carl against Kim, Steve against
+  Cathie) walking, backing off, jumping and through a KO run with no errors.
+  A walking or jumping fighter now poses their idle guard as well each frame
+  (one more `basePose`); it is not measured on a phone, but it is the same
+  cost as an idle fighter's pose.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 

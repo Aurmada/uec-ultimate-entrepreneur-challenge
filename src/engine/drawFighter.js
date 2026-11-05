@@ -400,6 +400,8 @@ export function computePose(f, t, form = null) {
     for (const j of Object.keys(V.keys[0].joints)) P[j] = typeof S[j] === 'object' ? { ...S[j] } : S[j];
     if (S.hand) P.hand = S.hand;
   }
+  if (f.state === 'walk' && form.walk) Object.assign(P, formWalk({ ...f, def }, form.walk));
+  if (f.state === 'jump' && form.jump) Object.assign(P, formJump({ ...f, def }, form.jump));
   P.handDepth = form.handDepth;
   P.guardTurn = form.guardTurn;
   // The lead hand's shape, for a model that has more than a fist: what the
@@ -410,6 +412,66 @@ export function computePose(f, t, form = null) {
     if (slap || form.open?.includes(f.state)) P.hand = 'open';
   }
   return P;
+}
+
+// A form's walk and jump are written from the fighter's idle guard, its
+// first frame (no breathing, no roll): the shared walk and jump start from the
+// stock rest height, so every fighter stood up straight the moment they moved,
+// Carl's hunch and Kim's crouch gone until they stopped again.
+const restingGuard = (f) => basePose({ ...f, state: 'idle', stateT: 0, side: 0 }, 0);
+
+// A form's own walk (forms.js `walk`): the feet staggered where the stance put
+// them, never meeting, stepping at the form's cadence (`rate` on the walk
+// phase), the rear foot `lag` behind the lead (half a cycle is a walk, a
+// quarter the step-and-follow of a boxer or a fencer), lifted `lift` as it
+// travels; the body `low`er than the guard and dipping `bob` with each step,
+// the shoulders rolling against the hips (`roll`, `hip`), the arms swinging
+// `swing` either side of the guard, the head nodding `nod`, the lead hand
+// keeping time `beat`.
+function formWalk(f, W) {
+  const G = restingGuard(f);
+  // Backing off, the cycle runs the other way, so the lifted foot is still the
+  // one travelling (the shared walk lifts the planted one).
+  const ph = f.walkPhase * (W.rate ?? 1) * (f.movingBack ? -1 : 1);
+  const lag = W.lag ?? Math.PI;
+  // As far as the feet can go and still stay 20 px apart at their nearest.
+  const step = Math.min(W.stride, (G.legF.x - G.legB.x - 20) / (2 * Math.sin(lag / 2)));
+  const foot = (x, p) => ({ x: x + Math.sin(p) * step, y: -Math.max(0, Math.cos(p)) * (W.lift ?? 0) });
+  const dip = (W.low ?? 0) + (W.bob ?? 0) * Math.sin(ph) ** 2;
+  const s = Math.sin(ph);
+  return {
+    legF: foot(G.legF.x, ph), legB: foot(G.legB.x, ph - lag),
+    hipY: G.hipY + dip, shoulderY: G.shoulderY + dip, headY: G.headY + dip,
+    headX: G.headX + s * (W.nod ?? 0),
+    bodyLean: f.movingBack ? (W.back ?? G.bodyLean) : (W.lean ?? G.bodyLean),
+    sx: G.sx, sy: G.sy,
+    twist: -s * (W.roll ?? 0), hipTwist: s * (W.hip ?? 0),
+    armF: { x: G.armF.x - s * (W.swing ?? 0), y: G.armF.y + dip - Math.sin(2 * ph) * (W.beat ?? 0) },
+    armB: { x: G.armB.x + s * (W.swing ?? 0), y: G.armB.y + dip },
+  };
+}
+
+// A form's own jump (forms.js `jump`): the shape it leaves the floor in (`up`)
+// eased into the one it comes down in (`down`) as the rise turns to a fall;
+// the legs, the lean and, where a form throws them, the arms (else the guard,
+// carried with the shoulders). The stretch going up and squash coming down are
+// the shared ones, by the form's `stretch`.
+function formJump(f, J) {
+  const G = restingGuard(f);
+  const rise = Math.max(-1, Math.min(1, -f.vy / 700));
+  const k = ease.smooth((1 - rise) / 2);
+  const U = J.up, D = J.down ?? J.up;
+  const mix = (a, b) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
+  const lean = (S) => S.lean ?? G.bodyLean;
+  const s = J.stretch ?? 1;
+  return {
+    legF: mix(U.legF, D.legF), legB: mix(U.legB, D.legB),
+    armF: mix(U.armF ?? G.armF, D.armF ?? G.armF), armB: mix(U.armB ?? G.armB, D.armB ?? G.armB),
+    hipY: G.hipY, shoulderY: G.shoulderY, headY: G.headY, headX: G.headX,
+    bodyLean: lean(U) + (lean(D) - lean(U)) * k,
+    sx: G.sx * (1 - 0.08 * s * rise), sy: G.sy * (1 + 0.10 * s * rise),
+    twist: 0, hipTwist: 0,
+  };
 }
 
 function basePose(f, t) {

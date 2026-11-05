@@ -815,6 +815,14 @@ export const FORMS = {
         { t: 1,   joints: { armF: { x: 24, y: -226 }, armB: { x: -8, y: -222 }, hipY: -84, shoulderY: -152, headY: -180, headX: 2, bodyLean: -0.04, sy: 1.02 }, ease: 'inOutCubic' },
       ]),
     },
+    // He walks a boxer's step-and-follow on the balls of his feet: the lead
+    // foot steps, the rear one follows, a bounce in every step and the guard
+    // tight. He jumps tucked, the gloves up, and comes down on his toes.
+    walk: { rate: 1.2, stride: 12, lag: Math.PI / 2, lift: 5, bob: 4, back: 0.06, roll: 0.04 },
+    jump: {
+      up: { legF: { x: 20, y: -34 }, legB: { x: -6, y: -26 } },
+      down: { legF: { x: 22, y: -14 }, legB: { x: -22, y: -10 } },
+    },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -845,6 +853,14 @@ export const FORMS = {
         { t: 0.5, joints: { armF: { x: 48, y: -196 }, armB: { x: -38, y: -194 }, hipY: -76, shoulderY: -146, headY: -172, headX: -1, bodyLean: 0.02, sx: 1.1, sy: 0.96 }, ease: 'inOutCubic' },
         { t: 1,   joints: { armF: { x: 44, y: -188 }, armB: { x: -34, y: -186 }, hipY: -78, shoulderY: -148, headY: -174, headX: 2, bodyLean: 0.04, sx: 1.06, sy: 0.98 }, ease: 'inOutCubic' },
       ]),
+    },
+    // He swaggers: wide, heavy steps, the shoulders rolling with each one and
+    // the fists swinging low. He throws himself into the air, legs flung
+    // apart and both arms up, and comes down in a stomp.
+    walk: { rate: 0.9, stride: 14, lift: 8, bob: 5, lean: 0.16, back: 0.08, roll: 0.14, hip: 0.06, swing: 6 },
+    jump: {
+      up: { legF: { x: 38, y: -30 }, legB: { x: -34, y: -22 }, armF: { x: 50, y: -196 }, armB: { x: -14, y: -190 }, lean: -0.06 },
+      down: { legF: { x: 32, y: -10 }, legB: { x: -30, y: -8 } },
     },
   },
   grappling: {
@@ -880,6 +896,16 @@ export const FORMS = {
         { t: 1,   hand: 'fist', joints: { armF: { x: 14, y: -144 }, armB: { x: -4, y: -100 }, hipY: -84, shoulderY: -152, headY: -178, headX: 2, bodyLean: -0.02, sy: 1.02 }, ease: 'inOutCubic' },
       ]),
     },
+    // He stalks you, slow and heavy: hunched lower than he stands, his weight
+    // rolling from foot to foot, the open hand pushing out with each step.
+    // He barely leaves the floor and does not look as if he means to: a
+    // heavy hop, the knees only bent, the hunch kept.
+    walk: { rate: 0.7, stride: 12, lift: 4, bob: 4, low: 4, lean: 0.26, back: 0.18, roll: 0.06, hip: 0.04, swing: 4 },
+    jump: {
+      up: { legF: { x: 28, y: -18 }, legB: { x: -22, y: -14 }, lean: 0.26 },
+      down: { legF: { x: 30, y: -8 }, legB: { x: -26, y: -6 }, lean: 0.28 },
+      stretch: 0.5,
+    },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -910,6 +936,14 @@ export const FORMS = {
         { t: 1,   hand: 'open', joints: { armF: { x: 70, y: -176 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.08 }, ease: 'inOutCubic' },
       ]),
     },
+    // He struts: tall, the chest out, the knees lifting high, the presenting
+    // hand keeping time. He jumps in a split for the crowd, the presenting
+    // hand thrown up, and gathers his legs to land.
+    walk: { stride: 10, lift: 14, bob: 3, lean: -0.08, back: -0.1, roll: 0.06, hip: 0.08, swing: 4, beat: 6 },
+    jump: {
+      up: { legF: { x: 46, y: -36 }, legB: { x: -42, y: -30 }, armF: { x: 60, y: -214 }, lean: -0.1 },
+      down: { legF: { x: 22, y: -20 }, legB: { x: -14, y: -14 }, lean: -0.06 },
+    },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -935,6 +969,14 @@ export const FORMS = {
         { t: 0.5, joints: { armF: { x: 22, y: -142 }, armB: { x: 30, y: -144 }, hipY: -84, shoulderY: -152, headY: -182, headX: 0, bodyLean: -0.02 }, ease: 'inOutCubic' },
         { t: 1,   joints: { armF: { x: 20, y: -140 }, armB: { x: 28, y: -142 }, hipY: -84, shoulderY: -152, headY: -181, headX: 2, bodyLean: -0.06 }, ease: 'inOutCubic' },
       ]),
+    },
+    // He glides in, unhurried: the lead hand low and loose, the shoulders
+    // rolling. He jumps with one knee up and the other leg hanging, no
+    // effort in it.
+    walk: { rate: 0.85, stride: 11, lift: 5, bob: 2, back: -0.06, roll: 0.1, hip: 0.03, swing: 5 },
+    jump: {
+      up: { legF: { x: 26, y: -40 }, legB: { x: -14, y: -6 } },
+      down: { legF: { x: 22, y: -16 }, legB: { x: -18, y: -4 } },
     },
   },
   fence: {
@@ -965,6 +1007,14 @@ export const FORMS = {
         { t: 1,   hand: 'fist', joints: { armF: { x: 6, y: -104 }, armB: { x: -6, y: -104 }, hipY: -84, shoulderY: -152, headY: -178, headX: 2, bodyLean: 0 }, ease: 'inOutCubic' },
       ]),
     },
+    // He sidles: a sliding shuffle, the feet hardly leaving the floor, the
+    // hand in his pocket and the head bobbing. He hops, both feet together,
+    // the hand still in his pocket.
+    walk: { rate: 1.1, stride: 9, lag: Math.PI / 2, lift: 2, bob: 2, lean: 0.06, back: -0.02, roll: 0.04, swing: 3, nod: 2 },
+    jump: {
+      up: { legF: { x: 8, y: -10 }, legB: { x: -4, y: -8 } },
+      down: { legF: { x: 6, y: -4 }, legB: { x: -4, y: -3 } },
+    },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -992,6 +1042,16 @@ export const FORMS = {
         { t: 0.5, hand: 'open', joints: { armF: { x: 26, y: -119 }, armB: { x: 20, y: -121 }, hipY: -87, shoulderY: -155, headY: -183, headX: 2, bodyLean: 0, sy: 1.02 }, ease: 'inOutCubic' },
         { t: 1,   hand: 'open', joints: { armF: { x: 26, y: -118 }, armB: { x: 20, y: -120 }, hipY: -86, shoulderY: -154, headY: -182, headX: 2, bodyLean: 0, sy: 1.02 }, ease: 'inOutCubic' },
       ]),
+    },
+    // She advances as a fencer does, the lead foot stepping and the rear one
+    // following, upright and level: no bob, nothing in the arms. She jumps
+    // straight up, the legs straight and together, and reaches for the floor
+    // with the lead foot, as for a lunge.
+    walk: { rate: 1.1, stride: 10, lag: Math.PI / 2, lift: 6, lean: 0.02, back: 0 },
+    jump: {
+      up: { legF: { x: 10, y: -6 }, legB: { x: -10, y: -6 } },
+      down: { legF: { x: 28, y: -8 }, legB: { x: -20, y: -10 } },
+      stretch: 0.3,
     },
   },
   peekaboo: {
@@ -1025,6 +1085,14 @@ export const FORMS = {
         { t: 1,   hand: 'open', joints: { armF: { x: 58, y: -150 }, armB: { x: 14, y: -110 }, hipY: -82, shoulderY: -150, headY: -176, headX: 3, bodyLean: 0.02 }, ease: 'inOutCubic' },
       ]),
     },
+    // She comes in bobbing and weaving: low, the head dipping under with
+    // every step and the shoulders turning it, the fists at her jaw. She
+    // jumps in a tight ball, the knees to her chest.
+    walk: { rate: 1.3, stride: 9, lift: 5, bob: 7, back: 0.12, roll: 0.12, hip: 0.04, nod: 4 },
+    jump: {
+      up: { legF: { x: 18, y: -48 }, legB: { x: 4, y: -42 }, lean: 0.24 },
+      down: { legF: { x: 22, y: -18 }, legB: { x: -16, y: -14 } },
+    },
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -1056,6 +1124,16 @@ export const FORMS = {
         { t: 0.5, hand: 'open', joints: { armF: { x: 70, y: -150 }, armB: { x: 40, y: -140 }, hipY: -90, shoulderY: -156, headY: -188, headX: 2, bodyLean: -0.02 }, ease: 'inOutCubic' },
         { t: 1,   hand: 'open', joints: { armF: { x: 50, y: -130 }, armB: { x: 30, y: -126 }, hipY: -88, shoulderY: -154, headY: -186, headX: 2, bodyLean: -0.02 }, ease: 'inOutCubic' },
       ]),
+    },
+    // She glides, slow and level: each foot placed before her weight goes onto
+    // it, the head never rising or falling, the arms drifting. She leaves the
+    // floor as a crane stands, the lead knee lifted high and the rear leg long
+    // beneath her, the lead hand opening.
+    walk: { rate: 0.6, stride: 9, lift: 4, back: -0.04, roll: 0.05, hip: 0.05, swing: 4 },
+    jump: {
+      up: { legF: { x: 22, y: -58 }, legB: { x: -6, y: -2 }, armF: { x: 70, y: -176 } },
+      down: { legF: { x: 20, y: -30 }, legB: { x: -10, y: -4 } },
+      stretch: 0.5,
     },
   },
 };
