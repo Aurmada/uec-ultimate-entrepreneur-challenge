@@ -50,7 +50,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.15 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 538 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released as v3.13; `main` is this branch | Merged into `main` on 2026-11-05. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.15, plus each form's own hit, KO and victory (below) | v3.15 merged into `main` on 2026-11-05; the reactions are not released yet. 540 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -879,7 +879,48 @@ at the middle while it can hit.
   its own in each: punch, kick, slap and launcher (the command normals and
   specials that borrow those tracks through `ATTACK_TRACK`, such as Kim's RUG
   PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
-  Block is each form's own; hit stun, the KO and victory are still shared.
+  Block is each form's own, and since the reactions below, so are hit stun,
+  the KO and victory.
+
+## Hit, KO and victory in each form (2026-11-05, on `claude/jeff-model`, not released)
+
+The owner, shown the v3.15 moves: "I like that, let's continue". The last
+shared poses in the 3D cast were how a fighter takes a hit, goes down and
+wins; now each form has its own (`hit`, `ko` and `victory` in `forms.js`,
+applied in `computePose` after the block).
+
+- **The timing stays shared.** The snap and settle of a hit and the fall of a
+  KO are still `basePose`'s, as they are for everyone; a form says where the
+  arms (and for a KO the legs) go, how far a hit throws the body (`hit.lean`
+  scales the lean and the head), and the hand's shape. A victory is a loop of
+  its own, `carried` keys from 0 to 1 at the form's `rate`.
+- **Hit:** Jeff covers up, gloves at his face, moved less than most; Adam is
+  thrown about, arms flung out; Carl barely moves, too heavy; Steve sells it,
+  arms thrown up; Elo takes it badly, both hands to his face; Scam gives with
+  it, a hand still in his pocket; Lizbeth hardly moves, upright and stiff;
+  Kim shells up, fists at her jaw; Cathie sways back a little and no more.
+- **KO:** Jeff with his guard still up, Adam spread out like a starfish, Carl
+  heavily with his arms at his sides, Steve with his arms flung up over his
+  head, Elo with one arm flung up, Scam with his hand still in his pocket,
+  Lizbeth stiff as a board, Kim with her fists still at her jaw, Cathie
+  composed, a palm on her chest.
+- **Victory:** Jeff both fists overhead, up on his toes; Adam flexing both
+  arms, roaring; Carl straightening his tie, the briefcase at his side
+  (dusting off his hands, the case came up between them and he seemed to
+  clap it); Steve presenting himself to the crowd, chin up; Elo arms crossed,
+  chin up, swaying; Scam both hands in his pockets and a shrug; Lizbeth quite
+  still, hands clasped in front of her, staring; Kim looking at her nails,
+  the other hand on her hip; Cathie breathing slowly, the arms opening palms
+  up and closing again.
+- Tests (`test/forms.test.js`): every form has all three; over the shared
+  timing the hit and the KO put the arms where the form says, a hit still
+  knocks the fighter back and a KO still puts them down; each victory is a
+  valid track that loops (its last key is its first) and moves; Kim's keeps
+  her hand clear of her face. Both fail with the `computePose` change
+  reverted.
+- Render-only, 3D only: `SIM_VERSION` stays 9, and both pixel checks are
+  identical. Two real matches in the page through a KO (Adam against Steve,
+  Steve against Cathie) run with no errors and show the falls.
 
 ## v3.15, released 2026-11-05: every basic move in each form
 

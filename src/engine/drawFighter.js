@@ -378,6 +378,28 @@ export function computePose(f, t, form = null) {
     }
     P.twist = form.block.twist ?? 0;
   }
+  // How a form takes a hit, goes down and celebrates (forms.js `hit`, `ko`,
+  // `victory`). The timing stays basePose's, as it is for everyone: the snap
+  // and settle of a hit, the fall of a KO. What the form says is where the
+  // arms go and how far a hit throws the body, and the celebration itself, a
+  // loop of its own.
+  if (f.state === 'hitstun' && form.hit) {
+    const H = form.hit;
+    P.bodyLean *= H.lean ?? 1;
+    P.headX *= H.lean ?? 1;
+    for (const k of ['armF', 'armB']) if (H[k]) P[k] = { ...H[k] };
+    if (H.hand) P.hand = H.hand;
+  }
+  if (f.state === 'ko' && form.ko) {
+    for (const k of ['armF', 'armB', 'legF', 'legB']) if (form.ko[k]) P[k] = { ...form.ko[k] };
+    if (form.ko.hand) P.hand = form.ko.hand;
+  }
+  if (f.state === 'victory' && form.victory) {
+    const V = form.victory;
+    const S = samplePose(V, (t * V.rate) % 1);
+    for (const j of Object.keys(V.keys[0].joints)) P[j] = typeof S[j] === 'object' ? { ...S[j] } : S[j];
+    if (S.hand) P.hand = S.hand;
+  }
   P.handDepth = form.handDepth;
   P.guardTurn = form.guardTurn;
   // The lead hand's shape, for a model that has more than a fist: what the

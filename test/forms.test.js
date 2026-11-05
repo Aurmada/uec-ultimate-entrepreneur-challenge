@@ -503,3 +503,41 @@ test('every form has its own slap, open at the face, and its own uppercut, up pa
     assert.ok(upper.armF.y < upper.headY - 10, `${name}'s uppercut is not up past the head (${upper.armF.y} against ${upper.headY})`);
   }
 });
+
+// How each form takes a hit, goes down and celebrates (`hit`, `ko`,
+// `victory`). The timing is the shared one; the form says where the arms
+// go, how far a hit throws the body, and its own celebration, a loop that
+// ends where it began.
+test('every form takes a hit, goes down and celebrates its own way', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    assert.ok(form.hit && form.ko && form.victory, `${name} reacts the shared way`);
+    assert.ok(form.hit.lean > 0.3 && form.hit.lean < 1.6, `${name}'s hit throws it ${form.hit.lean} times as far`);
+    const V = form.victory;
+    assert.deepEqual(validateTrack(`${name}.victory`, V), []);
+    const keys = V.keys;
+    assert.equal(keys[0].t, 0);
+    assert.equal(keys[keys.length - 1].t, 1);
+    assert.deepEqual(keys[keys.length - 1].joints, keys[0].joints, `${name}'s celebration does not loop`);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const at = (state, stateT, t = 0) => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, t, form);
+    // the arms where the form puts them, over the shared timing
+    const hit = at('hitstun', 0.05);
+    assert.deepEqual(hit.armF, form.hit.armF);
+    assert.ok(hit.bodyLean < 0, `${name} is not knocked back`);
+    assert.deepEqual(at('ko', 0.3).armF, form.ko.armF);
+    assert.ok(at('ko', 1).rot < -1.2, `${name} does not go down`);
+    // and the celebration moves
+    const v0 = at('victory', 0, 0), v1 = at('victory', 0, 0.5 / V.rate);
+    assert.notDeepEqual([v0.armF, v0.armB, v0.headY], [v1.armF, v1.armB, v1.headY], `${name}'s celebration stands still`);
+  }
+});
+
+// Kim's nails are held out in front of her chest, not her face (above).
+test("Kim's celebration keeps her face clear", () => {
+  const def = getFighter('zara');
+  for (const t of [0, 0.5, 1, 1.5]) {
+    const P = computePose({ def, state: 'victory', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, t, FORMS.peekaboo);
+    assert.ok(P.armF.y > P.headY + 15, `at ${t} her hand is at her face (${P.armF.y} against ${P.headY})`);
+  }
+});

@@ -802,6 +802,19 @@ export const FORMS = {
     guardTurn: 1,
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
     tracks: { punch: LEAD_STRAIGHT, kick: BOX_KICK, slap: BOX_SLAP, launch: BOX_UPPER },
+    // Hit, he covers up: the gloves stay up at his face and the hit moves him
+    // less than most. Out cold, his guard is still up. He wins with both fists
+    // over his head, up on his toes.
+    hit: { lean: 0.8, armF: { x: 42, y: -160 }, armB: { x: 30, y: -160 } },
+    ko: { armF: { x: 34, y: -150 }, armB: { x: 22, y: -148 } },
+    victory: {
+      rate: 1.6,
+      keys: carried([
+        { t: 0,   joints: { armF: { x: 24, y: -226 }, armB: { x: -8, y: -222 }, hipY: -84, shoulderY: -152, headY: -180, headX: 2, bodyLean: -0.04, sy: 1.02 } },
+        { t: 0.5, joints: { armF: { x: 28, y: -232 }, armB: { x: -4, y: -228 }, hipY: -90, shoulderY: -158, headY: -186, headX: 2, bodyLean: -0.04, sy: 1.04 }, ease: 'inOutCubic' },
+        { t: 1,   joints: { armF: { x: 24, y: -226 }, armB: { x: -8, y: -222 }, hipY: -84, shoulderY: -152, headY: -180, headX: 2, bodyLean: -0.04, sy: 1.02 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -821,6 +834,18 @@ export const FORMS = {
     // not scaled again; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 7, squash: 0.06, brace: 6, thrust: 5 },
     tracks: { punch: HAYMAKER, kick: BRAWL_KICK, slap: BRAWL_SLAP, launch: BRAWL_UPPER },
+    // Hit, he is thrown about, the arms flung out. He goes down spread out
+    // like a starfish, and wins flexing both arms, roaring.
+    hit: { lean: 1.3, armF: { x: 54, y: -130 }, armB: { x: -10, y: -150 } },
+    ko: { armF: { x: 60, y: -160 }, armB: { x: -48, y: -160 }, legF: { x: 40, y: -6 }, legB: { x: -34, y: -4 } },
+    victory: {
+      rate: 1.2,
+      keys: carried([
+        { t: 0,   joints: { armF: { x: 44, y: -188 }, armB: { x: -34, y: -186 }, hipY: -78, shoulderY: -148, headY: -174, headX: 2, bodyLean: 0.04, sx: 1.06, sy: 0.98 } },
+        { t: 0.5, joints: { armF: { x: 48, y: -196 }, armB: { x: -38, y: -194 }, hipY: -76, shoulderY: -146, headY: -172, headX: -1, bodyLean: 0.02, sx: 1.1, sy: 0.96 }, ease: 'inOutCubic' },
+        { t: 1,   joints: { armF: { x: 44, y: -188 }, armB: { x: -34, y: -186 }, hipY: -78, shoulderY: -148, headY: -174, headX: 2, bodyLean: 0.04, sx: 1.06, sy: 0.98 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   grappling: {
     stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
@@ -840,6 +865,21 @@ export const FORMS = {
     // The seizure is written whole; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 8, squash: 0.08, brace: 4, thrust: 5 },
     tracks: { punch: SEIZE, kick: GRAB_KICK, slap: GRAB_SLAP, launch: GRAB_UPPER },
+    // Hit, he barely moves: too heavy to throw about. He goes down heavily,
+    // the arms at his sides, and wins straightening his tie, the lead hand
+    // snugging the knot up under his chin, the briefcase (in the rear hand)
+    // hanging at his side: dusting off his hands, the case came up between
+    // them and he seemed to be clapping it.
+    hit: { lean: 0.6, armF: { x: 50, y: -120 }, armB: { x: 36, y: -116 }, hand: 'open' },
+    ko: { armF: { x: 26, y: -112 }, armB: { x: -10, y: -110 }, hand: 'open' },
+    victory: {
+      rate: 0.8,
+      keys: carried([
+        { t: 0,   hand: 'fist', joints: { armF: { x: 14, y: -144 }, armB: { x: -4, y: -100 }, hipY: -84, shoulderY: -152, headY: -178, headX: 2, bodyLean: -0.02, sy: 1.02 } },
+        { t: 0.5, hand: 'fist', joints: { armF: { x: 14, y: -151 }, armB: { x: -4, y: -100 }, hipY: -84, shoulderY: -153, headY: -180, headX: 0, bodyLean: -0.03, sy: 1.02 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'fist', joints: { armF: { x: 14, y: -144 }, armB: { x: -4, y: -100 }, hipY: -84, shoulderY: -152, headY: -178, headX: 2, bodyLean: -0.02, sy: 1.02 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -857,6 +897,19 @@ export const FORMS = {
     // The flourish and the held finish are written into the punch itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.04, brace: 0, thrust: 3 },
     tracks: { punch: BIG_FINISH, kick: SHOW_KICK, slap: SHOW_SLAP, launch: SHOW_UPPER },
+    // Hit, he sells it, the arms thrown up. He goes down with them flung up
+    // over his head, and wins presenting himself to the crowd, chin up, the
+    // presenting hand sweeping up.
+    hit: { lean: 1.2, armF: { x: 50, y: -176 }, armB: { x: 14, y: -166 }, hand: 'open' },
+    ko: { armF: { x: 24, y: -210 }, armB: { x: -20, y: -200 }, hand: 'open' },
+    victory: {
+      rate: 0.8,
+      keys: carried([
+        { t: 0,   hand: 'open', joints: { armF: { x: 70, y: -176 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.08 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 78, y: -196 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -184, headX: 2, bodyLean: -0.1 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 70, y: -176 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.08 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -871,6 +924,18 @@ export const FORMS = {
     // The coil and the snap back are written into the whip itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.06, brace: 6, thrust: 4 },
     tracks: { punch: WHIP, kick: ROLL_KICK, slap: ROLL_SLAP, launch: ROLL_UPPER },
+    // Hit, he takes it badly, both hands to his face. He goes down with one
+    // arm flung up, and wins with his arms crossed and his chin up, swaying.
+    hit: { lean: 1.3, armF: { x: 36, y: -164 }, armB: { x: 30, y: -168 } },
+    ko: { armF: { x: 40, y: -190 }, armB: { x: -30, y: -120 } },
+    victory: {
+      rate: 0.6,
+      keys: carried([
+        { t: 0,   joints: { armF: { x: 20, y: -140 }, armB: { x: 28, y: -142 }, hipY: -84, shoulderY: -152, headY: -181, headX: 2, bodyLean: -0.06 } },
+        { t: 0.5, joints: { armF: { x: 22, y: -142 }, armB: { x: 30, y: -144 }, hipY: -84, shoulderY: -152, headY: -182, headX: 0, bodyLean: -0.02 }, ease: 'inOutCubic' },
+        { t: 1,   joints: { armF: { x: 20, y: -140 }, armB: { x: 28, y: -142 }, hipY: -84, shoulderY: -152, headY: -181, headX: 2, bodyLean: -0.06 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   fence: {
     stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
@@ -888,6 +953,18 @@ export const FORMS = {
     // The slip is written whole; nothing about it should look heavy.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
     tracks: { punch: SLIP, kick: FENCE_KICK, slap: FENCE_SLAP, launch: FENCE_UPPER },
+    // Hit, he gives with it, the hand still in his pocket. He goes down with
+    // it there too, and wins with both hands in his pockets and a shrug.
+    hit: { lean: 0.8, armF: { x: 44, y: -136 }, armB: { x: -6, y: -104 }, hand: 'open' },
+    ko: { armF: { x: 30, y: -112 }, armB: { x: -6, y: -104 }, hand: 'open' },
+    victory: {
+      rate: 0.7,
+      keys: carried([
+        { t: 0,   hand: 'fist', joints: { armF: { x: 6, y: -104 }, armB: { x: -6, y: -104 }, hipY: -84, shoulderY: -152, headY: -178, headX: 2, bodyLean: 0 } },
+        { t: 0.5, hand: 'fist', joints: { armF: { x: 6, y: -106 }, armB: { x: -6, y: -106 }, hipY: -84, shoulderY: -156, headY: -180, headX: 2, bodyLean: 0 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'fist', joints: { armF: { x: 6, y: -104 }, armB: { x: -6, y: -104 }, hipY: -84, shoulderY: -152, headY: -178, headX: 2, bodyLean: 0 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -903,6 +980,19 @@ export const FORMS = {
     // Nothing in the hips, nothing that admits effort.
     motion: { windup: 1, follow: 1, drop: 0, squash: 0.02, brace: 0, thrust: 1 },
     tracks: { punch: THRUST, kick: EN_KICK, slap: EN_SLAP, launch: EN_UPPER },
+    // Hit, she hardly moves, upright and stiff. She goes down stiff as a
+    // board, and wins standing quite still, hands clasped in front of her,
+    // staring.
+    hit: { lean: 0.5, armF: { x: 46, y: -132 }, armB: { x: 36, y: -138 }, hand: 'open' },
+    ko: { armF: { x: 12, y: -106 }, armB: { x: -8, y: -106 }, legF: { x: 12, y: -2 }, legB: { x: -10, y: -2 }, hand: 'open' },
+    victory: {
+      rate: 0.4,
+      keys: carried([
+        { t: 0,   hand: 'open', joints: { armF: { x: 26, y: -118 }, armB: { x: 20, y: -120 }, hipY: -86, shoulderY: -154, headY: -182, headX: 2, bodyLean: 0, sy: 1.02 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 26, y: -119 }, armB: { x: 20, y: -121 }, hipY: -87, shoulderY: -155, headY: -183, headX: 2, bodyLean: 0, sy: 1.02 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 26, y: -118 }, armB: { x: 20, y: -120 }, hipY: -86, shoulderY: -154, headY: -182, headX: 2, bodyLean: 0, sy: 1.02 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   peekaboo: {
     stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
@@ -921,6 +1011,20 @@ export const FORMS = {
     // The bob and the snap back are written into the jab itself.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.05, brace: 4, thrust: 2 },
     tracks: { punch: SNAP, kick: PEEK_KICK, slap: PEEK_SLAP, launch: PEEK_UPPER },
+    // Hit, she shells up, the fists staying at her jaw. She goes down with
+    // them there, and wins looking at her nails, the other hand on her hip
+    // (the nails held out in front of her chest: up by her face, the hand
+    // hid it).
+    hit: { lean: 0.7, armF: { x: 52, y: -150 }, armB: { x: 42, y: -154 } },
+    ko: { armF: { x: 50, y: -150 }, armB: { x: 40, y: -154 } },
+    victory: {
+      rate: 0.5,
+      keys: carried([
+        { t: 0,   hand: 'open', joints: { armF: { x: 58, y: -150 }, armB: { x: 14, y: -110 }, hipY: -82, shoulderY: -150, headY: -176, headX: 3, bodyLean: 0.02 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 60, y: -153 }, armB: { x: 14, y: -110 }, hipY: -82, shoulderY: -150, headY: -176, headX: 4, bodyLean: 0.03 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 58, y: -150 }, armB: { x: 14, y: -110 }, hipY: -82, shoulderY: -150, headY: -176, headX: 3, bodyLean: 0.02 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -940,5 +1044,18 @@ export const FORMS = {
     // Nothing thrown, the hips barely moving.
     motion: { windup: 1, follow: 1, drop: 1, squash: 0.02, brace: 0, thrust: 1 },
     tracks: { punch: PUSH, kick: CALM_KICK, slap: CALM_SLAP, launch: CALM_UPPER },
+    // Hit, she sways back a little and no more. She goes down composed, a
+    // palm on her chest, and wins breathing slowly, the arms opening palms up
+    // and closing again.
+    hit: { lean: 0.5, armF: { x: 56, y: -136 }, armB: { x: 38, y: -116 }, hand: 'open' },
+    ko: { armF: { x: 28, y: -140 }, armB: { x: 16, y: -122 }, hand: 'open' },
+    victory: {
+      rate: 0.35,
+      keys: carried([
+        { t: 0,   hand: 'open', joints: { armF: { x: 50, y: -130 }, armB: { x: 30, y: -126 }, hipY: -88, shoulderY: -154, headY: -186, headX: 2, bodyLean: -0.02 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 70, y: -150 }, armB: { x: 40, y: -140 }, hipY: -90, shoulderY: -156, headY: -188, headX: 2, bodyLean: -0.02 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 50, y: -130 }, armB: { x: 30, y: -126 }, hipY: -88, shoulderY: -154, headY: -186, headX: 2, bodyLean: -0.02 }, ease: 'inOutCubic' },
+      ]),
+    },
   },
 };
