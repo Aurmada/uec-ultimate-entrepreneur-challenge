@@ -6,11 +6,12 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.15 on GitHub Pages
+The game is live at v3.16 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
 on 2026-11-05: 3D by default, the nine founders the sculpted cast below, each
-in their own fighting form for every basic move, and 2D a choice in Settings
-(see "v3.15", "v3.14" and "v3.13"). v3.12 was built on 2026-10-30 but never reached `main`; it went
+in their own fighting form for every basic move and every reaction (hit, KO,
+victory), and 2D a choice in Settings (see "v3.16", "v3.15", "v3.14" and
+"v3.13"). v3.12 was built on 2026-10-30 but never reached `main`; it went
 out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
@@ -49,8 +50,8 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.15 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 538 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.15, plus each form's own hit, KO and victory (below) | v3.15 merged into `main` on 2026-11-05; the reactions are not released yet. 540 tests pass. |
+| `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16; `main` is this branch | Merged into `main` on 2026-11-05. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -882,9 +883,10 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions below, so are hit stun,
   the KO and victory.
 
-## Hit, KO and victory in each form (2026-11-05, on `claude/jeff-model`, not released)
+## v3.16, released 2026-11-05: hit, KO and victory in each form
 
-The owner, shown the v3.15 moves: "I like that, let's continue". The last
+The owner, shown the v3.15 moves: "I like that, let's continue"; shown the
+reactions, "Yes, push v3.16 live". The last
 shared poses in the 3D cast were how a fighter takes a hit, goes down and
 wins; now each form has its own (`hit`, `ko` and `victory` in `forms.js`,
 applied in `computePose` after the block).
