@@ -836,6 +836,21 @@ mat stood a hand's width off his back, which a test now catches.
 
 Next: the owner's call on putting the sculpts in front of players.
 
+**The kicks** (2026-11-05, after v3.14). Each form kicks its own way, from
+its guard (each form's guard is now one constant, `<FORM>_AT`, where every
+one of its tracks starts and ends): Jeff a boxer's push kick, the hands never
+leaving the guard; Adam a door kick, wound up high and stumbling forward off
+it; Carl a heavy push at the thigh, the open hand reaching with it; Steve a
+crescent swept up high, arms wide, the finish held; Elo a roundhouse coiled
+well away and snapped home; Scam a push to keep you off, the hand still in his
+pocket; Lizbeth a line kick, straight out along its line; Kim a snap kick, the
+fists at her jaw; Cathie a heel kick, placed, the arms opening. Adam's and
+Elo's wind-ups first drew the leg back behind them, where the game's camera
+could not see it, and Adam's lead arm thrown forward read as a punch; both
+now lift the knee in front. The test that holds a punch to its guard now
+holds every move a form has (and its lead hand), and each kick must be out
+at the middle while it can hit.
+
 **Gaps, now the whole cast is built:**
 
 - `body.reach` is not read: the arms are as long as the fighter's height
@@ -860,9 +875,10 @@ Next: the owner's call on putting the sculpts in front of players.
   stands out stiffly in a kick, where the 2D one trails.
 - Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
   (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth), the
-  peek-a-boo (Kim) and tai chi (Cathie). Only the punch has a track of its
-  own in each; the kicks, the launcher and the specials are still the shared
-  ones.
+  peek-a-boo (Kim) and tai chi (Cathie). The punch and the kick have tracks
+  of their own in each (the kick track also serves the command normals that
+  borrow it, such as Kim's RUG PULL); the slap, the launcher and the specials
+  are still the shared ones.
 
 ## v3.14, released 2026-11-05: 3D by default
 

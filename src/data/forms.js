@@ -29,6 +29,10 @@ const HIP = -82, SHOULDER = -148, HEAD = -176;   // REST lowered by the stance
 // every straight and stood back up on the last
 const GUARD_SY = 1.02;
 
+// The guard: where each of this form's tracks starts and ends.
+const BOX_AT = { armF: GUARD_F, armB: GUARD_B, hipY: HIP, shoulderY: SHOULDER, headY: HEAD,
+  headX: 2, bodyLean: 0.12, twist: 0, hipTwist: 0, sx: 1, sy: GUARD_SY, legF: { x: 24, y: 0 }, legB: { x: -30, y: 0 } };
+
 // The lead straight, thrown from the guard and back to it along the same line.
 // No wind-up of the fist: a boxer who draws his hand back before he punches
 // is telling you it is coming. The weight comes from turning the body instead:
@@ -40,7 +44,7 @@ const GUARD_SY = 1.02;
 const LEAD_STRAIGHT = {
   own: true,
   keys: carried([
-    { t: 0,    joints: { armF: GUARD_F, armB: GUARD_B, hipY: HIP, shoulderY: SHOULDER, headY: HEAD, headX: 2, bodyLean: 0.12, twist: 0, hipTwist: 0, sx: 1, sy: GUARD_SY, legF: { x: 24, y: 0 }, legB: { x: -30, y: 0 } } },
+    { t: 0,    joints: BOX_AT },
     // load: sink a little and turn away, the fist staying home
     { t: 0.6,  joints: { armF: { x: 46, y: -170 }, hipY: HIP + 2, bodyLean: 0.1, twist: -0.12, hipTwist: -0.1, sx: 1.03, sy: 0.97 }, ease: 'outCubic' },
     { t: 0.95, joints: { armF: { x: 44, y: -169 }, hipY: HIP + 3, bodyLean: 0.09, twist: -0.16, hipTwist: -0.12, sx: 1.04, sy: 0.96 }, ease: 'outQuad' },
@@ -53,12 +57,36 @@ const LEAD_STRAIGHT = {
   ]),
 };
 
+// A boxer's kick, which is to say a push: the knee comes straight up in
+// front of him, the hands never leaving the guard, and the foot is driven out
+// flat at the belly with the hips behind it, then drawn back to the knee and
+// set down where it came from. Nothing about it is pretty; all of it is
+// efficient.
+const BOX_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: BOX_AT },
+    { t: 0.5,  joints: { legF: { x: 32, y: -44 }, hipY: HIP - 1, bodyLean: 0.06, sx: 1.02 }, ease: 'outCubic' },
+    { t: 0.95, joints: { legF: { x: 34, y: -58 }, bodyLean: 0.02 }, ease: 'outQuad' },
+    // driven out, the hips through it
+    { t: 1.15, joints: { legF: { x: 104, y: -74 }, legB: { x: -32, y: 0 }, hipY: HIP - 6, bodyLean: -0.08, twist: 0.08, hipTwist: 0.1, sx: 0.96, sy: 1.06 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { legF: { x: 100, y: -72 }, bodyLean: -0.06 }, hold: true },
+    // back to the knee before it comes down
+    { t: 2.35, joints: { legF: { x: 40, y: -40 }, legB: { x: -30, y: 0 }, hipY: HIP - 2, bodyLean: 0.06, twist: 0, hipTwist: 0, sx: 1, sy: GUARD_SY }, ease: 'outQuad' },
+    { t: 3,    joints: BOX_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A bar-room brawler's guard, Adam's from 2D: slouched low on the hips, the
 // fists down at the belly and too far apart, chin tucked, the widest base in
 // the cast. Ready to fight, never once ready to defend.
 const BRAWL_F = { x: 60, y: -126 };
 const BRAWL_B = { x: 42, y: -134 };
 const B_HIP = -70, B_SHOULDER = -148, B_HEAD = -168;    // REST lowered by the stance
+
+// The guard: where each of this form's tracks starts and ends.
+const BRAWL_AT = { armF: BRAWL_F, armB: BRAWL_B, hipY: B_HIP, shoulderY: B_SHOULDER, headY: B_HEAD,
+  headX: 2, bodyLean: 0.14, twist: 0, hipTwist: 0, sx: 1.06, sy: 0.98, legF: { x: 33, y: 0 }, legB: { x: -31, y: 0 } };
 
 // The haymaker: all wind-up and no control. The fist goes back by his ear
 // and the whole body turns away with it, the deepest coil in the cast, so
@@ -69,7 +97,7 @@ const B_HIP = -70, B_SHOULDER = -148, B_HEAD = -168;    // REST lowered by the s
 const HAYMAKER = {
   own: true,
   keys: carried([
-    { t: 0,    joints: { armF: BRAWL_F, armB: BRAWL_B, hipY: B_HIP, shoulderY: B_SHOULDER, headY: B_HEAD, headX: 2, bodyLean: 0.14, twist: 0, hipTwist: 0, sx: 1.06, sy: 0.98, legF: { x: 33, y: 0 }, legB: { x: -31, y: 0 } } },
+    { t: 0,    joints: BRAWL_AT },
     // the wind-up: back past the ear, the body turned away
     { t: 0.6,  joints: { armF: { x: 16, y: -158 }, hipY: B_HIP + 4, headX: -1, bodyLean: 0.02, twist: -0.42, hipTwist: -0.22, sx: 1.08, sy: 0.95 }, ease: 'outCubic' },
     { t: 0.95, joints: { armF: { x: 6, y: -162 }, hipY: B_HIP + 5, bodyLean: -0.02, twist: -0.52, hipTwist: -0.28, sx: 1.09, sy: 0.94 }, ease: 'outQuad' },
@@ -83,12 +111,37 @@ const HAYMAKER = {
   ]),
 };
 
+// A brawler's kick is the haymaker with a foot: he hauls the knee up high,
+// the body leaning back and turned away and the arms thrown up and out for
+// balance, so anyone can see it coming (the lead arm forward read as a punch,
+// and the leg drawn back behind him could not be seen), then stamps it
+// through as if at a door, and keeps going after it lands, stumbling forward
+// off the kick before he finds his feet.
+const BRAWL_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: BRAWL_AT },
+    { t: 0.55, joints: { legF: { x: 30, y: -52 }, armF: { x: 56, y: -166 }, armB: { x: 16, y: -152 }, hipY: B_HIP + 2, bodyLean: -0.06, twist: -0.2, hipTwist: -0.15, sx: 1.08, sy: 0.96 }, ease: 'outCubic' },
+    { t: 0.95, joints: { legF: { x: 28, y: -66 }, armF: { x: 54, y: -176 }, armB: { x: 8, y: -156 }, bodyLean: -0.14, twist: -0.28, hipTwist: -0.2 }, ease: 'outQuad' },
+    // stamped through
+    { t: 1.15, joints: { legF: { x: 108, y: -84 }, legB: { x: -28, y: 0 }, armF: { x: 60, y: -150 }, armB: { x: -4, y: -150 }, hipY: B_HIP - 10, bodyLean: -0.2, twist: 0.25, hipTwist: 0.3, sx: 0.94, sy: 1.06 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { legF: { x: 104, y: -80 }, bodyLean: -0.16 }, hold: true },
+    // and off balance after it
+    { t: 2.5,  joints: { legF: { x: 58, y: -14 }, armF: { x: 70, y: -130 }, armB: { x: 36, y: -138 }, hipY: B_HIP - 2, bodyLean: 0.2, twist: 0.1, hipTwist: 0.1, sx: 1.04, sy: 0.98 }, ease: 'outQuad' },
+    { t: 3,    joints: BRAWL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A grappler's stance, Carl's from 2D: hunched well forward over a wide low
 // base, chin down, the lead hand open and reaching at chest height for
 // something to take hold of, the rear one low with his briefcase.
 const GRAB_F = { x: 64, y: -134 };
 const GRAB_B = { x: 44, y: -122 };
 const G_HIP = -68, G_SHOULDER = -140, G_HEAD = -160;   // REST lowered by the stance
+
+// The guard: where each of this form's tracks starts and ends.
+const GRAB_AT = { armF: GRAB_F, armB: GRAB_B, hipY: G_HIP, shoulderY: G_SHOULDER, headY: G_HEAD,
+  headX: 2, bodyLean: 0.22, twist: 0, hipTwist: 0, sx: 1.04, sy: 0.96, legF: { x: 31, y: 0 }, legB: { x: -29, y: 0 } };
 
 // The seizure: a grappler does not hit you, he takes hold of you. The weight
 // sinks and the open hand draws in, then shoots out at the chest with the
@@ -99,7 +152,7 @@ const G_HIP = -68, G_SHOULDER = -140, G_HEAD = -160;   // REST lowered by the st
 const SEIZE = {
   own: true,
   keys: carried([
-    { t: 0,    hand: 'open', joints: { armF: GRAB_F, armB: GRAB_B, hipY: G_HIP, shoulderY: G_SHOULDER, headY: G_HEAD, headX: 2, bodyLean: 0.22, twist: 0, hipTwist: 0, sx: 1.04, sy: 0.96, legF: { x: 31, y: 0 }, legB: { x: -29, y: 0 } } },
+    { t: 0,    hand: 'open', joints: GRAB_AT },
     // gathering: the hand drawn in a little, the weight sinking
     { t: 0.6,  hand: 'open', joints: { armF: { x: 58, y: -136 }, hipY: G_HIP + 3, bodyLean: 0.2, twist: -0.08, hipTwist: -0.05, sx: 1.06, sy: 0.94 }, ease: 'outCubic' },
     { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -138 }, hipY: G_HIP + 5, bodyLean: 0.19, twist: -0.12, hipTwist: -0.08, sx: 1.07, sy: 0.93 }, ease: 'outQuad' },
@@ -115,12 +168,35 @@ const SEIZE = {
   ]),
 };
 
+// A grappler kicks to move you, not to hurt you: the knee lifts, then a heavy
+// push at the thigh with the foot turned out, the body leaning in behind it
+// and the open hand reaching forward with it for whatever comes loose. He
+// sets it down and is still coming.
+const GRAB_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: GRAB_AT },
+    { t: 0.55, hand: 'open', joints: { legF: { x: 36, y: -50 }, armF: { x: 58, y: -140 }, hipY: G_HIP - 2, bodyLean: 0.12, sx: 1.04 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { legF: { x: 38, y: -62 }, bodyLean: 0.08 }, ease: 'outQuad' },
+    // the push, the hand reaching with it
+    { t: 1.15, hand: 'open', joints: { legF: { x: 100, y: -66 }, legB: { x: -28, y: 0 }, armF: { x: 74, y: -138 }, hipY: G_HIP - 6, bodyLean: 0.02, twist: 0.12, hipTwist: 0.16, sx: 0.96, sy: 1.02 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { legF: { x: 97, y: -64 } }, hold: true },
+    // set down, still leaning in
+    { t: 2.45, hand: 'open', joints: { legF: { x: 48, y: -26 }, armF: { x: 66, y: -136 }, hipY: G_HIP, bodyLean: 0.18, twist: 0.04, hipTwist: 0.04, sx: 1.04, sy: 0.96 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A showman's guard, Steve's from 2D: mid-presentation, tall, the chest open,
 // the lead hand open, out and high, showing you the thing, and the device
 // held at the chest in the other.
 const SHOW_F = { x: 66, y: -170 };
 const SHOW_B = { x: 42, y: -142 };
 const S_HIP = -84, S_SHOULDER = -152, S_HEAD = -183;   // REST, the head raised by the stance
+
+// The guard: where each of this form's tracks starts and ends.
+const SHOW_AT = { armF: SHOW_F, armB: SHOW_B, hipY: S_HIP, shoulderY: S_SHOULDER, headY: S_HEAD,
+  headX: 2, bodyLean: -0.06, twist: 0, hipTwist: 0, sx: 1, sy: 1.02, legF: { x: 21, y: 0 }, legB: { x: -19, y: 0 } };
 
 // The big finish: a flourish, the open hand swept up and back over his
 // shoulder and the body turned away with it, the chest open to the
@@ -131,7 +207,7 @@ const S_HIP = -84, S_SHOULDER = -152, S_HEAD = -183;   // REST, the head raised 
 const BIG_FINISH = {
   own: true,
   keys: carried([
-    { t: 0,    hand: 'open', joints: { armF: SHOW_F, armB: SHOW_B, hipY: S_HIP, shoulderY: S_SHOULDER, headY: S_HEAD, headX: 2, bodyLean: -0.06, twist: 0, hipTwist: 0, sx: 1, sy: 1.02, legF: { x: 21, y: 0 }, legB: { x: -19, y: 0 } } },
+    { t: 0,    hand: 'open', joints: SHOW_AT },
     // the flourish, up and back, the body turning away
     { t: 0.5,  hand: 'open', joints: { armF: { x: 30, y: -196 }, headX: -1, bodyLean: -0.12, twist: -0.3, hipTwist: -0.12 }, ease: 'outCubic' },
     { t: 0.95, hand: 'fist', joints: { armF: { x: 20, y: -192 }, headX: -2, bodyLean: -0.14, twist: -0.38, hipTwist: -0.16, sx: 1.02, sy: 1.03 }, ease: 'outQuad' },
@@ -145,12 +221,35 @@ const BIG_FINISH = {
   ]),
 };
 
+// The showman's kick is a crescent: the leg swept up and round in an arc,
+// high, the arms flung open wide as if he were unveiling it, and the finish
+// held a beat too long, chin up, the presenting hand still out, before he
+// remembers there is a fight on.
+const SHOW_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: SHOW_AT },
+    { t: 0.5,  hand: 'open', joints: { legF: { x: 40, y: -60 }, armF: { x: 74, y: -176 }, armB: { x: 30, y: -150 }, bodyLean: -0.1 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { legF: { x: 30, y: -92 }, bodyLean: -0.16, twist: -0.12 }, ease: 'outQuad' },
+    // swept round and through, the arms wide
+    { t: 1.15, hand: 'open', joints: { legF: { x: 104, y: -96 }, legB: { x: -18, y: 0 }, armF: { x: 84, y: -182 }, armB: { x: 14, y: -160 }, hipY: S_HIP - 8, bodyLean: -0.22, twist: 0.1, hipTwist: 0.08, sx: 0.94, sy: 1.08 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { legF: { x: 100, y: -92 }, bodyLean: -0.2 }, hold: true },
+    // the finish, held, chin up
+    { t: 2.55, hand: 'open', joints: { legF: { x: 56, y: -30 }, armF: { x: 80, y: -180 }, hipY: S_HIP - 2, headY: S_HEAD - 3, bodyLean: -0.1, twist: 0.04, hipTwist: 0.02, sx: 1, sy: 1.02 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A shoulder roll, Elo's from 2D: the lead arm dropped low across the belly,
 // the rear fist parked at the chin, chin up, weight back. The guard of
 // someone who thinks you are not worth putting his hands up for.
 const ROLL_F = { x: 30, y: -112 };
 const ROLL_B = { x: 40, y: -160 };
 const R_HIP = -84, R_SHOULDER = -152, R_HEAD = -180;   // REST, the head raised by the stance
+
+// The guard: where each of this form's tracks starts and ends.
+const ROLL_AT = { armF: ROLL_F, armB: ROLL_B, hipY: R_HIP, shoulderY: R_SHOULDER, headY: R_HEAD,
+  headX: 2, bodyLean: -0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 20, y: 0 }, legB: { x: -23, y: 0 } };
 
 // The whip, a glass cannon's: power out of no mass. The low lead fist is
 // drawn back past his hip and the body coils away with it, a huge wind-up
@@ -161,7 +260,7 @@ const R_HIP = -84, R_SHOULDER = -152, R_HEAD = -180;   // REST, the head raised 
 const WHIP = {
   own: true,
   keys: carried([
-    { t: 0,    joints: { armF: ROLL_F, armB: ROLL_B, hipY: R_HIP, shoulderY: R_SHOULDER, headY: R_HEAD, headX: 2, bodyLean: -0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 20, y: 0 }, legB: { x: -23, y: 0 } } },
+    { t: 0,    joints: ROLL_AT },
     // the wind-up, the fist back past the hip and the body coiled away
     { t: 0.55, joints: { armF: { x: -4, y: -116 }, headX: -1, bodyLean: -0.1, twist: -0.45, hipTwist: -0.2, sx: 1.02, sy: 0.98 }, ease: 'outCubic' },
     { t: 0.95, joints: { armF: { x: -12, y: -120 }, headX: -2, bodyLean: -0.12, twist: -0.55, hipTwist: -0.25, sx: 1.03, sy: 0.97 }, ease: 'outQuad' },
@@ -171,6 +270,27 @@ const WHIP = {
     // and snapped straight back home
     { t: 2.3,  joints: { armF: { x: 36, y: -116 }, hipY: R_HIP, headX: 2, bodyLean: -0.03, twist: 0.04, hipTwist: 0.02, sx: 1, sy: 1, legB: { x: -23, y: 0 } }, ease: 'outCubic' },
     { t: 3,    joints: { armF: ROLL_F, bodyLean: -0.04, twist: 0, hipTwist: 0 }, ease: 'inOutCubic' },
+  ]),
+};
+
+// The roundhouse, the whip with a leg: power out of no mass again. The lead
+// knee is coiled up with the body turned well away (drawn back across him,
+// the leg was hidden behind him and he seemed only to stand there), the
+// dropped lead arm swinging back as he winds, then the leg whips round at the
+// head with the body snapping round behind it, and is snapped straight home
+// the moment it has landed.
+const ROLL_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: ROLL_AT },
+    { t: 0.55, joints: { legF: { x: 22, y: -48 }, armF: { x: 24, y: -120 }, bodyLean: -0.08, twist: -0.35, hipTwist: -0.3 }, ease: 'outCubic' },
+    { t: 0.95, joints: { legF: { x: 18, y: -64 }, bodyLean: -0.1, twist: -0.45, hipTwist: -0.36 }, ease: 'outQuad' },
+    // the whip
+    { t: 1.15, joints: { legF: { x: 108, y: -88 }, legB: { x: -20, y: 0 }, armF: { x: 10, y: -118 }, hipY: R_HIP - 6, bodyLean: -0.16, twist: 0.4, hipTwist: 0.45, sx: 0.95, sy: 1.06 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { legF: { x: 104, y: -86 }, twist: 0.36, hipTwist: 0.4 }, hold: true },
+    // snapped home
+    { t: 2.3,  joints: { legF: { x: 34, y: -30 }, legB: { x: -23, y: 0 }, armF: { x: 30, y: -112 }, hipY: R_HIP, bodyLean: -0.04, twist: 0.04, hipTwist: 0.04, sx: 1, sy: 1 }, ease: 'outCubic' },
+    { t: 3,    joints: ROLL_AT, ease: 'inOutCubic' },
   ]),
 };
 
@@ -184,6 +304,10 @@ const F_HIP = -84, F_SHOULDER = -154, F_HEAD = -178;   // REST, the shoulders ra
 // (keyed at 3, it jumped 2 px back on the first frame of every slip)
 const F_HEADX = 5;
 
+// The guard: where each of this form's tracks starts and ends.
+const FENCE_AT = { armF: FENCE_F, armB: FENCE_B, hipY: F_HIP, shoulderY: F_SHOULDER, headY: F_HEAD,
+  headX: F_HEADX, bodyLean: 0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -17, y: 0 } };
+
 // The slip: understated on the way in, lingering on the way out. The open
 // hand barely draws in, so it reads as less than it is, closes only as it
 // lands, and stays out after the hit, unhurried, before it opens again
@@ -191,7 +315,7 @@ const F_HEADX = 5;
 const SLIP = {
   own: true,
   keys: carried([
-    { t: 0,    hand: 'open', joints: { armF: FENCE_F, armB: FENCE_B, hipY: F_HIP, shoulderY: F_SHOULDER, headY: F_HEAD, headX: F_HEADX, bodyLean: 0.04, twist: 0, hipTwist: 0, sx: 1, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -17, y: 0 } } },
+    { t: 0,    hand: 'open', joints: FENCE_AT },
     // barely any wind-up
     { t: 0.6,  hand: 'open', joints: { armF: { x: 56, y: -147 }, bodyLean: 0.03, twist: -0.04 }, ease: 'outQuad' },
     { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -148 }, bodyLean: 0.03, twist: -0.06, hipTwist: -0.03 }, ease: 'outQuad' },
@@ -204,12 +328,34 @@ const SLIP = {
   ]),
 };
 
+// The fence's kick is a push to keep you at arm's length: hardly any lift,
+// the foot set flat into your middle, unhurried, the open hand still out in
+// front of him and the other still in his pocket, and left out there a moment
+// after, as if to say there is no need for any of this.
+const FENCE_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: FENCE_AT },
+    { t: 0.6,  hand: 'open', joints: { legF: { x: 28, y: -36 }, bodyLean: 0.02 }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { legF: { x: 30, y: -46 }, bodyLean: 0 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { legF: { x: 98, y: -70 }, legB: { x: -18, y: 0 }, hipY: F_HIP - 4, headX: F_HEADX + 1, bodyLean: -0.06, twist: 0.04, hipTwist: 0.06 }, ease: 'outCubic', smear: true },
+    { t: 2,    hand: 'open', joints: { legF: { x: 96, y: -68 } }, hold: true },
+    // and lingering out there
+    { t: 2.6,  hand: 'open', joints: { legF: { x: 70, y: -50 }, legB: { x: -17, y: 0 }, hipY: F_HIP - 2, headX: F_HEADX, bodyLean: -0.02, twist: 0.02, hipTwist: 0.02 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A fencer's guard, Lizbeth's from 2D, and the stillest in the game: narrow
 // and upright, side on, the lead hand loose and forward at the chest and the
 // rear one close behind it, as if holding something fragile.
 const EN_F = { x: 54, y: -136 };
 const EN_B = { x: 40, y: -142 };
 const E_HIP = -84, E_SHOULDER = -152, E_HEAD = -181;   // REST, the head raised by the stance
+
+// The guard: where each of this form's tracks starts and ends.
+const EN_AT = { armF: EN_F, armB: EN_B, hipY: E_HIP, shoulderY: E_SHOULDER, headY: E_HEAD,
+  headX: 2, bodyLean: 0.02, twist: 0, hipTwist: 0, sx: 1, sy: 1.02, legF: { x: 17, y: 0 }, legB: { x: -17, y: 0 } };
 
 // The thrust: economical to the point of eerie. The hand barely draws back,
 // then goes straight out along its own line, fingers first, the lead foot
@@ -218,7 +364,7 @@ const E_HIP = -84, E_SHOULDER = -152, E_HEAD = -181;   // REST, the head raised 
 const THRUST = {
   own: true,
   keys: carried([
-    { t: 0,    hand: 'open', joints: { armF: EN_F, armB: EN_B, hipY: E_HIP, shoulderY: E_SHOULDER, headY: E_HEAD, headX: 2, bodyLean: 0.02, twist: 0, hipTwist: 0, sx: 1, sy: 1.02, legF: { x: 17, y: 0 }, legB: { x: -17, y: 0 } } },
+    { t: 0,    hand: 'open', joints: EN_AT },
     { t: 0.6,  hand: 'open', joints: { armF: { x: 50, y: -137 } }, ease: 'outQuad' },
     { t: 0.95, hand: 'open', joints: { armF: { x: 48, y: -137 }, bodyLean: 0.01 }, ease: 'outQuad' },
     // straight out along the line, the lead foot after it
@@ -230,6 +376,24 @@ const THRUST = {
   ]),
 };
 
+// A fencer's kick is the thrust again: the knee barely bends before the
+// foot goes straight out along its own line, low and level, nothing in the
+// hips, and straight back the way it went. The hands stay where they were.
+const EN_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: EN_AT },
+    { t: 0.6,  hand: 'open', joints: { legF: { x: 24, y: -30 } }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { legF: { x: 26, y: -40 } }, ease: 'outQuad' },
+    // straight out along the line
+    { t: 1.15, hand: 'open', joints: { legF: { x: 106, y: -76 }, hipY: E_HIP - 4, bodyLean: -0.04 }, ease: 'outCubic', smear: true },
+    { t: 2,    hand: 'open', joints: { legF: { x: 104, y: -76 } }, hold: true },
+    // and straight back
+    { t: 2.45, hand: 'open', joints: { legF: { x: 40, y: -36 }, hipY: E_HIP - 1, bodyLean: 0 }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A peek-a-boo guard, Kim's from 2D, the most compact outline in the game:
 // crouched in and leaning forward, both fists high and tight in front of the
 // jaw with the elbows tucked, the face just above them (over the face, the
@@ -237,6 +401,10 @@ const THRUST = {
 const PEEK_F = { x: 54, y: -150 };
 const PEEK_B = { x: 43, y: -154 };
 const K_HIP = -70, K_SHOULDER = -142, K_HEAD = -165;   // REST lowered by the coiled stance and hers
+
+// The guard: where each of this form's tracks starts and ends.
+const PEEK_AT = { armF: PEEK_F, armB: PEEK_B, hipY: K_HIP, shoulderY: K_SHOULDER, headY: K_HEAD,
+  headX: 2, bodyLean: 0.18, twist: 0, hipTwist: 0, sx: 0.97, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -20, y: 0 } };
 
 // The snap: the shortest wind-up and the fastest reset in the game. She dips
 // under the line first, the head and the knees bobbing down together and
@@ -247,7 +415,7 @@ const K_HIP = -70, K_SHOULDER = -142, K_HEAD = -165;   // REST lowered by the co
 const SNAP = {
   own: true,
   keys: carried([
-    { t: 0,    joints: { armF: PEEK_F, armB: PEEK_B, hipY: K_HIP, shoulderY: K_SHOULDER, headY: K_HEAD, headX: 2, bodyLean: 0.18, twist: 0, hipTwist: 0, sx: 0.97, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -20, y: 0 } } },
+    { t: 0,    joints: PEEK_AT },
     // the bob, under the line, the fists going down with the head
     { t: 0.6,  joints: { armF: { x: 52, y: -146 }, armB: { x: 42, y: -150 }, hipY: K_HIP + 5, shoulderY: K_SHOULDER + 5, headY: K_HEAD + 7, headX: 0, bodyLean: 0.24, twist: -0.06, hipTwist: -0.03, sx: 1, sy: 0.97 }, ease: 'outQuad' },
     { t: 0.95, joints: { armF: { x: 51, y: -145 }, armB: { x: 42, y: -149 }, hipY: K_HIP + 6, shoulderY: K_SHOULDER + 6, headY: K_HEAD + 9, bodyLean: 0.25, twist: -0.08, hipTwist: -0.04, sx: 1.01, sy: 0.96 }, ease: 'outQuad' },
@@ -260,6 +428,24 @@ const SNAP = {
   ]),
 };
 
+// The snap kick: the least chamber in the game, the fists never leaving her
+// jaw. The head bobs down as the knee comes up, the shin snaps out at the
+// middle and is back on the floor before you have registered it left, the
+// head slipping off the line on the way home, as her jab does.
+const PEEK_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: PEEK_AT },
+    { t: 0.6,  joints: { legF: { x: 30, y: -40 }, hipY: K_HIP - 1, headY: K_HEAD + 2, bodyLean: 0.14 }, ease: 'outQuad' },
+    { t: 0.95, joints: { legF: { x: 32, y: -50 }, bodyLean: 0.1 }, ease: 'outQuad' },
+    { t: 1.15, joints: { legF: { x: 100, y: -78 }, legB: { x: -20, y: 0 }, hipY: K_HIP - 6, headY: K_HEAD, bodyLean: -0.04, twist: 0.1, hipTwist: 0.16, sx: 0.95, sy: 1.04 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { legF: { x: 98, y: -76 } }, hold: true },
+    // home at once, the head off the line
+    { t: 2.25, joints: { legF: { x: 36, y: -28 }, hipY: K_HIP, headX: 0, bodyLean: 0.14, twist: 0, hipTwist: 0, sx: 0.97, sy: 1 }, ease: 'outCubic' },
+    { t: 3,    joints: PEEK_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A tai chi ready stance, Cathie's from 2D, the calmest in the game: upright
 // and tall, the lead palm open and level in front of the chest where it can
 // keep you away, the rear hand low at the waist with the tablet, breathing
@@ -267,6 +453,10 @@ const SNAP = {
 const CALM_F = { x: 66, y: -140 };
 const CALM_B = { x: 42, y: -116 };
 const T_HIP = -88, T_SHOULDER = -152, T_HEAD = -184;   // REST, the head raised by the stance
+
+// The guard: where each of this form's tracks starts and ends.
+const CALM_AT = { armF: CALM_F, armB: CALM_B, hipY: T_HIP, shoulderY: T_SHOULDER, headY: T_HEAD,
+  headX: 2, bodyLean: -0.02, twist: 0, hipTwist: 0, sx: 1, sy: 1.04, legF: { x: 19, y: 0 }, legB: { x: -19, y: 0 } };
 
 // The push: nothing is thrown, everything is placed. The palm draws in to
 // the chest as the weight settles back, then goes out level and unhurried,
@@ -276,7 +466,7 @@ const T_HIP = -88, T_SHOULDER = -152, T_HEAD = -184;   // REST, the head raised 
 const PUSH = {
   own: true,
   keys: carried([
-    { t: 0,    hand: 'open', joints: { armF: CALM_F, armB: CALM_B, hipY: T_HIP, shoulderY: T_SHOULDER, headY: T_HEAD, headX: 2, bodyLean: -0.02, twist: 0, hipTwist: 0, sx: 1, sy: 1.04, legF: { x: 19, y: 0 }, legB: { x: -19, y: 0 } } },
+    { t: 0,    hand: 'open', joints: CALM_AT },
     // gathering: the palm drawn in, the weight settling back
     { t: 0.6,  hand: 'open', joints: { armF: { x: 56, y: -142 }, hipY: T_HIP + 2, headX: 0, bodyLean: -0.05 }, ease: 'inOutCubic' },
     { t: 0.95, hand: 'open', joints: { armF: { x: 52, y: -142 }, hipY: T_HIP + 3, headX: -1, bodyLean: -0.06 }, ease: 'inOutCubic' },
@@ -286,6 +476,25 @@ const PUSH = {
     // and back the way it went
     { t: 2.55, hand: 'open', joints: { armF: { x: 78, y: -141 }, hipY: T_HIP + 1, headX: 3, bodyLean: 0.01, twist: 0.02 }, ease: 'inOutCubic' },
     { t: 3,    hand: 'open', joints: { armF: CALM_F, hipY: T_HIP, headX: 2, bodyLean: -0.02, twist: 0 }, ease: 'inOutCubic' },
+  ]),
+};
+
+// A heel kick, placed like the push: the knee lifts slowly as the arms open
+// out, the palm forward and the tablet hand back, upright and balanced on
+// one leg, then the heel is pressed out level, without hurry and without a
+// turn of the hips, and drawn back the way it went.
+const CALM_KICK = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: CALM_AT },
+    { t: 0.6,  hand: 'open', joints: { legF: { x: 34, y: -54 }, armF: { x: 78, y: -150 }, armB: { x: 30, y: -128 } }, ease: 'inOutCubic' },
+    { t: 0.95, hand: 'open', joints: { legF: { x: 36, y: -62 }, bodyLean: -0.03 }, ease: 'inOutCubic' },
+    // pressed out, level
+    { t: 1.15, hand: 'open', joints: { legF: { x: 106, y: -78 }, legB: { x: -19, y: 0 }, armF: { x: 88, y: -150 }, hipY: T_HIP - 6, bodyLean: -0.06 }, ease: 'outCubic' },
+    { t: 2,    hand: 'open', joints: { legF: { x: 104, y: -78 } }, hold: true },
+    // and drawn back the way it went
+    { t: 2.55, hand: 'open', joints: { legF: { x: 50, y: -44 }, armF: { x: 74, y: -144 }, armB: { x: 36, y: -122 }, hipY: T_HIP - 2, bodyLean: -0.03 }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: CALM_AT, ease: 'inOutCubic' },
   ]),
 };
 
@@ -307,7 +516,7 @@ export const FORMS = {
     // turning with them.
     guardTurn: 1,
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
-    tracks: { punch: LEAD_STRAIGHT },
+    tracks: { punch: LEAD_STRAIGHT, kick: BOX_KICK },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -326,7 +535,7 @@ export const FORMS = {
     // The exaggeration is written into the haymaker itself, so the swing is
     // not scaled again; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 7, squash: 0.06, brace: 6, thrust: 5 },
-    tracks: { punch: HAYMAKER },
+    tracks: { punch: HAYMAKER, kick: BRAWL_KICK },
   },
   grappling: {
     stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
@@ -345,7 +554,7 @@ export const FORMS = {
     guardTurn: 0.6,
     // The seizure is written whole; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 8, squash: 0.08, brace: 4, thrust: 5 },
-    tracks: { punch: SEIZE },
+    tracks: { punch: SEIZE, kick: GRAB_KICK },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -362,7 +571,7 @@ export const FORMS = {
     guardTurn: 0.7,
     // The flourish and the held finish are written into the punch itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.04, brace: 0, thrust: 3 },
-    tracks: { punch: BIG_FINISH },
+    tracks: { punch: BIG_FINISH, kick: SHOW_KICK },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -376,7 +585,7 @@ export const FORMS = {
     guardTurn: 1,
     // The coil and the snap back are written into the whip itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.06, brace: 6, thrust: 4 },
-    tracks: { punch: WHIP },
+    tracks: { punch: WHIP, kick: ROLL_KICK },
   },
   fence: {
     stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
@@ -393,7 +602,7 @@ export const FORMS = {
     guardTurn: 0.3,
     // The slip is written whole; nothing about it should look heavy.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
-    tracks: { punch: SLIP },
+    tracks: { punch: SLIP, kick: FENCE_KICK },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -408,7 +617,7 @@ export const FORMS = {
     guardTurn: 1,
     // Nothing in the hips, nothing that admits effort.
     motion: { windup: 1, follow: 1, drop: 0, squash: 0.02, brace: 0, thrust: 1 },
-    tracks: { punch: THRUST },
+    tracks: { punch: THRUST, kick: EN_KICK },
   },
   peekaboo: {
     stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
@@ -426,7 +635,7 @@ export const FORMS = {
     guardTurn: 1,
     // The bob and the snap back are written into the jab itself.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.05, brace: 4, thrust: 2 },
-    tracks: { punch: SNAP },
+    tracks: { punch: SNAP, kick: PEEK_KICK },
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -445,6 +654,6 @@ export const FORMS = {
     guardTurn: 0.3,
     // Nothing thrown, the hips barely moving.
     motion: { windup: 1, follow: 1, drop: 1, squash: 0.02, brace: 0, thrust: 1 },
-    tracks: { punch: PUSH },
+    tracks: { punch: PUSH, kick: CALM_KICK },
   },
 };

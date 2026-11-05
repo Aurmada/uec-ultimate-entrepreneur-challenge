@@ -426,24 +426,43 @@ test('the push is placed, not thrown: drawn in, out level with the hips still, a
 // measured from the stock chin instead of the guard's each made the hands,
 // the head or the stance jump on the first frame of a punch and back on the
 // last. The idle's own motion (a form's roll) is left out: it moves anyway.
-test("every sculpt's punch leaves from its idle guard and comes back to it, at the game's reach", () => {
+test("every sculpt's own moves leave from its idle guard and come back to it, at the game's reach", () => {
   const ids = Object.keys(MODELS3D).filter((k) => k.startsWith('sculpt:') && MODELS3D[k].form).map((k) => k.slice(7));
   assert.ok(ids.length >= 9, `only ${ids.length} sculpts have a form`);
   for (const id of ids) {
     const def = getFighter(id), form = FORMS[MODELS3D[`sculpt:${id}`].form];
-    const atk = { ...ATTACKS.punch, kind: 'punch', reach: ATTACKS.punch.reach * (STYLES[def.style] || STYLES.balanced).reach };
     const at = (state, stateT, extra = {}) => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, 0, form);
     const guard = at('idle', 0);
-    for (const [k, stateT] of [[0, 0], [3, atk.startup + atk.active + atk.recovery]]) {
-      const P = at('attack', stateT, { attack: atk });
-      for (const c of ['hipY', 'shoulderY', 'headY', 'headX', 'bodyLean', 'sx', 'sy']) {
-        assert.ok(Math.abs((P[c] ?? 0) - (guard[c] ?? 0)) < 1e-6, `${id} at ${k}: ${c} ${P[c]} against the guard's ${guard[c]}`);
-      }
-      for (const l of ['armF', 'armB', 'legF', 'legB']) {
-        assert.ok(Math.hypot(P[l].x - guard[l].x, P[l].y - guard[l].y) < 1e-6,
-          `${id} at ${k}: ${l} (${P[l].x.toFixed(2)}, ${P[l].y.toFixed(2)}) against the guard's (${guard[l].x.toFixed(2)}, ${guard[l].y.toFixed(2)})`);
+    for (const kind of Object.keys(form.tracks)) {
+      const atk = { ...ATTACKS[kind], kind, reach: ATTACKS[kind].reach * (STYLES[def.style] || STYLES.balanced).reach };
+      for (const [k, stateT] of [[0, 0], [3, atk.startup + atk.active + atk.recovery]]) {
+        const P = at('attack', stateT, { attack: atk });
+        const what = `${id}'s ${kind} at ${k}`;
+        for (const c of ['hipY', 'shoulderY', 'headY', 'headX', 'bodyLean', 'sx', 'sy']) {
+          assert.ok(Math.abs((P[c] ?? 0) - (guard[c] ?? 0)) < 1e-6, `${what}: ${c} ${P[c]} against the guard's ${guard[c]}`);
+        }
+        for (const l of ['armF', 'armB', 'legF', 'legB']) {
+          assert.ok(Math.hypot(P[l].x - guard[l].x, P[l].y - guard[l].y) < 1e-6,
+            `${what}: ${l} (${P[l].x.toFixed(2)}, ${P[l].y.toFixed(2)}) against the guard's (${guard[l].x.toFixed(2)}, ${guard[l].y.toFixed(2)})`);
+        }
+        assert.equal(P.hand, guard.hand, `${what}: the lead hand is ${P.hand || 'a fist'}, in the guard ${guard.hand || 'a fist'}`);
       }
     }
+  }
+});
+
+// Each form kicks its own way, and each of them is a kick: out at the
+// middle while it can hit, wherever it started from.
+test('every form has a kick of its own, out at the middle while it can hit', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    assert.ok(form.tracks.kick, `${name} kicks the shared kick`);
+    assert.deepEqual(validateTrack(`${name}.kick`, form.tracks.kick, { attack: true }), []);
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const atk = { ...ATTACKS.kick, kind: 'kick' };
+    const at = (stateT) => computePose({ def, state: 'attack', stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, attack: atk }, 0, form);
+    const guard = at(0), out = at(atk.startup + atk.active * 0.6);
+    assert.ok(out.legF.x > guard.legF.x + 50 && out.legF.y < -55, `${name}'s kick is not out at the middle (${out.legF.x}, ${out.legF.y})`);
   }
 });
 
