@@ -195,3 +195,25 @@ for (const def of FIGHTERS) {
     });
   }
 }
+
+// A dash pressed with a direction held goes that way, a dash back included.
+// The walk took over on the dash's own first frame whenever a direction was
+// held, so the cooldown went, the dust and the sound played, and the fighter
+// only walked: just a dash with nothing held ever ran (v1.0 to v3.16), and
+// the AI, which dashes as it walks, lost every one.
+test('a dash pressed with a direction held runs that way, forward and back', () => {
+  for (const def of FIGHTERS) {
+    for (const [dir, sign] of [['right', 1], ['left', -1]]) {
+      const game = liveMatch(def);
+      const [a, b] = game.fighters;
+      a.x = 480; b.x = 760; a.y = b.y = 480;
+      let i = 0;
+      a.controller = { isHuman: false, update(f) { f.pad = { ...EMPTY, [dir]: true, dash: i++ === 0 }; } };
+      const states = new Set();
+      for (let k = 0; k < 20; k++) { game.update(1 / 60); states.add(a.state); b.x = 760; }
+      const what = `${def.id} dashing ${dir === 'right' ? 'in' : 'back'}`;
+      assert.ok(states.has('dash'), `${what}: never dashed (${[...states]})`);
+      assert.ok((a.x - 480) * sign > 150, `${what}: moved ${(a.x - 480).toFixed(0)} px`);
+    }
+  }
+});

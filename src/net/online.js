@@ -138,7 +138,12 @@ export const CHARACTER_WIRE_VERSION = 1;
 // sends the loser the way they were thrown: doKO reads its direction from the
 // two x positions, which v8 left equal, so every throw KO flew right. A real
 // bump: v8 shipped in v3.9 and v3.9.1.
-export const SIM_VERSION = 9;
+//
+// v10: a dash pressed with a direction held runs. The walk took over on the
+// dash's first frame, so a v9 peer walks where a v10 peer dashes (a dash back
+// included), and the two disagree on x from the first such dash. v9 shipped
+// in v3.9.2 through v3.16.
+export const SIM_VERSION = 10;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

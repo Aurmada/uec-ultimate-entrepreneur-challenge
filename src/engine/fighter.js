@@ -355,7 +355,10 @@ export class Fighter {
             game.audio.sfx('whiff');
           }
 
-          if (this.state !== 'attack') {
+          // Not on the frame a dash starts either: a direction held through
+          // the press set the walk over it, so a dash with a direction held
+          // spent its cooldown and only walked (v1.0 to v3.16).
+          if (this.state !== 'attack' && this.state !== 'dash') {
             const dir = (pad.right ? 1 : 0) - (pad.left ? 1 : 0);
             if (dir !== 0) {
               const sp = PHYS.WALK * this.speedMult * (this.airborne ? PHYS.AIR_DRIFT : 1);

@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk and jump (below) | v3.16 merged into `main` on 2026-11-05; the walks and jumps are not released yet. 542 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch and dash and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 545 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -881,9 +881,9 @@ at the middle while it can hit.
   specials that borrow those tracks through `ATTACK_TRACK`, such as Kim's RUG
   PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
   Block is each form's own, and since the reactions and the walks below, so
-  are hit stun, the KO, victory, the walk and the jump.
+  are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## Walk and jump in each form (2026-11-05, on `claude/jeff-model`, not released)
+## Walk, jump, crouch and dash in each form (2026-11-05, on `claude/jeff-model`, not released)
 
 The owner, offered each fighter's own walk and jump after v3.16: "yes, let's
 keep going". The shared walk was one shuffle for all nine, and it stood every
@@ -928,6 +928,59 @@ tuck for all nine.
   A walking or jumping fighter now poses their idle guard as well each frame
   (one more `basePose`); it is not measured on a phone, but it is the same
   cost as an idle fighter's pose.
+
+**The crouch and the dash**, the owner's "not yet, keep going" after the
+walks: the last of a fighter's moving states in the shared shapes.
+
+- **Written from the guard too** (`fromGuard`): a held shape, the hips,
+  shoulders and head dropped below the guard, the lean, the feet, and the
+  hands as the guard carried down with the shoulders, moved from there (as a
+  form's block moves them), so whatever a hand holds stays in it. The shared
+  crouch dropped everyone from the stock rest height, so Carl and Kim, already
+  low in their guards, hardly went down.
+- **A dash back of its own.** The shared dash leans into a charge whichever
+  way it goes; each form's `dash.back` leans away (a dash goes back when
+  `dashDir` is not `facing`).
+- **Each fighter:** Jeff ducks as a boxer, dashes in low behind the gloves
+  and pulls straight back; Adam squats sumo-wide, charges shoulder first and
+  stumbles back, arms out; Carl changes level like a wrestler, shoots in
+  lower still and steps back heavily; Steve goes down as if taking a knee,
+  sweeps in chest first, glides back; Elo sinks with his weight back, slides
+  in and leans out; Scam squats with his hand in his pocket, scurries in,
+  backs off; Lizbeth sinks into a low en garde, dashes in a lunge and
+  retreats upright; Kim ducks deep and darts in off the line; Cathie sinks
+  over her rear foot with the lead leg long, and glides in and out.
+- Tests: every crouch at least 18 px below its guard's head and 15 below its
+  hips, at its own lean, feet on the floor and apart, the hands where the
+  guard carried down puts them; every dash in at its own lean and every dash
+  back leaning away from it. Both fail with the `computePose` change reverted.
+  Both pixel checks identical without the dash fix below; real matches
+  crouching, dashing back and in, and through a KO (Adam against Lizbeth,
+  Cathie against Jeff) run with no errors.
+
+### A dash with a direction held runs (`SIM_VERSION` 10, awaiting the owner)
+
+Found while driving the dashes in a real match: a dash pressed with a
+direction held never ran. `startDash` set the dash, then the walk code in the
+same frame saw the direction and set the walk over it, so the cooldown went,
+the dust and the sound played, and the fighter walked. Only a dash with
+nothing held worked (the only kind `rosterMoves.test.js` fired), so there was
+no dash back at all, and the AI, which dashes as it walks (`ai.js` checks
+where `walk || f.facing` takes it), lost every dash it threw. In the game
+since v1.0.
+
+- **The fix** (`fighter.js`): the walk does not take over on the frame a dash
+  starts. A regression test dashes every fighter both ways with the direction
+  held; it fails without the fix.
+- **It changes fights**, so `SIM_VERSION` is 10. AI against AI
+  (`lab/balance.js`, Mogul): on seed 7 at 10 a pair and seed 11 at 20 a pair,
+  Scam falls about 10 points and Carl gains 5 to 12; the rest move within
+  the noise between the two seeds. The spread from strongest to weakest is a
+  little narrower (seed 11: 27.8 to 64.1 before, 30.6 to 66.9 after).
+- The 2D pixel check differs on every frame with it, and only with it: the
+  seeded matches play out differently once the AI's dashes run. Without it,
+  both checks are identical.
+- It is its own commit, so it can be left out of a release.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 

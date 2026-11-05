@@ -191,7 +191,8 @@ test('the simulation version was bumped for the behaviour change', () => {
   // 8: SAME-DAY DELIVERY, the deferred effect, and traps in the fingerprint.
   // 9: a throw goes behind the thrower from either side, corners included
   // (see online.js).
-  assert.equal(SIM_VERSION, 9);
+  // 10: a dash pressed with a direction held runs.
+  assert.equal(SIM_VERSION, 10);
 });
 
 // initState() now assigns every registry field in the constructor, so the
