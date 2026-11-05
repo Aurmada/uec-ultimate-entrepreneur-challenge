@@ -783,6 +783,150 @@ const CALM_UPPER = {
   ]),
 };
 
+// ---------------------------------------------------------------- signatures
+// Each fighter's own signature special, in their form (FORMS `specials`, by
+// the special's id). Until these, a signature special played the basic its
+// kind borrows (data/tracks.js ATTACK_TRACK): Kim's GROWTH HACK rush was one
+// punch held for half a second, Cathie's FUNDING ROUND a slap, and BURN IT
+// ALL and SAME-DAY DELIVERY, whose kinds borrow nothing, the old computed
+// swing. Written at the special's own reach (there is no nominal to scale
+// from), on the same clock as every attack: wind-up 0 to 1, the special's
+// active window 1 to 2, recovery 2 to 3, from the guard and back to it.
+
+// SAME-DAY DELIVERY: he places the order. The lead hand goes up, open, then
+// points the parcel down onto the rival's spot, and he leans in to watch it go.
+const BOX_DELIVERY = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'fist', joints: BOX_AT },
+    { t: 0.5,  hand: 'open', joints: { armF: { x: 40, y: -228 }, bodyLean: 0.04, headX: 0, twist: -0.08 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 44, y: -234 }, bodyLean: 0.02, twist: -0.1 }, ease: 'outQuad' },
+    { t: 1.1,  hand: 'open', joints: { armF: { x: 106, y: -180 }, headX: 5, bodyLean: 0.18, twist: 0.2, hipTwist: 0.08 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 104, y: -178 } }, hold: true },
+    { t: 2.5,  hand: 'open', joints: { armF: { x: 70, y: -174 }, headX: 3, bodyLean: 0.14, twist: 0.06, hipTwist: 0.02 }, ease: 'outQuad' },
+    { t: 3,    hand: 'fist', joints: BOX_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// BURN IT ALL: both fists hauled up over his head, then brought down on you
+// with everything, the step and the whole body behind them; winded after,
+// bent over, before he straightens up.
+const BRAWL_BURN = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: BRAWL_AT },
+    { t: 0.55, joints: { armF: { x: 30, y: -222 }, armB: { x: 10, y: -218 }, hipY: B_HIP - 4, headX: -2, bodyLean: -0.12, twist: -0.05, sx: 1, sy: 1.04 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: 22, y: -230 }, armB: { x: 4, y: -226 }, bodyLean: -0.16, sy: 1.06 }, ease: 'outQuad' },
+    { t: 1.12, joints: { armF: { x: 138, y: -112 }, armB: { x: 120, y: -116 }, hipY: B_HIP + 8, headX: 8, bodyLean: 0.5, twist: 0.04, sx: 1.1, sy: 0.92, legF: { x: 50, y: 0 }, legB: { x: -34, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 134, y: -110 }, armB: { x: 116, y: -114 } }, hold: true },
+    { t: 2.5,  joints: { armF: { x: 72, y: -108 }, armB: { x: 52, y: -114 }, hipY: B_HIP + 4, headX: 6, bodyLean: 0.32, twist: 0, sx: 1.06, sy: 0.96, legF: { x: 40, y: 0 }, legB: { x: -32, y: 0 } }, ease: 'outQuad' },
+    { t: 3,    joints: BRAWL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// HOSTILE TAKEOVER: he sinks and draws the open hand back, then lunges a long
+// way after you; the hand closes on what it reaches and hauls it back to him.
+// The briefcase stays in the rear hand throughout.
+const GRAB_TAKEOVER = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: GRAB_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 40, y: -126 }, hipY: G_HIP + 6, bodyLean: 0.3, twist: -0.2, hipTwist: -0.1, sx: 1.08, sy: 0.92 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 34, y: -124 }, hipY: G_HIP + 8, twist: -0.24 }, ease: 'outQuad' },
+    { t: 1.1,  hand: 'open', joints: { armF: { x: 140, y: -126 }, headX: 8, bodyLean: 0.5, twist: 0.3, hipTwist: 0.15, legF: { x: 54, y: 0 }, legB: { x: -30, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 1.6,  hand: 'fist', joints: { armF: { x: 136, y: -124 } } },
+    { t: 2,    hand: 'fist', joints: { armF: { x: 134, y: -124 } }, hold: true },
+    { t: 2.45, hand: 'fist', joints: { armF: { x: 58, y: -132 }, hipY: G_HIP + 2, headX: 0, bodyLean: 0.14, twist: -0.18, hipTwist: -0.06, legF: { x: 36, y: 0 } }, ease: 'outCubic' },
+    { t: 3,    hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// PITCH DECK STRIKE: the presenting hand raised, then flicked at you once for
+// each slide as it goes (the three leave 0.14 s apart, at 1, 1.3 and 1.6 of
+// the clock), the tablet held in the other.
+const SHOW_DECK = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: SHOW_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 40, y: -206 }, bodyLean: -0.12, twist: -0.15 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 36, y: -210 }, twist: -0.18 }, ease: 'outQuad' },
+    { t: 1.02, hand: 'open', joints: { armF: { x: 104, y: -170 }, bodyLean: 0, twist: 0.2 }, ease: 'outBack', smear: true },
+    { t: 1.18, hand: 'open', joints: { armF: { x: 56, y: -196 }, twist: -0.1 }, ease: 'inOutCubic' },
+    { t: 1.32, hand: 'open', joints: { armF: { x: 106, y: -168 }, twist: 0.22 }, ease: 'outBack', smear: true },
+    { t: 1.48, hand: 'open', joints: { armF: { x: 56, y: -196 }, twist: -0.1 }, ease: 'inOutCubic' },
+    { t: 1.62, hand: 'open', joints: { armF: { x: 108, y: -166 }, bodyLean: 0.02, twist: 0.24 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 104, y: -166 } }, hold: true },
+    { t: 2.5,  hand: 'open', joints: { armF: { x: 84, y: -172 }, bodyLean: -0.04, twist: 0.08 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// BURN RATE BLAST: he gathers himself, both fists drawn in low and the body
+// wound away, then throws everything open at once, arms flung wide and the
+// chest up, the inferno going out from him on all sides.
+const ROLL_BLAST = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'fist', joints: ROLL_AT },
+    { t: 0.6,  hand: 'fist', joints: { armF: { x: 20, y: -110 }, armB: { x: 14, y: -118 }, hipY: R_HIP + 14, headX: 4, bodyLean: 0.2, twist: -0.3, hipTwist: -0.15, sx: 1.06, sy: 0.94 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'fist', joints: { armF: { x: 16, y: -106 }, armB: { x: 10, y: -114 }, hipY: R_HIP + 18, twist: -0.34, sx: 1.08, sy: 0.92 }, ease: 'outQuad' },
+    { t: 1.1,  hand: 'open', joints: { armF: { x: 96, y: -190 }, armB: { x: -40, y: -186 }, hipY: R_HIP - 2, headX: -2, bodyLean: -0.14, twist: 0.1, hipTwist: 0, sx: 0.96, sy: 1.06 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 98, y: -188 }, armB: { x: -42, y: -184 } }, hold: true },
+    { t: 2.5,  hand: 'open', joints: { armF: { x: 48, y: -130 }, armB: { x: 30, y: -156 }, hipY: R_HIP + 2, headX: 1, bodyLean: -0.02, twist: 0.02, sx: 1, sy: 1 }, ease: 'outQuad' },
+    { t: 3,    hand: 'fist', joints: ROLL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// PIVOT PUNCH: she turns away on the spot, the hands drawn in and closed, and
+// comes out of the turn (and out of the air, behind you) in a lunge, fist
+// first, along her line.
+const EN_PIVOT = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: EN_AT },
+    { t: 0.5,  hand: 'fist', joints: { armF: { x: 30, y: -150 }, armB: { x: 30, y: -150 }, bodyLean: -0.04, twist: -0.5, hipTwist: -0.35 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'fist', joints: { armF: { x: 24, y: -154 }, twist: -0.7, hipTwist: -0.5, sy: 1.04 }, ease: 'outQuad' },
+    { t: 1.1,  hand: 'fist', joints: { armF: { x: 116, y: -150 }, armB: { x: 34, y: -146 }, hipY: E_HIP + 8, headX: 6, bodyLean: 0.16, twist: 0.3, hipTwist: 0.15, sy: 1, legF: { x: 44, y: 0 }, legB: { x: -34, y: 0 } }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'fist', joints: { armF: { x: 112, y: -150 } }, hold: true },
+    { t: 2.5,  hand: 'fist', joints: { armF: { x: 74, y: -140 }, armB: { x: 38, y: -144 }, hipY: E_HIP + 2, headX: 3, bodyLean: 0.06, twist: 0.06, hipTwist: 0.02, sy: 1.02, legF: { x: 26, y: 0 }, legB: { x: -22, y: 0 } }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// GROWTH HACK: she drops into a deep crouch, then comes in on a run throwing
+// both hands in turn, the body weaving from side to side behind them, eight
+// punches across the rush (four of which the game counts as hits).
+const PEEK_IN = { armF: { x: 96, y: -140 }, armB: { x: 38, y: -150 }, twist: 0.25, legF: { x: 34, y: -6 }, legB: { x: -18, y: 0 } };
+const PEEK_OUT = { armF: { x: 50, y: -148 }, armB: { x: 92, y: -136 }, twist: -0.25, legF: { x: 18, y: 0 }, legB: { x: -26, y: -6 } };
+const PEEK_RUSH = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: PEEK_AT },
+    { t: 0.6,  joints: { armF: { x: 48, y: -146 }, armB: { x: 40, y: -150 }, hipY: K_HIP + 8, bodyLean: 0.3, twist: -0.15, sx: 1, sy: 0.94 }, ease: 'outCubic' },
+    { t: 0.95, joints: { hipY: K_HIP + 10, bodyLean: 0.34, twist: -0.2 }, ease: 'outQuad' },
+    ...[1.06, 1.19, 1.31, 1.44, 1.56, 1.69, 1.81, 1.94].map((t, i) => ({ t, joints: i % 2 ? PEEK_OUT : PEEK_IN, ease: 'outCubic' })),
+    { t: 2,    joints: PEEK_OUT, hold: true },
+    { t: 2.4,  joints: { armF: { x: 60, y: -150 }, armB: { x: 44, y: -154 }, hipY: K_HIP + 4, bodyLean: 0.22, twist: 0, sy: 0.98, legF: { x: 22, y: 0 }, legB: { x: -20, y: 0 } }, ease: 'outQuad' },
+    { t: 3,    joints: PEEK_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// FUNDING ROUND: she lifts the lead hand slowly, palm up, high over her head,
+// then sweeps it out over you and lets it rain, the tablet raised a little in
+// the other as if reading the terms.
+const CALM_ROUND = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: CALM_AT },
+    { t: 0.5,  hand: 'open', joints: { armF: { x: 50, y: -190 }, armB: { x: 40, y: -130 }, hipY: T_HIP - 2, bodyLean: -0.06, sy: 1.05 }, ease: 'inOutCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 40, y: -226 }, armB: { x: 38, y: -136 }, headX: 0, bodyLean: -0.1 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 104, y: -212 }, headX: 3, bodyLean: -0.02, twist: 0.12 }, ease: 'outCubic' },
+    { t: 2,    hand: 'open', joints: { armF: { x: 110, y: -200 } }, hold: true },
+    { t: 2.5,  hand: 'open', joints: { armF: { x: 86, y: -160 }, armB: { x: 40, y: -122 }, hipY: T_HIP, bodyLean: -0.02, twist: 0.04, sy: 1.04 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: CALM_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -831,6 +975,8 @@ export const FORMS = {
       drop: 8, lean: 0.3, headX: 2, legF: { x: 38, y: -4 }, legB: { x: -34, y: -8 },
       back: { drop: 2, lean: -0.08, headX: 0, legF: { x: 22, y: -8 }, legB: { x: -36, y: -2 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { sameday: BOX_DELIVERY },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -878,6 +1024,8 @@ export const FORMS = {
       drop: 10, lean: 0.5, twist: 0.25, legF: { x: 42, y: -10 }, legB: { x: -36, y: -4 }, armF: { x: -10, y: 16 }, armB: { x: -6, y: 12 },
       back: { drop: 4, lean: -0.16, twist: 0, legF: { x: 24, y: -12 }, legB: { x: -38, y: -2 }, armF: { x: 8, y: -20 }, armB: { x: -20, y: -16 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { burnitall: BRAWL_BURN },
   },
   grappling: {
     stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
@@ -930,6 +1078,8 @@ export const FORMS = {
       drop: 16, lean: 0.46, legF: { x: 42, y: -4 }, legB: { x: -36, y: -2 }, armF: { x: 16, y: 12 },
       back: { drop: 6, lean: 0.14, legF: { x: 24, y: -4 }, legB: { x: -36, y: -4 }, armF: { x: 0, y: 0 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { takeover: GRAB_TAKEOVER },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -976,6 +1126,8 @@ export const FORMS = {
       drop: 2, lean: -0.06, legF: { x: 34, y: -16 }, legB: { x: -30, y: 0 }, armF: { x: 8, y: -12 },
       back: { drop: 0, lean: -0.14, legF: { x: 14, y: 0 }, legB: { x: -24, y: -8 }, armF: { x: 0, y: 0 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { pitchdeck: SHOW_DECK },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -1017,6 +1169,8 @@ export const FORMS = {
       drop: 8, lean: 0.22, legF: { x: 36, y: -4 }, legB: { x: -32, y: -6 },
       back: { drop: 4, lean: -0.22, twist: -0.1, legF: { x: 26, y: -2 }, legB: { x: -30, y: -6 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { burnrate: ROLL_BLAST },
   },
   fence: {
     stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
@@ -1107,6 +1261,8 @@ export const FORMS = {
       drop: 10, lean: 0.1, legF: { x: 52, y: -2 }, legB: { x: -40, y: 0 }, armF: { x: 22, y: 0 },
       back: { drop: 6, lean: 0.02, legF: { x: 22, y: 0 }, legB: { x: -34, y: -6 }, armF: { x: 0, y: 0 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { pivot: EN_PIVOT },
   },
   peekaboo: {
     stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
@@ -1154,6 +1310,8 @@ export const FORMS = {
       drop: 14, lean: 0.34, twist: 0.12, legF: { x: 34, y: -6 }, legB: { x: -30, y: -4 },
       back: { drop: 8, lean: -0.06, twist: 0, legF: { x: 20, y: -4 }, legB: { x: -32, y: -6 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { growthhack: PEEK_RUSH },
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -1204,5 +1362,7 @@ export const FORMS = {
       drop: 4, lean: 0.02, legF: { x: 34, y: -4 }, legB: { x: -30, y: -2 }, armF: { x: 10, y: -4 },
       back: { drop: 4, lean: -0.04, legF: { x: 18, y: -2 }, legB: { x: -32, y: -4 }, armF: { x: 0, y: 0 } },
     },
+    // Its signature special, in its own form (above).
+    specials: { fundinground: CALM_ROUND },
   },
 };

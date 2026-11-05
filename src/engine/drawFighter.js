@@ -173,7 +173,13 @@ const ease = {
 // from the hands you were looking at and returns to them, instead of popping
 // to the stock guard on the first frame and back on the last.
 function trackedAttackPose(f, atk) {
-  const name = ATTACK_TRACK[atk.kind];
+  // A signature special a form has a track of its own for (forms.js
+  // `specials`) plays it; every other move plays the basic its kind borrows,
+  // as a signature special did before (Kim's whole GROWTH HACK rush was one
+  // punch held for half a second). A command normal's archetype params ride
+  // as `special` too, with no id, so they never match.
+  const own = atk.special && !atk.cmd && atk.special.id && `special:${atk.special.id}`;
+  const name = own && f.def?.animOverrides?.[own] ? own : ATTACK_TRACK[atk.kind];
   if (!name) return null;
   const track = trackFor(f.def, name, BASE_TRACKS);
   if (!track) return null;
@@ -225,6 +231,17 @@ function trackedAttackPose(f, atk) {
   const head = (P) => P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX;
   pose.armB.x += head(pose) - head(track.own ? trackStart(track) : REST);
   return pose;
+}
+
+// A form's signature specials under the names trackedAttackPose looks them up
+// by, made once per form.
+const SPECIAL_TRACKS = new WeakMap();
+function specialTracks(form) {
+  if (!form.specials) return null;
+  if (!SPECIAL_TRACKS.has(form)) {
+    SPECIAL_TRACKS.set(form, Object.fromEntries(Object.entries(form.specials).map(([id, track]) => [`special:${id}`, track])));
+  }
+  return SPECIAL_TRACKS.get(form);
 }
 
 const TRACK_START = new WeakMap();
@@ -356,7 +373,7 @@ function carryGuard(P, G, lift = 0) {
 export function computePose(f, t, form = null) {
   if (!form) return basePose(f, t);
   const def = { ...f.def, stance: form.stance, motion: form.motion ?? f.def?.motion,
-    animOverrides: { ...f.def?.animOverrides, ...form.tracks } };
+    animOverrides: { ...f.def?.animOverrides, ...form.tracks, ...specialTracks(form) } };
   const P = basePose({ ...f, def }, t);
   if (f.state === 'idle' && form.roll) {
     // the shoulders and hips roll with the weight, the hips a beat behind

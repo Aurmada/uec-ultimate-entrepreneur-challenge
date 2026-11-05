@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch and dash and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 545 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash and signature special, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 546 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -981,6 +981,39 @@ since v1.0.
   seeded matches play out differently once the AI's dashes run. Without it,
   both checks are identical.
 - It is its own commit, so it can be left out of a release.
+
+### Each fighter's signature special in their form (2026-11-05, not released)
+
+The owner, asked whether to release the moves and the dash fix: "not yet,
+keep going". In 3D every special played the basic its kind borrows
+(`ATTACK_TRACK` in `data/tracks.js`): Kim's GROWTH HACK rush was one punch
+held for half a second, Cathie's FUNDING ROUND a slap, Steve's PITCH DECK
+STRIKE a slap, and BURN IT ALL and SAME-DAY DELIVERY, whose kinds borrow
+nothing, the old computed swing.
+
+- **A track of its own** for each signature special, in its form (FORMS
+  `specials`, by the special's id; `trackedAttackPose` looks for
+  `special:<id>` first). Written at the special's own reach, since there is
+  no nominal to scale from, on the usual clock and from the guard and back.
+  A command normal carries its archetype's params as `special` too, with no
+  id, so it never plays one.
+- **Each:** Jeff (SAME-DAY DELIVERY) raises the lead hand and points the order
+  down onto the rival's spot; Adam (BURN IT ALL) hauls both fists overhead
+  and brings them down with a step, then is winded; Carl (HOSTILE TAKEOVER)
+  sinks, lunges a long way with the open hand, closes it and hauls back;
+  Steve (PITCH DECK STRIKE) flicks the presenting hand once per slide, timed
+  to the three shots; Elo (BURN RATE BLAST) gathers low and throws himself
+  open, arms wide; Lizbeth (PIVOT PUNCH) turns away on the spot and comes out
+  in a lunge, fist first; Kim (GROWTH HACK) runs in throwing both hands in
+  turn, eight punches over the rush, weaving; Cathie (FUNDING ROUND) lifts the
+  lead hand palm up and sweeps it out over the rival. Scam's ALIGNMENT SHIFT
+  is a stance switch that never becomes an attack, so it has none; a
+  flourish for it would have to be read from the stance cooldown.
+- Tests: every signature special but Scam's has its own valid track, starts
+  and ends in the guard, differs from the borrowed basic in the middle, and a
+  command normal of the same kind still plays the basic. Fails with the
+  lookup reverted. Both pixel checks identical; real matches firing Kim's,
+  Adam's and Cathie's run with no errors.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 

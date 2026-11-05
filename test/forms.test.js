@@ -650,3 +650,45 @@ test('every form dashes its own way, leaning out of a dash back', () => {
     for (const P of [into, away]) assert.ok(P.legF.x - P.legB.x >= 20, `${name}'s feet meet in a dash`);
   }
 });
+
+// Each fighter's signature special plays a track of its own in their form,
+// from the idle guard and back to it, where it used to play the basic its
+// kind borrows (Kim's GROWTH HACK rush was one punch held half a second).
+// Scam's ALIGNMENT SHIFT switches stance and swings nothing, so it has none.
+test("every sculpt's signature special plays its own track, from its guard and back", async () => {
+  const { SPECIALS } = await import('../src/data/fighters.js');
+  const { shapeAttack } = await import('../src/engine/moves.js');
+  const ids = Object.keys(MODELS3D).filter((k) => k.startsWith('sculpt:') && MODELS3D[k].form).map((k) => k.slice(7));
+  let own = 0;
+  for (const id of ids) {
+    const def = getFighter(id), form = FORMS[MODELS3D[`sculpt:${id}`].form];
+    const sp = SPECIALS[def.special];
+    if (sp.type === 'stance') { assert.equal(form.specials?.[sp.id], undefined); continue; }
+    const track = form.specials?.[sp.id];
+    assert.ok(track, `${id}'s ${sp.name} plays the basic its kind borrows`);
+    assert.deepEqual(validateTrack(`${id}.${sp.id}`, track, { attack: true }), []);
+    own++;
+    const a = shapeAttack({ kind: sp.type, special: sp, hasHit: false, startup: sp.startup || 0.15, active: sp.active || 0.1, recovery: sp.recovery || 0.3, reach: sp.reach }, sp);
+    const at = (stateT, attack = a) => computePose({ def, state: 'attack', stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, attack }, 0, form);
+    const guard = computePose({ def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form);
+    for (const [k, stateT] of [[0, 0], [3, a.startup + a.active + a.recovery]]) {
+      const P = at(stateT), what = `${id}'s ${sp.name} at ${k}`;
+      for (const c of ['hipY', 'shoulderY', 'headY', 'headX', 'bodyLean', 'sx', 'sy']) {
+        assert.ok(Math.abs((P[c] ?? 0) - (guard[c] ?? 0)) < 1e-6, `${what}: ${c} ${P[c]} against the guard's ${guard[c]}`);
+      }
+      for (const l of ['armF', 'armB', 'legF', 'legB']) {
+        assert.ok(Math.hypot(P[l].x - guard[l].x, P[l].y - guard[l].y) < 1e-6, `${what}: ${l} leaves the guard`);
+      }
+      assert.equal(P.hand || 'fist', guard.hand || 'fist', `${what}: the lead hand`);
+    }
+    // in the middle of it, its own and not the borrowed basic
+    const mid = a.startup + a.active / 2;
+    const borrowed = at(mid, { ...a, special: { ...sp, id: undefined } });
+    const P = at(mid);
+    assert.notDeepEqual([P.armF, P.armB, P.bodyLean], [borrowed.armF, borrowed.armB, borrowed.bodyLean], `${id}'s ${sp.name} is the borrowed basic`);
+    // and a command normal of the same kind still borrows the basic
+    const cmd = at(mid, { ...a, cmd: { archetype: sp.type } });
+    assert.deepEqual([cmd.armF, cmd.armB], [borrowed.armF, borrowed.armB], `${id}'s command normals play ${sp.name}`);
+  }
+  assert.equal(own, 8, `${own} signature specials have their own track`);
+});
