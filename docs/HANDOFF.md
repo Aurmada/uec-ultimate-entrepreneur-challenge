@@ -6,11 +6,11 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.14 on GitHub Pages
+The game is live at v3.15 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
 on 2026-11-05: 3D by default, the nine founders the sculpted cast below, each
-in their own fighting form, and 2D a choice in Settings (see "v3.14" and
-"v3.13"). v3.12 was built on 2026-10-30 but never reached `main`; it went
+in their own fighting form for every basic move, and 2D a choice in Settings
+(see "v3.15", "v3.14" and "v3.13"). v3.12 was built on 2026-10-30 but never reached `main`; it went
 out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
@@ -49,7 +49,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.14 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 538 tests pass. |
+| `main` | The live game, v3.15 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 538 tests pass. |
 | `claude/jeff-model` | The remodel of the cast, released as v3.13; `main` is this branch | Merged into `main` on 2026-11-05. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
@@ -875,10 +875,35 @@ at the middle while it can hit.
   stands out stiffly in a kick, where the 2D one trails.
 - Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
   (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth), the
-  peek-a-boo (Kim) and tai chi (Cathie). The punch and the kick have tracks
-  of their own in each (the kick track also serves the command normals that
-  borrow it, such as Kim's RUG PULL); the slap, the launcher and the specials
-  are still the shared ones.
+  peek-a-boo (Kim) and tai chi (Cathie). Every basic move has a track of
+  its own in each: punch, kick, slap and launcher (the command normals and
+  specials that borrow those tracks through `ATTACK_TRACK`, such as Kim's RUG
+  PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
+  Block is each form's own; hit stun, the KO and victory are still shared.
+
+## v3.15, released 2026-11-05: every basic move in each form
+
+The owner, shown the kicks: "wait and release them together with each
+fighter's slap and uppercut".
+
+- **The kicks** (above, under the remodel), **the slaps and the uppercuts**:
+  each form's own, written from its guard (`<FORM>_SLAP`, `<FORM>_UPPER` in
+  `forms.js`). Jeff a flicked backhand and a boxer's uppercut from a dip;
+  Adam a roundhouse slap carried on past and an uppercut from the floor that
+  lifts him; Carl the flat of his hand in your face and a heave, the open
+  hand closing on its hold; Steve a slap from high over his head and a
+  springing uppercut held up for the audience; Elo a backhand off his dropped
+  hand and an uppercut whipped up off it; Scam a pat and a palm lifted under
+  the chin; Lizbeth a flick and a hand sent straight up along its line; Kim
+  a slap from beside her ear as she bobs and an uppercut out of her deepest
+  bob; Cathie a palm placed at the face and one lifted slowly under the chin.
+  A fist form's slap opens the hand after its first frame and closes it on
+  its last (`hand` keys), so the guard is a fist at both ends.
+- Tests: every move a form has leaves from its idle guard and comes back to
+  it, lead hand included, at the game's reach; each kick is out at the
+  middle, each slap open at the face, each uppercut up past the head.
+- Render-only, 3D only: `SIM_VERSION` stays 9, and both pixel checks are
+  identical. A real match in the page runs with no errors.
 
 ## v3.14, released 2026-11-05: 3D by default
 
