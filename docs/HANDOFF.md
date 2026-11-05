@@ -52,7 +52,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus each form's own knockout fall (below) | v3.17 merged into `main` on 2026-11-05; the falls are not released and not pushed. 554 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus each form's own knockout fall and juggle (below) | v3.17 merged into `main` on 2026-11-05; these are not released and not pushed. 555 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -884,7 +884,7 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## Each form's own knockout fall (2026-11-05, on `claude/jeff-model`, not released)
+## Each form's own knockout fall and juggle (2026-11-05, on `claude/jeff-model`, not released)
 
 The owner, releasing v3.17: "Push it live and continue". A knocked-out
 fighter's arms and legs were each form's own (v3.16), but everyone went over
@@ -900,6 +900,13 @@ in the same 0.45 s along the same curve (`basePose`, `P.rot`).
   there, and they all differ. Fails with the fall switched off. Both pixel
   checks identical; knockouts of Lizbeth and Cathie in real matches show the
   falls with no errors.
+
+- **Hit in the air** (a juggle after a launcher), a fighter hung their legs
+  straight down as if standing on the floor; they now take the form's own
+  jump at that moment of the rise and fall (`formJump`), the hit's arms kept.
+  Test: rising and falling, the jump's legs and the hit's arms, and on the
+  ground the feet still on the floor; fails with the change switched off.
+  Steve launched by Jeff in a real match shows it, with no errors.
 
 ## v3.17, released 2026-11-05: every move in each form, and the dash fixed
 

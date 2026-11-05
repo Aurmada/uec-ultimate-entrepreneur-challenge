@@ -905,3 +905,21 @@ test('every form falls its own way when it is knocked out', () => {
   }
   assert.ok(curves.size >= 8, `only ${curves.size} different falls`);
 });
+
+// Hit in the air (a juggle), a fighter's legs hung straight down as if on the
+// floor; they take the form's own jump at that moment instead. On the ground
+// the hit is as it was.
+test('every form takes a hit in the air in its own jump', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    for (const vy of [-400, 300]) {
+      const jump = computePose({ def, state: 'jump', stateT: 0, walkPhase: 0, side: 0, vy, airborne: true, movingBack: false }, 0, form);
+      const hit = computePose({ def, state: 'hitstun', stateT: 0.1, walkPhase: 0, side: 0, vy, airborne: true, movingBack: false }, 0, form);
+      assert.deepEqual([hit.legF, hit.legB], [jump.legF, jump.legB], `${name} hangs its legs down when hit in the air`);
+      assert.deepEqual(hit.armF, form.hit.armF);
+    }
+    const ground = computePose({ def, state: 'hitstun', stateT: 0.1, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form);
+    assert.equal(ground.legF.y, 0, `${name}'s feet leave the floor when hit on it`);
+  }
+});

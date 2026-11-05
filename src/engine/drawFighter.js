@@ -419,6 +419,12 @@ export function computePose(f, t, form = null, intro = null) {
     for (const k of ['armF', 'armB']) if (H[k]) P[k] = { ...H[k] };
     if (H.hand) P.hand = H.hand;
   }
+  // Hit in the air (a juggle), the legs hung straight down as if on the
+  // floor; they take the form's own jump at that moment of the rise and fall.
+  if (f.state === 'hitstun' && f.airborne && form.jump) {
+    const J = formJump({ ...f, def }, form.jump);
+    P.legF = { ...J.legF }; P.legB = { ...J.legB };
+  }
   if (f.state === 'ko' && form.ko) {
     for (const k of ['armF', 'armB', 'legF', 'legB']) if (form.ko[k]) P[k] = { ...form.ko[k] };
     if (form.ko.hand) P.hand = form.ko.hand;
