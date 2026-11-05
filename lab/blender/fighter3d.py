@@ -98,10 +98,21 @@ class Build:
         self.jaw = r('jaw', f.get('jaw', 1), 0.6)
         self.shoulders = r('shoulders', b.get('shoulders', 1), 0.5)
         self.belly = f.get('belly', 0)
+        # A woman's frame (`figure.frame` 'f'), as the 2D figure draws it: the
+        # shoulders narrower (0.86, figure.js), a lighter neck, the pelvis
+        # wider by her `hips` and wider again than a man's, and soft tissue
+        # over the muscle that a man of the same build does not carry (laid
+        # in a woman's pattern, `fat`). All exactly 1 or 0 for a man.
+        self.frame = f.get('frame', 'm')
+        woman = self.frame == 'f'
+        if woman:
+            self.shoulders *= 0.86
+            self.neck *= 0.88
+        self.pelvis = (1 + 0.8 * (f.get('hips', 1) - 1)) * (1.1 if woman else 1)
+        self.soft = 0.3 if woman else 0
         # How much fat they carry. The 2D figure has one knob for it, the belly,
         # but fat is never only there (`fat`).
-        self.fat = self.belly
-        self.frame = f.get('frame', 'm')
+        self.fat = self.belly + self.soft
         # how deep definition is carved: a soft body shows less of it, fat
         # covers more of it, and a belly hides the abs altogether
         self.definition = min(1.0, max(0.25, f.get('muscle', 1) / REF['muscle'])) * (1 - 0.9 * self.fat)
@@ -111,9 +122,9 @@ class Build:
         """How much wider (y) and deeper (x) than Jeff's the trunk is at height
         z: the hips as his, the waist's factor over the belly, the chest's over
         the ribcage, eased between them. Deeper only half as far: a broad chest
-        is mostly broad."""
+        is mostly broad. The hips are a woman's pelvis, where she has one."""
         ease = lambda a, b: (lambda t: t * t * (3 - 2 * t))(min(1.0, max(0.0, (z - a) / (b - a))))
-        gy = 1 + (self.waist - 1) * ease(0.98, 1.12)
+        gy = self.pelvis + (self.waist - self.pelvis) * ease(0.98, 1.12)
         gy = gy + (self.chest - gy) * ease(1.24, 1.38)
         return 1 + (gy - 1) * 0.5, gy
 
@@ -295,6 +306,11 @@ def trunk():
         TE(V(-0.07, s * 0.16, 1.4), scaled((0.03, 0.04, 0.032), m, m, m), k=0.025)       # teres, from the blade to the armpit
         TE(V(-0.08, s * 0.03, 1.2), scaled((0.03, 0.032, 0.16), m, m, 1), k=0.03)        # erectors
         TE(V(-0.05, s * 0.07, 0.955), scaled((0.066, 0.076, 0.088), m, m, m), sc.rot(rx=s * 8), k=0.04)   # glutes
+    if B.frame == 'f':
+        # her bust, over the chest's muscle, in place of a man's chest plates:
+        # modest, as a fighter's is, and set a little out to the sides
+        for s in (1, -1):
+            TE(V(0.078, s * 0.064, 1.405), (0.052, 0.056, 0.05), sc.rot(rx=s * 10), k=0.03)
     if B.belly > 0:
         # a belly over the abs, hanging forward of them: Jeff has none. Blended
         # broadly up into the chest and round into the flanks: met tightly, it
@@ -350,7 +366,7 @@ def legs():
     m = B.muscle
     mc = 1 + 0.4 * (m - 1)
     for s in (1, -1):
-        Hj = V(0.0, s * 0.095, 0.955)
+        Hj = V(0.0, s * 0.095 * (1 + 0.5 * (B.pelvis - 1)), 0.955)    # set in a wider pelvis, if hers is
         K = V(0.012, s * 0.1, 0.52)
         A = V(-0.008, s * 0.105, 0.085)
         LEG[s] = (Hj, K, A)
@@ -423,26 +439,42 @@ def covered(X, Y, Z):
     return (1 - ease(Z, 1.66, 1.73)) * ease(Z, 0.1, 0.17) * (1 - ease(np.abs(Y), 0.53, 0.6))
 
 
+# Where a woman carries it: the hips and the seat most, then the thighs, the
+# bust and the backs of the upper arms, least round the middle.
+FAT_F = [
+    ((-0.02, 0.135, 0.98), (0.1, 0.09, 0.12), 0.07),    # the hips, out at the sides
+    ((-0.065, 0.075, 0.93), (0.08, 0.09, 0.1), 0.06),   # the seat
+    ((0.08, 0.064, 1.4), (0.05, 0.06, 0.06), 0.035),    # the bust
+    ((0.0, 0.14, 1.36), (0.06, 0.04, 0.08), 0.02),      # under the arm
+    ((0.09, 0, 1.13), (0.09, 0.14, 0.12), 0.02),        # a little over the belly
+    ((-0.09, 0, 1.12), (0.06, 0.13, 0.11), 0.02),       # and the lower back
+]
+# and on the limbs: (upper arm, forearm, thigh, inside of the thigh, calf)
+LIMB_FAT = {'m': (0.04, 0.012, 0.04, 0.018, 0.01), 'f': (0.05, 0.008, 0.06, 0.03, 0.014)}
+
+
 def fat():
     t = B.fat
     if t <= 0:
         return
+    woman = B.frame == 'f'
     F.thicken(0.016 * t, covered)
-    for c, r, d in FAT_M:
+    for c, r, d in (FAT_F if woman else FAT_M):
         for s in ((1, -1) if c[1] else (1,)):
             F.swell(V(c[0], s * c[1], c[2]), r, d * t)
+    ua, fa, th, ti, ca = LIMB_FAT['f' if woman else 'm']
     for s in (1, -1):
         S, El, W = ARM[s]
         u, v, lat, ax = limb(S, El, s)
-        F.swell(S + u * 0.17 - v * 0.015, (0.16, 0.085, 0.085), 0.04 * t, ax)        # the upper arm, most at the back
+        F.swell(S + u * 0.17 - v * 0.015, (0.16, 0.085, 0.085), ua * t, ax)         # the upper arm, most at the back
         u, v, lat, ax = limb(El, W, s)
-        F.swell(El + u * 0.09, (0.12, 0.06, 0.06), 0.012 * t, ax)                   # the forearm, a little
+        F.swell(El + u * 0.09, (0.12, 0.06, 0.06), fa * t, ax)                      # the forearm, a little
         Hj, K, A = LEG[s]
         u, v, lat, ax = limb(Hj, K, s)
-        F.swell(lerp(Hj, K, 0.35), (0.27, 0.12, 0.12), 0.04 * t, ax)                # the thigh
-        F.swell(lerp(Hj, K, 0.3) - lat * 0.05, (0.2, 0.07, 0.06), 0.018 * t, ax)    # and its inside, where they meet
+        F.swell(lerp(Hj, K, 0.35), (0.27, 0.12, 0.12), th * t, ax)                  # the thigh
+        F.swell(lerp(Hj, K, 0.3) - lat * 0.05, (0.2, 0.07, 0.06), ti * t, ax)      # and its inside, where they meet
         u, v, lat, ax = limb(K, A, s)
-        F.swell(lerp(K, A, 0.3), (0.15, 0.07, 0.07), 0.01 * t, ax)                  # the calf, least
+        F.swell(lerp(K, A, 0.3), (0.15, 0.07, 0.07), ca * t, ax)                    # the calf, least
     # last, so the swells' own edges soften too: softened first, the chest's
     # lower edge stood out as a ledge over the belly
     F.soften(0.008 + 0.014 * t, lambda X, Y, Z: np.float32(min(1.0, 1.6 * t)) * covered(X, Y, Z))
@@ -471,8 +503,10 @@ def G(points, depth, width, k, f=None):
 def definition(spec):
     spec.head_definition(sys.modules[__name__])
 
-    # chest and belly
-    G([(0.13, 0, 1.55), (0.13, 0, 1.47), (0.125, 0, 1.405)], **STRONG)
+    # chest and belly (a man's chest lines: hers has none)
+    man = B.frame != 'f'
+    if man:
+        G([(0.13, 0, 1.55), (0.13, 0, 1.47), (0.125, 0, 1.405)], **STRONG)
     G([(0.122, 0, 1.385), (0.12, 0, 1.25), (0.115, 0, 1.08)], **LINE, f=B.abs)
     # The abs' rows and the lines down either side of them are soft: carved as
     # deep as the midline, they broke into scattered dark chips through the game's
@@ -480,7 +514,8 @@ def definition(spec):
     for z in (1.3, 1.235, 1.17):
         G([(0.11, -0.058, z + 0.006), (0.118, -0.03, z), (0.12, 0, z - 0.004), (0.118, 0.03, z), (0.11, 0.058, z + 0.006)], **SOFT, f=B.abs)
     for s in (1, -1):
-        G([(0.12, s * 0.008, 1.4), (0.118, s * 0.05, 1.388), (0.105, s * 0.1, 1.395), (0.075, s * 0.145, 1.42), (0.045, s * 0.17, 1.46)], **STRONG)
+        if man:
+            G([(0.12, s * 0.008, 1.4), (0.118, s * 0.05, 1.388), (0.105, s * 0.1, 1.395), (0.075, s * 0.145, 1.42), (0.045, s * 0.17, 1.46)], **STRONG)
         G([(0.11, s * 0.066, 1.385), (0.112, s * 0.064, 1.25), (0.105, s * 0.058, 1.12), (0.095, s * 0.045, 1.04)], **SOFT, f=B.abs)
         G([(0.07, s * 0.122, 1.08), (0.09, s * 0.09, 1.02), (0.1, s * 0.055, 0.96)], **SOFT)
 

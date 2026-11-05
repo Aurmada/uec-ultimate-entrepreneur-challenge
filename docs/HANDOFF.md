@@ -667,16 +667,34 @@ closing only as it lands, lingering out after before it opens again; the
 pocket hand stays at his side, going only with his lean. He blocks with the
 briefcase in the fence hand. `test/forms.test.js`, `test/sculpt3d.test.js`.
 
-All six men are now remodelled. Next: the owner's look, then the women's
-base (Lizbeth, Kim, Cathie).
+All six men are now remodelled. The owner on Elo and Scam: "good".
+
+**The women's base** (2026-11-04). The pipeline's body was a man's: pecs, a
+man's shoulder girdle, Jeff's hips, the male fat pattern. A woman's frame
+(`figure.frame` 'f', all three women) is now built into it, switched only by
+that knob, so every man is exactly as he was (Jeff rebuilt byte-identical):
+the shoulders narrower and the deltoids with them, as the 2D figure draws
+hers (0.86, figure.js), a lighter neck; the pelvis wider by her `hips` (now
+read, `Build.pelvis`) and wider again than a man's, through the trunk's girth
+map so the seat and the hip joints come out with it; a modest bust over the
+chest's muscle and none of a man's chest lines carved; and soft tissue a man
+of the same build does not carry (`Build.soft`), laid in a woman's pattern
+(`FAT_F`, `LIMB_FAT`: the hips and the seat most, then the thighs, the bust
+and the backs of the upper arms, least round the middle), which softens the
+muscle under it as fat does. Kept as modest as the 2D women are: in clay
+the curves barely show in profile, and the clothes will cover them. In clay
+beside Jeff and Steve, with plain placeholder heads
+(`fighter3d.py -- --cast <dir> ava zara eleanor`).
+
+Next: the owner's look at the women's base, then Lizbeth (`ava`), Kim
+(`zara`) and Cathie (`eleanor`), each through the same stages.
 
 **Gaps, before the rest of the cast can be built:**
 
 - `body.reach` is not read: the arms are as long as the fighter's height
   makes them, and the rig reaches them to the 2D fists.
-- The women. Ava, Zara and Eleanor (`figure.frame` 'f') need a women's base,
-  as the 2D figure and the athlete bodies have, with `figure.hips`, and its
-  own fat pattern (`FAT_M` is a man's).
+- The women. Their base is built (frame 'f', `hips`, `FAT_F`); each still
+  needs her head, hair, outfit, prop and form.
 - Outfits. Jeff's vest, Adam's hoodie, Carl's suit, Steve's turtleneck,
   Elo's tee and Scam's henley. The rest, all the women's: blazer (Ava),
   bomber (Zara), suit (Eleanor); the blazer and Eleanor's suit can start
