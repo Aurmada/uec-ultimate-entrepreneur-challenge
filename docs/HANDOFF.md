@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special (Scam's stance switch included), command moves, steal, bomb, super pose, round start and moves thrown from a crouch, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 552 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special (Scam's stance switch included), command moves, steal, bomb, super pose, round start and moves thrown from a crouch and in the air, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 553 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1167,6 +1167,19 @@ them as a crouching one.
   crouch's height and lean, is thrown its crouch's drop lower than standing,
   and a crouching kick rises no higher above the hips than a standing one.
   Fails with the change switched off. Both pixel checks identical.
+
+### Moves thrown in the air, from each form's jump (2026-11-05, not released, not pushed)
+
+A move in the air played the standing move with the legs tucked by the same
+18 and 12 px for everyone, whatever their own jump looked like.
+
+- **In 3D the legs a move does not use come from the form's own jump** at
+  that moment of the rise and fall (`formJump`); a kick keeps its kicking
+  leg. So Steve punches in his split, Kim in her tuck, Cathie in her crane,
+  Lizbeth with her legs straight. The 2D game keeps the tuck.
+- Tests: rising and falling, a punch and a slap carry both of the jump's
+  legs, a kick the rear one and its own kicking leg. Fails with the change
+  switched off. Both pixel checks identical.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 

@@ -448,6 +448,14 @@ export function computePose(f, t, form = null, intro = null) {
       else if (C[l]) P[l] = { x: P[l].x + C[l].x - G[l].x, y: 0 };
     }
   }
+  // A move thrown in the air keeps the form's own jump in the legs it does
+  // not use (all but a kick's kicking leg), where they were the standing
+  // move's tucked up by the same amount for everyone.
+  if (f.state === 'attack' && f.airborne && form.jump) {
+    const J = formJump({ ...f, def }, form.jump);
+    P.legB = { ...J.legB };
+    if ((f.attack?.button || f.attack?.kind) !== 'kick') P.legF = { ...J.legF };
+  }
   // The round's start (forms.js `intro`): the fighters stand locked through
   // ROUND and FIGHT!, and each form spends it on a gesture of its own, which
   // ends in the guard and hands over to the live idle by the time the round

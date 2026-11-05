@@ -868,3 +868,23 @@ test('every form throws a move from its crouch low, and leaves from the crouch',
     }
   }
 });
+
+// A move thrown in the air keeps the form's own jump in the legs it does not
+// use, where everyone's were the standing move's tucked the same amount; a
+// kick keeps its kicking leg. On the ground nothing changes.
+test('every form throws a move in the air from its own jump', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    for (const vy of [-500, 300]) {
+      const jump = computePose({ def, state: 'jump', stateT: 0, walkPhase: 0, side: 0, vy, airborne: true, movingBack: false }, 0, form);
+      for (const kind of ['punch', 'slap', 'kick']) {
+        const atk = { ...ATTACKS[kind], kind, button: kind, hasHit: false };
+        const P = computePose({ def, state: 'attack', stateT: atk.startup + atk.active / 2, walkPhase: 0, side: 0, vy, airborne: true, movingBack: false, attack: atk }, 0, form);
+        assert.deepEqual(P.legB, jump.legB, `${name}'s ${kind} in the air drops its jump`);
+        if (kind !== 'kick') assert.deepEqual(P.legF, jump.legF, `${name}'s ${kind} in the air drops its jump`);
+        else assert.ok(P.legF.x > jump.legF.x + 30, `${name}'s kick in the air does not kick`);
+      }
+    }
+  }
+});
