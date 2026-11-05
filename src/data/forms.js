@@ -77,6 +77,39 @@ const BOX_KICK = {
   ]),
 };
 
+// A boxer's slap is a flicked backhand: the lead hand opens and turns out at
+// the top of the guard, flicks across at the face with a little turn of the
+// shoulders, and closes again on the way home. Dismissive, and over quickly.
+const BOX_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'fist', joints: BOX_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 40, y: -182 }, bodyLean: 0.1, twist: -0.08 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 34, y: -186 }, twist: -0.1 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 98, y: -160 }, headX: 4, bodyLean: 0.16, twist: 0.14, hipTwist: 0.06 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 94, y: -160 } }, hold: true },
+    { t: 2.4,  hand: 'open', joints: { armF: { x: 60, y: -170 }, headX: 2, bodyLean: 0.13, twist: 0.04, hipTwist: 0.02 }, ease: 'outQuad' },
+    { t: 3,    hand: 'fist', joints: BOX_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The uppercut, a boxer's: he dips at the knees with the lead fist dropped to
+// the chest and the body turned away, then comes up through it, the fist
+// rising past the chin with the hips and shoulders turning behind it, the
+// feet planted and the rear fist at his chin throughout.
+const BOX_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: BOX_AT },
+    { t: 0.55, joints: { armF: { x: 40, y: -140 }, hipY: HIP + 8, shoulderY: SHOULDER + 8, headY: HEAD + 8, bodyLean: 0.18, twist: -0.15, hipTwist: -0.1, sx: 1.06, sy: 0.96 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: 38, y: -134 }, hipY: HIP + 10, shoulderY: SHOULDER + 10, headY: HEAD + 10, twist: -0.2, hipTwist: -0.12 }, ease: 'outQuad' },
+    { t: 1.15, joints: { armF: { x: 70, y: -214 }, hipY: HIP - 10, shoulderY: SHOULDER - 14, headY: HEAD - 14, bodyLean: 0, twist: 0.25, hipTwist: 0.15, sx: 0.94, sy: 1.08 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 68, y: -210 } }, hold: true },
+    { t: 2.45, joints: { armF: { x: 56, y: -180 }, hipY: HIP - 2, shoulderY: SHOULDER - 3, headY: HEAD - 3, bodyLean: 0.08, twist: 0.06, hipTwist: 0.04, sx: 1, sy: GUARD_SY }, ease: 'outQuad' },
+    { t: 3,    joints: BOX_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A bar-room brawler's guard, Adam's from 2D: slouched low on the hips, the
 // fists down at the belly and too far apart, chin tucked, the widest base in
 // the cast. Ready to fight, never once ready to defend.
@@ -128,6 +161,38 @@ const BRAWL_KICK = {
     { t: 2,    joints: { legF: { x: 104, y: -80 }, bodyLean: -0.16 }, hold: true },
     // and off balance after it
     { t: 2.5,  joints: { legF: { x: 58, y: -14 }, armF: { x: 70, y: -130 }, armB: { x: 36, y: -138 }, hipY: B_HIP - 2, bodyLean: 0.2, twist: 0.1, hipTwist: 0.1, sx: 1.04, sy: 0.98 }, ease: 'outQuad' },
+    { t: 3,    joints: BRAWL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The brawler's slap is a roundhouse with the flat of the hand: wound right
+// back and up past his ear with the body turned away, swung all the way
+// across and on past the target, the body carried round after it.
+const BRAWL_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'fist', joints: BRAWL_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 10, y: -180 }, bodyLean: 0.02, twist: -0.35, hipTwist: -0.15, sx: 1.08, sy: 0.96 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 0, y: -186 }, twist: -0.45, hipTwist: -0.2 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 100, y: -154 }, headX: 6, bodyLean: 0.32, twist: 0.45, hipTwist: 0.25, sx: 0.95, sy: 1.04 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 96, y: -150 }, twist: 0.55, hipTwist: 0.3 }, hold: true },
+    { t: 2.5,  hand: 'open', joints: { armF: { x: 70, y: -130 }, headX: 4, bodyLean: 0.2, twist: 0.25, hipTwist: 0.12, sx: 1.04, sy: 0.98 }, ease: 'outQuad' },
+    { t: 3,    hand: 'fist', joints: BRAWL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// His uppercut comes up from the floor: the fist dropped down by his knee
+// and the body bent over and turned away, then one huge upward swing that
+// lifts him off his feet, and the stumble after it.
+const BRAWL_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: BRAWL_AT },
+    { t: 0.55, joints: { armF: { x: 30, y: -96 }, hipY: B_HIP + 10, shoulderY: B_SHOULDER + 12, headY: B_HEAD + 12, bodyLean: 0.3, twist: -0.3, hipTwist: -0.15, sx: 1.1, sy: 0.92 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: 26, y: -90 }, hipY: B_HIP + 12, shoulderY: B_SHOULDER + 14, headY: B_HEAD + 14, twist: -0.36 }, ease: 'outQuad' },
+    { t: 1.15, joints: { armF: { x: 70, y: -230 }, legF: { x: 28, y: -16 }, hipY: B_HIP - 22, shoulderY: B_SHOULDER - 30, headY: B_HEAD - 34, bodyLean: -0.1, twist: 0.4, hipTwist: 0.25, sx: 0.9, sy: 1.12 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 68, y: -224 } }, hold: true },
+    { t: 2.5,  joints: { armF: { x: 66, y: -170 }, legF: { x: 33, y: 0 }, hipY: B_HIP - 4, shoulderY: B_SHOULDER - 4, headY: B_HEAD - 4, bodyLean: 0.2, twist: 0.15, hipTwist: 0.08, sx: 1.04, sy: 0.98 }, ease: 'outQuad' },
     { t: 3,    joints: BRAWL_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -187,6 +252,37 @@ const GRAB_KICK = {
   ]),
 };
 
+// The grappler's slap is the flat of his open hand shoved into your face,
+// more push than blow, the body leaning in behind it.
+const GRAB_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: GRAB_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 54, y: -150 }, bodyLean: 0.2, twist: -0.06 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 50, y: -152 }, twist: -0.08 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 100, y: -150 }, headX: 5, bodyLean: 0.32, twist: 0.16, hipTwist: 0.08 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 97, y: -148 } }, hold: true },
+    { t: 2.45, hand: 'open', joints: { armF: { x: 70, y: -140 }, headX: 3, bodyLean: 0.26, twist: 0.05, hipTwist: 0.03 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// His launcher is a heave, not a punch: he sinks with the open hand reaching
+// low for a hold, closes it on what it finds and stands up with it, hauling
+// it up and leaning back under the weight, then lets go.
+const GRAB_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: GRAB_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 58, y: -112 }, hipY: G_HIP + 10, shoulderY: G_SHOULDER + 10, headY: G_HEAD + 10, bodyLean: 0.3, sx: 1.06, sy: 0.94 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 56, y: -108 }, hipY: G_HIP + 12, shoulderY: G_SHOULDER + 12, headY: G_HEAD + 12 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'fist', joints: { armF: { x: 64, y: -206 }, hipY: G_HIP - 14, shoulderY: G_SHOULDER - 22, headY: G_HEAD - 24, bodyLean: -0.14, twist: 0.1, hipTwist: 0.06, sx: 0.94, sy: 1.1 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'fist', joints: { armF: { x: 63, y: -202 } }, hold: true },
+    { t: 2.45, hand: 'open', joints: { armF: { x: 62, y: -150 }, hipY: G_HIP - 2, shoulderY: G_SHOULDER - 2, headY: G_HEAD - 2, bodyLean: 0.1, twist: 0.03, hipTwist: 0.02, sx: 1.02, sy: 0.98 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A showman's guard, Steve's from 2D: mid-presentation, tall, the chest open,
 // the lead hand open, out and high, showing you the thing, and the device
 // held at the chest in the other.
@@ -236,6 +332,38 @@ const SHOW_KICK = {
     { t: 2,    hand: 'open', joints: { legF: { x: 100, y: -92 }, bodyLean: -0.2 }, hold: true },
     // the finish, held, chin up
     { t: 2.55, hand: 'open', joints: { legF: { x: 56, y: -30 }, armF: { x: 80, y: -180 }, hipY: S_HIP - 2, headY: S_HEAD - 3, bodyLean: -0.1, twist: 0.04, hipTwist: 0.02, sx: 1, sy: 1.02 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The showman's slap: the hand raised high over his head first, as if for a
+// reveal, then swept down across in a long arc, and the follow-through held
+// a beat too long, chin up.
+const SHOW_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: SHOW_AT },
+    { t: 0.5,  hand: 'open', joints: { armF: { x: 40, y: -200 }, bodyLean: -0.12, twist: -0.2 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 30, y: -206 }, twist: -0.26 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 98, y: -146 }, headX: 4, bodyLean: 0.18, twist: 0.24, hipTwist: 0.1 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 94, y: -144 } }, hold: true },
+    { t: 2.55, hand: 'open', joints: { armF: { x: 90, y: -160 }, headY: S_HEAD - 3, headX: 3, bodyLean: 0.02, twist: 0.12, hipTwist: 0.05 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// His launcher is the big reveal: the hand drops and closes as he turns
+// away, then he springs up off the floor with the fist thrown up high, and
+// holds it there, up, for the audience, before he goes back to presenting.
+const SHOW_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: SHOW_AT },
+    { t: 0.5,  hand: 'open', joints: { armF: { x: 44, y: -130 }, hipY: S_HIP + 8, shoulderY: S_SHOULDER + 8, headY: S_HEAD + 8, bodyLean: 0.08, twist: -0.3, sx: 1.06, sy: 0.96 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'fist', joints: { armF: { x: 40, y: -124 }, hipY: S_HIP + 10, shoulderY: S_SHOULDER + 10, headY: S_HEAD + 10, twist: -0.36 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'fist', joints: { armF: { x: 70, y: -232 }, legF: { x: 24, y: -20 }, hipY: S_HIP - 20, shoulderY: S_SHOULDER - 28, headY: S_HEAD - 30, bodyLean: -0.1, twist: 0.3, hipTwist: 0.15, sx: 0.9, sy: 1.12 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'fist', joints: { armF: { x: 70, y: -228 } }, hold: true },
+    { t: 2.55, hand: 'fist', joints: { armF: { x: 72, y: -224 }, legF: { x: 21, y: 0 }, hipY: S_HIP - 4, shoulderY: S_SHOULDER - 6, headY: S_HEAD - 9, bodyLean: -0.08, twist: 0.12, hipTwist: 0.05, sx: 1, sy: 1.02 }, ease: 'outQuad' },
     { t: 3,    hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -294,6 +422,38 @@ const ROLL_KICK = {
   ]),
 };
 
+// A backhand off the dropped lead hand, the shoulder roll's insult: the low
+// hand opens and flicks up and out at the face with a roll of the shoulder,
+// and is back down at his belly at once.
+const ROLL_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'fist', joints: ROLL_AT },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 24, y: -120 }, twist: -0.1 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 20, y: -124 }, twist: -0.14 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 100, y: -158 }, headX: 3, bodyLean: 0.04, twist: 0.2, hipTwist: 0.06 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 96, y: -156 } }, hold: true },
+    { t: 2.3,  hand: 'open', joints: { armF: { x: 36, y: -116 }, headX: 2, bodyLean: -0.03, twist: 0.02, hipTwist: 0.01 }, ease: 'outCubic' },
+    { t: 3,    hand: 'fist', joints: ROLL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The uppercut comes naturally off his low lead hand: a turn away, then the
+// fist whips straight up the middle with the whole body snapping round
+// behind it, and is snapped home the moment it has landed.
+const ROLL_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: ROLL_AT },
+    { t: 0.55, joints: { armF: { x: 26, y: -108 }, hipY: R_HIP + 6, shoulderY: R_SHOULDER + 6, headY: R_HEAD + 6, bodyLean: 0.06, twist: -0.3, hipTwist: -0.15 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: 24, y: -104 }, twist: -0.38, hipTwist: -0.2 }, ease: 'outQuad' },
+    { t: 1.15, joints: { armF: { x: 68, y: -222 }, hipY: R_HIP - 14, shoulderY: R_SHOULDER - 20, headY: R_HEAD - 20, bodyLean: -0.08, twist: 0.38, hipTwist: 0.2, sx: 0.92, sy: 1.1 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 66, y: -218 } }, hold: true },
+    { t: 2.3,  joints: { armF: { x: 32, y: -114 }, hipY: R_HIP, shoulderY: R_SHOULDER, headY: R_HEAD, bodyLean: -0.04, twist: 0.04, hipTwist: 0.02, sx: 1, sy: 1 }, ease: 'outCubic' },
+    { t: 3,    joints: ROLL_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // The fence, Scam's from 2D: one hand in his pocket, the other up open-palmed
 // in front of his chest, the placating gesture of a man explaining why it
 // was fine, and also, quietly, a fence that keeps you at arm's length.
@@ -346,6 +506,37 @@ const FENCE_KICK = {
   ]),
 };
 
+// The fence's slap is barely one: the open hand that was out already pats
+// you across the face, unhurried, and stays there a moment, placating.
+const FENCE_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: FENCE_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 56, y: -152 }, bodyLean: 0.03 }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -154 }, twist: -0.04 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 96, y: -150 }, headX: F_HEADX + 1, bodyLean: 0.1, twist: 0.1, hipTwist: 0.04 }, ease: 'outCubic', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 94, y: -150 } }, hold: true },
+    { t: 2.6,  hand: 'open', joints: { armF: { x: 88, y: -150 }, headX: F_HEADX, bodyLean: 0.08, twist: 0.06, hipTwist: 0.02 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// His launcher is a palm lifted under your chin, as if helping you up: no
+// wind-up to speak of, the body rising a little with it, and the hand left
+// there after.
+const FENCE_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: FENCE_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 56, y: -130 }, hipY: F_HIP + 4, shoulderY: F_SHOULDER + 4, headY: F_HEAD + 4 }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -128 } }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 72, y: -210 }, hipY: F_HIP - 8, shoulderY: F_SHOULDER - 10, headY: F_HEAD - 10, bodyLean: 0, twist: 0.08, hipTwist: 0.03 }, ease: 'outCubic', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 72, y: -206 } }, hold: true },
+    { t: 2.6,  hand: 'open', joints: { armF: { x: 70, y: -190 }, hipY: F_HIP - 3, shoulderY: F_SHOULDER - 4, headY: F_HEAD - 4, bodyLean: 0.02, twist: 0.04, hipTwist: 0.01 }, ease: 'outQuad' },
+    { t: 3,    hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A fencer's guard, Lizbeth's from 2D, and the stillest in the game: narrow
 // and upright, side on, the lead hand loose and forward at the chest and the
 // rear one close behind it, as if holding something fragile.
@@ -390,6 +581,37 @@ const EN_KICK = {
     { t: 2,    hand: 'open', joints: { legF: { x: 104, y: -76 } }, hold: true },
     // and straight back
     { t: 2.45, hand: 'open', joints: { legF: { x: 40, y: -36 }, hipY: E_HIP - 1, bodyLean: 0 }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Her slap is a flick of the fingers along a line at the face, the least
+// motion that will do it, and straight back.
+const EN_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: EN_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 50, y: -140 } }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 48, y: -142 } }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 104, y: -148 }, headX: 3, bodyLean: 0.06, twist: 0.04 }, ease: 'outCubic', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 102, y: -148 } }, hold: true },
+    { t: 2.45, hand: 'open', joints: { armF: { x: 60, y: -140 }, headX: 2, bodyLean: 0.03, twist: 0.01 }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Her launcher is the thrust turned upward: the hand goes straight up from
+// the guard along a line, fingers first, the body rising only as far as it
+// must, and straight back down.
+const EN_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: EN_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 54, y: -130 }, hipY: E_HIP + 3, shoulderY: E_SHOULDER + 3, headY: E_HEAD + 3 }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 54, y: -128 } }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 74, y: -220 }, hipY: E_HIP - 6, shoulderY: E_SHOULDER - 8, headY: E_HEAD - 8, bodyLean: -0.02 }, ease: 'outCubic', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 74, y: -218 } }, hold: true },
+    { t: 2.45, hand: 'open', joints: { armF: { x: 60, y: -160 }, hipY: E_HIP - 1, shoulderY: E_SHOULDER - 1, headY: E_HEAD - 1, bodyLean: 0.01 }, ease: 'inOutCubic' },
     { t: 3,    hand: 'open', joints: EN_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -446,6 +668,38 @@ const PEEK_KICK = {
   ]),
 };
 
+// Kim's slap is contempt in one flick: the hand opens beside her ear as she
+// bobs, cracks across the face and is back at her jaw, a fist again, before
+// you have registered it left.
+const PEEK_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'fist', joints: PEEK_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 48, y: -160 }, headY: K_HEAD + 4, bodyLean: 0.2, twist: -0.06 }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 46, y: -164 }, twist: -0.08 }, ease: 'outQuad' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 98, y: -150 }, headY: K_HEAD, headX: 4, bodyLean: 0.24, twist: 0.16, hipTwist: 0.06 }, ease: 'outBack', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 96, y: -150 } }, hold: true },
+    { t: 2.25, hand: 'open', joints: { armF: { x: 56, y: -152 }, headX: 0, bodyLean: 0.18, twist: 0, hipTwist: 0 }, ease: 'outCubic' },
+    { t: 3,    hand: 'fist', joints: PEEK_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// The peek-a-boo uppercut: the deepest bob she has, then up out of it like
+// a spring, the fist driving up past the chin and her feet nearly leaving
+// the floor, and back down into the guard at once.
+const PEEK_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    joints: PEEK_AT },
+    { t: 0.6,  joints: { armF: { x: 48, y: -134 }, hipY: K_HIP + 10, shoulderY: K_SHOULDER + 10, headY: K_HEAD + 12, bodyLean: 0.26, twist: -0.12, sx: 1.02, sy: 0.95 }, ease: 'outQuad' },
+    { t: 0.95, joints: { armF: { x: 46, y: -130 }, hipY: K_HIP + 12, shoulderY: K_SHOULDER + 12, headY: K_HEAD + 14, twist: -0.16 }, ease: 'outQuad' },
+    { t: 1.15, joints: { armF: { x: 66, y: -214 }, legF: { x: 24, y: -14 }, hipY: K_HIP - 16, shoulderY: K_SHOULDER - 22, headY: K_HEAD - 22, bodyLean: 0.02, twist: 0.24, hipTwist: 0.16, sx: 0.92, sy: 1.1 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 64, y: -210 } }, hold: true },
+    { t: 2.25, joints: { armF: { x: 56, y: -152 }, legF: { x: 22, y: 0 }, hipY: K_HIP, shoulderY: K_SHOULDER, headY: K_HEAD, headX: 0, bodyLean: 0.18, twist: 0, hipTwist: 0, sx: 0.97, sy: 1 }, ease: 'outCubic' },
+    { t: 3,    joints: PEEK_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 // A tai chi ready stance, Cathie's from 2D, the calmest in the game: upright
 // and tall, the lead palm open and level in front of the chest where it can
 // keep you away, the rear hand low at the waist with the tablet, breathing
@@ -498,6 +752,37 @@ const CALM_KICK = {
   ]),
 };
 
+// Her slap is a palm placed at the face, rising a little on its way as if
+// it were following a circle, without hurry and without a turn of the hips.
+const CALM_SLAP = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: CALM_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 60, y: -160 } }, ease: 'inOutCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 56, y: -164 }, bodyLean: -0.03 }, ease: 'inOutCubic' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 106, y: -150 }, headX: 3, bodyLean: 0.06 }, ease: 'outCubic' },
+    { t: 2,    hand: 'open', joints: { armF: { x: 104, y: -150 } }, hold: true },
+    { t: 2.55, hand: 'open', joints: { armF: { x: 78, y: -148 }, headX: 2, bodyLean: 0.01 }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: CALM_AT, ease: 'inOutCubic' },
+  ]),
+};
+
+// Her launcher lifts: she sinks a little, then the lead palm rises slowly up
+// under the chin as she comes up onto her toes, the tablet hand rising a
+// little with it, and settles back the way it came.
+const CALM_UPPER = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: CALM_AT },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 60, y: -128 }, hipY: T_HIP + 4, shoulderY: T_SHOULDER + 4, headY: T_HEAD + 4 }, ease: 'inOutCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 58, y: -124 }, hipY: T_HIP + 6, shoulderY: T_SHOULDER + 6, headY: T_HEAD + 6 }, ease: 'inOutCubic' },
+    { t: 1.15, hand: 'open', joints: { armF: { x: 78, y: -212 }, armB: { x: 44, y: -126 }, hipY: T_HIP - 10, shoulderY: T_SHOULDER - 12, headY: T_HEAD - 12, bodyLean: -0.04 }, ease: 'outCubic' },
+    { t: 2,    hand: 'open', joints: { armF: { x: 78, y: -210 } }, hold: true },
+    { t: 2.55, hand: 'open', joints: { armF: { x: 74, y: -170 }, armB: { x: 42, y: -118 }, hipY: T_HIP - 3, shoulderY: T_SHOULDER - 3, headY: T_HEAD - 3, bodyLean: -0.03 }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: CALM_AT, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -516,7 +801,7 @@ export const FORMS = {
     // turning with them.
     guardTurn: 1,
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
-    tracks: { punch: LEAD_STRAIGHT, kick: BOX_KICK },
+    tracks: { punch: LEAD_STRAIGHT, kick: BOX_KICK, slap: BOX_SLAP, launch: BOX_UPPER },
   },
   brawling: {
     stance: { hip: 8, head: 4, lean: 0.14, armF: BRAWL_F, armB: BRAWL_B,
@@ -535,7 +820,7 @@ export const FORMS = {
     // The exaggeration is written into the haymaker itself, so the swing is
     // not scaled again; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 7, squash: 0.06, brace: 6, thrust: 5 },
-    tracks: { punch: HAYMAKER, kick: BRAWL_KICK },
+    tracks: { punch: HAYMAKER, kick: BRAWL_KICK, slap: BRAWL_SLAP, launch: BRAWL_UPPER },
   },
   grappling: {
     stance: { hip: 10, shoulder: 8, head: 12, lean: 0.22, armF: GRAB_F, armB: GRAB_B,
@@ -554,7 +839,7 @@ export const FORMS = {
     guardTurn: 0.6,
     // The seizure is written whole; the hit lands with his weight.
     motion: { windup: 1, follow: 1, drop: 8, squash: 0.08, brace: 4, thrust: 5 },
-    tracks: { punch: SEIZE, kick: GRAB_KICK },
+    tracks: { punch: SEIZE, kick: GRAB_KICK, slap: GRAB_SLAP, launch: GRAB_UPPER },
   },
   showboating: {
     stance: { head: -3, lean: -0.06, armF: SHOW_F, armB: SHOW_B, legF: { x: 21 }, legB: { x: -19 }, sy: 1.02 },
@@ -571,7 +856,7 @@ export const FORMS = {
     guardTurn: 0.7,
     // The flourish and the held finish are written into the punch itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.04, brace: 0, thrust: 3 },
-    tracks: { punch: BIG_FINISH, kick: SHOW_KICK },
+    tracks: { punch: BIG_FINISH, kick: SHOW_KICK, slap: SHOW_SLAP, launch: SHOW_UPPER },
   },
   shoulderRoll: {
     stance: { head: -2, lean: -0.04, armF: ROLL_F, armB: ROLL_B, legF: { x: 20 }, legB: { x: -23 } },
@@ -585,7 +870,7 @@ export const FORMS = {
     guardTurn: 1,
     // The coil and the snap back are written into the whip itself.
     motion: { windup: 1, follow: 1, drop: 3, squash: 0.06, brace: 6, thrust: 4 },
-    tracks: { punch: WHIP, kick: ROLL_KICK },
+    tracks: { punch: WHIP, kick: ROLL_KICK, slap: ROLL_SLAP, launch: ROLL_UPPER },
   },
   fence: {
     stance: { lean: 0.04, headX: 3, shoulder: -2, armF: FENCE_F, armB: FENCE_B, legF: { x: 22 }, legB: { x: -17 } },
@@ -602,7 +887,7 @@ export const FORMS = {
     guardTurn: 0.3,
     // The slip is written whole; nothing about it should look heavy.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
-    tracks: { punch: SLIP, kick: FENCE_KICK },
+    tracks: { punch: SLIP, kick: FENCE_KICK, slap: FENCE_SLAP, launch: FENCE_UPPER },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
@@ -617,7 +902,7 @@ export const FORMS = {
     guardTurn: 1,
     // Nothing in the hips, nothing that admits effort.
     motion: { windup: 1, follow: 1, drop: 0, squash: 0.02, brace: 0, thrust: 1 },
-    tracks: { punch: THRUST, kick: EN_KICK },
+    tracks: { punch: THRUST, kick: EN_KICK, slap: EN_SLAP, launch: EN_UPPER },
   },
   peekaboo: {
     stance: { hip: 6, shoulder: 4, head: 6, lean: 0.18, armF: PEEK_F, armB: PEEK_B,
@@ -635,7 +920,7 @@ export const FORMS = {
     guardTurn: 1,
     // The bob and the snap back are written into the jab itself.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.05, brace: 4, thrust: 2 },
-    tracks: { punch: SNAP, kick: PEEK_KICK },
+    tracks: { punch: SNAP, kick: PEEK_KICK, slap: PEEK_SLAP, launch: PEEK_UPPER },
   },
   taiChi: {
     stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
@@ -654,6 +939,6 @@ export const FORMS = {
     guardTurn: 0.3,
     // Nothing thrown, the hips barely moving.
     motion: { windup: 1, follow: 1, drop: 1, squash: 0.02, brace: 0, thrust: 1 },
-    tracks: { punch: PUSH, kick: CALM_KICK },
+    tracks: { punch: PUSH, kick: CALM_KICK, slap: CALM_SLAP, launch: CALM_UPPER },
   },
 };

@@ -445,7 +445,8 @@ test("every sculpt's own moves leave from its idle guard and come back to it, at
           assert.ok(Math.hypot(P[l].x - guard[l].x, P[l].y - guard[l].y) < 1e-6,
             `${what}: ${l} (${P[l].x.toFixed(2)}, ${P[l].y.toFixed(2)}) against the guard's (${guard[l].x.toFixed(2)}, ${guard[l].y.toFixed(2)})`);
         }
-        assert.equal(P.hand, guard.hand, `${what}: the lead hand is ${P.hand || 'a fist'}, in the guard ${guard.hand || 'a fist'}`);
+        // no shape is the fist
+        assert.equal(P.hand || 'fist', guard.hand || 'fist', `${what}: the lead hand is ${P.hand || 'fist'}, in the guard ${guard.hand || 'fist'}`);
       }
     }
   }
@@ -477,4 +478,28 @@ test('a form reaches a fighter only through a sculpt drawn in 3D', () => {
   assert.equal(MODELS3D[DEFAULT_MODEL].form, undefined);
   assert.deepEqual(Object.keys(FIGHTER_MODELS), [], 'a fighter wears a sculpt by default');
   for (const def of [...FIGHTERS, ...BASE_CHARACTERS]) assert.equal(form3D(def), null, `${def.id} has a form with nothing drawn in 3D`);
+});
+
+// And a slap and an uppercut of its own: the slap with the hand open,
+// out at the face while it can hit; the launcher's fist (or palm) up past
+// the head. Each from its own guard and back (above).
+test('every form has its own slap, open at the face, and its own uppercut, up past the head', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    for (const kind of ['slap', 'launch']) {
+      assert.ok(form.tracks[kind], `${name} throws the shared ${kind}`);
+      assert.deepEqual(validateTrack(`${name}.${kind}`, form.tracks[kind], { attack: true }), []);
+    }
+    // at a share k of the move's active window, or its first frame
+    const at = (kind, k) => {
+      const atk = { ...ATTACKS[kind], kind };
+      return computePose({ def, state: 'attack', stateT: Math.max(0, atk.startup + atk.active * k), walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, attack: atk }, 0, form);
+    };
+    const guard = at('slap', -Infinity);
+    const slap = at('slap', 0.6), upper = at('launch', 0.6);
+    assert.equal(slap.hand, 'open', `${name}'s slap is a ${slap.hand || 'fist'}`);
+    assert.ok(slap.armF.x > guard.armF.x + 25 && slap.armF.y < -140, `${name}'s slap is not out at the face (${slap.armF.x}, ${slap.armF.y})`);
+    assert.ok(upper.armF.y < upper.headY - 10, `${name}'s uppercut is not up past the head (${upper.armF.y} against ${upper.headY})`);
+  }
 });

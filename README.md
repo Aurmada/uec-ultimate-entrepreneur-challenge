@@ -71,6 +71,10 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.15: everyone fights their own way
+
+- 🥋 **Every move is theirs.** In 3D each founder now kicks, slaps and throws an uppercut in their own fighting style, not only punches. Jeff Bozo push-kicks with his hands still up and flicks a backhand. Adam Weumann winds up a door kick and an uppercut from the floor that lifts him off his feet. Carl Icahnt shoves with his foot and heaves you up rather than punching. Steve Nojobs sweeps a high crescent kick and holds the finish too long. Elo Ma whips a roundhouse and backhands off his dropped hand. Scam Alt barely pats you, hand still in his pocket. Lizbeth Holmez kicks and strikes along a line. Kim Koindashian snaps everything out from her peek-a-boo and is back before you notice. Cathie Woodz places a heel kick and lifts a palm under your chin. What each move does in the fight is unchanged.
+
 ## What's new in v3.14: the game is 3D
 
 - 🎮 **3D for everyone.** The nine founders are 3D fighters now, each in their own fighting style, on rendered stages, wherever your browser can draw them. Prefer the original look? Open Settings and switch GRAPHICS to 2D, and the game remembers. Browsers without WebGL2 stay in 2D.
