@@ -309,3 +309,34 @@ test('the slip barely winds up, closes only as it lands and lingers out after', 
   }
   for (const [name, track] of Object.entries(FENCE.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
 });
+
+// Lizbeth (`ava`), the seventh: fencing, the stillest guard in the game, side
+// on with the lead hand loose and open; the thrust goes straight out along
+// its own line, fingers first, and the hand never closes.
+const avaDef = getFighter('ava');
+const FENCING = FORMS.fencing;
+const avaAt = (state, extra = {}, t = 0) => computePose(
+  { def: avaDef, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, FENCING);
+const thrustAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return avaAt('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Lizbeth fences from the guard her 2D figure stands in, the lead hand open', () => {
+  assert.equal(MODELS3D['sculpt:ava'].form, 'fencing');
+  const own = applyProportions(computePose({ def: avaDef, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(avaDef.body));
+  const guard = applyProportions(avaAt('idle'), clampBody(avaDef.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(guard[k], own[k], `her ${k} is not where her 2D guard holds it`);
+  assert.equal(avaAt('idle').hand, 'open');
+  assert.ok(FENCING.handDepth.F < 0.7 && FENCING.handDepth.B < 0.7, 'her hands are not in on her centre line');
+});
+
+test('the thrust goes straight out along its line, the foot after it, and the hand never closes', () => {
+  const guard = thrustAt(0);
+  for (const k of [0, 0.95, 1.15, 1.6, 2.45, 3]) assert.equal(thrustAt(k).hand, 'open', `at ${k} the hand closes`);
+  assert.ok(Math.abs(thrustAt(0.95).armF.x - guard.armF.x) < 8, 'she draws back: it admits effort');
+  assert.ok(thrustAt(1.6).armF.x > guard.armF.x + 40 && Math.abs(thrustAt(1.6).armF.y - guard.armF.y) < 6, 'not straight out along its line');
+  assert.ok(thrustAt(1.6).legF.x > guard.legF.x + 8, 'the lead foot does not step after it');
+  assert.ok(Math.abs(thrustAt(1.6).hipTwist) < 1e-9, 'there is weight in her hips');
+  for (const [name, track] of Object.entries(FENCING.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});

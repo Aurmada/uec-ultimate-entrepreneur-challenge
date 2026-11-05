@@ -120,7 +120,9 @@ const eloGlb = readFileSync(new URL(`../${MODELS3D['sculpt:elo'].url}`, import.m
 const elo = extractModel(parseGLB(eloGlb.buffer.slice(eloGlb.byteOffset, eloGlb.byteOffset + eloGlb.byteLength)));
 const scamGlb = readFileSync(new URL(`../${MODELS3D['sculpt:scam'].url}`, import.meta.url));
 const scam = extractModel(parseGLB(scamGlb.buffer.slice(scamGlb.byteOffset, scamGlb.byteOffset + scamGlb.byteLength)));
-const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo, scam };
+const avaGlb = readFileSync(new URL(`../${MODELS3D['sculpt:ava'].url}`, import.meta.url));
+const lizbeth = extractModel(parseGLB(avaGlb.buffer.slice(avaGlb.byteOffset, avaGlb.byteOffset + avaGlb.byteLength)));
+const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo, scam, ava: lizbeth };
 const top = (m, p, v) => {
   let best = -1, joint = 0;
   for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
@@ -136,6 +138,7 @@ test('every sculpt raises the block briefcase on its lead grip, and carries its 
     kai: { 'prop:guard-case': ['grip.L', CASE], 'prop:device': ['grip.R', ['accent']] },   // his device in his palette's accent
     elo: { 'prop:guard-case': ['grip.L', CASE], 'prop:booster': ['chest', ['accent', 'frame']] },   // worn on his back
     scam: { 'prop:guard-case': ['grip.L', CASE], 'prop:clip': ['chest', ['shoe']] },                  // and his, the 2D part's fill
+    ava: { 'prop:guard-case': ['grip.L', CASE], 'prop:vial': ['hips', ['accent', 'shoe']] },          // at her hip, a white cap
   };
   for (const [id, props] of Object.entries(carries)) {
     const m = sculpts[id];
@@ -240,4 +243,25 @@ test('Scam wears his henley, its trim and buttons, his trousers, shoes and curly
   };
   const skin = reach(body.find((p) => p.role === 'skin'));
   for (const p of body.filter((q) => q.role !== 'skin')) assert.ok(reach(p) < skin - 0.06, `${p.role} reaches over the hands`);
+});
+
+// Lizbeth (`ava`), the seventh and the first woman: a woman's frame (narrower
+// shoulders, a wider pelvis) out of the same pipeline; her blazer worn open
+// over a shirt, skinny trousers and shoes; her visor, cyan glass the painted
+// eyes show through; her ponytail.
+test("Lizbeth is built on a woman's frame: narrower in the shoulder against the hip than any man", () => {
+  const ratio = (id) => MODELS3D[`sculpt:${id}`].fit.shoulderHalf / MODELS3D[`sculpt:${id}`].fit.hipHalf;
+  for (const id of Object.keys(sculpts)) {
+    if (getFighter(id).figure?.frame === 'f') continue;
+    assert.ok(ratio('ava') < ratio(id) - 0.2, `her shoulders against her hips (${ratio('ava').toFixed(2)}) are a man's, as ${id}'s (${ratio(id).toFixed(2)})`);
+  }
+});
+
+test('Lizbeth wears her blazer open over a shirt, her trousers and shoes, her visor and ponytail', () => {
+  const body = lizbeth.primitives.filter((p) => p.name === 'body');
+  const roles = new Set(body.map((p) => p.role));
+  for (const role of ['skin', 'shirt', 'suit', 'suit*0.78', 'pants', 'shoe']) assert.ok(roles.has(role), `no ${role}`);
+  assert.deepEqual(new Set(lizbeth.primitives.filter((p) => p.name === 'eyewear:visor').map((p) => p.role)), new Set(['visor']));
+  assert.ok(MODELS3D['sculpt:ava'].glass.visor > 0 && MODELS3D['sculpt:ava'].glass.visor < 0.6, 'the visor is not glass the eyes show through');
+  assert.deepEqual(new Set(lizbeth.primitives.filter((p) => p.name === 'hair:ponytail').map((p) => p.role)), new Set(['hair']));
 });

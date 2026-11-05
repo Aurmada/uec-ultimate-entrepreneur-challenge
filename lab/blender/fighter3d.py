@@ -920,9 +920,13 @@ def _jacket():
 _NECK_AXIS = -0.012                     # as _neck_cut's
 
 
-def _vee(Z):
+def _vee(Z, open_front=False):
     """Half the width of the jacket's opening at height Z: shut at the button,
-    opening up to the base of the neck."""
+    opening up to the base of the neck; or worn open, as a blazer is, the
+    fronts apart all the way down and a little further apart at the hem."""
+    if open_front:
+        return (np.float32(0.03) + np.maximum(Z - np.float32(BUTTON), 0) * np.float32(0.22)
+                + np.maximum(np.float32(BUTTON) - Z, 0) * np.float32(0.04))
     return np.float32(0.01) + np.maximum(Z - np.float32(BUTTON), 0) * np.float32(0.26)
 
 
@@ -953,20 +957,26 @@ def dress_shirt():
     return S
 
 
-def jacket():
+def jacket(open_front=False, hem=JACKET_HEM):
     """The jacket: open in a V from the button to the base of the neck, its
     collar standing round the back of the neck, and below the button its
     fronts parting over the paunch, as the 2D jacket's do; sleeves stopping
-    short of the shirt's cuffs; the button at the bottom of the V."""
+    short of the shirt's cuffs; the button at the bottom of the V. Worn open
+    (a blazer), the fronts are apart from the collar to the hem and there is
+    no button."""
     S = _shell(0.0)
     S.d[:] = _jacket().d
     d = S.d
-    _keep_above(d, JACKET_HEM)
+    _keep_above(d, hem)
     _keep_below(d, 1.642)                   # under the shirt's collar
     _cuff_cut(d, CUFF + 0.03)
     _neck_cut(d, 0.092, 1.58)
-    sl = _zslab(JACKET_HEM - 0.02, 1.7)
+    sl = _zslab(hem - 0.02, 1.7)
     X, Y, Z = _grid(sl)
+    if open_front:
+        opening = np.maximum(np.abs(Y) - _vee(Z, True), _front(X))
+        d[sl] = np.maximum(d[sl], -opening)
+        return S
     vee = np.maximum(np.abs(Y) - _vee(Z), np.float32(BUTTON) - Z)
     parted = np.maximum(np.abs(Y) - (np.float32(BUTTON - 0.03) - Z) * np.float32(0.11), Z - np.float32(BUTTON - 0.03))
     opening = np.maximum(np.minimum(vee, parted), _front(X))
@@ -976,19 +986,19 @@ def jacket():
     return S
 
 
-def jacket_lapels():
+def jacket_lapels(open_front=False, hem=JACKET_HEM):
     """The lapels and the collar: a band of the jacket's cloth a few
     millimetres proud of it down each side of the V, widening from the button
     to a notch under the collarbone, then the collar's narrower band on up
     and round the back of the neck; in the suit's colour in shade (LAPEL), as
     the 2D figure's are: in its second colour, nearly black on Carl, they
     read as a black stand-up collar."""
-    J = jacket()                            # cut as it is: the cloth uncut ran on up the neck to the jaw
+    J = jacket(open_front, hem)             # cut as it is: the cloth uncut ran on up the neck to the jaw
     S = _shell(0.0)
     S.d[:] = np.float32(1)
     sl = _zslab(BUTTON - 0.01, 1.68)
     X, Y, Z = _grid(sl)
-    v = _vee(Z)
+    v = _vee(Z, open_front)
     w = np.where(Z < np.float32(1.5), np.float32(0.012) + (Z - np.float32(BUTTON)) * np.float32(0.16), np.float32(0.034))
     lapel = np.maximum(np.maximum(v - np.abs(Y), np.abs(Y) - v - w),
                        np.maximum(np.float32(BUTTON) - Z, _front(X)))
@@ -1279,6 +1289,18 @@ OUTFITS = {
         'covers': {'henley': ['trim'], 'trousers': ['henley', 'shoes']},
         'loose': True,
     },
+    # a blazer worn open over a fitted shirt, skinny trousers (Lizbeth's): the
+    # suit's jacket, open and shorter, its lapels down to where the button
+    # would be
+    'blazer': {
+        'pieces': [('shirt', shirt, 'shirt', '#f4f6ff'),
+                   ('jacket', lambda: jacket(True, 0.905), 'suit', None),
+                   ('lapels', lambda: jacket_lapels(True, 0.905), LAPEL, None),
+                   ('trousers', trousers, 'pants', None), ('shoes', shoes, 'shoe', None)],
+        'skin': ['shirt', 'jacket', 'trousers', 'shoes'],
+        'covers': {'shirt': ['jacket', 'trousers'], 'jacket': ['lapels'], 'trousers': ['jacket', 'shoes']},
+        'loose': True,
+    },
     # Trousers and shoes and nothing above the waist: what a fighter wears
     # until their own outfit is made, so their head and face can be judged in
     # the game before their clothes are.
@@ -1454,6 +1476,28 @@ def glasses(lens_c, lens_half, lens_turn, bridge, arm_from, arm_to, rad=0.0055, 
     return lens
 
 
+def visor(centre, radii, half_height, back):
+    """A visor, as the 2D figure draws it: a band of tinted glass across the
+    eyes (`visor`, drawn as glass in game, so the painted eyes show through),
+    a slice of an upright elliptical cylinder round the face (centre, radii
+    forward and across), clear of the nose and wrapping back to the temples,
+    `back` behind the centre. Built in a fine field of its own."""
+    import bpy
+    lo, hi = (-0.06, -0.12, centre[2] - half_height - 0.01), (0.14, 0.12, centre[2] + half_height + 0.01)
+    L = sc.Field(lo=lo, hi=hi, h=0.001)
+    ax = [L.lo[k] + np.arange(L.n[k]) * L.h for k in range(3)]
+    X, Y, Z = ax[0][:, None, None], ax[1][None, :, None], ax[2][None, None, :]
+    a, b = radii
+    q = np.sqrt(((X - centre[0]) / a) ** 2 + ((Y - centre[1]) / b) ** 2)
+    band = np.abs(q - 1) * min(a, b) - 0.0013                          # the glass, 2.6 mm thick
+    edge = np.abs(Z - centre[2]) - half_height                         # top and bottom
+    rear = (centre[0] - back) - X                                      # wrapping back only so far
+    L.d = np.maximum(np.maximum(band, edge), rear).astype(np.float32)
+    ob = sc.to_blender('eyewear:visor', *L.mesh(), smooth=1)
+    ob.data.materials.append(material('visor', (0.024, 0.69, 1.0, 1)))
+    return ob
+
+
 # ================================================================ props
 # What a fighter carries (data/fighters.js `parts`), as the founder's model
 # carries it (build_founder.py): a mesh `prop:<id>` for each part, which the
@@ -1461,8 +1505,8 @@ def glasses(lens_c, lens_half, lens_turn, bridge, arm_from, arm_to, rad=0.0055, 
 # but faces the way the body faces (rig.js), as a 2D part is an unrotated
 # offset from the hand. Built in the fighter's own space at their grip joint
 # and sized with them. The block briefcase every fighter raises is here, and
-# Carl's case, Steve's device, Elo's booster and Scam's paperclip; each other
-# fighter's prop comes with their remodel.
+# Carl's case, Steve's device, Elo's booster, Scam's paperclip and Lizbeth's
+# vial; each other fighter's prop comes with their remodel.
 FRAME_C, BRASS_C = '#1b1a22', '#c9a03c'
 
 
@@ -1609,6 +1653,32 @@ def paperclip(name, chest, fill, pal):
     return ob
 
 
+def vial(name, hip, fill, pal):
+    """Lizbeth's vial, worn at the hip as the 2D part is (`vial`, behind the
+    hip): a big sample vial stood upright behind her lead hip, its contents
+    in the part's colour (`accent`, a palette role), a white cap on top
+    (her palette's `shoe`, white as the 2D cap's highlight). It rides the
+    hips, wholly. One object, `name`."""
+    import bpy
+    s = FR.size
+    back = F.project(np.array([[-0.14, 0.09, 0.96]]))[0]               # the back of her hip, in Jeff's space
+    a = FR.warp(back + V(-0.05, 0.02, 0))
+    lo, hi = a - np.array([0.08, 0.08, 0.24]) * s, a + np.array([0.08, 0.08, 0.24]) * s
+    body = sc.Field(lo=lo, hi=hi, h=0.0015)
+    body.add(sc.RoundCone(a - V(0, 0, 0.13 * s), a + V(0, 0, 0.1 * s), 0.042 * s, 0.042 * s), 0.0)
+    cap = sc.Field(lo=lo, hi=hi, h=0.0015)
+    cap.add(sc.RoundCone(a + V(0, 0, 0.105 * s), a + V(0, 0, 0.15 * s), 0.047 * s, 0.047 * s), 0.0)
+    objs = []
+    for f, role, colour in ((body, fill if fill in (pal or {}) else 'accent', None), (cap, 'shoe', None)):
+        ob = sc.to_blender(name, *f.mesh(), smooth=1)
+        ob.data.materials.append(material(role, role_colour(pal or {}, role, '#29d9ff' if role != 'shoe' else '#eef1ff')))
+        objs.append(ob)
+    with bpy.context.temp_override(active_object=objs[0], selected_editable_objects=objs, selected_objects=objs):
+        bpy.ops.object.join()
+    objs[0].name = objs[0].data.name = name
+    return objs[0]
+
+
 # Each prop: the bone it rides (a grip, or the chest for what is worn on the
 # back), and how it is made from (name, that bone's joint, the 2D part's
 # fill, the palette). The cases hang with the handle in the
@@ -1625,7 +1695,10 @@ PROPS = {
     'booster': ('chest', booster),
     # Scam's: the paperclip on his back, riding the chest
     'clip': ('chest', paperclip),
+    # Lizbeth's: the vial at her hip, riding the hips
+    'vial': ('hips', vial),
 }
+JOINT_OF = {'hips': 'hip'}                  # a bone named apart from the joint it starts at
 
 
 def props(data, J):
@@ -1635,7 +1708,7 @@ def props(data, J):
     for part in data.get('parts') or []:
         if part['id'] in PROPS:
             bone, make = PROPS[part['id']]
-            out.append((make('prop:' + part['id'], J[bone], part.get('fill') or '#6b4a2b', data.get('c')), bone))
+            out.append((make('prop:' + part['id'], J[JOINT_OF.get(bone, bone)], part.get('fill') or '#6b4a2b', data.get('c')), bone))
     return out
 
 

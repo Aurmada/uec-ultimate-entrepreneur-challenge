@@ -1,8 +1,9 @@
 // Fighting forms: how a fighter stands, guards and throws, as a martial art
 // rather than as a personality. Boxing first (November 2026), for the
 // sculpted Jeff, then brawling, for Adam, grappling, for Carl, showboating,
-// for Steve, the shoulder roll, for Elo, and the fence, for Scam; karate,
-// kung fu and the rest are each their own when a fighter takes them up.
+// for Steve, the shoulder roll, for Elo, the fence, for Scam, and fencing,
+// for Lizbeth; karate, kung fu and the rest are each their own when a
+// fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -196,6 +197,32 @@ const SLIP = {
   ]),
 };
 
+// A fencer's guard, Lizbeth's from 2D, and the stillest in the game: narrow
+// and upright, side on, the lead hand loose and forward at the chest and the
+// rear one close behind it, as if holding something fragile.
+const EN_F = { x: 54, y: -136 };
+const EN_B = { x: 40, y: -142 };
+const E_HIP = -84, E_SHOULDER = -152, E_HEAD = -181;   // REST, the head raised by the stance
+
+// The thrust: economical to the point of eerie. The hand barely draws back,
+// then goes straight out along its own line, fingers first, the lead foot
+// stepping after it and nothing in the hips; it comes straight back the way
+// it went. The hand never closes: nothing about it admits effort.
+const THRUST = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: { armF: EN_F, armB: EN_B, hipY: E_HIP, shoulderY: E_SHOULDER, headY: E_HEAD, headX: 2, bodyLean: 0.02, twist: 0, hipTwist: 0, sx: 1, sy: 1.02, legF: { x: 17, y: 0 }, legB: { x: -17, y: 0 } } },
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 50, y: -137 } }, ease: 'outQuad' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 48, y: -137 }, bodyLean: 0.01 }, ease: 'outQuad' },
+    // straight out along the line, the lead foot after it
+    { t: 1.15, hand: 'open', joints: { armF: { x: 106, y: -140 }, headX: 3, bodyLean: 0.08, twist: 0.08, legF: { x: 29, y: 0 } }, ease: 'outCubic', smear: true },
+    { t: 2,    hand: 'open', joints: { armF: { x: 104, y: -140 } }, hold: true },
+    // and straight back the way it went
+    { t: 2.45, hand: 'open', joints: { armF: { x: 62, y: -137 }, headX: 2, bodyLean: 0.03, twist: 0.01, legF: { x: 18, y: 0 } }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: { armF: EN_F, bodyLean: 0.02, twist: 0, legF: { x: 17, y: 0 } }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -301,5 +328,20 @@ export const FORMS = {
     // The slip is written whole; nothing about it should look heavy.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.03, brace: 0, thrust: 2 },
     tracks: { punch: SLIP },
+  },
+  fencing: {
+    stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },
+    // The lead hand loose and open wherever she is not holding the block
+    // briefcase in it; her thrust keeps it open too.
+    open: ['idle', 'walk', 'dash', 'crouch', 'jump'],
+    // She parries: the lead hand, and the briefcase in it, swept in across her
+    // line, the shoulders turned a touch away.
+    block: { armF: { x: -8, y: -10 }, armB: { x: -2, y: -4 }, twist: -0.06 },
+    // Side on: both hands in on her centre line, one behind the other.
+    handDepth: { F: 0.5, B: 0.6 },
+    guardTurn: 1,
+    // Nothing in the hips, nothing that admits effort.
+    motion: { windup: 1, follow: 1, drop: 0, squash: 0.02, brace: 0, thrust: 1 },
+    tracks: { punch: THRUST },
   },
 };

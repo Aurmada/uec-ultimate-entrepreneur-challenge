@@ -686,8 +686,41 @@ the curves barely show in profile, and the clothes will cover them. In clay
 beside Jeff and Steve, with plain placeholder heads
 (`fighter3d.py -- --cast <dir> ava zara eleanor`).
 
-Next: the owner's look at the women's base, then Lizbeth (`ava`), Kim
-(`zara`) and Cathie (`eleanor`), each through the same stages.
+The owner: "yes, looks good".
+
+**Lizbeth** (`ava`, 2026-11-04), the first woman. Her body is the women's
+base at her size: 1.13 times Jeff's height, slight. Her head
+(`lab/blender/fighters/ava.py`): an original face for "the stare", a slim,
+even face on a woman's narrower jaw, a light brow set high and level, big
+eyes set shallow under thin lids raised high (carved, as Adam's stare is),
+high cheekbones, a straight narrow nose, an even mouth and a narrow defined
+chin. Her pale blonde hair is pulled back tight into a ponytail, smooth (the
+comb's lines the men's hair has inked as black specks on hair this pale), a
+tie at the back of the crown and the tail tapering down the back of the neck,
+round and joined end to end without a blend (flattened, each length kinked
+against the next, and blended, each join bulged: either way a string of
+beads). Her visor is new to the pipeline (`visor`): a band of cyan glass
+across the eyes, a slice of an upright elliptical cylinder clear of the nose,
+ending in front of the ears (wider, it stood out past her temples like
+goggles), drawn as glass in game (`visor`, as the founder's). Registered as
+`sculpt:ava`.
+
+Her clothes (`OUTFITS.blazer`): the suit's jacket worn open (`jacket(open_front)`,
+`_vee(open_front)`: the fronts apart from the collar to the hem, no button,
+the lapels down to where the button would be), shorter, over the fitted
+white shirt, skinny trousers and white shoes. Her vial (`vial`): a big sample
+vial stood upright behind her lead hip, in her accent with a white cap,
+riding the hips bone (`JOINT_OF`: the bone is named apart from its joint).
+
+Her form (`fencing`, `data/forms.js`), from her 2D guard: narrow, upright and
+side on, both hands in on her centre line, the lead hand loose and open. Her
+punch is the thrust: the hand barely draws back, then goes straight out along
+its own line, fingers first, the lead foot stepping after it and nothing in
+the hips, and straight back; the hand never closes. She parries with the
+briefcase. `test/forms.test.js`, `test/sculpt3d.test.js` (her frame: narrower
+in the shoulder against the hip than any man).
+
+Next: Kim (`zara`) and Cathie (`eleanor`).
 
 **Gaps, before the rest of the cast can be built:**
 
@@ -696,22 +729,22 @@ Next: the owner's look at the women's base, then Lizbeth (`ava`), Kim
 - The women. Their base is built (frame 'f', `hips`, `FAT_F`); each still
   needs her head, hair, outfit, prop and form.
 - Outfits. Jeff's vest, Adam's hoodie, Carl's suit, Steve's turtleneck,
-  Elo's tee and Scam's henley. The rest, all the women's: blazer (Ava),
-  bomber (Zara), suit (Eleanor); the blazer and Eleanor's suit can start
-  from Carl's jacket, the bomber from the hoodie's loose cloth. Most are the same shells with other edges; the 2D
+  Elo's tee, Scam's henley and Lizbeth's blazer. The rest: bomber (Kim,
+  from the hoodie's loose cloth), suit (Cathie, from Carl's jacket). Most are the same shells with other edges; the 2D
   `costume` (`fit` tight to oversized, `legs` suit, skinny, baggy, flared)
   says how far each stands off the body and how the trousers fall.
-- Hair and headwear. Adam's cap, Carl's slick, Steve's quiff, Elo's buzz and
-  Scam's curly mop are made; the women's styles need makers (ponytail,
-  puffs, bob).
-- Eyewear beyond shades and glasses (Ava's visor), the earrings and
-  brooch.
+- Hair and headwear. Adam's cap, Carl's slick, Steve's quiff, Elo's buzz,
+  Scam's curly mop and Lizbeth's ponytail are made; Kim's puffs and Cathie's
+  bob need makers.
+- The earrings (Kim) and the brooch (Cathie); shades, glasses and the visor
+  are made.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
-- Props. The block briefcase, Carl's case, Steve's device, Elo's booster and
-  Scam's paperclip are made; Jeff's parcel and Adam's mat come with their
-  next look (the women's with their remodels).
+- Props. The block briefcase, Carl's case, Steve's device, Elo's booster,
+  Scam's paperclip and Lizbeth's vial are made; Kim's ring light and
+  Cathie's tablet and coat come with their remodels, Jeff's parcel and
+  Adam's mat with their next look.
 - Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
-  (Steve), the shoulder roll (Elo) and the fence (Scam). Each fighter's own fighting style
+  (Steve), the shoulder roll (Elo), the fence (Scam) and fencing (Lizbeth). Each fighter's own fighting style
   is its own stage, after their model.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings

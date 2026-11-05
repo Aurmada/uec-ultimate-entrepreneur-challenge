@@ -100,8 +100,9 @@ export const newBodyFor = (def) => (CAST_MODELS.includes(def?.id) ? def.id : ath
 const SCULPTED_BASE = {
   fit: { girth: 1, head: 1, nod: 0.2, lean: 0.14, pelvis: 0.85 },
   face: { mesh: 'body', role: 'skin', turn: 0, px: [0.0035, 0.0035], front: 0.045, fade: [0.25, 0.0] },
-  // clear lenses (glasses) as the 2D ones are filled: a faint sheen
-  glass: { lens: 0.84, clear: 0.14 },
+  // clear lenses (glasses) as the 2D ones are filled: a faint sheen; a visor
+  // a cyan tint the eyes show through, as the founder's
+  glass: { lens: 0.84, clear: 0.14, visor: 0.45 },
   // glasses' rims are wire, too thin to outline: the ink filled the lenses
   inkless: ['rim'],
 };
@@ -240,6 +241,27 @@ export const SCULPTED = {
       },
     },
     form: 'fence',
+  },
+  // Lizbeth (ava, 2026-11-04), the first woman (the pipeline's frame 'f'):
+  // 1.13 times Jeff's height, slight, her head about Jeff's
+  // (lab/blender/fighters/ava.py): big eyes 0.033 out at 1.828 behind her
+  // visor, a light brow set high and level, its painted line at 1.857 above
+  // the visor; an even mouth meeting at 1.744. Her fencer's guard is upright,
+  // so her sculpt adds no lean of its own. She fences (data/forms.js).
+  ava: {
+    leaf: { forearm: 0.4077, head: 0.2625, foot: [0.1963, -0.0721, 0] },
+    skull: 0.1647,
+    fit: { shoulderHalf: 0.1626, hipHalf: 0.1106, legs: 1.1087, lean: 0 },
+    face: {
+      at: [0, 1.9835], px: [0.003603, 0.003603],
+      layout: {
+        eye: { x: 9.4, y: -10.9, w: 4.3 },
+        brow: { y: -19.1, inner: 3.4, outer: 15.4 },
+        mouth: { y: 13.1, w: 5.1 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+    form: 'fencing',
   },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
