@@ -379,3 +379,40 @@ test('the snap bobs under the line, the fists at the jaw, then jabs and is home 
   assert.ok(Math.abs(snapAt(2.25).armB.x - guard.armB.x) < 8 && snapAt(2.25).armB.y === guard.armB.y, 'the rear fist leaves her jaw');
   for (const [name, track] of Object.entries(PEEKABOO.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
 });
+
+// Cathie (`eleanor`), the ninth: tai chi, the calmest guard in the game,
+// upright with the lead palm open and level in front of the chest; the push
+// draws the palm in, places it out level with the weight behind it and no
+// turn of the hips, and brings it back the way it went.
+const eleanorDef = getFighter('eleanor');
+const TAICHI = FORMS.taiChi;
+const eleanorAt = (state, extra = {}, t = 0) => computePose(
+  { def: eleanorDef, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, t, TAICHI);
+const pushAt = (k) => {
+  const { startup: s, active: a, recovery: r } = PUNCH;
+  return eleanorAt('attack', { attack: PUNCH, stateT: k < 1 ? k * s : k < 2 ? s + (k - 1) * a : s + a + (k - 2) * r });
+};
+
+test('the sculpted Cathie stands in tai chi, the guard her 2D figure stands in, the lead palm open', () => {
+  assert.equal(MODELS3D['sculpt:eleanor'].form, 'taiChi');
+  const own = applyProportions(computePose({ def: eleanorDef, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0), clampBody(eleanorDef.body));
+  const guard = applyProportions(eleanorAt('idle'), clampBody(eleanorDef.body));
+  for (const k of ['armF', 'armB']) assert.deepEqual(guard[k], own[k], `her ${k} is not where her 2D guard holds it`);
+  for (const [state, extra] of [['idle', {}], ['walk', { walkPhase: 2.1 }]]) assert.equal(eleanorAt(state, extra).hand, 'open', `${state}: the palm is closed`);
+  assert.equal(eleanorAt('block').hand, undefined, 'blocking, her lead hand holds the briefcase: a fist');
+  assert.ok(eleanorAt('idle').armB.y > eleanorAt('idle').armF.y + 15, 'the tablet hand is not low at her waist');
+});
+
+test('the push is placed, not thrown: drawn in, out level with the hips still, and back the way it went', () => {
+  const guard = pushAt(0);
+  for (const k of [0, 0.95, 1.15, 1.6, 2.55, 3]) {
+    const P = pushAt(k);
+    assert.equal(P.hand, 'open', `at ${k} the palm closes`);
+    assert.ok(Math.abs(P.hipTwist) < 1e-9, `at ${k} her hips turn`);
+    assert.ok(Math.abs(P.twist) < 0.06, `at ${k} her shoulders turn (${P.twist})`);
+  }
+  assert.ok(pushAt(0.95).armF.x < guard.armF.x - 8, 'the palm is not drawn in');
+  assert.ok(pushAt(1.6).armF.x > guard.armF.x + 35 && Math.abs(pushAt(1.6).armF.y - guard.armF.y) < 4, 'not placed out level');
+  assert.ok(pushAt(1.6).bodyLean > guard.bodyLean + 0.05, 'her weight does not move behind it');
+  for (const [name, track] of Object.entries(TAICHI.tracks)) assert.deepEqual(validateTrack(name, track, { attack: true }), []);
+});

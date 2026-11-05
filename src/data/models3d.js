@@ -285,6 +285,30 @@ export const SCULPTED = {
     },
     form: 'peekaboo',
   },
+  // Cathie (eleanor, 2026-11-04), the third woman: the tallest in the cast,
+  // 1.3 times Jeff's height, slim and straight-backed, her head small for
+  // her height (lab/blender/fighters/eleanor.py): eyes 0.034 out at 1.828,
+  // open under plain lids, a soft brow set a little high, its painted line at
+  // 1.856; a level mouth meeting at 1.743. Her cream bob frames the face. A
+  // navy suit and tie with her brooch on the lapel, the tablet in her rear
+  // hand and the skirt of her cream coat behind her (fighter3d.py `suit`,
+  // `brooch`, `tablet`, `coat`). Upright, so no lean of her own; she stands
+  // in tai chi (forms.js).
+  eleanor: {
+    leaf: { forearm: 0.4532, head: 0.2792, foot: [0.209, -0.0834, 0] },
+    skull: 0.1752,
+    fit: { shoulderHalf: 0.1731, hipHalf: 0.1178, legs: 1.2826, lean: 0 },
+    face: {
+      at: [0, 2.2742], px: [0.003831, 0.003831],
+      layout: {
+        eye: { x: 9.7, y: -10.9, w: 4.1 },
+        brow: { y: -18.9, inner: 3.4, outer: 15.4 },
+        mouth: { y: 13.4, w: 5.4 },
+        lid: 1.7, line: 1.4,
+      },
+    },
+    form: 'taiChi',
+  },
 };
 for (const [id, own] of Object.entries(SCULPTED)) {
   MODELS3D[`sculpt:${id}`] = {

@@ -2,8 +2,8 @@
 // rather than as a personality. Boxing first (November 2026), for the
 // sculpted Jeff, then brawling, for Adam, grappling, for Carl, showboating,
 // for Steve, the shoulder roll, for Elo, the fence, for Scam, fencing, for
-// Lizbeth, and the peek-a-boo, for Kim; karate, kung fu and the rest are each
-// their own when a fighter takes them up.
+// Lizbeth, the peek-a-boo, for Kim, and tai chi, for Cathie; karate, kung fu
+// and the rest are each their own when a fighter takes them up.
 //
 // RENDER-ONLY, the same contract as a fighter's stance and the attack tracks:
 // nothing here reaches the simulation. Hits come from ATTACKS timing, never
@@ -253,6 +253,35 @@ const SNAP = {
   ]),
 };
 
+// A tai chi ready stance, Cathie's from 2D, the calmest in the game: upright
+// and tall, the lead palm open and level in front of the chest where it can
+// keep you away, the rear hand low at the waist with the tablet, breathing
+// slowly.
+const CALM_F = { x: 66, y: -140 };
+const CALM_B = { x: 42, y: -116 };
+const T_HIP = -88, T_SHOULDER = -152, T_HEAD = -184;   // REST, the head raised by the stance
+
+// The push: nothing is thrown, everything is placed. The palm draws in to
+// the chest as the weight settles back, then goes out level and unhurried,
+// the weight moving forward behind it and the body upright, the hips all
+// but still and no turn of the shoulders; it rests out there, and comes back
+// the way it went. The hand stays open throughout; the tablet stays low.
+const PUSH = {
+  own: true,
+  keys: carried([
+    { t: 0,    hand: 'open', joints: { armF: CALM_F, armB: CALM_B, hipY: T_HIP, shoulderY: T_SHOULDER, headY: T_HEAD, headX: 2, bodyLean: -0.02, twist: 0, hipTwist: 0, sx: 1, sy: 1.04, legF: { x: 19, y: 0 }, legB: { x: -19, y: 0 } } },
+    // gathering: the palm drawn in, the weight settling back
+    { t: 0.6,  hand: 'open', joints: { armF: { x: 56, y: -142 }, hipY: T_HIP + 2, headX: 0, bodyLean: -0.05 }, ease: 'inOutCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 52, y: -142 }, hipY: T_HIP + 3, headX: -1, bodyLean: -0.06 }, ease: 'inOutCubic' },
+    // placed: out level, the weight forward behind it
+    { t: 1.15, hand: 'open', joints: { armF: { x: 108, y: -142 }, hipY: T_HIP + 2, headX: 4, bodyLean: 0.06, twist: 0.04 }, ease: 'outCubic' },
+    { t: 2,    hand: 'open', joints: { armF: { x: 106, y: -142 }, headX: 4, bodyLean: 0.06, twist: 0.04 }, hold: true },
+    // and back the way it went
+    { t: 2.55, hand: 'open', joints: { armF: { x: 78, y: -141 }, hipY: T_HIP + 1, headX: 3, bodyLean: 0.01, twist: 0.02 }, ease: 'inOutCubic' },
+    { t: 3,    hand: 'open', joints: { armF: CALM_F, hipY: T_HIP, headX: 2, bodyLean: -0.02, twist: 0 }, ease: 'inOutCubic' },
+  ]),
+};
+
 export const FORMS = {
   boxing: {
     stance: { hip: 4, shoulder: 4, head: 4, lean: 0.12, armF: GUARD_F, armB: GUARD_B,
@@ -391,5 +420,24 @@ export const FORMS = {
     // The bob and the snap back are written into the jab itself.
     motion: { windup: 1, follow: 1, drop: 2, squash: 0.05, brace: 4, thrust: 2 },
     tracks: { punch: SNAP },
+  },
+  taiChi: {
+    stance: { hip: -2, head: -4, lean: -0.02, armF: CALM_F, armB: CALM_B, legF: { x: 19 }, legB: { x: -19 },
+      sy: 1.04, swayY: 1.1, swayRate: 1.3 },
+    // The lead palm open wherever she is not holding the block briefcase in
+    // it; her push keeps it open too.
+    open: ['idle', 'walk', 'dash', 'crouch', 'jump'],
+    // She turns the hit aside rather than meeting it: the lead hand, and the
+    // briefcase in it, raised and drawn in across her, the shoulders turning
+    // a little away with it.
+    block: { armF: { x: -12, y: -14 }, armB: { x: 0, y: 0 }, twist: -0.08 },
+    // The palm out in front of the middle of her chest, the tablet at her
+    // side.
+    handDepth: { F: 0.6, B: 0.95 },
+    // The tablet hand does not follow the chest round.
+    guardTurn: 0.3,
+    // Nothing thrown, the hips barely moving.
+    motion: { windup: 1, follow: 1, drop: 1, squash: 0.02, brace: 0, thrust: 1 },
+    tracks: { punch: PUSH },
   },
 };

@@ -1415,6 +1415,9 @@ OUTFITS = {
         'covers': {'trousers': ['shoes']},
     },
 }
+# a plain suit (Cathie's): the pinstripe's cut and tie, as the 2D figure draws
+# the two alike but for the stripes, which the renderer cannot paint
+OUTFITS['suit'] = OUTFITS['pinstripe']
 
 
 def hidden(obj, covers, depth=0.0025, below=None):
@@ -1487,6 +1490,9 @@ def open_hand(s=1):
     return H
 
 
+DRESS = {}                           # the clothes' fields as last dressed, for what is worn on them
+
+
 def dressed(data, hand=False):
     """Body and clothes as Blender objects, the hidden parts removed:
     (body, [(object, role, colour)]), colours from the fighter's palette;
@@ -1498,6 +1504,8 @@ def dressed(data, hand=False):
         print(f'[{data["id"]}] no {data["outfit"]} yet (OUTFITS): trousers and shoes for now', flush=True)
         O = OUTFITS['base']
     pieces = {n: make() for n, make, _, _ in O['pieces']}
+    DRESS.clear()
+    DRESS.update(pieces)
     objs = {n: sc.to_blender(n, *f.mesh(), smooth=1) for n, f in pieces.items()}
     hidden(body, [pieces[n] for n in O['skin']], below=WAIST - 0.012)
     for n, over in O['covers'].items():
@@ -1784,6 +1792,98 @@ def vial(name, hip, fill, pal):
     return objs[0]
 
 
+def tablet(name, grip, fill, pal):
+    """Cathie's tablet, held up in the rear hand as the 2D part is
+    (`tablet`, the chart out): a thin slab bigger than Steve's device, its
+    face to the camera and its top leaning back a little as the 2D one is
+    turned, solid in the part's colour (`accent`, a palette role: see the
+    device for why not a dark screen), and on the face the camera sees, its
+    chart, a dark line falling from top left to bottom right with every dip
+    on the way. One object, `name`."""
+    import bpy
+    s = FR.size
+    a = 0.2
+    across, up, side = V(math.cos(a), 0, math.sin(a)), V(-math.sin(a), 0, math.cos(a)), V(0, 1, 0)
+    # gripped below its middle, as the 2D one is: higher, it stood up in front
+    # of her chest
+    c = np.asarray(grip, float) + np.array([0.05, -0.03, 0.04]) * s
+    e = np.array([0.12, 0.011, 0.165]) * s
+    lo, hi = c - np.array([0.17, 0.035, 0.205]) * s, c + np.array([0.17, 0.035, 0.205]) * s   # the slab, tilted, and no more
+    D = sc.Field(lo=lo, hi=hi, h=0.0015)
+    D.add(sc.Box(c, e, 0.016 * s, np.stack([across, side, up], axis=1)), 0.0)
+    chart = sc.Field(lo=lo, hi=hi, h=0.0012)
+    line = [(-0.085, 0.11), (-0.05, 0.05), (-0.025, 0.08), (0.01, 0.0), (0.035, 0.025), (0.06, -0.05), (0.08, -0.03), (0.09, -0.12)]
+    P = [c + (across * u + up * v) * s - side * (e[1] + 0.001 * s) for u, v in line]
+    for p, q in zip(P, P[1:]):
+        chart.add(sc.RoundCone(p, q, 0.0055 * s, 0.0055 * s), 0.0)
+    objs = []
+    role = fill if fill in (pal or {}) else 'accent'
+    for f, role, colour in ((D, role, role_colour(pal or {}, role, '#ffd23f')), (chart, 'frame', srgb(FRAME_C))):
+        ob = sc.to_blender(name, *f.mesh(), smooth=1)
+        ob.data.materials.append(material(role, colour))
+        objs.append(ob)
+    with bpy.context.temp_override(active_object=objs[0], selected_editable_objects=objs, selected_objects=objs):
+        bpy.ops.object.join()
+    objs[0].name = objs[0].data.name = name
+    return objs[0]
+
+
+def coat(name, hip, fill, pal):
+    """Cathie's coat, as the 2D part is (`coat`, behind the hips): the
+    skirt of a long coat, hanging from under the jacket's hem round her back
+    and sides to above the knee and flaring out as it falls (the 2D one must
+    flare past the body or the legs hide it), open in front, in the part's
+    colour (`hair`, her cream, a palette role). Built in Jeff's space and
+    warped to hers. It rides the hips, wholly. One object, `name`."""
+    f = sc.Field(lo=(-0.4, -0.4, 0.5), hi=(0.25, 0.4, 1.06), h=0.0025)
+    X, Y, Z = _axes(f)
+    top, foot = 1.0, 0.6
+    t = np.clip((top - Z) / (top - foot), 0, 1)
+    rx, ry, x0 = 0.125 + 0.08 * t, 0.175 + 0.09 * t, -0.01 - 0.03 * t
+    r = np.minimum(rx, ry)
+    q = (np.sqrt(((X - x0) / rx) ** 2 + (Y / ry) ** 2) - 1) * r
+    d = np.abs(q) - np.float32(0.006)
+    d = np.maximum(d, np.maximum(Z - top, foot - Z))
+    # open in front, its two edges straight down either side
+    ang = np.abs(np.arctan2(Y, X - x0))
+    d = np.maximum(d, (np.float32(math.radians(70)) - ang) * r)
+    f.d = d.astype(np.float32)             # not softened: a blur as wide as the cloth is thick took all of it
+    ob = sc.to_blender(name, *f.mesh(), smooth=1)
+    FR.warp_mesh(ob)
+    role = fill if fill in (pal or {}) else 'hair'
+    ob.data.materials.append(material(role, role_colour(pal or {}, role, '#f2ece0')))
+    return ob
+
+
+# What is worn on the clothes (fighters.js `accessory`), as (the bone it
+# rides, how it is made from the palette), each built in Jeff's space on the
+# clothes as last dressed (DRESS) and warped to the fighter's.
+def brooch(pal):
+    """A brooch (Cathie's; the 2D figure draws it on the jacket): a round,
+    domed pin high on the chest on the side the camera sees, on a suit's
+    near lapel, where the 2D one is, lying on whatever is worn there, a stone
+    standing proud in its middle, in the accent colour. Its own mesh
+    (`accessory:brooch`), so it shows when the look says so."""
+    worn = _shell(0.0)
+    worn.d[:] = np.float32(1)
+    for f in DRESS.values():
+        if f.d.shape == worn.d.shape:
+            np.minimum(worn.d, f.d, out=worn.d)
+    p = worn.project(np.array([[0.16, -0.108, 1.47]]))[0]
+    n = worn.normal(p[None])[0]
+    t1 = sc.unit(np.cross(n, V(0, 0, 1)))
+    ax = np.stack([n, t1, np.cross(n, t1)], axis=1)
+    B = sc.Field(lo=p - 0.03, hi=p + 0.03, h=0.0007)
+    B.add(sc.Ellipsoid(p + n * 0.002, (0.004, 0.015, 0.015), ax), 0.0)
+    B.add(sc.Ellipsoid(p + n * 0.0055, (0.004, 0.0065, 0.0065), ax), 0.002)
+    ob = sc.to_blender('accessory:brooch', *B.mesh(), smooth=1)
+    ob.data.materials.append(material('accent', role_colour(pal, 'accent', '#ffd23f')))
+    return ob
+
+
+ACCESSORIES = {'brooch': ('chest', brooch)}
+
+
 # The head is posed turned toward the camera by GL3D.YAW + GL3D.HEAD_YAW
 # (src/config.js): change those two constants and this must follow, as the
 # founder's must (build_founder.py).
@@ -1835,6 +1935,10 @@ PROPS = {
     'vial': ('hips', vial),
     # Kim's: the ring light behind her head, riding it
     'ringlight': ('head', ringlight),
+    # Cathie's: the tablet up in the rear hand, and her coat behind her
+    # riding the hips
+    'tablet': ('grip.R', tablet),
+    'coat': ('hips', coat),
 }
 JOINT_OF = {'hips': 'hip'}                  # a bone named apart from the joint it starts at
 
@@ -2029,6 +2133,17 @@ def export_rigged(data, spec, path, tris=44000):
         _decimate(wear, 6000)
         wear.data.shade_smooth()
         wear.vertex_groups.new(name='head').add(list(range(len(wear.data.vertices))), 1.0, 'REPLACE')
+        mod = wear.modifiers.new('Armature', 'ARMATURE')
+        mod.object = rig
+        wear.parent = rig
+    # an accessory worn on the clothes rides its bone, wholly
+    if data.get('accessory') in ACCESSORIES:
+        bone, make = ACCESSORIES[data['accessory']]
+        wear = make(data.get('c') or {})
+        FR.warp_mesh(wear)
+        _decimate(wear, 1500)
+        wear.data.shade_smooth()
+        wear.vertex_groups.new(name=bone).add(list(range(len(wear.data.vertices))), 1.0, 'REPLACE')
         mod = wear.modifiers.new('Armature', 'ARMATURE')
         mod.object = rig
         wear.parent = rig

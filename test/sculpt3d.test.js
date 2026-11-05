@@ -125,7 +125,9 @@ const avaGlb = readFileSync(new URL(`../${MODELS3D['sculpt:ava'].url}`, import.m
 const lizbeth = extractModel(parseGLB(avaGlb.buffer.slice(avaGlb.byteOffset, avaGlb.byteOffset + avaGlb.byteLength)));
 const zaraGlb = readFileSync(new URL(`../${MODELS3D['sculpt:zara'].url}`, import.meta.url));
 const kim = extractModel(parseGLB(zaraGlb.buffer.slice(zaraGlb.byteOffset, zaraGlb.byteOffset + zaraGlb.byteLength)));
-const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo, scam, ava: lizbeth, zara: kim };
+const eleanorGlb = readFileSync(new URL(`../${MODELS3D['sculpt:eleanor'].url}`, import.meta.url));
+const cathie = extractModel(parseGLB(eleanorGlb.buffer.slice(eleanorGlb.byteOffset, eleanorGlb.byteOffset + eleanorGlb.byteLength)));
+const sculpts = { bozo: model, max: adam, dex: carl, kai: steve, elo, scam, ava: lizbeth, zara: kim, eleanor: cathie };
 const top = (m, p, v) => {
   let best = -1, joint = 0;
   for (let k = 0; k < 4; k++) if (p.weights[v * 4 + k] > best) { best = p.weights[v * 4 + k]; joint = p.joints[v * 4 + k]; }
@@ -143,6 +145,8 @@ test('every sculpt raises the block briefcase on its lead grip, and carries its 
     scam: { 'prop:guard-case': ['grip.L', CASE], 'prop:clip': ['chest', ['shoe']] },                  // and his, the 2D part's fill
     ava: { 'prop:guard-case': ['grip.L', CASE], 'prop:vial': ['hips', ['accent', 'shoe']] },          // at her hip, a white cap
     zara: { 'prop:guard-case': ['grip.L', CASE], 'prop:ringlight': ['head', ['accent']] },           // haloing her head
+    eleanor: { 'prop:guard-case': ['grip.L', CASE], 'prop:tablet': ['grip.R', ['accent', 'frame']],   // the chart on it dark
+      'prop:coat': ['hips', ['hair']] },                                                             // her cream coat behind her
   };
   for (const [id, props] of Object.entries(carries)) {
     const m = sculpts[id];
@@ -325,4 +329,36 @@ test('her ring light stands behind her head, turned as her head is posed so the 
   assert.ok(Math.abs(turn - (GL3D.YAW + GL3D.HEAD_YAW)) < 0.03, `turned ${turn.toFixed(3)}, the head ${GL3D.YAW + GL3D.HEAD_YAW}`);
   assert.ok(thin < 0.03, `not a flat ring (${thin.toFixed(3)} thick)`);
   assert.ok(c[0] < -0.08 && c[1] > 1.75, `not behind her head (${c.map((v) => v.toFixed(3))})`);
+});
+
+// Cathie (`eleanor`), the ninth and the third woman: a navy suit buttoned over
+// a shirt and tie, as the 2D figure draws it, her brooch on the near lapel,
+// her trousers and shoes, her cream bob; and the skirt of her coat, behind
+// her and open in front.
+test('Cathie wears her suit, shirt and tie, trousers, shoes and bob, and her brooch high on the near lapel', () => {
+  const body = cathie.primitives.filter((p) => p.name === 'body');
+  const roles = new Set(body.map((p) => p.role));
+  for (const role of ['skin', 'shirt', 'accent', 'suit', 'suit*0.78', 'pants', 'shoe']) assert.ok(roles.has(role), `no ${role}`);
+  assert.deepEqual(new Set(cathie.primitives.filter((p) => p.name === 'hair:bob').map((p) => p.role)), new Set(['hair']));
+  const pins = cathie.primitives.filter((p) => p.name === 'accessory:brooch');
+  assert.deepEqual(new Set(pins.map((p) => p.role)), new Set(['accent']));
+  const P = pins[0].positions;
+  const centre = [0, 1, 2].map((k) => { let a = 0; for (let i = k; i < P.length; i += 3) a += P[i]; return a / (P.length / 3); });
+  // glTF's z is the body's right, the side the camera sees; up the chest
+  // between the bottom of the V and the collar
+  assert.ok(centre[2] > 0.05 && centre[0] > 0.08, `not on the front of the near side (${centre.map((v) => v.toFixed(3))})`);
+  for (let v = 0; v < P.length / 3; v++) {
+    const [joint, w] = top(cathie, pins[0], v);
+    assert.ok(joint === 'chest' && w > 0.999, `brooch vertex ${v} rides ${joint} at ${w}`);
+  }
+});
+
+test('her coat hangs behind her and round her sides, open in front', () => {
+  const P = cathie.primitives.filter((p) => p.name === 'prop:coat').flatMap((p) => Array.from(p.positions));
+  let behind = 0;
+  for (let i = 0; i < P.length; i += 3) {
+    if (P[i] < 0) behind++;
+    if (Math.abs(P[i + 2]) < 0.08) assert.ok(P[i] < 0, `the coat closes in front (${P[i].toFixed(3)}, ${P[i + 2].toFixed(3)})`);
+  }
+  assert.ok(behind > 0.6 * (P.length / 3), 'it is not behind her');
 });

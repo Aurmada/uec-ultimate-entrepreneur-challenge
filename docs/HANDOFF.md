@@ -759,34 +759,72 @@ comes up with the jab already out, and has it home by 2.25 of the track, the
 fastest reset in the game, the head slipping off the line as it comes back.
 `test/forms.test.js`, `test/sculpt3d.test.js`.
 
-Next: Cathie (`eleanor`).
+**Cathie** (`eleanor`, 2026-11-04), the third woman and the last of the cast:
+the women's base at her size, the tallest in the game at 1.3 times Jeff's
+height, slim and straight-backed, her head small for her height. Her head
+(`lab/blender/fighters/eleanor.py`): an original face for "serene", a calm
+oval face older and softer than the other women's, a soft brow set a little
+high, eyes open under plain lids, cheeks settled a little low, a straight nose
+of a good length, a level mouth with thin lips, the folds from the nose to the
+mouth just drawn in. Her cream bob: her head's surface pushed out and hung
+straight down from wherever it is widest, as hair falls, to a level cut at
+the jaw, fullest about the eyes and turned under at the ends, a fringe swept
+down across the forehead from a side parting, the face cut clear between the
+two sides, coming further forward toward the ends (hung straight and belled
+out under a level fringe, it was a helmet; cut square in front, each side was
+a flat plate down the cheek; thinner over the forehead, the ink broke the
+fringe's edge into specks). Registered as `sculpt:eleanor`.
 
-**Gaps, before the rest of the cast can be built:**
+Her clothes (`OUTFITS.suit`): Carl's suit, the jacket buttoned over a shirt
+and tie, as the 2D figure draws the two alike but for the stripes. Her brooch
+is the first accessory worn on the clothes (`ACCESSORIES`): built on the
+clothes as last dressed (`DRESS`), a domed pin with a stone high on the near
+lapel where the 2D one is, its own mesh (`accessory:brooch`) riding the chest.
+Her tablet (`tablet`): a slab bigger than Steve's device, in her accent, its
+top leaning back as the 2D one is turned, gripped below its middle, with a
+dark line chart falling from top left to bottom right across the face the
+camera sees. Her coat (`coat`): the skirt of a long coat in her cream,
+hanging from under the jacket's hem round her back and sides to above the
+knee and flaring as it falls, open in front, riding the hips, as the 2D part
+is drawn behind her (softened, a blur as wide as the cloth is thick took all
+of it, and the test now catches a missing prop).
+
+Her form (`taiChi`, `data/forms.js`), from her 2D guard: upright and tall,
+the lead palm open and level in front of the chest, the tablet low at the
+waist, breathing slowly. Her punch is the push, placed rather than thrown:
+the palm drawn in as the weight settles back, then out level with the weight
+moving behind it, no turn of the hips and hardly any of the shoulders, and
+back the way it went; the hand never closes. She turns the block aside with
+the briefcase. `test/forms.test.js`, `test/sculpt3d.test.js`.
+
+All nine are remodelled. Next: Jeff's parcel and Adam's mat, with their next
+look, then the owner's call on putting the sculpts in front of players.
+
+**Gaps, now the whole cast is built:**
 
 - `body.reach` is not read: the arms are as long as the fighter's height
   makes them, and the rig reaches them to the 2D fists.
-- The women. Their base is built (frame 'f', `hips`, `FAT_F`); Cathie still
-  needs her head, hair, outfit, props and form.
-- Outfits. Jeff's vest, Adam's hoodie, Carl's suit, Steve's turtleneck,
-  Elo's tee, Scam's henley, Lizbeth's blazer and Kim's bomber. The rest:
-  suit (Cathie, from Carl's jacket). Most are the same shells with other
-  edges; the 2D `costume` (`fit` tight to oversized, `legs` suit, skinny,
-  baggy, flared) says how far each stands off the body and how the trousers
-  fall.
+- Outfits. Every roster outfit is made: Jeff's vest, Adam's hoodie, Carl's
+  pinstripe (Cathie's suit is the same cut), Steve's turtleneck, Elo's tee,
+  Scam's henley, Lizbeth's blazer and Kim's bomber. A player's founder can
+  pick any of them in 2D; the 2D `costume` (`fit` tight to oversized, `legs`
+  suit, skinny, baggy, flared) says how far each stands off the body and
+  how the trousers fall.
 - Hair and headwear. Adam's cap, Carl's slick, Steve's quiff, Elo's buzz,
-  Scam's curly mop, Lizbeth's ponytail and Kim's puffs are made; Cathie's bob
-  needs a maker.
-- The brooch (Cathie); shades, glasses, the visor and Kim's earrings are
-  made.
+  Scam's curly mop, Lizbeth's ponytail, Kim's puffs and Cathie's bob are
+  made, each in its fighter's own module; a player's founder would need
+  them as makers of their own.
+- Accessories: shades, glasses, the visor, Kim's earrings and Cathie's
+  brooch are made.
 - Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
 - Props. The block briefcase, Carl's case, Steve's device, Elo's booster,
-  Scam's paperclip, Lizbeth's vial and Kim's ring light are made; Cathie's
-  tablet and coat come with her remodel, Jeff's parcel and Adam's mat with
-  their next look.
+  Scam's paperclip, Lizbeth's vial, Kim's ring light and Cathie's tablet and
+  coat are made; Jeff's parcel and Adam's mat come with their next look.
 - Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
-  (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth) and
-  the peek-a-boo (Kim). Each fighter's own fighting style is its own stage,
-  after their model.
+  (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth), the
+  peek-a-boo (Kim) and tai chi (Cathie). Only the punch has a track of its
+  own in each; the kicks, the launcher and the specials are still the shared
+  ones.
 
 ## v3.12, released 2026-10-30: the 3D preview in Settings
 
