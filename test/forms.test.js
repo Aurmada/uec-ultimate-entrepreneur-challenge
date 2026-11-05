@@ -841,3 +841,30 @@ test("Scam's ALIGNMENT SHIFT shows which way he switched, and lets it go", async
   assert.deepEqual(pose(null, STANCE.CD), plain);
   for (const [name, f] of Object.entries(FORMS)) if (name !== 'fence') assert.equal(f.shift, undefined);
 });
+
+// A move thrown from a crouch is thrown low: the hurtbox stays crouched
+// through it (Fighter.crouching), and the fighter stood up to swing. It
+// leaves from the crouch, at the crouch's height, and a move thrown standing
+// is untouched.
+test('every form throws a move from its crouch low, and leaves from the crouch', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const C = form.crouch;
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    for (const kind of ['punch', 'kick']) {
+      const atk = { ...ATTACKS[kind], kind, hasHit: false };
+      const pose = (state, stateT, crouching, attack = atk) => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching, movingBack: false, attack }, 0, form);
+      const crouch = pose('crouch', 0, true, null);
+      const first = pose('attack', 0, true), standing = pose('attack', 0, false);
+      for (const c of ['hipY', 'shoulderY', 'headY', 'bodyLean']) {
+        assert.ok(Math.abs(first[c] - crouch[c]) < 1e-9, `${name}'s ${kind} from a crouch leaves from ${first[c]}, the crouch's ${c} is ${crouch[c]}`);
+      }
+      const mid = atk.startup + atk.active / 2;
+      const low = pose('attack', mid, true), high = pose('attack', mid, false);
+      assert.ok(Math.abs(low.headY - high.headY - (C.head ?? C.drop ?? 0)) < 1e-9, `${name}'s ${kind} from a crouch is not thrown low`);
+      assert.ok(standing.headY < first.headY - 15, `${name} stands up to ${kind} from a crouch`);
+      // a kick from a crouch is a low kick: the foot no higher above the hips than standing
+      if (kind === 'kick') assert.ok(low.legF.y - low.hipY >= high.legF.y - high.hipY - 1e-9 && low.legF.y <= 0, `${name}'s kick from a crouch rises above its hips`);
+    }
+  }
+});

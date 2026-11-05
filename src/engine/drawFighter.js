@@ -429,6 +429,25 @@ export function computePose(f, t, form = null, intro = null) {
     for (const j of Object.keys(V.keys[0].joints)) P[j] = typeof S[j] === 'object' ? { ...S[j] } : S[j];
     if (S.hand) P.hand = S.hand;
   }
+  // A move thrown from a crouch (down held: Fighter.crouching stays set
+  // through the attack, and the hurtbox with it) is the same move, thrown
+  // low: the body and the hands dropped by the form's crouch, a kicking foot
+  // with them, and the planted feet widened to its stance. It stood up
+  // to swing, while the game went on hitting it as a crouching fighter.
+  if (f.state === 'attack' && f.crouching && !f.airborne && form.crouch) {
+    const C = form.crouch, G = restingGuard({ ...f, def }), d = C.drop ?? 0;
+    const hip = C.hip ?? d, shoulder = C.shoulder ?? d, head = C.head ?? d;
+    P.hipY += hip; P.shoulderY += shoulder; P.headY += head;
+    P.armF = { x: P.armF.x, y: P.armF.y + shoulder };
+    P.armB = { x: P.armB.x, y: P.armB.y + shoulder };
+    P.bodyLean += (C.lean ?? G.bodyLean) - G.bodyLean;
+    // A foot off the floor comes down with the hips, never through the floor:
+    // left where it was, a kick from a crouch rose above the hips it came from.
+    for (const l of ['legF', 'legB']) {
+      if (P[l].y < 0) P[l] = { x: P[l].x, y: Math.min(0, P[l].y + hip) };
+      else if (C[l]) P[l] = { x: P[l].x + C[l].x - G[l].x, y: 0 };
+    }
+  }
   // The round's start (forms.js `intro`): the fighters stand locked through
   // ROUND and FIGHT!, and each form spends it on a gesture of its own, which
   // ends in the guard and hands over to the live idle by the time the round

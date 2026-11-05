@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special (Scam's stance switch included), command moves, steal, bomb, super pose and round start, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 551 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special (Scam's stance switch included), command moves, steal, bomb, super pose, round start and moves thrown from a crouch, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 552 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1149,6 +1149,24 @@ so there was nothing to draw.
   after `hold + fade`, the two different, nothing with no stance, no other
   form with one. Fails with the pose switched off. Both pixel checks
   identical; the switch in a real match runs with no errors.
+
+### Moves thrown from a crouch, thrown low (2026-11-05, not released, not pushed)
+
+Holding down and attacking keeps the hurtbox crouched through the move
+(`Fighter.crouching` is only cleared by a block), but the pose played the
+standing move: the fighter stood up to swing while the game went on hitting
+them as a crouching one.
+
+- **In 3D, the same move from the form's crouch** (`computePose`, after the
+  move is posed): the hips, shoulders, head and hands dropped by the crouch's
+  drops and the lean moved by its lean, the planted feet widened to its
+  stance, and a foot off the floor brought down with the hips but never
+  through the floor, so a kick from a crouch is a low kick (left where it was,
+  it rose above the hips it came from). The 2D game is untouched.
+- Tests: for a punch and a kick in every form, the move leaves from the
+  crouch's height and lean, is thrown its crouch's drop lower than standing,
+  and a crouching kick rises no higher above the hips than a standing one.
+  Fails with the change switched off. Both pixel checks identical.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 
