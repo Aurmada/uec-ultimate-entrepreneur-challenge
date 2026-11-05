@@ -724,3 +724,48 @@ test('every form steals and throws the bomb its own way, from its guard and back
     }
   }
 });
+
+// Each fighter's command moves play their own track, by input, where they
+// borrowed the form's basic for that button (Lizbeth's THE DEMO, a counter
+// that swings nothing, was her slap). From the guard and back. Carl's ASSET
+// SEIZURE keeps his punch, which is already a seizure.
+test("every sculpt's command moves play their own track, from its guard and back", async () => {
+  const { shapeAttack } = await import('../src/engine/moves.js');
+  const ids = Object.keys(MODELS3D).filter((k) => k.startsWith('sculpt:') && MODELS3D[k].form).map((k) => k.slice(7));
+  let own = 0;
+  for (const id of ids) {
+    const def = getFighter(id), form = FORMS[MODELS3D[`sculpt:${id}`].form];
+    const style = STYLES[def.style] || STYLES.balanced;
+    for (const cn of def.commandNormals || []) {
+      const track = form.commands?.[cn.slot];
+      if (cn.displayName === 'ASSET SEIZURE') { assert.equal(track, undefined); continue; }
+      assert.ok(track, `${id}'s ${cn.displayName} borrows the basic`);
+      assert.deepEqual(validateTrack(`${id}.${cn.slot}`, track, { attack: true }), []);
+      own++;
+      // built as Fighter.startAttack builds it
+      const button = cn.slot.split('+')[1];
+      const fd = { ...ATTACKS[button], ...cn.frameData };
+      const a = { ...fd, kind: cn.archetype !== 'strike' ? cn.archetype : button, button, cmd: cn, hasHit: false,
+        startup: fd.startup * style.startup, recovery: fd.recovery * style.recovery, reach: (fd.reach || 84) * style.reach };
+      a.special = { ...(cn.params || {}), ...cn.frameData, type: cn.archetype };
+      shapeAttack(a, a.special);
+      const at = (stateT, attack = a) => computePose({ def, state: 'attack', stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, attack }, 0, form);
+      const guard = computePose({ def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form);
+      for (const [k, stateT] of [[0, 0], [3, a.startup + a.active + a.recovery]]) {
+        const P = at(stateT), what = `${id}'s ${cn.displayName} at ${k}`;
+        for (const c of ['hipY', 'shoulderY', 'headY', 'headX', 'bodyLean', 'sx', 'sy']) {
+          assert.ok(Math.abs((P[c] ?? 0) - (guard[c] ?? 0)) < 1e-6, `${what}: ${c} ${P[c]} against the guard's ${guard[c]}`);
+        }
+        for (const l of ['armF', 'armB', 'legF', 'legB']) {
+          assert.ok(Math.hypot(P[l].x - guard[l].x, P[l].y - guard[l].y) < 1e-6, `${what}: ${l} leaves the guard`);
+        }
+        assert.equal(P.hand || 'fist', guard.hand || 'fist', `${what}: the lead hand`);
+      }
+      const mid = a.startup + a.active / 2;
+      const borrowed = at(mid, { ...a, cmd: { ...cn, slot: 'none' } });
+      const P = at(mid);
+      assert.notDeepEqual([P.armF, P.armB, P.legF], [borrowed.armF, borrowed.armB, borrowed.legF], `${id}'s ${cn.displayName} is the borrowed basic`);
+    }
+  }
+  assert.equal(own, 9, `${own} command moves have their own track`);
+});

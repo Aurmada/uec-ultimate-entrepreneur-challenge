@@ -178,11 +178,14 @@ function trackedAttackPose(f, atk) {
   // as a signature special did before (Kim's whole GROWTH HACK rush was one
   // punch held for half a second). A command normal's archetype params ride
   // as `special` too, with no id, so they never match.
-  // The moves everyone has (forms.js `moves`: the energy steal, the bomb) come
-  // next, by their own kind, before the basic it borrows.
+  // Then a command move, by its input (forms.js `commands`: a form is one
+  // fighter's, so the input names the move), then the moves everyone has
+  // (`moves`: the energy steal, the bomb) by their own kind, and only then
+  // the basic the kind borrows.
+  const over = f.def?.animOverrides;
   const own = atk.special && !atk.cmd && atk.special.id && `special:${atk.special.id}`;
-  const over = f.def?.animOverrides, kind = `kind:${atk.kind}`;
-  const name = own && over?.[own] ? own : over?.[kind] ? kind : ATTACK_TRACK[atk.kind];
+  const cmd = atk.cmd && `cmd:${atk.cmd.slot}`, kind = `kind:${atk.kind}`;
+  const name = own && over?.[own] ? own : cmd && over?.[cmd] ? cmd : over?.[kind] ? kind : ATTACK_TRACK[atk.kind];
   if (!name) return null;
   const track = trackFor(f.def, name, BASE_TRACKS);
   if (!track) return null;
@@ -236,14 +239,15 @@ function trackedAttackPose(f, atk) {
   return pose;
 }
 
-// A form's signature specials and shared moves under the names
+// A form's signature specials, command moves and shared moves under the names
 // trackedAttackPose looks them up by, made once per form.
 const SPECIAL_TRACKS = new WeakMap();
 function specialTracks(form) {
-  if (!form.specials && !form.moves) return null;
+  if (!form.specials && !form.moves && !form.commands) return null;
   if (!SPECIAL_TRACKS.has(form)) {
     SPECIAL_TRACKS.set(form, Object.fromEntries([
       ...Object.entries(form.specials || {}).map(([id, track]) => [`special:${id}`, track]),
+      ...Object.entries(form.commands || {}).map(([slot, track]) => [`cmd:${slot}`, track]),
       ...Object.entries(form.moves || {}).map(([kind, track]) => [`kind:${kind}`, track]),
     ]));
   }

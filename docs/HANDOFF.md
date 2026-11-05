@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, steal and bomb, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 547 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, command moves, steal and bomb, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet. 548 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1044,6 +1044,34 @@ a seizure.
   unshaped first key takes the next key's open hand). Both pixel checks
   identical; real matches with Adam and Scam stealing and throwing run with
   no errors.
+
+### The command moves in each form (2026-11-05, not released)
+
+"Not yet, keep going", once more. Each fighter's command moves (forward and a
+basic) borrowed the form's basic for that button: Lizbeth's THE DEMO, a
+counter that swings nothing, was her slap; Kim's RUG PULL, a trap laid on
+the floor, her kick; Adam's BLITZSCALE rush one haymaker held for the run.
+
+- **By input** (FORMS `commands`, keyed by the slot such as `fwd+kick`; a
+  form is one fighter's, so the input names the move, for a human playing
+  the fighter as for the computer). `trackedAttackPose` looks for
+  `cmd:<slot>` after a signature special and before a move's kind.
+- **Each:** Jeff (UNDERCUT) kicks low at the shins with his guard kept up;
+  Adam (BLITZSCALE) runs you down throwing three haymakers; Steve (ONE MORE
+  THING) raises the presenting hand beside his head, then drives the palm
+  up; Elo (PLATFORM BURN) lifts the lead knee and stamps, the hands dropping
+  open; Scam (SAFETY MEMO) flicks two memos from the pocket hand, timed to
+  the two shots; Lizbeth (THE DEMO) holds the demo up palm out and waits
+  through the counter's window; Kim (PUMP) throws a short shovel punch up
+  from her crouch, and (RUG PULL) goes right down with both hands on the
+  floor and yanks the rug back; Cathie (CONVICTION BUY) lifts the lead hand
+  high, palm up, once. Carl's ASSET SEIZURE keeps his punch, a seizure
+  already.
+- Tests: nine command moves with their own valid tracks, built as
+  `Fighter.startAttack` builds them, from the guard and back, none the
+  borrowed basic in the middle. Fails with the lookup reverted. Both pixel
+  checks identical; real matches firing Kim's RUG PULL, Jeff's UNDERCUT and
+  Lizbeth's THE DEMO run with no errors.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 
