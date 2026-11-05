@@ -1114,22 +1114,21 @@ function wireSound() {
 
 // ---------------------------------------------------------------- graphics
 
-// The 3D preview, the player's choice (graphics.js). A change reloads the
-// page: the renderers are set up once, at load, and a reload is the one way
-// to be sure Classic is the classic game with nothing of the 3D path left
-// running. Any graphics flags in the address go too, or they would outvote it.
+// 2D or 3D, the player's choice (graphics.js). A change reloads the page:
+// the renderers are set up once, at load, and a reload is the one way to be
+// sure 2D is the classic game with nothing of the 3D path left running. Any graphics flags in the address go too, or they would outvote it.
 // What is on screen, which an address with ?gl can make 3D whatever was
 // chosen: the button shows that, and pressing it changes that.
 const showing3D = () => graphicsFlags(location.search, Save.settings).gl;
 
 function syncGraphicsUI() {
   const on = showing3D();
-  $('setGfx').textContent = `GRAPHICS: ${on ? '3D PREVIEW' : 'CLASSIC'}`;
+  $('setGfx').textContent = `GRAPHICS: ${on ? '3D' : '2D'}`;
   const s3 = stats3D();
   $('setGfxHint').textContent = on && s3.enabled === false && !s3.renderer
-    ? '3D needs WebGL2, which this browser does not have, so you are seeing Classic.'
-    : on ? 'The new 3D look. Still being tested: switch back any time.'
-      : 'Try the 3D preview: the founders as 3D figures on rendered stages.';
+    ? '3D needs WebGL2, which this browser does not have, so you are seeing 2D.'
+    : on ? 'The founders in 3D, each in their own fighting style. Still being tested: switch back any time.'
+      : 'Try 3D: the founders as 3D fighters, each in their own fighting style, on rendered stages.';
 }
 
 function wireGraphics() {

@@ -8,6 +8,12 @@
 // does, so a player can try the 3D preview without editing a URL. The address
 // wins when it names a piece. With neither, everything is off and the game is
 // the classic one, pixel for pixel.
+//
+// In 3D the roster fighters wear their sculpted models and fight in their
+// own forms (`sculpts`, models3d.js and forms.js); a player's own founder
+// wears the founder model, whose looks are theirs to choose. ?sculpts=0 puts
+// the roster back in the founder model, and ?athlete (the athlete bodies,
+// on test) does too, so each can still be seen alone.
 
 export function graphicsFlags(search, settings = {}) {
   const q = new URLSearchParams(search || '');
@@ -18,6 +24,7 @@ export function graphicsFlags(search, settings = {}) {
   return {
     gl,
     ids,
+    sculpts: q.has('sculpts') ? gl && q.get('sculpts') !== '0' : gl && !q.has('athlete'),
     perf: q.has('perf'),
     sharp: on('sharp'),
     stages: on('stages'),
@@ -29,7 +36,7 @@ export function graphicsFlags(search, settings = {}) {
 // choice changes: otherwise a ?gl left in the address would outvote it.
 export function withoutGraphicsParams(search) {
   const q = new URLSearchParams(search || '');
-  for (const k of ['gl', 'perf', 'sharp', 'stages', 'fx']) q.delete(k);
+  for (const k of ['gl', 'perf', 'sharp', 'stages', 'fx', 'sculpts']) q.delete(k);
   const s = q.toString();
   return s ? `?${s}` : '';
 }

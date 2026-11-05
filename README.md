@@ -71,9 +71,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
-## What's new in v3.12: try the 3D preview from Settings
+## What's new in v3.13: 2D or 3D, your choice
 
-- 🕹️ **The 3D preview is a button now.** Open Settings and switch GRAPHICS to 3D PREVIEW: the founders as 3D figures on stages rendered in Blender, with the new hit effects. The game reloads once to switch, and you can switch back to Classic any time. It needs a browser with WebGL2; without it you stay on Classic. It only changes how the fight looks, so you can still play anyone online.
+- 🕹️ **Pick 2D or 3D in Settings.** Switch GRAPHICS to 3D and the nine founders become 3D fighters on stages rendered in Blender, with the new hit effects. The game reloads once to switch, and you can go back to 2D any time. 3D needs a browser with WebGL2; without it you stay in 2D. It only changes how the fight looks, never what happens in it, so you can play anyone online either way. 3D is new, so it is still being tested.
+- 🧑‍🎨 **The 3D founders are built from scratch.** Each of the nine has a body, face, hair, clothes and props of their own, and a fighting style of their own: Jeff Bozo boxes, Adam Weumann brawls, Carl Icahnt grapples, Steve Nojobs showboats, Elo Ma rolls his shoulder, Scam Alt keeps you at arm's length, Lizbeth Holmez fences, Kim Koindashian fights from a peek-a-boo and Cathie Woodz stands in tai chi, and each throws a punch their own way. Your own founder keeps the look you built.
+- 🥋 **Everyone stands in a fighting guard, in 2D too.** Hands up and feet staggered, ready to strike or cover, each in their own way: Kim's fists by her jaw, Cathie's palm out, Jeff's karate chamber. A walk is a shuffle that never crosses the feet, and a held prop, like Cathie's tablet or Jeff's parcel, stays where its owner holds it instead of rising over their face.
 - 🥼 **A Rookie Lizbeth Holmez comes to you.** At Rookie she stood back waiting to counter blows that rarely came. Now she closes in and fights.
 
 ## What's new in v3.11: Rookie means Rookie, whoever you draw

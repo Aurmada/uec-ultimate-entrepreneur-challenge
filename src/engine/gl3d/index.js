@@ -187,7 +187,15 @@ let athletes = false;
 export function athletes3D(on = true) {
   athletes = !!on;      // each body is fetched the first time someone wears it (modelFor)
 }
-const modelIdFor = (def) => FIGHTER_MODELS[def.id] || (athletes ? newBodyFor(def) : DEFAULT_MODEL);
+// The roster in their sculpted models (models3d.js `sculpt:<id>`), each
+// fetched the first time they are drawn; anyone without one (a player's own
+// founder) keeps the founder model and their own looks.
+let sculpts = false;
+export function sculpts3D(on = true) {
+  sculpts = !!on;
+}
+const sculptOf = (def) => (sculpts && MODELS3D[`sculpt:${def.id}`] ? `sculpt:${def.id}` : null);
+const modelIdFor = (def) => FIGHTER_MODELS[def.id] || sculptOf(def) || (athletes ? newBodyFor(def) : DEFAULT_MODEL);
 // Whether a fighter is drawn in one of the new bodies, which take the 2D
 // figure's proportions too (engine/figure.js figureFrame): the hip higher, so
 // the legs are half the fighter.
@@ -233,9 +241,16 @@ export function renderFull3D(ctx, rect, def, P, { state = 'idle', face = null, s
 
 // True while def would render in 3D but its model is still on the way.
 // Screens drawn in that window can ask to be drawn again (on3DReady).
+// Whether the model this fighter wears is on its way. Asking starts the
+// fetch of one nobody has drawn yet, as drawing would (modelFor): a sculpt or
+// a new body is fetched the first time it is wanted, and a portrait drawn
+// before the fight's first frame (the HUD's, the versus screen's) found the
+// founder model ready instead of its own still to come, so it drew in 2D and
+// never asked to be drawn again.
 export function pending3D(def) {
   if (!enabled || !renderer || renderer.lost || !def || (only && !only.has(def.id))) return false;
-  const entry = models.get(FIGHTER_MODELS[def.id] || DEFAULT_MODEL);
+  const id = modelIdFor(def);
+  const entry = models.get(id) || (MODELS3D[id] ? load(id) : null);
   return !!entry && !entry.ready && !entry.failed;
 }
 export function on3DReady(fn) { waiting.push(fn); }

@@ -1,4 +1,4 @@
-# UEC handoff: where things stand (late October 2026)
+# UEC handoff: where things stand (early November 2026)
 
 Written so the work can continue from a fresh clone, in a cloud session or on a
 new machine, with nothing from the machine it was built on. Read `CLAUDE.md`
@@ -6,9 +6,12 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.12 on GitHub Pages
+The game is live at v3.13 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-10-29. The repository
+on 2026-11-05: players choose 2D or 3D in Settings, and in 3D the nine
+founders are the sculpted cast below, each in their own fighting form (see
+"v3.13"). v3.12 was built on 2026-10-30 but never reached `main`; it went
+out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
 now returns 404.
@@ -46,10 +49,10 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.12 (`SIM_VERSION` 9), with the 3D preview behind `?gl` or Settings | Deployed. A push here is a release. 462 tests pass. |
-| `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Built on 2026-10-30, not released. 471 tests pass. |
-| `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | In progress on 2026-10-30, not released. 482 tests pass. |
-| `claude/jeff-model` | `claude/figure-pass` plus Jeff remodelled from scratch, one stage at a time | In progress on 2026-11-01. The pre-rendered route (`claude/blender-sprites`) was turned down. |
+| `main` | The live game, v3.13 (`SIM_VERSION` 9): 2D or 3D in Settings, the sculpted cast in 3D | Deployed. A push here is a release. 536 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released as v3.13; `main` is this branch | Merged into `main` on 2026-11-05. |
+| `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
+| `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
@@ -861,7 +864,38 @@ Next: the owner's call on putting the sculpts in front of players.
   own in each; the kicks, the launcher and the specials are still the shared
   ones.
 
-## v3.12, released 2026-10-30: the 3D preview in Settings
+## v3.13, released 2026-11-05: 2D or 3D
+
+The owner: "we can have 2D and a 3D options and will test it out on the live
+site", and, asked what to release, everything on `claude/jeff-model`.
+
+- **2D or 3D in Settings** ("Graphics: 2D / 3D", the v3.12 switch relabelled;
+  the saved values are still `classic` and `3d`). In 3D the nine roster
+  fighters wear their sculpted models and fight in their own forms
+  (`graphics.js` `sculpts`, `gl3d` `sculpts3D`); a player's own founder keeps
+  the founder model and their own looks. `?sculpts=0` puts the roster back in
+  the founder model, and `?athlete` in the athlete bodies.
+- **The guard pass** (below) is live in 2D too: every fighter stands in a
+  guard. `lab/pixels.js` against v3.11 reports every frame different, which
+  is that change; against the tree before the release, identical.
+- **The figure** (`?figure`) and the athlete bodies (`?gl&athlete`) ship
+  behind their flags, unchanged.
+- **v3.12** (below) goes out with it: the Settings switch and the Rookie
+  Lizbeth.
+- Nothing in the simulation changed since v3.11 (`SIM_VERSION` stays 9): the
+  AI change is single-player only.
+- Checked in a real match in a headless browser, 2D and 3D: the sculpts load
+  (about 1.5 to 2 MB each, fetched the first time a fighter is drawn), fight,
+  fall in a KO and celebrate, with no errors. The portraits (HUD, versus,
+  results) are the sculpts' busts. They were drawn in 2D and stayed so: a
+  portrait drawn before the fight's first frame asked `pending3D`, which
+  looked at the founder model (preloaded, ready) instead of the sculpt still
+  to be fetched, so it never queued its redraw. `pending3D` now follows the
+  fighter's own model and starts its fetch, as drawing does; checked in the
+  browser, before and after. Not yet measured on a phone: the owner's test on
+  the live site (`&perf` shows the 3D layer's cost a frame) is the first.
+
+## v3.12, built 2026-10-30, released with v3.13: the 3D preview in Settings
 
 - **A Settings switch for the 3D preview** ("Graphics: Classic / 3D preview").
   Players no longer need `?gl` to try it, so real usage can inform whether 3D
