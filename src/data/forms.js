@@ -1792,6 +1792,15 @@ export const FORMS = {
     super: { fade: 0.3, hand: 'open', joints: { armF: { x: 44, y: -132 }, armB: { x: 26, y: -134 }, hipY: -84, shoulderY: -158, headY: -178, headX: 3, bodyLean: 0 } },
     // How it opens the round (above).
     intro: FENCE_INTRO,
+    // ALIGNMENT SHIFT, the stance switch, which swings nothing: into SAFETY
+    // he shows you his palms, safety first; into CAPABILITIES he leans in
+    // with his arms spread, think bigger. Below the head, where the special's
+    // banner does not cover them.
+    shift: {
+      hold: 0.25, fade: 0.25, hand: 'open',
+      safety: { joints: { armF: { x: 46, y: -150 }, armB: { x: 32, y: -146 }, headX: 0, bodyLean: -0.12 } },
+      capabilities: { joints: { armF: { x: 78, y: -150 }, armB: { x: -24, y: -140 }, headX: 8, bodyLean: 0.14 } },
+    },
   },
   fencing: {
     stance: { lean: 0.02, head: -3, armF: EN_F, armB: EN_B, legF: { x: 17 }, legB: { x: -17 }, sy: 1.02 },

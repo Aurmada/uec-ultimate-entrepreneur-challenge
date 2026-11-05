@@ -3,7 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE, GL3D, PHYS, UNICORN, ROUND } from '../config.js';
+import { STYLES, STYLIZE, GL3D, PHYS, UNICORN, ROUND, STANCE } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
@@ -462,14 +462,15 @@ export function computePose(f, t, form = null, intro = null) {
   // ground. Read from the timer, never written: render-only.
   if (form.super && f.unicornT > 0 && SUPER_STATES.includes(f.state)) {
     const S = form.super;
-    const w = ease.smooth(Math.max(0, Math.min(1, (f.unicornT - (UNICORN.DURATION - S.fade)) / S.fade)));
-    if (w > 0) {
-      for (const [j, v] of Object.entries(S.joints)) {
-        const mix = (a, b) => a * (1 - w) + b * w;   // exactly the pose at full weight
-        P[j] = typeof v === 'object' ? { x: mix(P[j].x, v.x), y: mix(P[j].y, v.y) } : mix(P[j] ?? 0, v);
-      }
-      if (S.hand && w > 0.5) P.hand = S.hand;
-    }
+    holdPose(P, S, (f.unicornT - (UNICORN.DURATION - S.fade)) / S.fade);
+  }
+  // A stance switch (forms.js `shift`, Scam's ALIGNMENT SHIFT): it never
+  // becomes an attack, so it had nothing to show. The pose for the stance he
+  // switched to, held for `hold` seconds of the switch's cooldown and eased
+  // out over `fade`, read from the cooldown as the super's is from its timer.
+  if (form.shift && f.stanceCD > 0 && form.shift[f.stanceId] && SUPER_STATES.includes(f.state)) {
+    const S = form.shift;
+    holdPose(P, { ...S, ...S[f.stanceId] }, (f.stanceCD - (STANCE.CD - S.hold - S.fade)) / S.fade);
   }
   P.handDepth = form.handDepth;
   P.guardTurn = form.guardTurn;
@@ -481,6 +482,17 @@ export function computePose(f, t, form = null, intro = null) {
     if (slap || form.open?.includes(f.state)) P.hand = 'open';
   }
   return P;
+}
+
+// A held pose `S` (joints, hand) laid over P at weight k, clamped and eased.
+function holdPose(P, S, k) {
+  const w = ease.smooth(Math.max(0, Math.min(1, k)));
+  if (!(w > 0)) return;
+  const mix = (a, b) => a * (1 - w) + b * w;   // exactly the pose at full weight
+  for (const [j, v] of Object.entries(S.joints)) {
+    P[j] = typeof v === 'object' ? { x: mix(P[j].x, v.x), y: mix(P[j].y, v.y) } : mix(P[j] ?? 0, v);
+  }
+  if (S.hand && w > 0.5) P.hand = S.hand;
 }
 
 // The states a super can go on from, standing (Fighter.update's actionable

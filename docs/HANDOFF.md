@@ -51,7 +51,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.16 (`SIM_VERSION` 9): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 540 tests pass. |
-| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special, command moves, steal, bomb, super pose and round start, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 550 tests pass. |
+| `claude/jeff-model` | The remodel of the cast, released through v3.16, plus each form's own walk, jump, crouch, dash, signature special (Scam's stance switch included), command moves, steal, bomb, super pose and round start, and the dash fix (below) | v3.16 merged into `main` on 2026-11-05; the rest is not released yet and, by the owner's word, not pushed. 551 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1131,6 +1131,24 @@ the round was starting.
   in 2D. Fails with the gesture switched off. Both pixel checks identical
   (their frames are mid-round); a real match through the round's start runs
   with no errors.
+
+### Scam's ALIGNMENT SHIFT shows (2026-11-05, not released, not pushed)
+
+The one signature special left without a pose: a stance switch never
+becomes an attack (`Fighter.startSpecial` switches and goes back to idle),
+so there was nothing to draw.
+
+- **Read from the switch's cooldown** (`stanceCD`, `STANCE.CD` 0.8 s, and
+  `stanceId` for which way), as the super's pose is from its timer: Scam's
+  form (`shift` on the fence) holds a pose for the stance he switched to for
+  `hold` seconds and eases it out over `fade`, well inside the cooldown.
+  Into SAFETY he shows you his palms; into CAPABILITIES he leans in with his
+  arms spread. Hands below the head, under the special's banner.
+- The super's pose and this one share `holdPose` in `drawFighter.js`.
+- Tests: each stance's pose as he switches and still `hold` seconds on, gone
+  after `hold + fade`, the two different, nothing with no stance, no other
+  form with one. Fails with the pose switched off. Both pixel checks
+  identical; the switch in a real match runs with no errors.
 
 ## v3.16, released 2026-11-05: hit, KO and victory in each form
 

@@ -817,3 +817,27 @@ test('every form opens the round its own way and is in its live idle by FIGHT!',
       computePose({ def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0.7));
   }
 });
+
+// Scam's ALIGNMENT SHIFT switches stance and swings nothing, so it had
+// nothing to show. His form strikes a pose for the stance he switched to,
+// held for a moment of the switch's cooldown and gone before it ends.
+test("Scam's ALIGNMENT SHIFT shows which way he switched, and lets it go", async () => {
+  const { STANCE } = await import('../src/config.js');
+  const form = FORMS.fence, S = form.shift, def = getFighter('scam');
+  assert.ok(S && S.safety && S.capabilities, 'the switch shows nothing');
+  const pose = (stanceId, stanceCD, state = 'idle') => computePose({ def, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, stanceId, stanceCD }, 0.4, form);
+  const plain = pose(null, 0);
+  for (const id of ['safety', 'capabilities']) {
+    const on = pose(id, STANCE.CD), held = pose(id, STANCE.CD - S.hold);
+    for (const [j, v] of Object.entries(S[id].joints)) {
+      assert.deepEqual(on[j], v, `${id}: ${j} as he switches`);
+      assert.deepEqual(held[j], v, `${id}: ${j} ${S.hold} s on`);
+    }
+    for (const l of ['armF', 'armB']) assert.ok(on[l].y >= on.headY - 6, `${id}: ${l} goes up under the banner`);
+    assert.deepEqual(pose(id, STANCE.CD - S.hold - S.fade - 0.01), pose(id, 0), `${id}: still switching after ${S.hold + S.fade} s`);
+    assert.ok(S.hold + S.fade < STANCE.CD, 'the pose outlasts the cooldown');
+  }
+  assert.notDeepEqual(pose('safety', STANCE.CD).armF, pose('capabilities', STANCE.CD).armF);
+  assert.deepEqual(pose(null, STANCE.CD), plain);
+  for (const [name, f] of Object.entries(FORMS)) if (name !== 'fence') assert.equal(f.shift, undefined);
+});
