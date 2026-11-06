@@ -43,7 +43,7 @@ def head(fx):
     for s in (1, -1):
         E(V(0.0, s * 0.05, 1.765), (0.02, 0.007, 0.028), k=0.03)                 # chewing muscle, slight
         E(V(0.064, s * 0.049, 1.809), (0.017, 0.022, 0.011), k=0.025)            # soft cheekbones
-        E(V(0.06, s * 0.048, 1.766), (0.025, 0.028, 0.029), k=0.03)              # apple cheeks, settled a little low
+        E(V(0.06, s * 0.048, 1.766), (0.023, 0.026, 0.028), k=0.03)              # apple cheeks, settled a little low
         E(V(0.045, s * 0.048, 1.728), (0.022, 0.022, 0.022), k=0.03)             # soft at the jaw
     # A soft brow ridge, set a little high and level: the raised brows are
     # painted, the ridge only gives them somewhere to sit.

@@ -15,7 +15,9 @@ brown hair is a buzz cut (`headwear`).
 
 Pushed further on 2026-11-06, when the nine faces read too alike: the jaw
 broad and square, heavy at its corners and in the chewing muscle, the chin
-wide and the nose tip broader, so the face is a block under a small skull.
+wide, so the face is a block under a small skull. (A broader face mass was
+tried and taken back: it pressed the cheek against the nostril and left a
+pocket the outline showed through, a dark mark beside the mouth.)
 
 As for Jeff: head 0.265 tall in Jeff's space, only the forms sculpted, the
 eyes, brows and mouth painted in game.
@@ -34,7 +36,7 @@ def head(fx):
         E(V(0.0, s * 0.064, 1.722), (0.03, 0.024, 0.032), k=0.02)
     E(V(-0.012, 0, 1.864), (0.1, 0.08, 0.1), k=0.02)                              # cranium
     E(V(0.048, 0, 1.884), (0.05, 0.064, 0.06), k=0.03)                            # a high forehead
-    E(V(0.044, 0, 1.8), (0.054, 0.07, 0.082), k=0.03)                             # the face's mass, broad
+    E(V(0.044, 0, 1.8), (0.054, 0.064, 0.082), k=0.03)                            # the face's mass
     for s in (1, -1):
         E(V(0.0, s * 0.06, 1.762), (0.028, 0.012, 0.034), k=0.03)                # chewing muscle, heavy
         E(V(0.064, s * 0.05, 1.808), (0.018, 0.022, 0.012), k=0.025)             # soft cheekbones
@@ -55,7 +57,7 @@ def head(fx):
     # the eyes (see Adam's and Steve's: without them the crease went black).
     E(V(0.092, 0, 1.81), (0.014, 0.027, 0.03), k=0.022)
     C(V(0.096, 0, 1.848), V(0.115, 0, 1.788), 0.0075, 0.0095, k=0.018)
-    E(V(0.115, 0, 1.784), (0.012, 0.015, 0.011), k=0.01)
+    E(V(0.115, 0, 1.784), (0.011, 0.0125, 0.0105), k=0.01)
     for s in (1, -1):
         E(V(0.102, s * 0.015, 1.778), (0.008, 0.0078, 0.0072), k=0.008)          # nostril wings
     # A small mouth on its barrel, the lower lip pouting, and a rounded chin.

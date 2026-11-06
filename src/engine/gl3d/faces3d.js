@@ -58,26 +58,30 @@ export function character(def) {
 // fighter's `face.style` (data/models3d.js), an original design from their
 // character, never a likeness. Every key is optional; left out, the face is
 // drawn as Jeff's is.
-//   eye     the eyes' shape: 'almond' (Jeff's), 'round', 'narrow', 'hooded'
-//           (a heavy lid with its crease above), 'droop' (the outer corners
-//           down), 'cat' (up), 'smile' (the lower lid pushed up, always)
+//   eye     the eyes' shape: 'almond' (Jeff's), 'round', 'hooded' (a heavy
+//           lid with its crease above), 'smile' (the lower lid pushed up,
+//           always)
 //   iris    the iris's colour; glint: false for no catchlight (a fixed stare)
-//   lash    lashes, 0 to 2; liner: true for a lined lid winged past the corner
+//   lash    lashes, 0 to 2
 //   bags    lines under the eyes, 0 to 1
 //   brow    { arch: how far the middle rises, w: weight against the 2D one,
-//           bushy: hair along it, raise: [the character's right, left] lifted,
-//           inner: the inner ends at rest (down is positive) }
+//           raise: [the character's right, left] lifted, inner: the inner
+//           ends at rest (down is positive) }
 //   mouth   the set mouth at rest: 'set' (from MOUTH_CURVE: Jeff's smirk, or a
-//           frown), 'serene', 'crooked', 'innocent', 'line', 'pout', 'warm'
+//           frown), 'serene', 'crooked', 'innocent', 'line', 'warm'
+//   calm    true for a face that does not glare: angry and blocking keep the
+//           mouth at rest and the eyes open, the brows drawn in a little
 //   lips    a colour for the lips (painted, not only the lower lip's shadow)
 //   lines   { brow: forehead lines, crow: at the eyes' corners, smile: from the
 //           nose to the mouth, jowl: true for lines down from the corners }
-//   blush, freckles, hollow   rosy cheeks (0 to 1), how many freckles, a
-//           shadow under the cheekbones (0 to 1)
-//   beard   a fuller shade than stubble over the jaw (0 to 1)
-export const FACE_STYLE_KEYS = ['eye', 'iris', 'glint', 'lash', 'liner', 'bags', 'brow', 'mouth', 'lips', 'lines', 'blush', 'freckles', 'hollow', 'beard'];
+//   blush, freckles   rosy cheeks (0 to 1), how many freckles
+// An art review (2026-11-06) took out what read badly or leaned toward a
+// namesake's own look: a painted beard (a smudge), a painted hollow under
+// the cheekbones (a bruise; the sculpt carries it), bushy brows, a winged
+// liner, a cat eye and a glossy pout.
+export const FACE_STYLE_KEYS = ['eye', 'iris', 'glint', 'lash', 'bags', 'brow', 'mouth', 'calm', 'lips', 'lines', 'blush', 'freckles'];
 // The mouths a face can set at rest (`mouth`); the others are expressions'.
-export const REST_MOUTHS = ['set', 'serene', 'crooked', 'innocent', 'line', 'pout', 'warm'];
+export const REST_MOUTHS = ['set', 'serene', 'crooked', 'innocent', 'line', 'warm'];
 
 // The eyes' outline as points across the opening, for a shape: the upper
 // lid's peak toward the nose (`ui`) and away from it (`uo`), the lower lid's
@@ -86,10 +90,7 @@ export const REST_MOUTHS = ['set', 'serene', 'crooked', 'innocent', 'line', 'pou
 export const EYE_SHAPES = {
   almond: { ui: 1.5, uo: 1.6, lo: 1.5, od: 0.2, hs: 1 },
   round:  { ui: 1.8, uo: 1.8, lo: 1.8, od: 0.2, hs: 1.18 },
-  narrow: { ui: 1.4, uo: 1.5, lo: 1.2, od: 0.2, hs: 0.72 },
   hooded: { ui: 1.0, uo: 1.15, lo: 1.4, od: 0.6, hs: 1, crease: true },
-  droop:  { ui: 1.6, uo: 1.1, lo: 1.3, od: 1.4, hs: 1 },
-  cat:    { ui: 1.3, uo: 1.8, lo: 1.1, od: -1.1, hs: 1 },
   smile:  { ui: 1.6, uo: 1.6, lo: -0.4, od: -0.2, hs: 1, crescent: true },
 };
 
@@ -114,11 +115,16 @@ export function paintSculpted(g, def, expression, layout, style = {}) {
     ko:    { open: 0, inner: -0.8, outer: 1, mouth: 'slack' },
     happy: { open: 0.9, inner: -0.6, outer: -0.6, mouth: 'grin', squint: true },
   }[expression] || { open: 1, inner: 0.6, outer: 0, mouth: 'set' };
+  // A calm face does not glare, even angry: the super's cut-in shows the angry
+  // face, and three of the cast are written as never glaring.
+  if (St.calm && (expression === 'angry' || expression === 'block')) {
+    Object.assign(X, { open: 1, inner: 0.6 + (B.inner ?? 0) + 0.8, outer: 0, mouth: rest, squint: false });
+  }
   const inner = X.inner + K.tilt, outer = X.outer - K.tilt * 0.4;
 
   // Under everything, what the skin carries: colour, then lines, then hair.
   marks(g, St, J, c, expression);
-  if (resolveLook3D(def).facialHair === 'stubble' || St.beard) stubble(g, hair, J, St.beard ? 0.24 + 0.3 * St.beard : 0.24);
+  if (resolveLook3D(def).facialHair === 'stubble') stubble(g, hair, J);
 
   const E = EYE_SHAPES[St.eye] || EYE_SHAPES.almond;
   for (const s of [-1, 1]) {
@@ -161,12 +167,11 @@ export function paintSculpted(g, def, expression, layout, style = {}) {
         g.quadraticCurveTo(ex - nose * w * 0.7, ey + h * Math.max(E.lo, 0.4) * 0.65, ex - nose * (w + 0.2), oy + 0.1);
         g.stroke();
       }
-      // the upper lid line, heavier lined
+      // the upper lid line, heavier
       g.strokeStyle = INK;
-      g.lineWidth = J.lid * (St.liner ? 1.45 : 1);
+      g.lineWidth = J.lid;
       g.beginPath();
       upper(0.3);
-      if (St.liner) g.lineTo(ex - nose * (w + 2.4), oy - 1.6);       // the wing
       g.stroke();
       // a heavy lid's crease, above it
       if (E.crease) {
@@ -218,22 +223,18 @@ export function paintSculpted(g, def, expression, layout, style = {}) {
     g.moveTo(s * J.brow.inner, by + inner);
     g.quadraticCurveTo(s * (J.brow.inner + J.brow.outer) * 0.55, by + mid - (B.arch || 0) * 0.6, s * J.brow.outer, by + outer - 0.4);
     g.stroke();
-    if (B.bushy) {
-      // hair along it, a coarse second edge above
-      g.lineWidth = K.brow * (B.w ?? 1) * 0.45;
-      for (let i = 0; i < 4; i++) {
-        const t = 0.15 + i * 0.22, bx = s * (J.brow.inner + (J.brow.outer - J.brow.inner) * t);
-        const yy = by + inner + (outer - inner) * t - (B.arch || 0) * Math.sin(t * Math.PI) - 0.6;
-        g.beginPath(); g.moveTo(bx, yy); g.lineTo(bx + s * 1.6, yy - 1.4); g.stroke();
-      }
-    }
   }
 
   // the mouth
   const my = J.mouth.y, mw = J.mouth.w;
   g.strokeStyle = INK;
   g.lineWidth = J.line;
+  // The teeth, white between the lips. Drawn to the expressions' heights under
+  // a full line they were a black slot (under 3 px of white inside a 1.4 px
+  // outline), so every grin and snarl read as a gasp: they are drawn taller,
+  // under a lighter line.
   const teeth = (top, bottom, w) => {
+    top *= 1.7; bottom *= 1.7;
     g.fillStyle = WHITE;
     g.beginPath();
     g.moveTo(-w, my + top * 0.3);
@@ -242,7 +243,10 @@ export function paintSculpted(g, def, expression, layout, style = {}) {
     g.quadraticCurveTo(0, my + bottom, -w, my + bottom * 0.3);
     g.closePath();
     g.fill();
+    g.save();
+    g.lineWidth = J.line * 0.5;
     g.stroke();
+    g.restore();
   };
   // painted lips, where a style colours them: the upper lip's bow and the
   // fuller lower lip either side of the line the mouth draws
@@ -302,16 +306,6 @@ export function paintSculpted(g, def, expression, layout, style = {}) {
     // pressed flat and straight, giving nothing away
     colour(1.1, 1.8, mw);
     g.beginPath(); g.moveTo(-mw, my); g.lineTo(mw, my); g.stroke();
-  } else if (X.mouth === 'pout') {
-    // full lips, pushed out a little, a shine on the lower one
-    colour(2.4, 3.8, mw * 0.95);
-    g.beginPath();
-    g.moveTo(-mw * 0.95, my + 0.2); g.quadraticCurveTo(0, my + 0.9, mw * 0.95, my + 0.2);
-    g.stroke();
-    g.save();
-    g.fillStyle = WHITE; g.globalAlpha = 0.6;
-    g.beginPath(); g.ellipse(mw * 0.15, my + 2.1, mw * 0.25, 0.55, 0, 0, 7); g.fill();
-    g.restore();
   } else if (X.mouth === 'warm') {
     // an open, easy smile, the top teeth showing
     colour(1.6, 2.8, mw);
@@ -354,15 +348,6 @@ function marks(g, St, J, c, expression) {
     g.globalAlpha = 0.28 * St.blush;
     g.filter = 'blur(1.6px)';
     for (const s of [-1, 1]) { g.beginPath(); g.ellipse(s * (ex + 1), ey + 8, 4.6, 2.6, 0, 0, 7); g.fill(); }
-    g.filter = 'none';
-  }
-  if (St.hollow) {
-    g.fillStyle = INK;
-    g.globalAlpha = 0.16 * St.hollow;
-    g.filter = 'blur(1.4px)';
-    for (const s of [-1, 1]) {
-      g.beginPath(); g.ellipse(s * (ex + 2.4), ey + 12, 2.4, 4.8, s * 0.35, 0, 7); g.fill();
-    }
     g.filter = 'none';
   }
   if (St.freckles) {
@@ -410,11 +395,11 @@ function marks(g, St, J, c, expression) {
 // soft-edged, over the upper lip, round the mouth and down the jaw to under
 // the chin. Not up the cheeks: carried across them, its top edge read as a
 // band, a mask over the lower face.
-function stubble(g, colour, J, alpha = 0.24) {
+function stubble(g, colour, J) {
   const my = J.mouth.y, mw = J.mouth.w;
   g.save();
   g.fillStyle = colour;
-  g.globalAlpha = alpha;
+  g.globalAlpha = 0.24;
   g.filter = 'blur(1.2px)';
   g.beginPath();
   g.moveTo(-mw * 0.95, my - 3.2);

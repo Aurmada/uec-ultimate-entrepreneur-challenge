@@ -311,7 +311,8 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
   const [hx, hy] = transformPoint(entry.rig.matrices, entry.head, entry.skull);
   const w = SPAN, h = (SPAN * rect.h) / rect.w;
   const box = { ox: w * HEAD_AT[0] - hx * U, oy: h * HEAD_AT[1] + hy * U, w, h };
-  const { vw, vh } = drawModel(entry, def, 'idle', unicorn, expression, face, { box, ss: rect.w / w });
+  const glass = close ? closeGlass(entry) : undefined;
+  const { vw, vh } = drawModel(entry, def, 'idle', unicorn, expression, face, { box, ss: rect.w / w, glass });
   ctx.save();
   if (mirror) {
     ctx.translate(2 * rect.x + rect.w, 0);
@@ -322,6 +323,19 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
   img.done();
   ctx.restore();
   return true;
+}
+
+// A model's glass in a close portrait: its own opacities, with those
+// GL3D.BUST.CLOSE.GLASS names in their place (a lighter visor).
+const closeGlasses = new WeakMap();
+export function closeGlass(entry) {
+  let g = closeGlasses.get(entry);
+  if (!g) {
+    const over = GL3D.BUST.CLOSE.GLASS;
+    g = new Map([...(entry.glass || [])].map(([role, a]) => [role, over[role] ?? a]));
+    closeGlasses.set(entry, g);
+  }
+  return g;
 }
 
 // Secondary motion. Each fighter's springs live here, keyed by the fighter, so
@@ -374,7 +388,7 @@ function drawModel(entry, def, state, unicorn, expression, painter, view, r = re
     memo.wears.set(wkey, wears);
   }
   return r.render(gpuFor(entry, r), entry.rig.matrices, {
-    ...view, colours, visible: (p) => wears(p.name), face, inkless: entry.inkless, glass: entry.glass,
+    ...view, colours, visible: (p) => wears(p.name), face, inkless: entry.inkless, glass: view.glass || entry.glass,
   });
 }
 

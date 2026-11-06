@@ -14,7 +14,8 @@ the bull neck and the second chin. His silver hair is combed straight back
 off a receding hairline (`headwear`), and he wears shades, as in 2D.
 
 Pushed further on 2026-11-06, when the nine faces read too alike: heavier
-jowls, a bigger nose and bigger ears.
+jowls. A bigger nose and ears were tried and taken back: with the bushy
+brows they drew the usual caricature of the man he parodies.
 
 As for Jeff: head 0.265 tall in Jeff's space, only the forms sculpted, the
 eyes, brows and mouth painted in game, mostly behind the shades.
@@ -50,7 +51,7 @@ def head(fx):
         E(V(0.08, s * EYE_Y, EYE_Z - 0.011), (0.009, 0.017, 0.006), k=0.008)     # and the bag under it
     # A big, fleshy nose.
     C(V(0.095, 0, 1.84), V(0.112, 0, 1.788), 0.009, 0.012, k=0.016)
-    E(V(0.117, 0, 1.78), (0.018, 0.02, 0.016), k=0.012)
+    E(V(0.115, 0, 1.782), (0.015, 0.017, 0.014), k=0.012)
     for s in (1, -1):
         E(V(0.101, s * 0.018, 1.777), (0.01, 0.01, 0.009), k=0.008)              # nostril wings
     # A thin, pressed mouth on its barrel, and a heavy chin.
@@ -59,7 +60,7 @@ def head(fx):
     E(V(0.09, 0, 1.737), (0.005, 0.02, 0.004), k=0.008)
     E(V(0.08, 0, 1.705), (0.017, 0.03, 0.017), k=0.022)
     for s in (1, -1):
-        E(V(-0.006, s * 0.086, 1.822), (0.026, 0.013, 0.038), sc.rot(ry=-10), k=0.01)  # large ears
+        E(V(-0.006, s * 0.086, 1.822), (0.024, 0.012, 0.034), sc.rot(ry=-10), k=0.01)  # large ears
         F.cut(sc.Ellipsoid(V(-0.002, s * 0.095, 1.818), (0.01, 0.006, 0.015)), 0.004)
 
 

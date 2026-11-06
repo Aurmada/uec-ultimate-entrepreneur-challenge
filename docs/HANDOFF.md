@@ -52,7 +52,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes, the game designers' animation and flow fixes, nine distinct faces) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 576 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes, the game designers' animation and flow fixes, nine distinct faces) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 579 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1176,25 +1176,57 @@ looked alike, and what changed (render only: no `SIM_VERSION`):
   by the same strokes (Jeff's), moved only a little by each fighter's 2D face
   values. Each sculpted fighter now has a face design, `face.style` in
   `data/models3d.js`, painted by `faces3d.js`: the eyes' shape (round,
-  hooded, cat, a smile's crescent), the iris colour, lashes and liner, the
-  brows' arch and weight, the mouth at rest (Steve's serene knowing smile,
-  Elo's crooked half smile, Scam's innocent one, Lizbeth's flat line, Kim's
-  pout, Cathie's warm open smile), lip colour, and what the skin carries
-  (bags, lines at the brow, eyes and mouth, Carl's jowl lines, Steve's hollow
-  cheeks, Scam's freckles and blush, Cathie's rosy cheeks, Adam's beard
-  shadow). The keys are listed above `FACE_STYLE_KEYS`.
+  hooded, a smile's crescent), the iris colour, lashes, the brows' arch,
+  weight and lift, the mouth at rest (Steve's serene knowing smile, Elo's
+  crooked half smile, Scam's innocent one, Lizbeth's flat line, Kim's bored
+  set mouth, Cathie's warm open smile), lip colour, and what the skin
+  carries (bags, lines at the brow, eyes and mouth, Carl's jowl lines,
+  Scam's freckles and blush, Cathie's rosy cheeks). Scam, Lizbeth and Cathie
+  are `calm`: their notes say they never glare, so angry and blocking keep
+  their rest mouth and open eyes (the super's cut-in shows the angry face).
+  The keys are listed above `FACE_STYLE_KEYS`.
 - **The heads were close to one shape.** Seven head scripts are pushed
   further (`lab/blender/fighters/*.py`, rebuilt; Jeff and Adam kept): Steve a
   long V with a long chin, Elo a broad square jaw under a small skull, Scam
   round and soft with a button nose, Lizbeth narrow with high sharp
   cheekbones, Kim a heart shape, Cathie apple cheeks and a soft jaw, Carl
-  heavier jowls, nose and ears. The eyes and mouth stay where the layouts say,
-  so the registry numbers did not move.
+  heavier jowls. The eyes and mouth stay where the layouts say, so the
+  registry numbers did not move.
 - **The portraits were too far away to see a face.** At `GL3D.BUST.SPAN` the
   head was a quarter of the frame. A framed portrait (select screen, HUD, VS,
   results, share card) now uses `GL3D.BUST.CLOSE` (48 rig px across, the head
-  centre 0.46 down); the super's cut-in keeps the old framing, which its band
-  is set to.
+  centre 0.46 down), and a visor is lighter there (0.25 against 0.45) so
+  Lizbeth's stare shows through it; in a match it stays the strong band. The
+  super's cut-in keeps the old framing, which its band is set to.
+- **Teeth were a black slot.** Under 2 px of white inside a 1.4 px outline,
+  so every grin and snarl, the cut-in's included, read as a gasp. They are
+  drawn 1.7 times taller under half the line.
+
+A fresh agent, as an art director, then judged the nine at every size
+players see them (portrait, HUD, cut-in, 1280 by 720 and a phone) against
+before, and its findings are in the list above and here:
+
+- **Taken out**: a painted beard on Adam (a brown smudge), a painted hollow
+  under Steve's cheekbones (a bruise; his sculpt carries it), and Kim's
+  winged liner, cat eye and glossy pout. Kim's notes say flat brows, the
+  heaviest lids and bored contempt; glamour was her namesake's look, not
+  her character's, so she has hooded eyes, flat brows and a set mouth.
+- **Likeness**: none of the nine is recognisable at game sizes, but Carl was
+  the closest, and pushing his nose, ears and brows bigger drew the usual
+  caricature of the man he parodies. His nose and ears are back as they
+  were and his brows are plain; his jowls stay (his notes).
+- **Marks the reshaping left**: a dark mark beside Elo's mouth, there even
+  with no paint at all (his broader face mass pressed the cheek against the
+  nostril and left a pocket the outline showed through; the review blamed
+  the nose tip, and taking that back did not clear it), an ink wedge on
+  Steve's longer chin, and a mark under Cathie's eye from her cheeks. All
+  three are reshaped and rebuilt.
+- Elo's raised brow is now the near one (the turn hid the far one), and his
+  brows thinner, apart from Scam's: the two were the closest pair.
+- **Not done**: at 52 px the painted features barely show, and in a match
+  the heads are told apart by hair, eyewear and build alone (Steve and Carl,
+  grey hair and eyewear both, by colour). Jeff's shades leave ink streaks
+  down his nose and Steve's quiff has black spikes; both were there before.
 
 In a match at 1280 by 720 a head is about 20 px tall, so there the fighters
 are still told apart by hair, eyewear, build and colour, as before; the faces
@@ -1203,8 +1235,10 @@ read in the portraits.
 Tests (`test/faces3d.test.js`): every sculpted fighter has a design in keys
 the painter knows; on one head with one set of 2D values the nine designs
 paint nine different faces; the renderer passes the design to the painter;
-the framed portrait comes in closer and the cut-in keeps its framing. Each
-fails without its part of the change. `lab/pixels.js` is identical against
+the framed portrait comes in closer and the cut-in keeps its framing; the
+portrait's visor is lighter and the match's is not; teeth show at least
+2 px of white wherever they are bared; a calm face bares no teeth angry.
+Each fails without its part of the change. `lab/pixels.js` is identical against
 8bc360e with and without `--flags gl`; it reads the 2D canvas, so the 3D
 fighters were checked by renders and five 3D matches with no page errors.
 

@@ -9,7 +9,7 @@ import { paintSculpted, character, FACE_REF, FACE_STYLE_KEYS, EYE_SHAPES, REST_M
 import { MODELS3D, SCULPTED, FACE_STATES } from '../src/data/models3d.js';
 import { getFighter, FIGHTERS } from '../src/data/fighters.js';
 import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
-import { wearing } from '../src/engine/gl3d/index.js';
+import { wearing, closeGlass } from '../src/engine/gl3d/index.js';
 import { GL3D } from '../src/config.js';
 
 // A 2D context that records what is drawn, enough to tell one face from another.
@@ -143,4 +143,63 @@ test('a portrait in its own frame comes in close on the face, and the cut-in kee
   assert.match(src('engine/gl3d/index.js'), /close \? BUST\.CLOSE : BUST/);
   // and the cut-in centres its band on the head where the bare bust puts it
   assert.match(src('engine/vfx.js'), new RegExp(`size \\* ${HEAD_AT[1]}`));
+});
+
+// The teeth a recorded face draws: for each set, how much white shows (its
+// height less its outline).
+function teethIn(calls) {
+  const y = (c) => +c.slice(c.indexOf('(') + 1, -1).split(',')[1];
+  const out = [];
+  for (let i = 0; i < calls.length; i++) {
+    if (calls[i] !== 'fillStyle=#eee5d6' || !calls[i + 2]?.startsWith('moveTo(') || !calls[i + 3]?.startsWith('quadraticCurveTo(0,')) continue;
+    const k = calls.indexOf('stroke()', i);
+    const lw = calls.slice(0, k).findLast((c) => c.startsWith('lineWidth='));
+    out.push(y(calls[i + 5]) - y(calls[i + 3]) - +lw.split('=')[1]);
+  }
+  return out;
+}
+
+test('teeth show white, not a black slot, in every face that bares them', () => {
+  // under a full outline they had under 2 px of white, so every grin and
+  // snarl read as a gasp (the art review, 2026-11-06)
+  let sets = 0;
+  for (const id of Object.keys(SCULPTED)) {
+    for (const expression of FACE_STATES) {
+      for (const white of teethIn(painted(getFighter(id), expression, undefined, MODELS3D[`sculpt:${id}`].face.style))) {
+        sets++;
+        assert.ok(white >= 2, `${id}'s ${expression} teeth show ${white.toFixed(2)} px of white`);
+      }
+    }
+  }
+  assert.ok(sets >= 18, `only ${sets} sets of teeth drawn: the check is not finding them`);
+});
+
+test('a calm face does not glare: angry and blocking keep the mouth at rest and the eyes open', () => {
+  // Scam, Lizbeth and Cathie are written as never glaring, and the super's
+  // cut-in shows the angry face
+  const calm = Object.keys(SCULPTED).filter((id) => MODELS3D[`sculpt:${id}`].face.style.calm);
+  assert.deepEqual(calm.sort(), ['ava', 'eleanor', 'scam']);
+  const scam = getFighter('scam'), St = MODELS3D['sculpt:scam'].face.style;
+  const bare = (St, expression) => teethIn(painted(scam, expression, undefined, St)).length;
+  for (const expression of ['angry', 'block']) {
+    assert.equal(bare(St, expression), 0, `calm, Scam bares his teeth ${expression}`);
+    assert.ok(bare({ ...St, calm: false }, expression) > 0, `the check sees no snarl ${expression} even uncalm`);
+  }
+  // still not the idle face: the brows draw in
+  assert.notEqual(painted(scam, 'angry', undefined, St).join(';'), painted(scam, 'idle', undefined, St).join(';'));
+});
+
+test("a close portrait lightens a visor so the eyes behind it read, and a match keeps it", () => {
+  // Lizbeth's stare is her character, and the visor hid it in every portrait;
+  // in a match the strong cyan band is what marks her at fight size
+  const glass = new Map([['lens', 0.84], ['clear', 0.14], ['visor', 0.45]]);
+  const entry = { glass };
+  const close = closeGlass(entry);
+  assert.ok(close.get('visor') <= 0.3, `the portrait visor is ${close.get('visor')} opaque`);
+  assert.equal(close.get('lens'), 0.84, 'shades are lightened too');
+  assert.equal(glass.get('visor'), 0.45, "the match's visor changed");
+  assert.equal(closeGlass(entry), close, 'worked out again on every portrait');
+  const src = readFileSync(new URL('../src/engine/gl3d/index.js', import.meta.url), 'utf8');
+  assert.match(src, /const glass = close \? closeGlass\(entry\) : undefined;/);
+  assert.match(src, /glass: view\.glass \|\| entry\.glass/);
 });

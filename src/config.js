@@ -665,7 +665,10 @@ export const GL3D = {
     // was a quarter of the frame, and nine faces drawn to be told apart
     // looked alike (2026-11-06). The super's cut-in keeps SPAN and HEAD_AT,
     // which its band is set to (engine/vfx.js).
-    CLOSE: { SPAN: 48, HEAD_AT: [0.5, 0.46] },
+    // A visor is lighter there too (glass opacity by material, over the
+    // model's own), so the eyes behind it read: Lizbeth's stare is her
+    // character. In a match it stays the strong band that marks her.
+    CLOSE: { SPAN: 48, HEAD_AT: [0.5, 0.46], GLASS: { visor: 0.25 } },
     TURN: { yaw: 0.9, hipYaw: 0.6, headYaw: 0.35 },
     HAND_F: [14, 16],
     HAND_B: [-8, 16],
