@@ -366,7 +366,7 @@ export class Fighter {
               this.movingBack = (dir !== this.facing);
               if (this.grounded) {
                 if (this.state !== 'walk') this.setState('walk');
-                this.walkPhase += dt * 11 * this.speedMult;
+                this.walkPhase += dt * PHYS.WALK_PHASE * this.speedMult;
               }
             } else if (this.state === 'walk') {
               this.setState('idle');

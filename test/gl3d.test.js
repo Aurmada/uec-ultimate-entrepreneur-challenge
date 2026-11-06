@@ -177,6 +177,10 @@ test('a prop follows its part\'s states', () => {
   const carl = FIGHTERS.find((f) => f.id === 'dex');
   assert.equal(wearing(carl, 'idle')('prop:guard-case'), false);
   assert.equal(wearing(carl, 'block')('prop:guard-case'), true);
+  // and he blocks with one briefcase, not two: his own goes while the
+  // guard's is up, and is back for everything else
+  assert.equal(wearing(carl, 'block')('prop:case'), false, 'Carl blocks holding two briefcases');
+  for (const s of ['idle', 'walk', 'jump', 'crouch', 'attack', 'dash', 'hitstun', 'ko', 'victory']) assert.equal(wearing(carl, s)('prop:case'), true, `Carl puts his case down to ${s}`);
 });
 
 test('the model wears every palette role', () => {

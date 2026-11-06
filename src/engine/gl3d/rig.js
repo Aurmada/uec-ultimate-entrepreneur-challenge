@@ -91,12 +91,13 @@ export function buildRig(model, spec) {
 }
 
 // Two-bone IK from a toward t, bending toward `pole`. Past full reach both
-// segments stretch equally, as the 2D rig's limbs do.
-export function ik(a, t, l1, l2, pole) {
+// segments stretch equally, as the 2D rig's limbs do, up to `most` times
+// their length (then the limb falls short of t).
+export function ik(a, t, l1, l2, pole, most = Infinity) {
   const d = sub(t, a);
   let reach = Math.hypot(d[0], d[1], d[2]);
   const u = normalize(d, [0, -1, 0]);
-  const s = Math.max(1, reach / ((l1 + l2) * 0.999));
+  const s = Math.min(most, Math.max(1, reach / ((l1 + l2) * 0.999)));
   const L1 = l1 * s, L2 = l2 * s;
   reach = Math.min(Math.max(reach, Math.abs(L1 - L2) + 1e-4), (L1 + L2) * 0.9999);
   const ca = Math.max(-1, Math.min(1, (L1 * L1 + reach * reach - L2 * L2) / (2 * L1 * reach)));
@@ -152,6 +153,11 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   const pelUp = tip([0, 1, 0], pl);
   const headFwd = tip([Math.cos(yh), 0, Math.sin(yh)], leanRad);
 
+  // A sculpted body's arms and legs stretch only a little past their length
+  // (GL3D.STRETCH_MOST): reaching for a strike placed for a longer limb, they
+  // grew by up to a third (Cathie's punch and kick, Jeff's UNDERCUT, Carl's
+  // HOSTILE TAKEOVER), and read as rubber. Past that they fall short.
+  const most = own ? GL3D.STRETCH_MOST : Infinity;
   const build = own ? 1 : (P.build ?? 1);
   const wide = own ? 1 : (P.shoulderW ?? 1);
   const G = (k) => (own ? fit.girth ?? 1 : GL3D[k]);
@@ -237,7 +243,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     const back = [-GL3D.ELBOW_BACK * k, -1, 0];
     const pole = normalize(add(a ? turned(back, a) : back, scale(chestLat, flare * GL3D.ELBOW_FLARE)));
     const up = rig.rest[`upper_arm.${side}`], lo = rig.rest[`forearm.${side}`];
-    const s = ik(shoulder, target, up.len, lo.len, pole);
+    const s = ik(shoulder, target, up.len, lo.len, pole, most);
     const girth = build * G('ARM_GIRTH');
     set(`upper_arm.${side}`, shoulder, s.mid, onHinge(s.hinge, shoulder, s.mid), dist(shoulder, s.mid) / up.len, girth, girth);
     set(`forearm.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / lo.len, girth, girth);
@@ -272,7 +278,8 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     const target = pt(foot.x, foot.y - GL3D.ANKLE_PX, hipJ[2] * GL3D.FOOT_DEPTH);
     const pole = normalize(add([1, 0, 0], scale(pelLat, flare * GL3D.KNEE_FLARE)));
     const th = rig.rest[`thigh.${side}`], sn = rig.rest[`shin.${side}`], ft = rig.rest[`foot.${side}`];
-    const s = ik(hipJ, target, th.len * stride, sn.len * stride, pole);
+    // a planted foot always reaches the floor
+    const s = ik(hipJ, target, th.len * stride, sn.len * stride, pole, foot.y < 0 ? most : Infinity);
     const girth = build * G('LEG_GIRTH');
     set(`thigh.${side}`, hipJ, s.mid, onHinge(s.hinge, hipJ, s.mid), dist(hipJ, s.mid) / th.len, girth, girth);
     set(`shin.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / sn.len, girth, girth);

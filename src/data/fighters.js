@@ -516,9 +516,12 @@ export const FIGHTERS = [
     parts: [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
-      // dex — CARL ICAHNT. The briefcase he never puts down.
+      // dex: CARL ICAHNT. The briefcase he never puts down. Except to block:
+      // the guard above is a briefcase too, raised in his lead hand, and with
+      // this one still in his rear hand he blocked holding two.
       { id: 'case', shape: 'roundRect', anchor: 'armB', dx: 18, dy: 26,
-        w: 44, h: 34, fill: '#6b4a2b', z: 'front' },
+        w: 44, h: 34, fill: '#6b4a2b', z: 'front',
+        states: ['idle', 'walk', 'jump', 'crouch', 'attack', 'dash', 'hitstun', 'ko', 'victory'] },
     ],
     // A slow, heavy shift of weight. He does not fidget — he waits.
     animOverrides: {

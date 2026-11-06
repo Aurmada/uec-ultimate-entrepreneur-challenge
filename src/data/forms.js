@@ -105,7 +105,7 @@ const BOX_UPPER = {
     { t: 0.95, joints: { armF: { x: 38, y: -134 }, hipY: HIP + 10, shoulderY: SHOULDER + 10, headY: HEAD + 10, twist: -0.2, hipTwist: -0.12 }, ease: 'outQuad' },
     { t: 1.15, joints: { armF: { x: 70, y: -214 }, hipY: HIP - 10, shoulderY: SHOULDER - 14, headY: HEAD - 14, bodyLean: 0, twist: 0.25, hipTwist: 0.15, sx: 0.94, sy: 1.08 }, ease: 'outBack', smear: true },
     { t: 2,    joints: { armF: { x: 68, y: -210 } }, hold: true },
-    { t: 2.45, joints: { armF: { x: 56, y: -180 }, hipY: HIP - 2, shoulderY: SHOULDER - 3, headY: HEAD - 3, bodyLean: 0.08, twist: 0.06, hipTwist: 0.04, sx: 1, sy: GUARD_SY }, ease: 'outQuad' },
+    { t: 2.6,  joints: { armF: { x: 58, y: -184 }, hipY: HIP - 4, shoulderY: SHOULDER - 5, headY: HEAD - 5, bodyLean: 0.06, twist: 0.1, hipTwist: 0.06, sx: 0.98, sy: GUARD_SY }, ease: 'outQuad' },
     { t: 3,    joints: BOX_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -449,7 +449,10 @@ const ROLL_UPPER = {
     { t: 0.95, joints: { armF: { x: 24, y: -104 }, twist: -0.38, hipTwist: -0.2 }, ease: 'outQuad' },
     { t: 1.15, joints: { armF: { x: 68, y: -222 }, hipY: R_HIP - 14, shoulderY: R_SHOULDER - 20, headY: R_HEAD - 20, bodyLean: -0.08, twist: 0.38, hipTwist: 0.2, sx: 0.92, sy: 1.1 }, ease: 'outBack', smear: true },
     { t: 2,    joints: { armF: { x: 66, y: -218 } }, hold: true },
-    { t: 2.3,  joints: { armF: { x: 32, y: -114 }, hipY: R_HIP, shoulderY: R_SHOULDER, headY: R_HEAD, bodyLean: -0.04, twist: 0.04, hipTwist: 0.02, sx: 1, sy: 1 }, ease: 'outCubic' },
+    // and stays up there, open, coming down only slowly: a launcher that
+    // misses is wide open for most of its long recovery, and looked home
+    // after a third of it
+    { t: 2.6,  joints: { armF: { x: 54, y: -180 }, hipY: R_HIP - 6, shoulderY: R_SHOULDER - 8, headY: R_HEAD - 8, bodyLean: -0.07, twist: 0.22, hipTwist: 0.1, sx: 0.96, sy: 1.04 }, ease: 'outQuad' },
     { t: 3,    joints: ROLL_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -695,7 +698,9 @@ const PEEK_UPPER = {
     { t: 0.95, joints: { armF: { x: 46, y: -130 }, hipY: K_HIP + 12, shoulderY: K_SHOULDER + 12, headY: K_HEAD + 14, twist: -0.16 }, ease: 'outQuad' },
     { t: 1.15, joints: { armF: { x: 66, y: -214 }, legF: { x: 24, y: -14 }, hipY: K_HIP - 16, shoulderY: K_SHOULDER - 22, headY: K_HEAD - 22, bodyLean: 0.02, twist: 0.24, hipTwist: 0.16, sx: 0.92, sy: 1.1 }, ease: 'outBack', smear: true },
     { t: 2,    joints: { armF: { x: 64, y: -210 } }, hold: true },
-    { t: 2.25, joints: { armF: { x: 56, y: -152 }, legF: { x: 22, y: 0 }, hipY: K_HIP, shoulderY: K_SHOULDER, headY: K_HEAD, headX: 0, bodyLean: 0.18, twist: 0, hipTwist: 0, sx: 0.97, sy: 1 }, ease: 'outCubic' },
+    // and stays up there, open, coming down only slowly (a launcher that
+    // misses is wide open; it looked home after a quarter of its recovery)
+    { t: 2.6,  joints: { armF: { x: 58, y: -178 }, legF: { x: 23, y: -5 }, hipY: K_HIP - 7, shoulderY: K_SHOULDER - 9, headY: K_HEAD - 9, headX: 0, bodyLean: 0.08, twist: 0.12, hipTwist: 0.08, sx: 0.95, sy: 1.04 }, ease: 'outQuad' },
     { t: 3,    joints: PEEK_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1487,7 +1492,7 @@ export const FORMS = {
     // He walks a boxer's step-and-follow on the balls of his feet: the lead
     // foot steps, the rear one follows, a bounce in every step and the guard
     // tight. He jumps tucked, the gloves up, and comes down on his toes.
-    walk: { rate: 1.2, stride: 12, lag: Math.PI / 2, lift: 5, bob: 4, back: 0.06, roll: 0.04 },
+    walk: { cycle: 100, lag: Math.PI / 2, lift: 5, bob: 4, back: 0.06, roll: 0.04 },
     jump: {
       up: { legF: { x: 20, y: -34 }, legB: { x: -6, y: -26 } },
       down: { legF: { x: 22, y: -14 }, legB: { x: -22, y: -10 } },
@@ -1534,7 +1539,7 @@ export const FORMS = {
     // like a starfish, and wins flexing both arms, roaring.
     hit: { lean: 1.3, armF: { x: 54, y: -130 }, armB: { x: -10, y: -150 } },
     // The fall: he crashes down hard and fast.
-    ko: { armF: { x: 60, y: -160 }, armB: { x: -48, y: -160 }, legF: { x: 40, y: -6 }, legB: { x: -34, y: -4 }, fall: { time: 0.4, rot: -1.55, ease: 'outQuad' } },
+    ko: { armF: { x: 60, y: -160 }, armB: { x: -48, y: -160 }, legF: { x: 40, y: 0 }, legB: { x: -34, y: 0 }, fall: { time: 0.4, rot: -1.55, ease: 'outQuad' } },
     victory: {
       rate: 1.2,
       keys: carried([
@@ -1546,7 +1551,7 @@ export const FORMS = {
     // He swaggers: wide, heavy steps, the shoulders rolling with each one and
     // the fists swinging low. He throws himself into the air, legs flung
     // apart and both arms up, and comes down in a stomp.
-    walk: { rate: 0.9, stride: 14, lift: 8, bob: 5, lean: 0.16, back: 0.08, roll: 0.14, hip: 0.06, swing: 6 },
+    walk: { cycle: 98, lift: 8, bob: 5, lean: 0.16, back: 0.08, roll: 0.14, hip: 0.06, swing: 6 },
     jump: {
       up: { legF: { x: 38, y: -30 }, legB: { x: -34, y: -22 }, armF: { x: 50, y: -196 }, armB: { x: -14, y: -190 }, lean: -0.06 },
       down: { legF: { x: 32, y: -10 }, legB: { x: -30, y: -8 } },
@@ -1611,7 +1616,7 @@ export const FORMS = {
     // rolling from foot to foot, the open hand pushing out with each step.
     // He barely leaves the floor and does not look as if he means to: a
     // heavy hop, the knees only bent, the hunch kept.
-    walk: { rate: 0.7, stride: 12, lift: 4, bob: 4, low: 4, lean: 0.26, back: 0.18, roll: 0.06, hip: 0.04, swing: 4 },
+    walk: { cycle: 100, slip: 0.3, lift: 4, bob: 4, low: 4, lean: 0.26, back: 0.18, roll: 0.06, hip: 0.04, swing: 4 },
     jump: {
       up: { legF: { x: 28, y: -18 }, legB: { x: -22, y: -14 }, lean: 0.26 },
       down: { legF: { x: 30, y: -8 }, legB: { x: -26, y: -6 }, lean: 0.28 },
@@ -1660,15 +1665,18 @@ export const FORMS = {
     victory: {
       rate: 0.8,
       keys: carried([
-        { t: 0,   hand: 'open', joints: { armF: { x: 70, y: -176 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.08 } },
-        { t: 0.5, hand: 'open', joints: { armF: { x: 78, y: -196 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -184, headX: 2, bodyLean: -0.1 }, ease: 'inOutCubic' },
-        { t: 1,   hand: 'open', joints: { armF: { x: 70, y: -176 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.08 }, ease: 'inOutCubic' },
+        // a hand on his chest (himself), then both swept out and up to the
+        // crowd, the chest out (the presenting hand alone, a little higher,
+        // was his guard)
+        { t: 0,   hand: 'open', joints: { armF: { x: 40, y: -158 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.06 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 86, y: -204 }, armB: { x: -32, y: -172 }, hipY: -85, shoulderY: -153, headY: -185, headX: -2, bodyLean: -0.15 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 40, y: -158 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.06 }, ease: 'inOutCubic' },
       ]),
     },
     // He struts: tall, the chest out, the knees lifting high, the presenting
     // hand keeping time. He jumps in a split for the crowd, the presenting
     // hand thrown up, and gathers his legs to land.
-    walk: { stride: 10, lift: 14, bob: 3, lean: -0.08, back: -0.1, roll: 0.06, hip: 0.08, swing: 4, beat: 6 },
+    walk: { cycle: 85, lag: Math.PI / 2, lift: 14, bob: 3, lean: -0.08, back: -0.1, roll: 0.06, hip: 0.08, swing: 4, beat: 6 },
     jump: {
       up: { legF: { x: 46, y: -36 }, legB: { x: -42, y: -30 }, armF: { x: 60, y: -214 }, lean: -0.1 },
       down: { legF: { x: 22, y: -20 }, legB: { x: -14, y: -14 }, lean: -0.06 },
@@ -1714,15 +1722,18 @@ export const FORMS = {
     victory: {
       rate: 0.6,
       keys: carried([
-        { t: 0,   joints: { armF: { x: 20, y: -140 }, armB: { x: 28, y: -142 }, hipY: -84, shoulderY: -152, headY: -181, headX: 2, bodyLean: -0.06 } },
-        { t: 0.5, joints: { armF: { x: 22, y: -142 }, armB: { x: 30, y: -144 }, hipY: -84, shoulderY: -152, headY: -182, headX: 0, bodyLean: -0.02 }, ease: 'inOutCubic' },
-        { t: 1,   joints: { armF: { x: 20, y: -140 }, armB: { x: 28, y: -142 }, hipY: -84, shoulderY: -152, headY: -181, headX: 2, bodyLean: -0.06 }, ease: 'inOutCubic' },
+        // the arms folded high on the chest and the whole body leaning back
+        // from it, the chin up: at his guard's height and lean it read as
+        // the guard
+        { t: 0,   joints: { armF: { x: 18, y: -158 }, armB: { x: 26, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: -3, bodyLean: -0.2 } },
+        { t: 0.5, joints: { armF: { x: 19, y: -160 }, armB: { x: 27, y: -152 }, hipY: -84, shoulderY: -152, headY: -183, headX: -5, bodyLean: -0.14 }, ease: 'inOutCubic' },
+        { t: 1,   joints: { armF: { x: 18, y: -158 }, armB: { x: 26, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: -3, bodyLean: -0.2 }, ease: 'inOutCubic' },
       ]),
     },
     // He glides in, unhurried: the lead hand low and loose, the shoulders
     // rolling. He jumps with one knee up and the other leg hanging, no
     // effort in it.
-    walk: { rate: 0.85, stride: 11, lift: 5, bob: 2, back: -0.06, roll: 0.1, hip: 0.03, swing: 5 },
+    walk: { cycle: 105, lag: Math.PI / 2, lift: 5, bob: 2, back: -0.06, roll: 0.1, hip: 0.03, swing: 5 },
     jump: {
       up: { legF: { x: 26, y: -40 }, legB: { x: -14, y: -6 } },
       down: { legF: { x: 22, y: -16 }, legB: { x: -18, y: -4 } },
@@ -1778,7 +1789,7 @@ export const FORMS = {
     // He sidles: a sliding shuffle, the feet hardly leaving the floor, the
     // hand in his pocket and the head bobbing. He hops, both feet together,
     // the hand still in his pocket.
-    walk: { rate: 1.1, stride: 9, lag: Math.PI / 2, lift: 2, bob: 2, lean: 0.06, back: -0.02, roll: 0.04, swing: 3, nod: 2 },
+    walk: { cycle: 95, slip: 0.25, lag: Math.PI / 2, lift: 2, bob: 2, lean: 0.06, back: -0.02, roll: 0.04, swing: 3, nod: 2 },
     jump: {
       up: { legF: { x: 8, y: -10 }, legB: { x: -4, y: -8 } },
       down: { legF: { x: 6, y: -4 }, legB: { x: -4, y: -3 } },
@@ -1832,16 +1843,18 @@ export const FORMS = {
     victory: {
       rate: 0.4,
       keys: carried([
-        { t: 0,   hand: 'open', joints: { armF: { x: 26, y: -118 }, armB: { x: 20, y: -120 }, hipY: -86, shoulderY: -154, headY: -182, headX: 2, bodyLean: 0, sy: 1.02 } },
-        { t: 0.5, hand: 'open', joints: { armF: { x: 26, y: -119 }, armB: { x: 20, y: -121 }, hipY: -87, shoulderY: -155, headY: -183, headX: 2, bodyLean: 0, sy: 1.02 }, ease: 'inOutCubic' },
-        { t: 1,   hand: 'open', joints: { armF: { x: 26, y: -118 }, armB: { x: 20, y: -120 }, hipY: -86, shoulderY: -154, headY: -182, headX: 2, bodyLean: 0, sy: 1.02 }, ease: 'inOutCubic' },
+        // the hands clasped up under her chin, the head tilting as she
+        // stares (clasped at the waist, it read as her guard)
+        { t: 0,   hand: 'open', joints: { armF: { x: 24, y: -166 }, armB: { x: 20, y: -164 }, hipY: -86, shoulderY: -154, headY: -181, headX: 5, bodyLean: 0.06, sy: 1.03 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 25, y: -167 }, armB: { x: 21, y: -165 }, hipY: -87, shoulderY: -155, headY: -182, headX: 8, bodyLean: 0.08, sy: 1.03 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 24, y: -166 }, armB: { x: 20, y: -164 }, hipY: -86, shoulderY: -154, headY: -181, headX: 5, bodyLean: 0.06, sy: 1.03 }, ease: 'inOutCubic' },
       ]),
     },
     // She advances as a fencer does, the lead foot stepping and the rear one
     // following, upright and level: no bob, nothing in the arms. She jumps
     // straight up, the legs straight and together, and reaches for the floor
     // with the lead foot, as for a lunge.
-    walk: { rate: 1.1, stride: 10, lag: Math.PI / 2, lift: 6, lean: 0.02, back: 0 },
+    walk: { cycle: 80, slip: 0.3, lag: Math.PI / 2, lift: 6, lean: 0.02, back: 0 },
     jump: {
       up: { legF: { x: 10, y: -6 }, legB: { x: -10, y: -6 } },
       down: { legF: { x: 28, y: -8 }, legB: { x: -20, y: -10 } },
@@ -1894,15 +1907,18 @@ export const FORMS = {
     victory: {
       rate: 0.5,
       keys: carried([
-        { t: 0,   hand: 'open', joints: { armF: { x: 58, y: -150 }, armB: { x: 14, y: -110 }, hipY: -82, shoulderY: -150, headY: -176, headX: 3, bodyLean: 0.02 } },
-        { t: 0.5, hand: 'open', joints: { armF: { x: 60, y: -153 }, armB: { x: 14, y: -110 }, hipY: -82, shoulderY: -150, headY: -176, headX: 4, bodyLean: 0.03 }, ease: 'inOutCubic' },
-        { t: 1,   hand: 'open', joints: { armF: { x: 58, y: -150 }, armB: { x: 14, y: -110 }, hipY: -82, shoulderY: -150, headY: -176, headX: 3, bodyLean: 0.02 }, ease: 'inOutCubic' },
+        // the nails held close and low, turned to the light, the head tipped
+        // down to them and the other hand back on her hip, the hip out (held
+        // out at her jaw, the hand sat where her guard puts it)
+        { t: 0,   hand: 'open', joints: { armF: { x: 34, y: -128 }, armB: { x: -14, y: -100 }, hipY: -82, shoulderY: -150, headY: -171, headX: 7, bodyLean: -0.06 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 38, y: -133 }, armB: { x: -14, y: -100 }, hipY: -82, shoulderY: -150, headY: -172, headX: 8, bodyLean: -0.05 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 34, y: -128 }, armB: { x: -14, y: -100 }, hipY: -82, shoulderY: -150, headY: -171, headX: 7, bodyLean: -0.06 }, ease: 'inOutCubic' },
       ]),
     },
     // She comes in bobbing and weaving: low, the head dipping under with
     // every step and the shoulders turning it, the fists at her jaw. She
     // jumps in a tight ball, the knees to her chest.
-    walk: { rate: 1.3, stride: 9, lift: 5, bob: 7, back: 0.12, roll: 0.12, hip: 0.04, nod: 4 },
+    walk: { cycle: 95, slip: 0.2, lag: Math.PI / 2, lift: 5, bob: 7, back: 0.12, roll: 0.12, hip: 0.04, nod: 4 },
     jump: {
       up: { legF: { x: 18, y: -48 }, legB: { x: 4, y: -42 }, lean: 0.24 },
       down: { legF: { x: 22, y: -18 }, legB: { x: -16, y: -14 } },
@@ -1953,16 +1969,20 @@ export const FORMS = {
     victory: {
       rate: 0.35,
       keys: carried([
-        { t: 0,   hand: 'open', joints: { armF: { x: 50, y: -130 }, armB: { x: 30, y: -126 }, hipY: -88, shoulderY: -154, headY: -186, headX: 2, bodyLean: -0.02 } },
-        { t: 0.5, hand: 'open', joints: { armF: { x: 70, y: -150 }, armB: { x: 40, y: -140 }, hipY: -90, shoulderY: -156, headY: -188, headX: 2, bodyLean: -0.02 }, ease: 'inOutCubic' },
-        { t: 1,   hand: 'open', joints: { armF: { x: 50, y: -130 }, armB: { x: 30, y: -126 }, hipY: -88, shoulderY: -154, headY: -186, headX: 2, bodyLean: -0.02 }, ease: 'inOutCubic' },
+        // the palms together low in front, then opened all the way, wide
+        // and up above the shoulders, the head lifting with the breath
+        // (opened a little, it stayed within 10 px of her guard; opened
+        // level, the lead arm read as a punch)
+        { t: 0,   hand: 'open', joints: { armF: { x: 44, y: -122 }, armB: { x: 34, y: -118 }, hipY: -88, shoulderY: -154, headY: -186, headX: 2, bodyLean: -0.02 } },
+        { t: 0.5, hand: 'open', joints: { armF: { x: 76, y: -198 }, armB: { x: -38, y: -192 }, hipY: -90, shoulderY: -157, headY: -191, headX: 0, bodyLean: -0.07 }, ease: 'inOutCubic' },
+        { t: 1,   hand: 'open', joints: { armF: { x: 44, y: -122 }, armB: { x: 34, y: -118 }, hipY: -88, shoulderY: -154, headY: -186, headX: 2, bodyLean: -0.02 }, ease: 'inOutCubic' },
       ]),
     },
     // She glides, slow and level: each foot placed before her weight goes onto
     // it, the head never rising or falling, the arms drifting. She leaves the
     // floor as a crane stands, the lead knee lifted high and the rear leg long
     // beneath her, the lead hand opening.
-    walk: { rate: 0.6, stride: 9, lift: 4, back: -0.04, roll: 0.05, hip: 0.05, swing: 4 },
+    walk: { cycle: 130, slip: 0.35, lag: Math.PI / 2, lift: 4, back: -0.04, roll: 0.05, hip: 0.05, swing: 4 },
     jump: {
       up: { legF: { x: 22, y: -58 }, legB: { x: -6, y: -2 }, armF: { x: 70, y: -176 } },
       down: { legF: { x: 20, y: -30 }, legB: { x: -10, y: -4 } },

@@ -83,6 +83,7 @@ export const FX_ART = {
 
 export const PHYS = {
   WALK: 250,           // px/s, scaled by fighter speed stat
+  WALK_PHASE: 11,      // rad/s the walk cycle's phase runs at walking speed, scaled the same: render only
   AIR_DRIFT: 0.78,     // fraction of walk speed while airborne
   JUMP_V: -760,
   GRAVITY: 2100,
@@ -578,6 +579,17 @@ export const GL3D = {
   PELVIS_LEAN: 0.5,     // share of that lean the pelvis takes
   HEAD_LEAN_PX: 26,     // head offset per unit of bodyLean, as drawFighter does
   SOCKET_DROP: 8,       // shoulder sockets sit this far below shoulderY, as drawFighter does
+  // A knocked-out body lies on the floor (drawFighter's groundFall): how far
+  // above it the hip and shoulders sit on the back, the head's centre, and a
+  // hand (a foot's point is its sole), in px.
+  LIE: { BACK: 13, HEAD: 15, LIMB: 4 },
+  // A basic punch, slap or kick lands where it hits (drawFighter's landStrike):
+  // the fist or foot no nearer than this to the hitbox's top, bottom or far
+  // edge, in px.
+  STRIKE_INSET: 8,
+  // How far a sculpted body's limb may stretch past its length to reach a
+  // target, as a share of it (rig.js solvePose); the stock body stretches freely.
+  STRETCH_MOST: 1.1,
   SHOULDER_HALF: 0.27,  // model units, before body.shoulders
   HIP_HALF: 0.10,
   HIP_DROP: 0.02,

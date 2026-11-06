@@ -52,7 +52,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 558 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes, the game designer's animation fixes) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 564 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -986,6 +986,100 @@ without seeing how they were built. What it found, and what changed:
 - **Letting go of down mid-move pops the crouching move up**: left as it is,
   since the hurtbox stands up on that frame too; the v3.17 note that said
   the crouch held through the move is corrected.
+
+### A game designer's review of the animation and characters (2026-11-06)
+
+The owner: "let's check the work, animation, flow, characters, you can
+introduce game designer (agent) to check and improve". A fresh agent, as a
+fighting-game designer and animation director, posed every fighter through
+every move in the shipping renderer, measured the poses against the hitboxes
+and hurtboxes, and ranked what a player would notice. A second, on flow and
+game feel, was stopped before it reported; it has not been rerun. What the
+first found, and what changed (all render only: nothing in the simulation,
+no `SIM_VERSION` change; 3D only, except Carl's briefcase):
+
+- **Every walk skated.** The feet swung on a sine at a cadence of their own,
+  short of the floor going by, so a planted foot slid along with the body at
+  59 to 83% of its speed (Cathie 83%). The walk phase already runs with the
+  distance walked (now `PHYS.WALK_PHASE`, the 11 that was in `fighter.js`), so
+  a form's walk now says how far one cycle carries the body (`cycle`, px) and
+  the cadence follows: a foot that is down goes back under the body at exactly
+  its speed, on a triangle wave (the same shape either way, so a turn still
+  only swaps which foot is up). Where a stance is too narrow for the step its
+  cycle needs, the form chooses a glide (`slip`): Carl 30%, Scam 25%, Lizbeth
+  30%, Kim 20%, Cathie 35%; the rest are locked. Steve, Elo and Kim now walk
+  the quarter-cycle step-and-follow that Jeff, Scam and Lizbeth did. Test:
+  measured on the floor as drawn, a planted foot moves no faster than its
+  form's slip; fails with the old sine.
+- **Low stances stood up to take a hit.** Hit stun started from the stock
+  standing pose, so Adam, Carl and Kim popped up 14 to 17 px and narrowed
+  their feet on every hit, and dropped back after it; Carl's hunch flipped to
+  a lean back. A hit is now taken from the form's own guard (height, feet,
+  lean), its arms carried down with it.
+- **Stoic hits barely registered.** Lizbeth's, Cathie's and Carl's reactions
+  were scaled down throughout. Every form now snaps fully on the impact (the
+  first four frames) and the stoic ones recover composed. Test: every form
+  leans back at least 0.18 and throws its head back 5 px on the impact.
+- **Knocked-out bodies lay through the floor or on nothing.** The fall turns
+  the standing pose about the feet, so the rear foot went 10 to 38 px through
+  the floor and the back sank (Adam, Lizbeth) or hovered (Scam 25 to 50 px).
+  `groundFall` brings whatever is lowest to the floor as the body goes over,
+  then lays the back on it (`GL3D.LIE`), lifting any hand or foot still
+  under it. Adam's knockout feet start on the floor. Test: through every
+  fall, nothing under the floor, the back on it once down, the fall starting
+  on its feet.
+- **Strikes went over heads and past their boxes.** A tall fighter's straight
+  went over a short one's head and still hit (Elo's fist 45 px over Kim's), and
+  Cathie's and Adam's went 15 to 25 px past the box. `landStrike` brings a basic
+  punch, slap or kick's fist or foot into the hitbox's height and no further
+  out than its far edge (`GL3D.STRIKE_INSET`), pivoting at the shoulder or hip
+  so the limb keeps its length, measured once a move at mid-active and eased in
+  and out. Specials and command moves keep theirs. Test: every form's three
+  basics land inside the box, the limb no longer, nothing moved at the first
+  frame, specials untouched.
+- **Limbs stretched like rubber.** A sculpted arm, or a lifted leg, now
+  stretches at most 10% past its length (`GL3D.STRETCH_MOST`, `rig.js`); past
+  that it falls short. Cathie's punch, slap and kick went from 1.19 to 1.28
+  times their length to 1.07; Jeff's UNDERCUT, Carl's HOSTILE TAKEOVER and
+  Adam's BURN IT ALL are capped the same way. A planted foot still reaches the
+  floor. The stock founder model is unchanged. Test.
+- **Crouching moves kept the standing move's stretch**, standing a crouching
+  kick 12 to 22 px taller than the crouch. They now squash as the crouch does,
+  the squash taken back off a hand or foot that is out, so it still strikes
+  where it hits. Test, in the crouch test.
+- **Launcher recoveries looked over too soon.** Elo's and Kim's whiffed
+  launchers were back in their guard for three quarters of the recovery, so
+  the punish window could not be seen. Elo's, Kim's and Jeff's now stay up
+  and open, coming down slowly. Test: no form back in its guard for more than
+  40% of the recovery. (The jabs still snap home: that is how they are
+  written, and their recovery is 7 frames.)
+- **Carl blocked holding two briefcases**: the guard's, raised in his lead
+  hand, and his own. His own now goes while he blocks. Test (`gl3d.test.js`).
+  This one shows in 2D too.
+- **Five wins looked like guards**: Lizbeth's clasped hands, Cathie's arms
+  opened a little, Elo's folded arms, Kim's nails at her jaw and Steve's
+  presenting hand stayed within a few px of the guard. Lizbeth now clasps her
+  hands under her chin and tilts her head, Cathie opens her arms all the way,
+  Elo folds his arms high and leans back, Kim looks down at her nails with a
+  hand on her hip, and Steve goes from a hand on his chest to both arms out to
+  the crowd. Test: every win moves the hands 60 px from the guard or leans 0.12.
+
+Not done, for the owner:
+
+- **Kicks end short of their box** (Kim 36 px, Jeff 34, Carl 31, Scam 30):
+  the leg is already straight, and reaching further needs the hips to go with
+  it, which the 3D rig cannot do yet (the pelvis stays over the feet). A
+  `hipX` in `solvePose` would let a kick drive the hips in.
+- **Crouching heads stand 40 to 70 px above the crouched hurtbox**, so a
+  launcher can whiff a crouching fighter while visibly going through the head.
+  Either the crouches go much deeper (a style change for all nine), or the
+  crouched hurtbox follows the drawn crouch (a gameplay change, `SIM_VERSION`).
+- **Slap and punch look alike** for most of the cast: both an arm straight out
+  at shoulder height. The slap tracks could become a wide arc with a
+  follow-through across the body. A judgement call.
+- Smaller: Kim's RUG PULL stops at her knees, Scam's SAFETY MEMO and bomb read
+  as two straight arms, Carl's walk nearly kneels, several round-start
+  gestures are small on a phone.
 
 ## v3.17, released 2026-11-05: every move in each form, and the dash fixed
 

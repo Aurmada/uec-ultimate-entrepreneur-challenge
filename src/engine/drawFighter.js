@@ -412,11 +412,24 @@ export function computePose(f, t, form = null, intro = null) {
   // and settle of a hit, the fall of a KO. What the form says is where the
   // arms go and how far a hit throws the body, and the celebration itself, a
   // loop of its own.
+  // The hit is taken from the form's own guard: its height, its feet and its
+  // lean, the snap thrown back from there. It started from the stock
+  // standing pose, so a low stance (Adam, Carl, Kim) stood up and narrowed its
+  // feet on every hit, and dropped back down after: two pops a hit, and Carl's
+  // hunch flipped to a lean back. The form's arms are written for the stock
+  // height, so they come down with the body.
   if (f.state === 'hitstun' && form.hit) {
-    const H = form.hit;
-    P.bodyLean *= H.lean ?? 1;
-    P.headX *= H.lean ?? 1;
-    for (const k of ['armF', 'armB']) if (H[k]) P[k] = { ...H[k] };
+    const H = form.hit, G = restingGuard({ ...f, def }), dy = G.hipY - P.hipY;
+    P.hipY += dy; P.shoulderY += dy; P.headY += dy;
+    // A stoic form (`lean` under 1: Lizbeth, Cathie, Carl) still snaps on the
+    // impact, the first few frames; it is the recovery that is composed. Scaled
+    // throughout, its hit hardly moved it and the hit effects carried it alone.
+    const sc = H.lean ?? 1, snap = sc < 1 ? Math.max(0, 1 - f.stateT * 14) : 0;
+    const by = sc + (1 - sc) * snap;
+    P.bodyLean = G.bodyLean + P.bodyLean * by;
+    P.headX = G.headX + P.headX * by;
+    P.legF = { ...G.legF }; P.legB = { ...G.legB };
+    for (const k of ['armF', 'armB']) if (H[k]) P[k] = { x: H[k].x, y: H[k].y + dy };
     if (H.hand) P.hand = H.hand;
   }
   // Hit in the air (a juggle), the legs hung straight down as if on the
@@ -432,7 +445,10 @@ export function computePose(f, t, form = null, intro = null) {
     // over, and how (an ease of ours: in for a plank that topples, out for a
     // crash, back for one that bounces), where everyone fell the same 0.45 s.
     const F = form.ko.fall;
-    if (F) P.rot = F.rot * ease[F.ease || 'outQuad'](Math.min(1, f.stateT / F.time));
+    if (F) {
+      P.fall = ease[F.ease || 'outQuad'](Math.min(1, f.stateT / F.time));
+      P.rot = F.rot * P.fall;
+    }
   }
   if (f.state === 'victory' && form.victory) {
     const V = form.victory;
@@ -459,10 +475,23 @@ export function computePose(f, t, form = null, intro = null) {
     P.hipY += drop; P.shoulderY += shoulder; P.headY += (C.head ?? d0) * k;
     P.bodyLean += ((C.lean ?? G.bodyLean) - G.bodyLean) * k;
     const out = (p, g) => Math.min(1, Math.hypot(p.x - g.x, p.y - g.y) / REACHED_OUT);
-    for (const a of ['armF', 'armB']) P[a] = { x: P[a].x, y: P[a].y + shoulder * (1 - out(P[a], G[a])) };
+    const o = {};
+    for (const a of ['armF', 'armB']) {
+      o[a] = out(P[a], G[a]);
+      P[a] = { x: P[a].x, y: P[a].y + shoulder * (1 - o[a]) };
+    }
     for (const l of ['legF', 'legB']) {
-      if (P[l].y < 0) P[l] = { x: P[l].x, y: Math.min(0, P[l].y + drop * (1 - out(P[l], G[l]))) };
+      o[l] = P[l].y < 0 ? out(P[l], G[l]) : 0;
+      if (P[l].y < 0) P[l] = { x: P[l].x, y: Math.min(0, P[l].y + drop * (1 - o[l])) };
       else if (C[l]) P[l] = { x: P[l].x + (C[l].x - G[l].x) * k, y: 0 };
+    }
+    // and squashes as the crouch does (the move's own stretch stood a
+    // crouching kick 12 to 22 px taller than the crouch), the squash taken
+    // back off a hand or foot that is out, so it still strikes where it hits
+    const cx = 1 + ((C.sx ?? 1) - 1) * k, cy = 1 + ((C.sy ?? 1) - 1) * k;
+    P.sx = (P.sx ?? 1) * cx; P.sy = (P.sy ?? 1) * cy;
+    for (const l of ['armF', 'armB', 'legF', 'legB']) {
+      if (o[l]) P[l] = { x: P[l].x / (1 + (cx - 1) * o[l]), y: P[l].y / (1 + (cy - 1) * o[l]) };
     }
   }
   // A move thrown in the air keeps the form's own jump in the legs it does
@@ -575,25 +604,116 @@ function heldUnbroken(f, which, timer) {
 // Carl's hunch and Kim's crouch gone until they stopped again.
 const restingGuard = (f) => basePose({ ...f, state: 'idle', stateT: 0, side: 0 }, 0);
 
+// A knockout in a form (forms.js `ko.fall`) turns the whole body over about
+// its feet, and the floor came out wherever the standing pose put it: the
+// legs keep their stance, so the rear foot went 10 to 38 px through the floor
+// and the back lay on nothing or half under it (Adam and Lizbeth sank, Scam
+// reclined 25 to 50 px up). Here, as it falls, whatever is lowest comes to
+// rest on the floor; once down (`P.fall` 1), the back does (the hip,
+// shoulders and head, by GL3D.LIE), and a hand or foot that would still be
+// under the floor is lifted onto it. `P` is the pose as drawn (after the
+// proportions and the figure's legs); returns how far to move the drawing,
+// in the turned frame it is drawn in. Render only.
+export function groundFall(P) {
+  const L = GL3D.LIE, c = Math.cos(P.rot || 0), s = Math.sin(P.rot || 0);
+  const sx = P.sx ?? 1, sy = P.sy ?? 1;
+  const lean = (P.bodyLean || 0) * GL3D.LEAN, cl = Math.cos(lean), sl = Math.sin(lean);
+  const socket = (x, y) => [x * cl - (y - P.hipY) * sl, P.hipY + x * sl + (y - P.hipY) * cl];
+  const down = ([x, y]) => x * sx * s + y * sy * c;     // how far below the feet, once turned
+  const torso = [[[0, P.hipY], L.BACK], [socket(0, P.shoulderY), L.BACK], [socket(P.headX || 0, P.headY), L.HEAD]];
+  const limbs = ['legF', 'legB', 'armF', 'armB'].filter((k) => P[k]);
+  const back = Math.max(...torso.map(([p, r]) => down(p) + r));
+  // a foot's point is its sole, a hand's the middle of the fist
+  const r = (k) => (k[0] === 'l' ? 0 : L.LIMB);
+  const all = Math.max(back, ...limbs.map((k) => down([P[k].x, P[k].y]) + r(k)));
+  const k = Math.max(0, Math.min(1, P.fall ?? 1));
+  const shift = -(all + (back - all) * k * k);
+  for (const l of limbs) {
+    const under = down([P[l].x, P[l].y]) + r(l) + shift;
+    if (under > 0) P[l] = { x: P[l].x - (under * s) / sx, y: P[l].y - (under * c) / sy };
+  }
+  return { x: shift * s, y: shift * c };
+}
+
+// A basic punch, slap or kick lands where it hits. The forms write their
+// strikes for a body of no particular size, and the hitbox does not know the
+// size either (Fighter.hitbox: the move's reach and height from the feet), so
+// a tall fighter's straight went over a short one's head and still hit (Elo's
+// fist 45 px over Kim's), and a long arm (Cathie's, Adam's) went 15 to 25 px
+// past the box, stretched to get there. Here the fist or foot, as drawn, is
+// brought into the box's height and no further out than its far edge,
+// pivoting about the shoulder or hip so the limb keeps its length. It is
+// measured once a move, in the middle of its active window, and the same
+// correction eased in over the wind-up and out over the recovery, so the
+// move keeps its shape. Specials and command moves keep theirs as written.
+// A kick that ends short of its box stays short: the leg cannot reach further
+// without the hips going with it. Render only: the hitbox is untouched.
+const STRIKE_LIMB = { punch: 'armF', slap: 'armF', kick: 'legF' };
+const LANDING = new WeakMap();      // attack -> { limb, dx, dy }
+export function landStrike(f, P, t, form, body, athlete) {
+  const atk = f.attack;
+  if (f.state !== 'attack' || !atk || atk.cmd || atk.special || !STRIKE_LIMB[atk.kind] || typeof f.hitbox !== 'function') return;
+  let L = LANDING.get(atk);
+  if (!L) {
+    const mid = atk.startup + atk.active / 2, limb = STRIKE_LIMB[atk.kind];
+    const Q = applyProportions(computePose({ ...f, stateT: mid }, t, form, roundStart), body);
+    if (athlete) figureFrame(Q);
+    const box = f.hitbox.call({ attack: atk, stateT: mid, x: 0, y: 0, facing: 1 });
+    const m = GL3D.STRIKE_INSET, sx = Q.sx ?? 1, sy = Q.sy ?? 1;
+    const x = Q[limb].x * sx, y = Q[limb].y * sy;
+    // the shoulder socket (turned with the lean, as the 3D rig turns it) or the hip
+    const lean = (Q.bodyLean || 0) * GL3D.LEAN, dy0 = Q.shoulderY + GL3D.SOCKET_DROP - Q.hipY;
+    const [ox, oy] = limb === 'armF' ? [-dy0 * Math.sin(lean) * sx, (Q.hipY + dy0 * Math.cos(lean)) * sy] : [0, Q.hipY * sy];
+    let tx = x, ty = Math.max(box.y + m, Math.min(box.y + box.h - m, y));
+    if (ty !== y) {
+      const r = Math.hypot(x - ox, y - oy), up = ty - oy;
+      tx = ox + Math.sqrt(Math.max(0, r * r - up * up));
+    }
+    tx = Math.min(tx, box.x + box.w - m);
+    L = { limb, dx: (tx - x) / sx, dy: (ty - y) / sy };
+    LANDING.set(atk, L);
+  }
+  if (!L.dx && !L.dy) return;
+  const k = attackPhaseT(f.stateT, atk.startup, atk.active, atk.recovery);
+  const w = k < 1 ? ease.smooth(k) : k <= 2 ? 1 : 1 - ease.smooth(k - 2);
+  P[L.limb] = { x: P[L.limb].x + L.dx * w, y: P[L.limb].y + L.dy * w };
+}
+
 // A form's own walk (forms.js `walk`): the feet staggered where the stance put
-// them, never meeting, stepping at the form's cadence (`rate` on the walk
-// phase), the rear foot `lag` behind the lead (half a cycle is a walk, a
-// quarter the step-and-follow of a boxer or a fencer), lifted `lift` as it
-// travels; the body `low`er than the guard and dipping `bob` with each step,
-// the shoulders rolling against the hips (`roll`, `hip`), the arms swinging
-// `swing` either side of the guard, the head nodding `nod`, the lead hand
-// keeping time `beat`.
+// them, never meeting, the rear foot `lag` behind the lead (half a cycle is a
+// walk, a quarter the step-and-follow of a boxer or a fencer), lifted `lift`
+// as it travels; the body `low`er than the guard and dipping `bob` with each
+// step, the shoulders rolling against the hips (`roll`, `hip`), the arms
+// swinging `swing` either side of the guard, the head nodding `nod`, the lead
+// hand keeping time `beat`.
+//
+// A planted foot stays where it was put. The walk phase runs with the distance
+// walked (PHYS.WALK_PHASE radians for every PHYS.WALK px), so a form says how
+// far one whole cycle carries the body (`cycle`, px) and the cadence follows
+// from it: each foot travels back under the body at exactly the body's speed
+// while it is down, and swings forward while it is up. The feet used to swing
+// on a sine at a cadence of their own, short of the ground going by, and slid
+// along with the body at 59 to 83% of its speed: every walk skated. Where a
+// stance is too narrow for the step its cycle needs, the step is cut to keep
+// the feet apart and the rest is `slip`, a glide the form chooses (Cathie's).
+const WALK_PX = PHYS.WALK / PHYS.WALK_PHASE;     // px walked per radian of the walk phase
+// A triangle wave, -1 to 1: back at one speed, forward at the same, so it is
+// the same shape whichever way the fighter goes, and a turn swaps only which
+// foot is up.
+const tri = (p) => (2 / Math.PI) * Math.asin(Math.sin(p));
 function formWalk(f, W) {
   const G = restingGuard(f);
-  // The cycle runs on with the walk phase whichever way the fighter goes, so
-  // nothing jumps when they turn (running it backwards to back off threw the
-  // feet up to 28 px in a frame); backing off, it is the foot travelling back
-  // that lifts (the shared walk lifts the planted one).
-  const ph = f.walkPhase * (W.rate ?? 1), lifts = f.movingBack ? -1 : 1;
   const lag = W.lag ?? Math.PI;
-  // As far as the feet can go and still stay 20 px apart at their nearest.
-  const step = Math.min(W.stride, (G.legF.x - G.legB.x - 20) / (2 * Math.sin(lag / 2)));
-  const foot = (x, p) => ({ x: x + Math.sin(p) * step, y: -Math.max(0, lifts * Math.cos(p)) * (W.lift ?? 0) });
+  // the legs are drawn `stride` times as wide (applyProportions)
+  const sp = (f.body || clampBody(f.def?.body)).stride || 1;
+  const cycle = W.cycle ?? (2 * Math.PI * WALK_PX) / (W.rate ?? 1);
+  const ph = f.walkPhase * (2 * Math.PI * WALK_PX) / cycle, lifts = f.movingBack ? -1 : 1;
+  // Down for half the cycle, carried back the body's distance (less the
+  // slip): each foot's step either side of where the stance put it. As far as
+  // the feet can go and still stay 20 px apart at their nearest.
+  const want = ((1 - (W.slip ?? 0)) * cycle) / (4 * sp);
+  const step = Math.min(want, ((G.legF.x - G.legB.x - 20) * Math.PI) / (2 * lag));
+  const foot = (x, p) => ({ x: x + tri(p) * step, y: -Math.max(0, lifts * Math.cos(p)) * (W.lift ?? 0) });
   const dip = (W.low ?? 0) + (W.bob ?? 0) * Math.sin(ph) ** 2;
   const s = Math.sin(ph);
   return {
@@ -1712,6 +1832,11 @@ export function drawFighter(ctx, f, t) {
   // blit are shared with the procedural rig below. Parts are not drawn yet.
   if (has3D(def)) {
     if (athlete3D(def)) figureFrame(P);    // the athlete body stands on the figure's longer legs
+    if (P.fall !== undefined) {
+      const g = groundFall(P);
+      ctx.translate(g.x, g.y);
+    }
+    if (form3D(def)) landStrike(f, P, t, form3D(def), body, athlete3D(def));
     const metrics = bufferMetrics(body);
     const stanceEl = f.state === 'idle' ? (def.stance || null) : null;
     // On the 3D layer (GL3D.LAYER, set up by render.js for this frame): drawn

@@ -521,10 +521,20 @@ test('every form takes a hit, goes down and celebrates its own way', () => {
     const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
     const def = getFighter(id);
     const at = (state, stateT, t = 0) => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, t, form);
-    // the arms where the form puts them, over the shared timing
-    const hit = at('hitstun', 0.05);
-    assert.deepEqual(hit.armF, form.hit.armF);
-    assert.ok(hit.bodyLean < 0, `${name} is not knocked back`);
+    // the arms where the form puts them, over the shared timing, taken from
+    // the form's own guard: its height and feet, knocked back from its lean
+    // (it took hits from the stock standing pose, so a low stance stood up)
+    const hit = at('hitstun', 0.05), guard = at('idle', 0);
+    const dy = guard.hipY - computePose({ def, state: 'hitstun', stateT: 0.05, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0).hipY;
+    assert.deepEqual(hit.armF, { x: form.hit.armF.x, y: form.hit.armF.y + dy });
+    assert.equal(hit.hipY, guard.hipY, `${name} stands up to take a hit`);
+    assert.deepEqual([hit.legF, hit.legB], [guard.legF, guard.legB], `${name} takes a hit on the stock feet`);
+    assert.ok(hit.bodyLean < guard.bodyLean - 0.05, `${name} is not knocked back`);
+    // and every form, the stoic ones too, snaps on the impact itself (they
+    // were scaled down throughout, and a hit hardly moved Lizbeth or Cathie)
+    const impact = at('hitstun', 0.01);
+    assert.ok(impact.bodyLean <= guard.bodyLean - 0.18 && impact.headX <= guard.headX - 5, `${name} hardly moves when hit (${(impact.bodyLean - guard.bodyLean).toFixed(2)}, ${(impact.headX - guard.headX).toFixed(1)} px)`);
+    for (const st of [0.02, 0.1, 0.3]) assert.ok(at('hitstun', st).headY > guard.headY - 6, `${name}'s head goes up when hit`);
     assert.deepEqual(at('ko', 0.3).armF, form.ko.armF);
     assert.ok(at('ko', 1).rot < -1.2, `${name} does not go down`);
     // and the celebration moves
@@ -550,7 +560,7 @@ test("Kim's celebration keeps her face clear", () => {
 test('every form walks its own way, in its own stance, the feet apart and the lifted one travelling', () => {
   for (const [name, form] of Object.entries(FORMS)) {
     const W = form.walk;
-    assert.ok(W && W.stride > 0 && (W.rate ?? 1) > 0 && (W.lift ?? 0) >= 0, `${name} walks the shared walk`);
+    assert.ok(W && W.cycle > 0 && (W.slip ?? 0) >= 0 && (W.slip ?? 0) <= 0.4 && (W.lift ?? 0) >= 0, `${name} walks the shared walk`);
     const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
     const def = getFighter(id);
     const pose = (state, extra = {}) => computePose({ def, state, stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, ...extra }, 0, form);
@@ -590,6 +600,36 @@ test('every form walks its own way, in its own stance, the feet apart and the li
       }
       for (const l of ['legF', 'legB']) assert.ok(Math.abs(on[l].y - back[l].y) <= (W.lift ?? 0) + 1e-9, `${name} turning round lifts ${l} past its step`);
       for (const c of ['hipY', 'twist', 'hipTwist']) assert.ok(Math.abs(on[c] - back[c]) < 1e-9, `${name} turning round at ${walkPhase.toFixed(2)}: ${c} jumps`);
+    }
+  }
+});
+
+// A planted foot stays where it was put on the floor. The walk phase runs with
+// the distance walked, so a foot that is down goes back under the body at the
+// body's own speed, less only the glide a form chooses (`slip`): the feet
+// swung on a sine at a cadence of their own and slid along with the body at
+// 59 to 83% of its speed, every walk skating. Measured on the floor, the legs
+// as drawn (applyProportions widens them by the body's stride).
+test('a planted foot stays planted: the walk keeps to the ground going by', async () => {
+  const { applyProportions, clampBody } = await import('../src/engine/proportions.js');
+  const { PHYS } = await import('../src/config.js');
+  const px = PHYS.WALK / PHYS.WALK_PHASE;     // floor going by per radian of the walk phase
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id), body = clampBody(def.body), slip = form.walk.slip ?? 0;
+    for (const movingBack of [false, true]) {
+      const at = (walkPhase) => applyProportions(computePose({ def, state: 'walk', stateT: 0, walkPhase, side: 0, vy: 0, airborne: false, movingBack }, 0, form), body);
+      let down = 0;
+      for (let i = 0; i < 240; i++) {
+        const w = i * 0.07, a = at(w), b = at(w + 0.005);
+        for (const l of ['legF', 'legB']) {
+          if (a[l].y !== 0 || b[l].y !== 0) continue;
+          down++;
+          const onFloor = (b[l].x - a[l].x) / 0.005 + (movingBack ? -px : px);
+          assert.ok(Math.abs(onFloor) <= (slip + 0.01) * px, `${name}${movingBack ? ' backing off' : ''} at ${w.toFixed(2)}: the planted ${l} slides at ${(100 * Math.abs(onFloor) / px).toFixed(0)}% of the walk`);
+        }
+      }
+      assert.ok(down > 120, `${name} hardly puts a foot down`);
     }
   }
 });
@@ -952,8 +992,11 @@ test('every form throws a move from its crouch, striking where it hits', async (
       // below the crouch it was thrown from
       assert.ok(low.hipY > high.hipY + 5, `${name}'s ${kind} from a crouch stands up`);
       assert.ok(low.hipY <= crouch.hipY + 1e-9, `${name}'s ${kind} from a crouch goes down to ${low.hipY}, below its crouch's ${crouch.hipY}`);
-      assert.ok(Math.hypot(low[limb].x - high[limb].x, low[limb].y - high[limb].y) < 1e-9,
-        `${name}'s ${kind} from a crouch strikes ${(low[limb].y - high[limb].y).toFixed(1)} px from where it hits`);
+      // where it hits as drawn, the squash and all
+      const dx = low[limb].x * low.sx - high[limb].x * high.sx, dy = low[limb].y * low.sy - high[limb].y * high.sy;
+      assert.ok(Math.hypot(dx, dy) < 1e-9, `${name}'s ${kind} from a crouch strikes ${Math.hypot(dx, dy).toFixed(1)} px from where it hits`);
+      // squashed as the crouch is (the move's own stretch stood it up)
+      if ((form.crouch.sy ?? 1) < 1) assert.ok(low.sy < high.sy - 0.02, `${name}'s ${kind} from a crouch keeps the standing move's stretch`);
     }
   }
   // Kim's RUG PULL is written down at the floor already
@@ -1001,6 +1044,41 @@ test('every form falls its own way when it is knocked out', () => {
   assert.ok(curves.size >= 8, `only ${curves.size} different falls`);
 });
 
+// And lands on the floor. The fall turns the standing pose over about the
+// feet, so the floor came out wherever the stance put it: the rear foot went
+// 10 to 38 px through it and the back lay on nothing or half under it (Adam
+// and Lizbeth sank, Scam reclined 25 to 50 px up). groundFall brings
+// whatever is lowest to the floor as the body goes over, and once down lays
+// the back on it, lifting any hand or foot still under it. Measured as drawn:
+// after the proportions and the figure's legs, turned and moved as
+// drawFighter draws it (which has to call it, in the 3D branch).
+test('a knocked-out body lies on the floor: nothing under it, the back on it', async () => {
+  const { groundFall } = await import('../src/engine/drawFighter.js');
+  const { GL3D } = await import('../src/config.js');
+  const src = readFileSync(new URL('../src/engine/drawFighter.js', import.meta.url), 'utf8');
+  assert.match(src, /const g = groundFall\(P\);\s*ctx\.translate\(g\.x, g\.y\);/, 'drawFighter never grounds the fall');
+  const L = GL3D.LIE;
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id), F = form.ko.fall;
+    for (const stateT of [0, 0.03, 0.1, 0.2, 0.3, 0.45, 0.6, 0.8, F.time, F.time + 2]) {
+      const P = figureFrame(applyProportions(computePose({ def, state: 'ko', stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form), clampBody(def.body)));
+      const g = groundFall(P), c = Math.cos(P.rot), s = Math.sin(P.rot);
+      const shift = g.x * s + g.y * c;
+      const lean = (P.bodyLean || 0) * GL3D.LEAN;
+      const at = ([x, y]) => -(x * P.sx * s + y * P.sy * c + shift);     // height above the floor
+      const socket = (x, y) => [x * Math.cos(lean) - (y - P.hipY) * Math.sin(lean), P.hipY + x * Math.sin(lean) + (y - P.hipY) * Math.cos(lean)];
+      const what = `${name} ${stateT.toFixed(2)} s into its knockout`;
+      for (const l of ['legF', 'legB']) assert.ok(at([P[l].x, P[l].y]) >= -1e-6, `${what}: ${l} is ${(-at([P[l].x, P[l].y])).toFixed(0)} px through the floor`);
+      for (const l of ['armF', 'armB']) assert.ok(at([P[l].x, P[l].y]) >= L.LIMB - 1e-6, `${what}: ${l} is through the floor`);
+      const hip = at([0, P.hipY]), sh = at(socket(0, P.shoulderY)), head = at(socket(P.headX, P.headY));
+      assert.ok(hip >= L.BACK - 1e-6 && sh >= L.BACK - 1e-6 && head >= L.HEAD - 1e-6, `${what}: the body is through the floor`);
+      if (stateT === 0) assert.ok(Math.abs(Math.min(at([P.legF.x, P.legF.y]), at([P.legB.x, P.legB.y]))) < 1e-6 && Math.abs(shift) < 3, `${what}: the fall does not start on its feet (moved ${shift.toFixed(1)} px)`);
+      if (stateT >= F.time) assert.ok(Math.abs(Math.min(hip - L.BACK, sh - L.BACK, head - L.HEAD)) < 1e-6, `${what}: lies ${Math.min(hip - L.BACK, sh - L.BACK, head - L.HEAD).toFixed(0)} px off the floor`);
+    }
+  }
+});
+
 // Hit in the air (a juggle), a fighter's legs hung straight down as if on the
 // floor; they take the form's own jump at that moment instead. On the ground
 // the hit is as it was.
@@ -1012,9 +1090,122 @@ test('every form takes a hit in the air in its own jump', () => {
       const jump = computePose({ def, state: 'jump', stateT: 0, walkPhase: 0, side: 0, vy, airborne: true, movingBack: false }, 0, form);
       const hit = computePose({ def, state: 'hitstun', stateT: 0.1, walkPhase: 0, side: 0, vy, airborne: true, movingBack: false }, 0, form);
       assert.deepEqual([hit.legF, hit.legB], [jump.legF, jump.legB], `${name} hangs its legs down when hit in the air`);
-      assert.deepEqual(hit.armF, form.hit.armF);
+      assert.equal(hit.armF.x, form.hit.armF.x);
     }
     const ground = computePose({ def, state: 'hitstun', stateT: 0.1, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, 0, form);
     assert.equal(ground.legF.y, 0, `${name}'s feet leave the floor when hit on it`);
+  }
+});
+
+// A basic punch, slap or kick lands where it hits, in every form, as drawn
+// (after the proportions and the figure's legs, and the squash): the fist or
+// foot inside the hitbox's height and no further out than its far edge. A
+// tall fighter's straight went over a short one's head and still hit (Elo's
+// fist 45 px over Kim's), and Cathie's and Adam's went 15 to 25 px past the
+// box. Brought in by pivoting at the shoulder or hip, the limb keeps its
+// length; eased in and out, the move keeps its shape (nothing moves at the
+// first frame); specials keep theirs as written.
+test('every form lands its basic strikes inside the hitbox', async () => {
+  const { landStrike } = await import('../src/engine/drawFighter.js');
+  const { Fighter } = await import('../src/engine/fighter.js');
+  const { GL3D } = await import('../src/config.js');
+  const noop = () => {};
+  const game = { audio: { sfx: noop }, fx: { dust: noop, burst: noop, ring: noop, text: noop, spark: noop }, onSpecialStart: noop, onSpecialDenied: noop, onUnicorn: noop, other: () => null };
+  const m = GL3D.STRIKE_INSET;
+  let moved = 0;
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id), body = clampBody(def.body);
+    for (const [kind, limb] of [['punch', 'armF'], ['slap', 'armF'], ['kick', 'legF']]) {
+      const f = new Fighter(def, 0, { update: noop });
+      f.x = 0; f.y = 0; f.energy = 100;
+      f.startAttack(kind, game);
+      const a = f.attack, at = (stateT, land = true) => {
+        f.stateT = stateT;
+        const P = figureFrame(applyProportions(computePose(f, 0, form), body));
+        if (land) landStrike(f, P, 0, form, body, true);
+        return P;
+      };
+      const mid = a.startup + a.active / 2, P = at(mid), raw = at(mid, false), box = f.hitbox();
+      const x = P[limb].x * P.sx, y = P[limb].y * P.sy;
+      const what = `${name}'s ${kind}`;
+      assert.ok(y >= box.y + m - 1e-6 && y <= box.y + box.h - m + 1e-6, `${what} lands ${(box.y - y).toFixed(0)} px over its hitbox`);
+      assert.ok(x <= box.x + box.w - m + 1e-6, `${what} lands ${(x - box.x - box.w).toFixed(0)} px past its hitbox`);
+      if (P[limb].y !== raw[limb].y) {
+        moved++;
+        // pivoted, not pulled: as far from the shoulder (or hip) as before
+        const o = limb === 'armF' ? (q) => [-(q.shoulderY + GL3D.SOCKET_DROP - q.hipY) * Math.sin(q.bodyLean * GL3D.LEAN), q.hipY + (q.shoulderY + GL3D.SOCKET_DROP - q.hipY) * Math.cos(q.bodyLean * GL3D.LEAN)] : (q) => [0, q.hipY];
+        const len = (q) => Math.hypot(q[limb].x * q.sx - o(q)[0] * q.sx, q[limb].y * q.sy - o(q)[1] * q.sy);
+        if (x < box.x + box.w - m - 1e-6) assert.ok(Math.abs(len(P) - len(raw)) < 1e-6, `${what}'s limb is ${(len(P) - len(raw)).toFixed(1)} px longer`);
+      }
+      assert.deepEqual(at(0)[limb], at(0, false)[limb], `${what} moves on its first frame`);
+    }
+    // a special is left as its form wrote it
+    const s = new Fighter(def, 0, { update: noop });
+    s.x = 0; s.y = 0; s.energy = 100;
+    s.startSpecial(game);
+    if (s.attack) {
+      s.stateT = s.attack.startup + s.attack.active / 2;
+      const P = figureFrame(applyProportions(computePose(s, 0, form), body)), before = structuredClone(P);
+      landStrike(s, P, 0, form, body, true);
+      assert.deepEqual(P, before, `${name}'s special is moved`);
+    }
+  }
+  assert.ok(moved >= 8, `only ${moved} strikes came down into their box`);
+});
+
+// A sculpted body's limb stretches only a little to reach a target placed
+// for a longer one (GL3D.STRETCH_MOST): Cathie's punch and kick, Jeff's
+// UNDERCUT and Carl's HOSTILE TAKEOVER grew by up to a third. A planted foot
+// still reaches the floor however far it is.
+test('a sculpted arm or lifted leg stretches no more than STRETCH_MOST', async () => {
+  const { GL3D } = await import('../src/config.js');
+  const len = (m, bone) => { const a = joint(m, bone), b = joint(m, bone, true); return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); };
+  const rest = solvePose(rig, posed('idle'));
+  const base = { arm: len(rest, 'forearm.L'), leg: len(rest, 'shin.L') };
+  const far = { ...posed('idle'), armF: { x: 260, y: -150 }, legF: { x: 220, y: -60 } };
+  const m = solvePose(rig, far);
+  assert.ok(len(m, 'forearm.L') / base.arm <= GL3D.STRETCH_MOST + 1e-3, `the arm stretches ${(len(m, 'forearm.L') / base.arm).toFixed(2)}`);
+  assert.ok(len(m, 'shin.L') / base.leg <= GL3D.STRETCH_MOST + 1e-3, `the leg stretches ${(len(m, 'shin.L') / base.leg).toFixed(2)}`);
+  const wide = solvePose(rig, { ...posed('idle'), legF: { x: 220, y: 0 } });
+  const ankle = joint(wide, 'shin.L', true);
+  assert.ok(Math.abs(ankle[0] - (220 / GL3D.UNIT)) < 0.02, 'a planted foot falls short of the floor');
+});
+
+// A launcher that misses is wide open for its long recovery, and should look
+// it: the fist comes down only slowly. Elo's and Kim's were back at the guard
+// for three quarters of the recovery, so the punish window could not be seen.
+test('every form stays open through most of a launcher recovery', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id), atk = { ...ATTACKS.launch, kind: 'launch', hasHit: false };
+    const P = (stateT, state = 'attack') => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, attack: atk }, 0, form);
+    const G = P(0, 'idle'), n = Math.round(atk.recovery * 60);
+    let home = 0;
+    for (let i = 1; i <= n; i++) {
+      const Q = P(atk.startup + atk.active + i / 60);
+      if (Math.hypot(Q.armF.x - G.armF.x, Q.armF.y - G.armF.y) < 12) home++;
+    }
+    assert.ok(home <= 0.4 * n, `${name}'s launcher is back in its guard for ${home} of its ${n} recovery frames`);
+  }
+});
+
+// A win is not the guard. Five victory poses kept the hands within a few px of
+// where the guard puts them, at its lean (Lizbeth's clasped hands, Cathie's
+// arms opened a little, Elo's folded arms, Kim's nails at her jaw, Steve's
+// presenting hand a little higher), and read as a fighter still waiting.
+test('every form wins in a pose of its own, not its guard', () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const P = (state, t) => computePose({ def, state, stateT: 1, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false }, t, form);
+    const G = P('idle', 0);
+    let hands = 0, lean = 0;
+    for (let i = 0; i < 40; i++) {
+      const V = P('victory', i / 10);
+      hands = Math.max(hands, Math.hypot(V.armF.x - G.armF.x, V.armF.y - G.armF.y) + Math.hypot(V.armB.x - G.armB.x, V.armB.y - G.armB.y));
+      lean = Math.max(lean, Math.abs(V.bodyLean - G.bodyLean));
+    }
+    assert.ok(hands >= 60 || lean >= 0.12, `${name} wins in its guard: the hands ${hands.toFixed(0)} px from it, the lean ${lean.toFixed(2)}`);
   }
 });
