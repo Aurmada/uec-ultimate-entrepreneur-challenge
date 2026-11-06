@@ -2152,6 +2152,7 @@ function drawBust3D(canvas, ctx, def, opts) {
   P.armB = { x: hb[0], y: P.hipY + hb[1] };
   return renderBust3D(ctx, { x: 0, y: 0, w: canvas.width, h: canvas.height }, def, P, {
     expression: opts.face || 'idle', face: FACE_PAINTER, mirror: !!opts.mirror, unicorn: !!opts.unicorn,
+    close: !opts.bare,                     // the cut-in brings its own band and framing
   });
 }
 

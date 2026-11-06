@@ -11,6 +11,10 @@ small even mouth and a round chin on a narrowish jaw. Nothing in it is
 pushed. His brown hair is a curly mop (`headwear`), puffs over the whole
 head and fullest on top, as the 2D one is drawn.
 
+Pushed further on 2026-11-06, when the nine faces read too alike: the
+cranium rounder, the cheeks fuller, the nose shorter, a button, and the chin
+short and round, so the face reads young and soft.
+
 As for Jeff: head 0.265 tall in Jeff's space, only the forms sculpted, the
 eyes, brows and mouth painted in game.
 """
@@ -28,13 +32,13 @@ def head(fx):
     E(V(0.024, 0, 1.734), (0.074, 0.054, 0.05), k=0.012)
     for s in (1, -1):
         E(V(-0.012, s * 0.05, 1.73), (0.022, 0.019, 0.028), k=0.02)
-    E(V(-0.012, 0, 1.866), (0.1, 0.081, 0.1), k=0.02)                             # cranium
+    E(V(-0.012, 0, 1.866), (0.102, 0.084, 0.1), k=0.02)                           # cranium, round
     E(V(0.048, 0, 1.884), (0.05, 0.064, 0.058), k=0.03)                           # a smooth forehead
     E(V(0.044, 0, 1.8), (0.054, 0.062, 0.082), k=0.03)                            # the face's mass
     for s in (1, -1):
         E(V(0.0, s * 0.054, 1.765), (0.022, 0.008, 0.03), k=0.03)                # chewing muscle
         E(V(0.063, s * 0.049, 1.808), (0.018, 0.022, 0.012), k=0.025)            # soft cheekbones
-        E(V(0.058, s * 0.046, 1.77), (0.022, 0.024, 0.027), k=0.03)              # round cheeks
+        E(V(0.06, s * 0.05, 1.772), (0.027, 0.03, 0.03), k=0.03)                 # full round cheeks
     # A low, soft brow ridge, level.
     for s in (1, -1):
         C(V(0.089, s * 0.012, 1.856), V(0.076, s * 0.055, 1.856), 0.0075, 0.0065, k=0.02)
@@ -48,15 +52,15 @@ def head(fx):
         E(V(0.082, s * EYE_Y, EYE_Z - 0.011), (0.008, 0.017, 0.006), k=0.008)    # the lower lid, into the cheek
     # A short, small nose on side planes (see Adam's and Steve's).
     E(V(0.091, 0, 1.81), (0.014, 0.027, 0.03), k=0.022)
-    C(V(0.095, 0, 1.847), V(0.112, 0, 1.79), 0.007, 0.009, k=0.018)
-    E(V(0.112, 0, 1.786), (0.0105, 0.012, 0.0098), k=0.01)
+    C(V(0.095, 0, 1.84), V(0.106, 0, 1.795), 0.007, 0.01, k=0.018)
+    E(V(0.107, 0, 1.791), (0.012, 0.012, 0.011), k=0.01)
     for s in (1, -1):
-        E(V(0.1, s * 0.0145, 1.779), (0.0078, 0.0075, 0.007), k=0.008)            # nostril wings
+        E(V(0.098, s * 0.0145, 1.783), (0.0078, 0.0075, 0.007), k=0.008)          # nostril wings
     # A small, even mouth and a round chin.
     E(V(0.07, 0, 1.751), (0.024, 0.038, 0.028), k=0.03)
     E(V(0.092, 0, 1.749), (0.0045, 0.018, 0.0037), k=0.008)
     E(V(0.09, 0, 1.739), (0.006, 0.017, 0.0045), k=0.008)
-    E(V(0.078, 0, 1.707), (0.016, 0.024, 0.017), k=0.022)
+    E(V(0.076, 0, 1.712), (0.018, 0.028, 0.015), k=0.022)
     for s in (1, -1):
         E(V(-0.006, s * 0.083, 1.826), (0.022, 0.011, 0.031), sc.rot(ry=-10), k=0.01)  # ear
         F.cut(sc.Ellipsoid(V(-0.002, s * 0.092, 1.821), (0.009, 0.006, 0.013)), 0.004)

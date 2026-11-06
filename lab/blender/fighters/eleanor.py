@@ -17,6 +17,10 @@ from a side parting, falling to the jaw at the sides and the back, fullest
 about the eyes and turned under at the ends, the face left clear between the
 two sides, as the 2D bob is drawn wide.
 
+Pushed further on 2026-11-06, when the nine faces read too alike: apple
+cheeks and a soft jaw under them, a rounder nose and chin and larger ears,
+so the face is the softest and kindest in the cast.
+
 As for Jeff: head 0.265 tall in Jeff's space, only the forms sculpted, the
 eyes, brows and mouth painted in game.
 """
@@ -39,7 +43,8 @@ def head(fx):
     for s in (1, -1):
         E(V(0.0, s * 0.05, 1.765), (0.02, 0.007, 0.028), k=0.03)                 # chewing muscle, slight
         E(V(0.064, s * 0.049, 1.809), (0.017, 0.022, 0.011), k=0.025)            # soft cheekbones
-        E(V(0.058, s * 0.045, 1.764), (0.02, 0.022, 0.027), k=0.03)              # the cheeks, settled a little low
+        E(V(0.06, s * 0.048, 1.766), (0.025, 0.028, 0.029), k=0.03)              # apple cheeks, settled a little low
+        E(V(0.045, s * 0.048, 1.728), (0.022, 0.022, 0.022), k=0.03)             # soft at the jaw
     # A soft brow ridge, set a little high and level: the raised brows are
     # painted, the ridge only gives them somewhere to sit.
     for s in (1, -1):
@@ -54,17 +59,17 @@ def head(fx):
         E(V(0.083, s * EYE_Y, EYE_Z - 0.012), (0.008, 0.017, 0.006), k=0.008)    # the lower lid, into the cheek
     # A straight nose of a good length on side planes (see Adam's).
     E(V(0.091, 0, 1.81), (0.014, 0.026, 0.03), k=0.022)
-    C(V(0.095, 0, 1.849), V(0.113, 0, 1.789), 0.0064, 0.0082, k=0.018)
-    E(V(0.112, 0, 1.785), (0.0095, 0.0108, 0.009), k=0.01)
+    C(V(0.095, 0, 1.849), V(0.111, 0, 1.791), 0.0064, 0.0086, k=0.018)
+    E(V(0.11, 0, 1.787), (0.0115, 0.0125, 0.0105), k=0.01)
     for s in (1, -1):
         E(V(0.1, s * 0.0135, 1.779), (0.0072, 0.007, 0.0065), k=0.008)           # nostril wings
     # A level mouth with thin lips, and a rounded chin.
     E(V(0.07, 0, 1.751), (0.024, 0.037, 0.027), k=0.03)
     E(V(0.092, 0, 1.749), (0.0042, 0.019, 0.0033), k=0.008)
     E(V(0.09, 0, 1.739), (0.0055, 0.017, 0.0044), k=0.008)
-    E(V(0.079, 0, 1.706), (0.015, 0.021, 0.016), k=0.022)
+    E(V(0.078, 0, 1.709), (0.017, 0.025, 0.016), k=0.022)
     for s in (1, -1):
-        E(V(-0.006, s * 0.08, 1.826), (0.02, 0.01, 0.028), sc.rot(ry=-10), k=0.01)      # small ears, under the bob
+        E(V(-0.006, s * 0.08, 1.826), (0.022, 0.011, 0.033), sc.rot(ry=-10), k=0.01)     # ears, under the bob
         F.cut(sc.Ellipsoid(V(-0.002, s * 0.088, 1.822), (0.008, 0.005, 0.012)), 0.004)
 
 

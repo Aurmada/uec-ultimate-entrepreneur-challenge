@@ -6,12 +6,16 @@ mouth, eyes certain they are the smartest thing on the stage; tall and
 heavy-set rather than built. Not a likeness: the man he parodies is named,
 never drawn.
 
-A soft oval face on a small head: a high forehead, a light brow ridge set
+A broad face on a small head: a high forehead, a light brow ridge set
 high with its inner ends lifted, big eyes set shallow and wide open under
 thin lids, soft cheekbones over full cheeks, a straight nose with a rounded
-tip, a small mouth with a pouting lower lip, and a broad rounded jaw. The fat
+tip, a small mouth with a pouting lower lip, and a broad, square jaw. The fat
 the pipeline lays on (his `belly`) softens the jaw line and the neck. His
 brown hair is a buzz cut (`headwear`).
+
+Pushed further on 2026-11-06, when the nine faces read too alike: the jaw
+broad and square, heavy at its corners and in the chewing muscle, the chin
+wide and the nose tip broader, so the face is a block under a small skull.
 
 As for Jeff: head 0.265 tall in Jeff's space, only the forms sculpted, the
 eyes, brows and mouth painted in game.
@@ -25,14 +29,14 @@ EYE_Z, EYE_Y = 1.828, 0.034
 def head(fx):
     E, C, V, sc, F = fx.E, fx.C, fx.V, fx.sc, fx.F
     # The jaw first, met tightly by the neck (see Jeff's): broad and rounded.
-    E(V(0.022, 0, 1.732), (0.078, 0.06, 0.05), k=0.012)
+    E(V(0.022, 0, 1.73), (0.08, 0.07, 0.054), k=0.012)
     for s in (1, -1):
-        E(V(-0.012, s * 0.054, 1.728), (0.024, 0.02, 0.03), k=0.02)
+        E(V(0.0, s * 0.064, 1.722), (0.03, 0.024, 0.032), k=0.02)
     E(V(-0.012, 0, 1.864), (0.1, 0.08, 0.1), k=0.02)                              # cranium
     E(V(0.048, 0, 1.884), (0.05, 0.064, 0.06), k=0.03)                            # a high forehead
-    E(V(0.044, 0, 1.8), (0.054, 0.064, 0.082), k=0.03)                            # the face's mass
+    E(V(0.044, 0, 1.8), (0.054, 0.07, 0.082), k=0.03)                             # the face's mass, broad
     for s in (1, -1):
-        E(V(0.0, s * 0.056, 1.765), (0.024, 0.008, 0.03), k=0.03)                # chewing muscle
+        E(V(0.0, s * 0.06, 1.762), (0.028, 0.012, 0.034), k=0.03)                # chewing muscle, heavy
         E(V(0.064, s * 0.05, 1.808), (0.018, 0.022, 0.012), k=0.025)             # soft cheekbones
         E(V(0.058, s * 0.048, 1.768), (0.022, 0.024, 0.028), k=0.03)             # full cheeks under them
     # The brow: a light ridge set high, its inner ends lifted: the grievance
@@ -51,14 +55,14 @@ def head(fx):
     # the eyes (see Adam's and Steve's: without them the crease went black).
     E(V(0.092, 0, 1.81), (0.014, 0.027, 0.03), k=0.022)
     C(V(0.096, 0, 1.848), V(0.115, 0, 1.788), 0.0075, 0.0095, k=0.018)
-    E(V(0.115, 0, 1.784), (0.011, 0.0125, 0.0105), k=0.01)
+    E(V(0.115, 0, 1.784), (0.012, 0.015, 0.011), k=0.01)
     for s in (1, -1):
         E(V(0.102, s * 0.015, 1.778), (0.008, 0.0078, 0.0072), k=0.008)          # nostril wings
     # A small mouth on its barrel, the lower lip pouting, and a rounded chin.
     E(V(0.07, 0, 1.75), (0.025, 0.04, 0.028), k=0.03)
     E(V(0.093, 0, 1.748), (0.0045, 0.018, 0.0036), k=0.008)
     E(V(0.092, 0, 1.736), (0.007, 0.017, 0.0055), k=0.008)
-    E(V(0.08, 0, 1.704), (0.017, 0.026, 0.017), k=0.022)
+    E(V(0.08, 0, 1.703), (0.019, 0.036, 0.019), k=0.022)
     for s in (1, -1):
         E(V(-0.006, s * 0.084, 1.826), (0.022, 0.011, 0.031), sc.rot(ry=-10), k=0.01)  # ear
         F.cut(sc.Ellipsoid(V(-0.002, s * 0.093, 1.821), (0.009, 0.006, 0.013)), 0.004)

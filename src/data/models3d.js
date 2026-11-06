@@ -132,6 +132,9 @@ export const SCULPTED = {
         mouth: { y: 14.4, w: 6.2 },
         lid: 1.7, line: 1.4,
       },
+      // the smug tough: his squint and smirk as they were, and the line the
+      // smirk has worn into one cheek (faces3d.js `style`)
+      style: { iris: '#4a3326', lines: { smile: 1 } },
     },
     form: 'boxing',
   },
@@ -157,6 +160,9 @@ export const SCULPTED = {
         mouth: { y: 14.0, w: 7.4 },
         lid: 1.7, line: 1.4,
       },
+      // the party that never stopped: round staring eyes under high arched
+      // brows, the loose grin, a scruff of beard and the bags of no sleep
+      style: { eye: 'round', iris: '#3b2a1c', brow: { arch: 2.2, w: 1.1 }, bags: 0.7, beard: 0.6, lines: { crow: 2, smile: 1 } },
     },
     form: 'brawling',
   },
@@ -178,6 +184,9 @@ export const SCULPTED = {
         mouth: { y: 13.9, w: 6.3 },
         lid: 1.7, line: 1.4,
       },
+      // the old raider: small hooded eyes, bushy brows dropped hard, the
+      // corners of the mouth down into jowls, and every line of the years
+      style: { eye: 'hooded', iris: '#6c7d8c', brow: { bushy: true, w: 1.15 }, bags: 1, lines: { brow: 3, crow: 2, smile: 2, jowl: true } },
     },
     form: 'grappling',
   },
@@ -199,6 +208,9 @@ export const SCULPTED = {
         mouth: { y: 13.7, w: 5.4 },
         lid: 1.7, line: 1.4,
       },
+      // the prophet on stage: bright eyes, thin brows raised as if about to
+      // reveal something, a closed, knowing smile, hollow cheeks
+      style: { iris: '#4f6a8a', brow: { arch: 2.6, w: 0.75, inner: -1.2 }, mouth: 'serene', hollow: 1, lines: { brow: 2, smile: 1 } },
     },
     form: 'showboating',
   },
@@ -220,6 +232,9 @@ export const SCULPTED = {
         mouth: { y: 13.6, w: 5.1 },
         lid: 1.7, line: 1.4,
       },
+      // posting at 3 a.m.: heavy-lidded eyes over dark bags, one brow up,
+      // half a smile pulled up one side
+      style: { eye: 'hooded', iris: '#5b7348', brow: { raise: [0, 2.6], w: 1.1 }, bags: 0.9, mouth: 'crooked', lines: { smile: 1 } },
     },
     form: 'shoulderRoll',
   },
@@ -240,6 +255,9 @@ export const SCULPTED = {
         mouth: { y: 13.1, w: 5.1 },
         lid: 1.7, line: 1.4,
       },
+      // the choirboy: big round eyes, worried brows raised at the middle, a
+      // small sweet smile, rosy cheeks and freckles; nothing to see here
+      style: { eye: 'round', iris: '#7a6a2e', brow: { arch: 1.2, inner: -1.8, w: 0.85 }, mouth: 'innocent', blush: 0.9, freckles: 10 },
     },
     form: 'fence',
   },
@@ -261,6 +279,9 @@ export const SCULPTED = {
         mouth: { y: 13.1, w: 5.1 },
         lid: 1.7, line: 1.4,
       },
+      // the pitch that never blinks: huge round eyes, deep blue and without a
+      // catchlight, lined, under thin level brows; lips pressed in a line
+      style: { eye: 'round', iris: '#1f4f8a', glint: false, liner: true, lash: 1, brow: { w: 0.7 }, mouth: 'line', lips: '#b5706e' },
     },
     form: 'fencing',
   },
@@ -283,6 +304,9 @@ export const SCULPTED = {
         mouth: { y: 13.1, w: 4.1 },
         lid: 1.7, line: 1.4,
       },
+      // camera ready: cat eyes, winged and long-lashed, sharply arched brows,
+      // full glossed lips in a pout
+      style: { eye: 'cat', iris: '#3a2416', liner: true, lash: 2, brow: { arch: 2, w: 0.95 }, mouth: 'pout', lips: '#b0405f' },
     },
     form: 'peekaboo',
   },
@@ -307,6 +331,9 @@ export const SCULPTED = {
         mouth: { y: 13.4, w: 5.4 },
         lid: 1.7, line: 1.4,
       },
+      // the believer, older and delighted: eyes creased into a smile, soft
+      // arched brows, an open, easy smile, rosy cheeks, the lines of laughing
+      style: { eye: 'smile', iris: '#4a6e94', lash: 1, brow: { arch: 1.6, w: 0.8 }, mouth: 'warm', lips: '#c07a78', blush: 0.6, lines: { crow: 3, smile: 1, brow: 1 } },
     },
     form: 'taiChi',
   },

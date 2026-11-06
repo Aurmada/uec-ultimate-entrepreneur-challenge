@@ -52,7 +52,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes, the game designers' animation and flow fixes) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 572 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes, the game designers' animation and flow fixes, nine distinct faces) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 576 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -1162,6 +1162,51 @@ For the owner (gameplay, so `SIM_VERSION` and your say, or yours by design):
   a few sound cues are borrowed (a briefcase landing plays the block sound);
   ROUND 1 on Demo Day sits over the stage's yellow sign; the 60 s clock never
   ran out in 1,200 simulated rounds.
+
+### Nine faces that look like nine people (2026-11-06)
+
+The owner: "can we make the characters look more real to the person they are
+trying to be. Right now all the character's faces look very much the same".
+Likenesses of the real people are out (rule 5: parodied by name only, never
+depicted), so each fighter got a clearly different original face built from
+their own character notes, never from the real person's looks. Why they
+looked alike, and what changed (render only: no `SIM_VERSION`):
+
+- **The painter drew one face nine times.** Every sculpted head was painted
+  by the same strokes (Jeff's), moved only a little by each fighter's 2D face
+  values. Each sculpted fighter now has a face design, `face.style` in
+  `data/models3d.js`, painted by `faces3d.js`: the eyes' shape (round,
+  hooded, cat, a smile's crescent), the iris colour, lashes and liner, the
+  brows' arch and weight, the mouth at rest (Steve's serene knowing smile,
+  Elo's crooked half smile, Scam's innocent one, Lizbeth's flat line, Kim's
+  pout, Cathie's warm open smile), lip colour, and what the skin carries
+  (bags, lines at the brow, eyes and mouth, Carl's jowl lines, Steve's hollow
+  cheeks, Scam's freckles and blush, Cathie's rosy cheeks, Adam's beard
+  shadow). The keys are listed above `FACE_STYLE_KEYS`.
+- **The heads were close to one shape.** Seven head scripts are pushed
+  further (`lab/blender/fighters/*.py`, rebuilt; Jeff and Adam kept): Steve a
+  long V with a long chin, Elo a broad square jaw under a small skull, Scam
+  round and soft with a button nose, Lizbeth narrow with high sharp
+  cheekbones, Kim a heart shape, Cathie apple cheeks and a soft jaw, Carl
+  heavier jowls, nose and ears. The eyes and mouth stay where the layouts say,
+  so the registry numbers did not move.
+- **The portraits were too far away to see a face.** At `GL3D.BUST.SPAN` the
+  head was a quarter of the frame. A framed portrait (select screen, HUD, VS,
+  results, share card) now uses `GL3D.BUST.CLOSE` (48 rig px across, the head
+  centre 0.46 down); the super's cut-in keeps the old framing, which its band
+  is set to.
+
+In a match at 1280 by 720 a head is about 20 px tall, so there the fighters
+are still told apart by hair, eyewear, build and colour, as before; the faces
+read in the portraits.
+
+Tests (`test/faces3d.test.js`): every sculpted fighter has a design in keys
+the painter knows; on one head with one set of 2D values the nine designs
+paint nine different faces; the renderer passes the design to the painter;
+the framed portrait comes in closer and the cut-in keeps its framing. Each
+fails without its part of the change. `lab/pixels.js` is identical against
+8bc360e with and without `--flags gl`; it reads the 2D canvas, so the 3D
+fighters were checked by renders and five 3D matches with no page errors.
 
 ## v3.17, released 2026-11-05: every move in each form, and the dash fixed
 

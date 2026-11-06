@@ -13,6 +13,10 @@ cheeks, a small nose, a tiny mouth with full lips, and a soft round chin.
 Her black hair is pulled up into two puffs on top (`headwear`), as the 2D
 ones are drawn, and she wears round earrings in her accent colour.
 
+Pushed further on 2026-11-06, when the nine faces read too alike: a heart
+shape, the cheekbones wide and the cheeks full over a narrow jaw and a small
+chin, the lips fuller.
+
 As for Jeff: head 0.265 tall in Jeff's space, only the forms sculpted, the
 eyes, brows and mouth painted in game.
 """
@@ -25,7 +29,7 @@ EYE_Z, EYE_Y = 1.826, 0.034
 def head(fx):
     E, C, V, sc, F = fx.E, fx.C, fx.V, fx.sc, fx.F
     # The jaw first, met tightly by the neck (see Jeff's): soft and round.
-    E(V(0.024, 0, 1.738), (0.07, 0.052, 0.046), k=0.012)
+    E(V(0.024, 0, 1.738), (0.068, 0.046, 0.044), k=0.012)
     for s in (1, -1):
         E(V(-0.012, s * 0.047, 1.733), (0.02, 0.017, 0.026), k=0.02)
     E(V(-0.014, 0, 1.866), (0.1, 0.08, 0.1), k=0.02)                              # cranium
@@ -33,8 +37,8 @@ def head(fx):
     E(V(0.044, 0, 1.8), (0.053, 0.062, 0.08), k=0.03)                             # the face's mass
     for s in (1, -1):
         E(V(0.0, s * 0.05, 1.766), (0.02, 0.007, 0.028), k=0.03)                 # chewing muscle, slight
-        E(V(0.065, s * 0.05, 1.81), (0.017, 0.022, 0.011), k=0.025)              # cheekbones
-        E(V(0.06, s * 0.047, 1.772), (0.021, 0.024, 0.026), k=0.03)              # full round cheeks
+        E(V(0.066, s * 0.055, 1.812), (0.019, 0.026, 0.012), k=0.025)            # wide cheekbones
+        E(V(0.062, s * 0.05, 1.775), (0.025, 0.028, 0.028), k=0.03)              # full round cheeks
     # The brow: light and flat.
     for s in (1, -1):
         C(V(0.088, s * 0.012, 1.855), V(0.075, s * 0.055, 1.855), 0.0065, 0.0055, k=0.02)
@@ -54,9 +58,9 @@ def head(fx):
         E(V(0.099, s * 0.0145, 1.78), (0.0078, 0.0078, 0.007), k=0.008)          # nostril wings
     # A tiny mouth with full lips, and a soft round chin.
     E(V(0.07, 0, 1.752), (0.024, 0.034, 0.027), k=0.03)
-    E(V(0.093, 0, 1.75), (0.0055, 0.0145, 0.0045), k=0.008)
-    E(V(0.091, 0, 1.739), (0.007, 0.0135, 0.0055), k=0.008)
-    E(V(0.079, 0, 1.708), (0.015, 0.021, 0.016), k=0.022)
+    E(V(0.093, 0, 1.75), (0.0065, 0.016, 0.005), k=0.008)
+    E(V(0.091, 0, 1.739), (0.0085, 0.015, 0.0065), k=0.008)
+    E(V(0.078, 0, 1.711), (0.014, 0.016, 0.014), k=0.022)
     for s in (1, -1):
         E(V(-0.006, s * 0.08, 1.826), (0.02, 0.01, 0.028), sc.rot(ry=-10), k=0.01)      # small ears
         F.cut(sc.Ellipsoid(V(-0.002, s * 0.088, 1.822), (0.008, 0.005, 0.012)), 0.004)

@@ -13,6 +13,10 @@ an even mouth and a narrow, defined chin; small ears. Her pale blonde hair is
 pulled back tight into a ponytail (`headwear`), and she wears her visor, a
 band of cyan glass across the eyes, as in 2D (`eyewear`).
 
+Pushed further on 2026-11-06, when the nine faces read too alike: the jaw
+narrower, the cheekbones higher and sharper over hollow cheeks, and the chin
+pointed, so the face is long and hard-edged.
+
 As for Jeff: head 0.265 tall in Jeff's space, only the forms sculpted, the
 eyes, brows and mouth painted in game, seen through the visor.
 """
@@ -26,16 +30,16 @@ def head(fx):
     E, C, V, sc, F = fx.E, fx.C, fx.V, fx.sc, fx.F
     # The jaw first, met tightly by the neck (see Jeff's): narrow, its angles
     # set in, a woman's.
-    E(V(0.026, 0, 1.736), (0.07, 0.05, 0.046), k=0.012)
+    E(V(0.026, 0, 1.736), (0.07, 0.044, 0.048), k=0.012)
     for s in (1, -1):
-        E(V(-0.012, s * 0.046, 1.732), (0.02, 0.016, 0.026), k=0.02)
+        E(V(-0.012, s * 0.04, 1.73), (0.018, 0.014, 0.026), k=0.02)
     E(V(-0.014, 0, 1.866), (0.1, 0.078, 0.1), k=0.02)                             # cranium
     E(V(0.048, 0, 1.884), (0.05, 0.062, 0.058), k=0.03)                           # a smooth forehead
     E(V(0.044, 0, 1.802), (0.052, 0.06, 0.08), k=0.03)                            # the face's mass
     for s in (1, -1):
         E(V(0.0, s * 0.05, 1.766), (0.02, 0.007, 0.028), k=0.03)                 # chewing muscle, slight
-        E(V(0.066, s * 0.05, 1.812), (0.017, 0.022, 0.011), k=0.025)             # high cheekbones
-        E(V(0.058, s * 0.043, 1.773), (0.018, 0.021, 0.024), k=0.03)             # the cheek under them
+        E(V(0.068, s * 0.053, 1.815), (0.018, 0.025, 0.01), k=0.025)             # high, sharp cheekbones
+        E(V(0.053, s * 0.04, 1.772), (0.013, 0.016, 0.02), k=0.03)               # the cheek under them, hollow
     # The brow: light, set high and level.
     for s in (1, -1):
         C(V(0.088, s * 0.012, 1.86), V(0.075, s * 0.054, 1.862), 0.0065, 0.0055, k=0.02)
@@ -57,7 +61,7 @@ def head(fx):
     E(V(0.07, 0, 1.752), (0.024, 0.036, 0.027), k=0.03)
     E(V(0.092, 0, 1.75), (0.0045, 0.018, 0.0038), k=0.008)
     E(V(0.09, 0, 1.739), (0.006, 0.016, 0.005), k=0.008)
-    E(V(0.08, 0, 1.708), (0.015, 0.02, 0.016), k=0.02)
+    E(V(0.083, 0, 1.699), (0.014, 0.015, 0.021), k=0.02)
     for s in (1, -1):
         E(V(-0.006, s * 0.08, 1.826), (0.02, 0.01, 0.028), sc.rot(ry=-10), k=0.01)      # small ears
         F.cut(sc.Ellipsoid(V(-0.002, s * 0.088, 1.822), (0.008, 0.005, 0.012)), 0.004)

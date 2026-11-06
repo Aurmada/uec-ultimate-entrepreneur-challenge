@@ -660,6 +660,12 @@ export const GL3D = {
   BUST: {
     SPAN: 64,
     HEAD_AT: [0.5, 0.42],
+    // A portrait in a frame of its own (the select screen, the HUD, the VS
+    // splash, the results) comes in closer, so a face reads: at SPAN the head
+    // was a quarter of the frame, and nine faces drawn to be told apart
+    // looked alike (2026-11-06). The super's cut-in keeps SPAN and HEAD_AT,
+    // which its band is set to (engine/vfx.js).
+    CLOSE: { SPAN: 48, HEAD_AT: [0.5, 0.46] },
     TURN: { yaw: 0.9, hipYaw: 0.6, headYaw: 0.35 },
     HAND_F: [14, 16],
     HAND_B: [-8, 16],

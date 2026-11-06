@@ -299,16 +299,18 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, face = null }) {
 
 // A head-and-shoulders render for a portrait: def in pose P, turned by
 // GL3D.BUST.TURN, framed on the head and drawn into ctx over rect
-// ({ x, y, w, h } in canvas px), mirrored if asked. False wherever render3D
-// would be, so the caller draws its 2D bust instead.
-export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = null, mirror = false, unicorn = false } = {}) {
+// ({ x, y, w, h } in canvas px), mirrored if asked; `close` frames it as a
+// portrait in its own frame (GL3D.BUST.CLOSE). False wherever render3D would
+// be, so the caller draws its 2D bust instead.
+export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = null, mirror = false, unicorn = false, close = false } = {}) {
   const entry = modelFor(def);
   if (!entry) return false;
   const U = GL3D.UNIT, BUST = GL3D.BUST;
+  const { SPAN, HEAD_AT } = close ? BUST.CLOSE : BUST;
   solvePose(entry.rig, P, {}, BUST.TURN);
   const [hx, hy] = transformPoint(entry.rig.matrices, entry.head, entry.skull);
-  const w = BUST.SPAN, h = (BUST.SPAN * rect.h) / rect.w;
-  const box = { ox: w * BUST.HEAD_AT[0] - hx * U, oy: h * BUST.HEAD_AT[1] + hy * U, w, h };
+  const w = SPAN, h = (SPAN * rect.h) / rect.w;
+  const box = { ox: w * HEAD_AT[0] - hx * U, oy: h * HEAD_AT[1] + hy * U, w, h };
   const { vw, vh } = drawModel(entry, def, 'idle', unicorn, expression, face, { box, ss: rect.w / w });
   ctx.save();
   if (mirror) {
@@ -400,7 +402,7 @@ function faceSlot(id, F) {
     front: F.front, fade: F.fade, mesh: F.mesh, role: F.role,
     // a sculpted head is painted to its own layout (faces3d.js), any other
     // with the 2D painter
-    paint: F.layout ? (g, def, expression) => paintSculpted(g, def, expression, F.layout) : null,
+    paint: F.layout ? (g, def, expression) => paintSculpted(g, def, expression, F.layout, F.style) : null,
   };
 }
 

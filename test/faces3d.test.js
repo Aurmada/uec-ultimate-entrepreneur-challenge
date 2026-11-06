@@ -5,11 +5,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { paintSculpted, character, FACE_REF } from '../src/engine/gl3d/faces3d.js';
+import { paintSculpted, character, FACE_REF, FACE_STYLE_KEYS, EYE_SHAPES, REST_MOUTHS } from '../src/engine/gl3d/faces3d.js';
 import { MODELS3D, SCULPTED, FACE_STATES } from '../src/data/models3d.js';
 import { getFighter, FIGHTERS } from '../src/data/fighters.js';
 import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { wearing } from '../src/engine/gl3d/index.js';
+import { GL3D } from '../src/config.js';
 
 // A 2D context that records what is drawn, enough to tell one face from another.
 function recorder() {
@@ -20,9 +21,9 @@ function recorder() {
   });
   return { ctx, calls };
 }
-const painted = (def, expression, layout = MODELS3D['sculpt:bozo'].face.layout) => {
+const painted = (def, expression, layout = MODELS3D['sculpt:bozo'].face.layout, style) => {
   const { ctx, calls } = recorder();
-  paintSculpted(ctx, def, expression, layout);
+  paintSculpted(ctx, def, expression, layout, style);
   return calls;
 };
 
@@ -90,4 +91,56 @@ test('the sculpted Jeff wears his shades, dark glass over his eyes', () => {
   assert.deepEqual(roles, ['frame', 'lens'], 'no shades mesh with a lens and a frame');
   assert.ok(wearing(getFighter('bozo'), 'idle')('eyewear:shades'), 'Jeff does not wear them');
   assert.ok(spec.glass?.lens > 0 && spec.glass.lens < 1, 'the lenses are not see-through glass');
+});
+
+// The nine sculpted faces looked alike (November 2026): the 2D face values
+// move only a few knobs a little, so each fighter's face carries a design of
+// its own (`face.style`), original and drawn from their character.
+test('every sculpted fighter has a face design of their own, in keys the painter knows', () => {
+  const hex = /^#[0-9a-f]{6}$/i;
+  for (const id of Object.keys(SCULPTED)) {
+    const St = MODELS3D[`sculpt:${id}`].face.style;
+    assert.ok(St && Object.keys(St).length > 0, `${id} has no face style`);
+    for (const k of Object.keys(St)) assert.ok(FACE_STYLE_KEYS.includes(k), `${id}'s face style has an unknown key ${k}`);
+    if (St.eye !== undefined) assert.ok(St.eye in EYE_SHAPES, `${id}'s eyes are an unknown shape ${St.eye}`);
+    if (St.mouth !== undefined) assert.ok(REST_MOUTHS.includes(St.mouth), `${id}'s mouth is an unknown set ${St.mouth}`);
+    for (const k of ['iris', 'lips']) if (St[k] !== undefined) assert.match(St[k], hex, `${id}'s ${k} is not a colour`);
+  }
+});
+
+test('on one head and with one set of face values, each design paints a face of its own', () => {
+  // Every fighter's 2D values set to Jeff's and every face on his head: what
+  // is left to tell them apart is the design alone, and it must be enough.
+  const jeff = getFighter('bozo');
+  const ids = Object.keys(SCULPTED);
+  for (const expression of ['idle', 'angry', 'happy']) {
+    const faces = new Set(ids.map((id) => painted({ ...jeff, c: getFighter(id).c }, expression, undefined, MODELS3D[`sculpt:${id}`].face.style).join(';')));
+    assert.equal(faces.size, ids.length, `two designs paint the same ${expression} face`);
+  }
+  // and at rest, nobody's design leaves the face as the bare painter draws it
+  for (const id of ids.filter((i) => i !== 'bozo')) {
+    const def = getFighter(id), St = MODELS3D[`sculpt:${id}`].face.style;
+    assert.notEqual(painted(def, 'idle', undefined, St).join(';'), painted(def, 'idle').join(';'), `${id}'s design changes nothing`);
+  }
+});
+
+test('the renderer hands each head its face design', () => {
+  // index.js faceSlot builds the painter for a sculpted head; the style has
+  // to go with the layout or the designs never reach the game
+  const src = readFileSync(new URL('../src/engine/gl3d/index.js', import.meta.url), 'utf8');
+  assert.match(src, /paintSculpted\(g, def, expression, F\.layout, F\.style\)/);
+});
+
+test('a portrait in its own frame comes in close on the face, and the cut-in keeps its framing', () => {
+  // At GL3D.BUST.SPAN the head was a quarter of the portrait and the painted
+  // features a few px across; the close framing at least a third larger.
+  const { SPAN, HEAD_AT, CLOSE } = GL3D.BUST;
+  assert.ok(SPAN / CLOSE.SPAN >= 1.3, `a portrait frames ${CLOSE.SPAN} rig px, hardly closer than ${SPAN}`);
+  assert.ok(CLOSE.HEAD_AT[1] > HEAD_AT[1] && CLOSE.HEAD_AT[1] < 0.5, 'the closer head leaves no room for the hair, or none for the shoulders');
+  // a framed portrait asks for it; the bare bust of the super's cut-in does not
+  const src = (f) => readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8');
+  assert.match(src('engine/drawFighter.js'), /close: !opts\.bare/);
+  assert.match(src('engine/gl3d/index.js'), /close \? BUST\.CLOSE : BUST/);
+  // and the cut-in centres its band on the head where the bare bust puts it
+  assert.match(src('engine/vfx.js'), new RegExp(`size \\* ${HEAD_AT[1]}`));
 });
