@@ -478,6 +478,12 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 }
 #announce.show { animation: annPop .55s cubic-bezier(.2,1.6,.4,1) forwards; }
 #announce.ko { color: var(--red); text-shadow: 5px 5px 0 var(--gold), 9px 9px 0 var(--shadow); }
+/* ROUND and FIGHT! go up over the fighters' heads, not across their chests:
+   centred, they hid the gesture each 3D fighter opens the round with. The
+   rest (K.O.!, the winner) stay centred, when there is nothing under them to
+   hide. Centred in a band of the stage's height, between the top bar and the
+   fighters' heads. */
+#announce.intro { inset: 14% 0 52% 0; }
 @keyframes annPop {
   0% { opacity: 0; transform: scale(2.4) rotate(3deg); }
   60% { opacity: 1; transform: scale(.96) rotate(-2deg); }

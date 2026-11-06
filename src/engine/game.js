@@ -128,12 +128,12 @@ export class Game {
     if (this.introStep < 0) {
       this.introStep = 0;
       const label = this.roundWins[0] === 1 && this.roundWins[1] === 1 ? 'FINAL ROUND' : `ROUND ${this.roundNum}`;
-      this.hud.announce(label);
+      this.hud.announce(label, 'intro');
       this.audio.sfx('round');
     }
     if (this.introStep === 0 && this.stateT >= ROUND.INTRO_ROUND_T) {
       this.introStep = 1;
-      this.hud.announce('FIGHT!');
+      this.hud.announce('FIGHT!', 'intro');
       this.audio.sfx('fight');
     }
     if (this.introStep === 1 && this.stateT >= ROUND.INTRO_ROUND_T + ROUND.INTRO_FIGHT_T) {

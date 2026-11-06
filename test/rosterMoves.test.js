@@ -217,3 +217,22 @@ test('a dash pressed with a direction held runs that way, forward and back', () 
     }
   }
 });
+
+// ROUND and FIGHT! are announced up over the fighters' heads (the `intro`
+// class in styles.css), where centred they hid the gesture each 3D fighter
+// opens the round with. Everything else (K.O.!, the winner) stays centred.
+test('the round start is announced over the fighters, the rest centred', () => {
+  const said = [];
+  const hud = new Proxy({}, { get: (_, k) => k === 'announce' ? (text, cls = '') => said.push([text, cls]) : () => {} });
+  const game = new Game({
+    p1: { def: FIGHTERS[0], controller: idler() }, p2: { def: FIGHTERS[1], controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'founder', hud, onEnd: () => {}, seed: 20261105,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  assert.deepEqual(said, [['ROUND 1', 'intro'], ['FIGHT!', 'intro']]);
+  game.fighters[1].hp = 1;
+  game.fighters[1].hp = 0;
+  for (let i = 0; i < 60; i++) game.update(1 / 60);
+  const ko = said.find(([text]) => text === 'K.O.!');
+  assert.ok(ko && ko[1] !== 'intro', `K.O.! is announced ${JSON.stringify(ko)}`);
+});
