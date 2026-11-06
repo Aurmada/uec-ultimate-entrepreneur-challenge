@@ -1565,10 +1565,11 @@ export const FORMS = {
     moves: { steal: BRAWL_STEAL, bomb: BRAWL_BOMB },
     // Its command moves, by input (above).
     commands: { 'fwd+punch': BRAWL_BLITZ },
-    // UNICORN MODE going on. He roars with his arms thrown wide at his
-    // shoulders and the head back. (Kept below the head: the super's banner
-    // covers the screen above it for longer than the pose lasts.)
-    super: { fade: 0.3, joints: { armF: { x: 64, y: -170 }, armB: { x: -36, y: -166 }, hipY: -74, shoulderY: -150, headY: -172, headX: -4, bodyLean: -0.06, sx: 1.1, sy: 1 } },
+    // UNICORN MODE going on. He drops into a wide squat and roars, arms thrown
+    // out at his shoulders. (Low: the super's banner covers the screen above
+    // the fighters' heads for longer than the pose lasts, and standing he is
+    // tall enough to put his head into it.)
+    super: { fade: 0.3, joints: { armF: { x: 66, y: -150 }, armB: { x: -34, y: -146 }, hipY: -54, shoulderY: -128, headY: -146, headX: 2, bodyLean: 0.06, sx: 1.14, sy: 0.94, legF: { x: 40, y: 0 }, legB: { x: -38, y: 0 } } },
     // How it opens the round (above).
     intro: BRAWL_INTRO,
   },

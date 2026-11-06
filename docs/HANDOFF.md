@@ -1124,7 +1124,10 @@ banner, and the fighter stood frozen in whatever they were doing.
   screen above the fighters' heads for longer than the pose lasts, so the
   first versions with the arms thrown up (Adam, Steve, Kim) showed nothing
   but a body. Every pose keeps the hands at or below the head, and a test
-  holds it there. Adam still loses his head under the banner, being tallest.
+  holds it there. The banner covers every fighter's head during the freeze
+  and shows their face as a portrait in the band instead, so a pose reads
+  from the shoulders down; Adam's, standing, was lost in it, and after
+  v3.17 he roars from a wide squat with his arms out, under it.
 - **Each:** Jeff roars, fists clenched at his sides and chest out; Adam roars
   with his arms wide at his shoulders; Carl straightens up for once, the
   briefcase raised beside him; Steve takes a showman's bow; Elo opens up,
