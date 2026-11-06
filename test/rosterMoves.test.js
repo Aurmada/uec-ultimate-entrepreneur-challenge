@@ -21,6 +21,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { Game } from '../src/engine/game.js';
 import { FIGHTERS } from '../src/data/fighters.js';
 import { METER } from '../src/config.js';
@@ -220,7 +221,8 @@ test('a dash pressed with a direction held runs that way, forward and back', () 
 
 // ROUND and FIGHT! are announced up over the fighters' heads (the `intro`
 // class in styles.css), where centred they hid the gesture each 3D fighter
-// opens the round with. Everything else (K.O.!, the winner) stays centred.
+// opens the round with. Everything else (K.O.!, the winner) stays centred,
+// and in the 2D game, where nobody gestures, so does the round start.
 test('the round start is announced over the fighters, the rest centred', () => {
   const said = [];
   const hud = new Proxy({}, { get: (_, k) => k === 'announce' ? (text, cls = '') => said.push([text, cls]) : () => {} });
@@ -235,4 +237,12 @@ test('the round start is announced over the fighters, the rest centred', () => {
   for (let i = 0; i < 60; i++) game.update(1 / 60);
   const ko = said.find(([text]) => text === 'K.O.!');
   assert.ok(ko && ko[1] !== 'intro', `K.O.! is announced ${JSON.stringify(ko)}`);
+  // moved only in 3D: every rule for the class is under body.gl3d, which
+  // main.js sets only with the 3D fighters in their own forms
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [...css.matchAll(/([^{}]*#announce\.intro[^{}]*)\{/g)].map((m) => m[1].trim());
+  assert.ok(rules.length > 0, 'nothing moves the round start');
+  for (const r of rules) assert.match(r, /^body\.gl3d\s/, `the round start moves in 2D too: ${r}`);
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(main, /classList\.toggle\('gl3d', !!\(on3D && gfx\.sculpts\)\)/, 'main.js never marks the 3D game');
 });

@@ -1177,8 +1177,12 @@ function boot() {
   // ?gl&athlete puts them in the athlete bodies instead, on test (models3d.js).
   if (gfx.sculpts) sculpts3D(true);
   if (gfx.gl && new URLSearchParams(location.search).has('athlete')) athletes3D(true);
-  if (gfx.gl) enable3D({ ids: gfx.ids, timing: gfx.perf });
-  else if (gfx.perf && STYLE.figure) startTiming();   // ?figure&perf: what the figure costs here
+  const on3D = gfx.gl && enable3D({ ids: gfx.ids, timing: gfx.perf });
+  if (!gfx.gl && gfx.perf && STYLE.figure) startTiming();   // ?figure&perf: what the figure costs here
+  // The fighters open the round with a gesture only in their own forms, so
+  // only then does ROUND and FIGHT! go up out of its way (styles.css): the 2D
+  // game keeps it where it always was. A change in Settings reloads the page.
+  document.body.classList.toggle('gl3d', !!(on3D && gfx.sculpts));
   RENDER.sharpFighters = gfx.sharp;
   STAGES.enabled = gfx.stages;
   FX_STYLE.impact = gfx.fx;

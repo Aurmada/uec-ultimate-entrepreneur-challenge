@@ -440,23 +440,29 @@ export function computePose(f, t, form = null, intro = null) {
     for (const j of Object.keys(V.keys[0].joints)) P[j] = typeof S[j] === 'object' ? { ...S[j] } : S[j];
     if (S.hand) P.hand = S.hand;
   }
-  // A move thrown from a crouch (down held: Fighter.crouching stays set
-  // through the attack, and the hurtbox with it) is the same move, thrown
-  // low: the body and the hands dropped by the form's crouch, a kicking foot
-  // with them, and the planted feet widened to its stance. It stood up
-  // to swing, while the game went on hitting it as a crouching fighter.
+  // A move thrown with down held (Fighter.crouching, set each frame down is
+  // held on the ground, the hurtbox crouched with it) is thrown from the
+  // form's crouch: it stood up to swing while the game hit it as a crouching
+  // fighter. The body goes down by the crouch's drop, but never below the
+  // crouch itself (a move already written low, Kim's RUG PULL, stays as
+  // written), and the planted feet widen to its stance. A hand or foot out of
+  // the guard stays where the move puts it, which is where it hits (the
+  // hitbox does not crouch, Fighter.hitbox), reached from lower down; the
+  // nearer the guard it is, the more it comes down with the body. Letting go
+  // of down mid-move stands it up, as it does the hurtbox.
   if (f.state === 'attack' && f.crouching && !f.airborne && form.crouch) {
-    const C = form.crouch, G = restingGuard({ ...f, def }), d = C.drop ?? 0;
-    const hip = C.hip ?? d, shoulder = C.shoulder ?? d, head = C.head ?? d;
-    P.hipY += hip; P.shoulderY += shoulder; P.headY += head;
-    P.armF = { x: P.armF.x, y: P.armF.y + shoulder };
-    P.armB = { x: P.armB.x, y: P.armB.y + shoulder };
-    P.bodyLean += (C.lean ?? G.bodyLean) - G.bodyLean;
-    // A foot off the floor comes down with the hips, never through the floor:
-    // left where it was, a kick from a crouch rose above the hips it came from.
+    const C = form.crouch, G = restingGuard({ ...f, def }), d0 = C.drop ?? 0;
+    const full = C.hip ?? d0;
+    const drop = Math.max(0, Math.min(full, G.hipY + full - P.hipY));
+    const k = full ? drop / full : 0;
+    const shoulder = (C.shoulder ?? d0) * k;
+    P.hipY += drop; P.shoulderY += shoulder; P.headY += (C.head ?? d0) * k;
+    P.bodyLean += ((C.lean ?? G.bodyLean) - G.bodyLean) * k;
+    const out = (p, g) => Math.min(1, Math.hypot(p.x - g.x, p.y - g.y) / REACHED_OUT);
+    for (const a of ['armF', 'armB']) P[a] = { x: P[a].x, y: P[a].y + shoulder * (1 - out(P[a], G[a])) };
     for (const l of ['legF', 'legB']) {
-      if (P[l].y < 0) P[l] = { x: P[l].x, y: Math.min(0, P[l].y + hip) };
-      else if (C[l]) P[l] = { x: P[l].x + C[l].x - G[l].x, y: 0 };
+      if (P[l].y < 0) P[l] = { x: P[l].x, y: Math.min(0, P[l].y + drop * (1 - out(P[l], G[l]))) };
+      else if (C[l]) P[l] = { x: P[l].x + (C[l].x - G[l].x) * k, y: 0 };
     }
   }
   // A move thrown in the air keeps the form's own jump in the legs it does
@@ -498,7 +504,7 @@ export function computePose(f, t, form = null, intro = null) {
   // full (it stands still through the freeze) and eased out over `fade`
   // seconds as it starts to run, from wherever they could press it on the
   // ground. Read from the timer, never written: render-only.
-  if (form.super && f.unicornT > 0 && SUPER_STATES.includes(f.state)) {
+  if (form.super && f.unicornT > 0 && heldUnbroken(f, 'super', f.unicornT)) {
     const S = form.super;
     holdPose(P, S, (f.unicornT - (UNICORN.DURATION - S.fade)) / S.fade);
   }
@@ -506,7 +512,7 @@ export function computePose(f, t, form = null, intro = null) {
   // becomes an attack, so it had nothing to show. The pose for the stance he
   // switched to, held for `hold` seconds of the switch's cooldown and eased
   // out over `fade`, read from the cooldown as the super's is from its timer.
-  if (form.shift && f.stanceCD > 0 && form.shift[f.stanceId] && SUPER_STATES.includes(f.state)) {
+  if (form.shift && f.stanceCD > 0 && form.shift[f.stanceId] && heldUnbroken(f, 'shift', f.stanceCD)) {
     const S = form.shift;
     holdPose(P, { ...S, ...S[f.stanceId] }, (f.stanceCD - (STANCE.CD - S.hold - S.fade)) / S.fade);
   }
@@ -537,6 +543,32 @@ function holdPose(P, S, k) {
 // ones on the ground; an attack it cancels has become idle by the next draw).
 const SUPER_STATES = ['idle', 'walk', 'crouch'];
 
+// How far (px) a hand or foot has to be from its place in the guard to count
+// as out in a move, where it hits: a move from a crouch leaves it there. Every
+// form's fist, palm and foot is at least 35 px out by the middle of a basic's
+// active window (the closest, Scam's slap and Steve's punch), and a guard hand
+// moves a few.
+const REACHED_OUT = 30;
+
+// Whether a held pose (the super's going on, a stance switch) is unbroken:
+// the fighter has stayed standing (SUPER_STATES) since it went on. Without
+// this a pose broken off by a strike, a block or a jump came back at
+// whatever weight its timer still gave when the fighter stood again (Scam
+// slapping out of his switch and snapping back into it), and a super pressed
+// in the air popped in on landing. The game keeps no history of states, so it
+// is remembered here, per fighter, from the frames drawn: render-side only,
+// never written to the fighter. A new trigger is its timer jumping back up.
+const HELD = new WeakMap();   // fighter -> { [which]: { last, broken } }
+function heldUnbroken(f, which, timer) {
+  let all = HELD.get(f);
+  if (!all) HELD.set(f, all = {});
+  let h = all[which];
+  if (!h || timer > h.last + 1e-9) h = all[which] = { last: timer, broken: false };
+  h.last = timer;
+  if (!SUPER_STATES.includes(f.state)) h.broken = true;
+  return !h.broken;
+}
+
 // A form's walk and jump are written from the fighter's idle guard, its
 // first frame (no breathing, no roll): the shared walk and jump start from the
 // stock rest height, so every fighter stood up straight the moment they moved,
@@ -553,13 +585,15 @@ const restingGuard = (f) => basePose({ ...f, state: 'idle', stateT: 0, side: 0 }
 // keeping time `beat`.
 function formWalk(f, W) {
   const G = restingGuard(f);
-  // Backing off, the cycle runs the other way, so the lifted foot is still the
-  // one travelling (the shared walk lifts the planted one).
-  const ph = f.walkPhase * (W.rate ?? 1) * (f.movingBack ? -1 : 1);
+  // The cycle runs on with the walk phase whichever way the fighter goes, so
+  // nothing jumps when they turn (running it backwards to back off threw the
+  // feet up to 28 px in a frame); backing off, it is the foot travelling back
+  // that lifts (the shared walk lifts the planted one).
+  const ph = f.walkPhase * (W.rate ?? 1), lifts = f.movingBack ? -1 : 1;
   const lag = W.lag ?? Math.PI;
   // As far as the feet can go and still stay 20 px apart at their nearest.
   const step = Math.min(W.stride, (G.legF.x - G.legB.x - 20) / (2 * Math.sin(lag / 2)));
-  const foot = (x, p) => ({ x: x + Math.sin(p) * step, y: -Math.max(0, Math.cos(p)) * (W.lift ?? 0) });
+  const foot = (x, p) => ({ x: x + Math.sin(p) * step, y: -Math.max(0, lifts * Math.cos(p)) * (W.lift ?? 0) });
   const dip = (W.low ?? 0) + (W.bob ?? 0) * Math.sin(ph) ** 2;
   const s = Math.sin(ph);
   return {

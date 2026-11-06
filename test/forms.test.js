@@ -579,6 +579,18 @@ test('every form walks its own way, in its own stance, the feet apart and the li
         }
       }
     }
+    // Turning round mid-walk carries on the same step: only which foot is up
+    // swaps, by no more than the form's lift (the cycle once ran backwards to
+    // back off, and the feet jumped up to 28 px in a frame).
+    for (let i = 0; i < 48; i++) {
+      const walkPhase = i * Math.PI / 12;
+      const on = pose('walk', { walkPhase }), back = pose('walk', { walkPhase, movingBack: true });
+      for (const l of ['legF', 'legB', 'armF', 'armB']) {
+        assert.ok(Math.abs(on[l].x - back[l].x) < 1e-9, `${name} turning round at ${walkPhase.toFixed(2)}: ${l} jumps ${(back[l].x - on[l].x).toFixed(1)} px`);
+      }
+      for (const l of ['legF', 'legB']) assert.ok(Math.abs(on[l].y - back[l].y) <= (W.lift ?? 0) + 1e-9, `${name} turning round lifts ${l} past its step`);
+      for (const c of ['hipY', 'twist', 'hipTwist']) assert.ok(Math.abs(on[c] - back[c]) < 1e-9, `${name} turning round at ${walkPhase.toFixed(2)}: ${c} jumps`);
+    }
   }
 });
 
@@ -818,6 +830,23 @@ test('every form opens the round its own way and is in its live idle by FIGHT!',
   }
 });
 
+// The round's start reaches the forms only through render.js telling
+// drawFighter where it is, as it sets the 3D clock: each of its three ways of
+// drawing a match (one canvas, the 3D layer, the layer's 2D fallback) has to,
+// before it draws a fighter, or that path opens every round standing idle.
+test('every way of drawing a match tells the fighters where the round start is', () => {
+  const src = readFileSync(new URL('../src/engine/render.js', import.meta.url), 'utf8');
+  const clocks = [...src.matchAll(/setClock3D\(game\.simT\)/g)].map((m) => m.index);
+  assert.ok(clocks.length >= 3, `render.js sets the 3D clock in ${clocks.length} places`);
+  const set = "setRoundStart(game.state === 'intro' ? game.stateT : null)";
+  assert.equal(src.split(set).length - 1, clocks.length, 'a path sets the clock and not the round start');
+  for (const at of clocks) {
+    const rest = src.slice(at), here = rest.indexOf(set), draws = rest.search(/drawFighter\(|drawFighters\w*\(/);
+    assert.ok(here >= 0 && (draws < 0 || here < draws), `the path at line ${src.slice(0, at).split("\n").length} draws a fighter before it sets the round start`);
+    assert.ok(here < rest.indexOf('\n}'), `the path at line ${src.slice(0, at).split('\n').length} never sets the round start`);
+  }
+});
+
 // Scam's ALIGNMENT SHIFT switches stance and swings nothing, so it had
 // nothing to show. His form strikes a pose for the stance he switched to,
 // held for a moment of the switch's cooldown and gone before it ends.
@@ -842,36 +871,102 @@ test("Scam's ALIGNMENT SHIFT shows which way he switched, and lets it go", async
   for (const [name, f] of Object.entries(FORMS)) if (name !== 'fence') assert.equal(f.shift, undefined);
 });
 
-// A move thrown from a crouch is thrown low: the hurtbox stays crouched
-// through it (Fighter.crouching), and the fighter stood up to swing. It
-// leaves from the crouch, at the crouch's height, and a move thrown standing
-// is untouched.
-test('every form throws a move from its crouch low, and leaves from the crouch', () => {
+// A held pose broken off stays off. The super's and the switch's poses run
+// on timers that keep counting through a strike, a block or a jump, so the
+// pose came back at whatever weight was left when the fighter stood again
+// (Scam slapping out of his switch snapped back into it), and a super pressed
+// in the air popped in on landing. Drawn frame by frame, as the game draws
+// the same fighter.
+test('a super or stance-switch pose broken off does not come back', async () => {
+  const { STANCE, UNICORN } = await import('../src/config.js');
+  const atk = { ...ATTACKS.slap, kind: 'slap', hasHit: false };
+  const frames = (form, def, steps) => {
+    const f = { def, state: 'idle', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, movingBack: false, attack: null, unicornT: 0, stanceCD: 0, stanceId: null };
+    return steps.map((s) => {
+      Object.assign(f, s);
+      const fresh = computePose({ ...f }, 0.4, form);
+      return { P: computePose(f, 0.4, form), fresh, plain: computePose({ ...f, unicornT: 0, stanceCD: 0 }, 0.4, form) };
+    });
+  };
+  // Scam switches, slaps out of it while the pose is still held, and stands
+  const S = FORMS.fence.shift, def = getFighter('scam');
+  const cd = (k) => STANCE.CD - k * (S.hold + S.fade) / 4;
+  const scam = frames(FORMS.fence, def, [
+    { stanceId: 'safety', stanceCD: cd(0) },
+    { state: 'attack', stateT: 0.02, attack: atk, stanceCD: cd(1) },
+    { state: 'idle', stateT: 0, attack: null, stanceCD: cd(2) },
+    { stanceCD: cd(3) },
+  ]);
+  assert.notDeepEqual(scam[0].P.armF, scam[0].plain.armF, 'the switch shows nothing');
+  assert.notDeepEqual(scam[2].fresh.armF, scam[2].plain.armF, 'the switch has eased out before he stands again: this shows nothing');
+  for (const i of [2, 3]) assert.deepEqual(scam[i].P, scam[i].plain, `Scam snaps back into his switch ${i - 1} frame(s) after the slap`);
+  // and a new switch shows again
+  const again = frames(FORMS.fence, def, [
+    { stanceId: 'safety', stanceCD: cd(0) }, { state: 'attack', attack: atk, stanceCD: cd(1) },
+    { state: 'idle', attack: null, stanceCD: cd(2) }, { stanceId: 'capabilities', stanceCD: cd(0) },
+  ]);
+  assert.notDeepEqual(again[3].P.armF, again[3].plain.armF, 'a second switch shows nothing');
   for (const [name, form] of Object.entries(FORMS)) {
-    const C = form.crouch;
     const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
-    const def = getFighter(id);
-    for (const kind of ['punch', 'kick']) {
-      const atk = { ...ATTACKS[kind], kind, hasHit: false };
-      const pose = (state, stateT, crouching, attack = atk) => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching, movingBack: false, attack }, 0, form);
-      const crouch = pose('crouch', 0, true, null);
-      const first = pose('attack', 0, true), standing = pose('attack', 0, false);
-      for (const c of ['hipY', 'shoulderY', 'headY', 'bodyLean']) {
-        assert.ok(Math.abs(first[c] - crouch[c]) < 1e-9, `${name}'s ${kind} from a crouch leaves from ${first[c]}, the crouch's ${c} is ${crouch[c]}`);
-      }
-      const mid = atk.startup + atk.active / 2;
-      const low = pose('attack', mid, true), high = pose('attack', mid, false);
-      assert.ok(Math.abs(low.headY - high.headY - (C.head ?? C.drop ?? 0)) < 1e-9, `${name}'s ${kind} from a crouch is not thrown low`);
-      assert.ok(standing.headY < first.headY - 15, `${name} stands up to ${kind} from a crouch`);
-      // a kick from a crouch is a low kick: the foot no higher above the hips than standing
-      if (kind === 'kick') assert.ok(low.legF.y - low.hipY >= high.legF.y - high.hipY - 1e-9 && low.legF.y <= 0, `${name}'s kick from a crouch rises above its hips`);
-    }
+    const def = getFighter(id), fade = form.super.fade;
+    const T = (k) => UNICORN.DURATION - k * fade / 4;
+    // pressed in the air, landing while the pose would still be held
+    const air = frames(form, def, [
+      { state: 'jump', airborne: true, vy: 200, unicornT: T(0) },
+      { state: 'idle', airborne: false, vy: 0, unicornT: T(1) },
+      { unicornT: T(2) },
+    ]);
+    assert.notDeepEqual(air[1].fresh, air[1].plain, `${name}'s super has eased out by landing: this shows nothing`);
+    for (const i of [1, 2]) assert.deepEqual(air[i].P, air[i].plain, `${name}'s super pressed in the air pops in on landing`);
+    // walking off as it goes on keeps it
+    const walk = frames(form, def, [
+      { unicornT: T(0) }, { state: 'walk', walkPhase: 0.5, unicornT: T(1) }, { state: 'crouch', crouching: true, unicornT: T(2) },
+    ]);
+    for (const i of [0, 1, 2]) assert.deepEqual(walk[i].P, walk[i].fresh, `${name}'s super pose breaks off on the ground`);
   }
 });
 
-// A move thrown in the air keeps the form's own jump in the legs it does not
-// use, where everyone's were the standing move's tucked the same amount; a
-// kick keeps its kicking leg. On the ground nothing changes.
+// A move thrown from a crouch comes from the crouch: the hurtbox stays
+// crouched while down is held (Fighter.crouching), and the fighter stood up
+// to swing. It leaves from the crouch, the body stays down, the fist or foot
+// it strikes with is where the standing move puts it (where it hits: the
+// hitbox does not crouch), and a move already written low goes no lower than
+// the crouch. A move thrown standing is untouched.
+test('every form throws a move from its crouch, striking where it hits', async () => {
+  const { shapeAttack } = await import('../src/engine/moves.js');
+  for (const [name, form] of Object.entries(FORMS)) {
+    const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);
+    const def = getFighter(id);
+    const pose = (state, stateT, crouching, attack) => computePose({ def, state, stateT, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching, movingBack: false, attack }, 0, form);
+    const crouch = pose('crouch', 0, true, null);
+    for (const [kind, limb] of [['punch', 'armF'], ['slap', 'armF'], ['kick', 'legF']]) {
+      const atk = { ...ATTACKS[kind], kind, hasHit: false };
+      const first = pose('attack', 0, true, atk), standing = pose('attack', 0, false, atk);
+      for (const c of ['hipY', 'shoulderY', 'headY', 'bodyLean']) {
+        assert.ok(Math.abs(first[c] - crouch[c]) < 1e-9, `${name}'s ${kind} from a crouch leaves from ${first[c]}, the crouch's ${c} is ${crouch[c]}`);
+      }
+      assert.ok(standing.headY < first.headY - 15, `${name} stands up to ${kind} from a crouch`);
+      const mid = atk.startup + atk.active / 2;
+      const low = pose('attack', mid, true, atk), high = pose('attack', mid, false, atk);
+      // a move that already dips (Carl's punch lunges 8 px) still never goes
+      // below the crouch it was thrown from
+      assert.ok(low.hipY > high.hipY + 5, `${name}'s ${kind} from a crouch stands up`);
+      assert.ok(low.hipY <= crouch.hipY + 1e-9, `${name}'s ${kind} from a crouch goes down to ${low.hipY}, below its crouch's ${crouch.hipY}`);
+      assert.ok(Math.hypot(low[limb].x - high[limb].x, low[limb].y - high[limb].y) < 1e-9,
+        `${name}'s ${kind} from a crouch strikes ${(low[limb].y - high[limb].y).toFixed(1)} px from where it hits`);
+    }
+  }
+  // Kim's RUG PULL is written down at the floor already
+  const def = getFighter('zara'), form = FORMS.peekaboo, cn = def.commandNormals.find((c) => c.displayName === 'RUG PULL');
+  const fd = { ...ATTACKS.kick, ...cn.frameData };
+  const a = { ...fd, kind: cn.archetype, button: 'kick', cmd: cn, hasHit: false };
+  a.special = { ...(cn.params || {}), ...cn.frameData, type: cn.archetype };
+  shapeAttack(a, a.special);
+  const at = (crouching, attack = a) => computePose({ def, state: crouching === null ? 'crouch' : 'attack', stateT: a.startup + a.active / 2, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching: !!crouching, movingBack: false, attack }, 0, form);
+  const crouch = at(null, null), low = at(true), high = at(false);
+  assert.ok(low.hipY <= Math.max(high.hipY, crouch.hipY) + 1e-9, `RUG PULL from a crouch goes down to ${low.hipY}, below her crouch's ${crouch.hipY}`);
+});
+
 test('every form throws a move in the air from its own jump', () => {
   for (const [name, form] of Object.entries(FORMS)) {
     const id = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name)?.slice(7);

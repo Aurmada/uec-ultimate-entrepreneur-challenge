@@ -52,7 +52,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up, Adam's super) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 556 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 558 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -925,12 +925,16 @@ place, so retiming the gestures would not have helped.
   which `styles.css` centres in a band of the stage's height (14% from the
   top to 52% from the bottom: below the top bar, above the heads), on a
   phone held sideways too. K.O.!, TIME UP and the winner stay centred.
-- **A page change, so the 2D game sees it too**: the one change in this
-  batch a player of the 2D game will notice. The owner's call on review.
+- **Only in 3D**: the rule is `body.gl3d #announce.intro`, and `main.js`
+  marks the page `gl3d` only when the 3D fighters are on in their own forms
+  (a change in Settings reloads the page). The 2D game, where nobody
+  gestures, keeps ROUND and FIGHT! centred as before. (It first moved in 2D
+  too; the review below caught it.)
 - Test (`rosterMoves.test.js`): a match's start announces ROUND 1 and FIGHT!
-  with the class and K.O.! without it; fails without the class. Screenshots
-  at 1000 by 600 in 3D and 2D, and 844 by 390, show the text clear of the
-  top bar and of the fighters.
+  with the class and K.O.! without it, every rule for the class is under
+  `body.gl3d`, and `main.js` sets it from the forms being on; fails without
+  the class, and with the rule unscoped. Screenshots at 1000 by 600 in 3D,
+  and 844 by 390, show the text clear of the top bar and of the fighters.
 
 ### Adam's super from a squat
 
@@ -939,6 +943,49 @@ freeze and shows their face as a portrait in the band instead, so a super
 pose reads from the shoulders down. Adam, the tallest, put most of his into
 it; he now roars from a wide squat, arms out, under it. Frames held at the
 freeze in real matches show his, Steve's and Cathie's.
+
+### Review fixes (an independent review of this section and of v3.17)
+
+A fresh agent reviewed the work above and the forms released in v3.17
+without seeing how they were built. What it found, and what changed:
+
+- **Moves from a crouch hit where they did not look** (v3.17). The crouch
+  dropped the whole move, so a crouching kick's foot went for the shins while
+  its hitbox (which does not crouch) stayed at the standing kick's height,
+  and a move already written low (Kim's RUG PULL) went below her crouch. Now
+  the body drops to the crouch and no lower (a move that already dips, Carl's
+  lunging punch, drops by what is left), and a hand or foot out in the move
+  (`REACHED_OUT`, 30 px from its place in the guard; every basic's fist, palm
+  and foot is at least 35 px out by the middle of its active window) stays
+  exactly where the standing move puts it. A planted foot still widens to the
+  crouch. Test: punch, slap and kick in every form leave from the crouch,
+  stay down but never below it, and strike exactly where the standing move
+  does; RUG PULL no lower than her crouch. Fails with the block off, and with
+  the old drop-everything rule.
+- **The walk jumped when a fighter turned round** (v3.17). Backing off ran
+  the cycle backwards, so changing direction mid-step threw the feet up to
+  28 px in a frame. The cycle now runs on whichever way they go, and backing
+  off it is the foot travelling back that lifts, so a turn only swaps which
+  foot is up (by no more than the form's `lift`). Test: at every phase, the
+  feet, arms, hips and twist are the same either way; fails with the old
+  cycle.
+- **A super or stance-switch pose came back after it was broken off**
+  (v3.17). Both read their timers, which keep counting through a
+  strike, a block or a jump, so Scam slapping out of his switch snapped back
+  into it when he stood, and a super pressed in the air popped in on landing.
+  `heldUnbroken` in `drawFighter.js` remembers, per fighter and from the
+  frames drawn, whether they have stayed standing since the pose went on
+  (render-side only, nothing written to the fighter; a new trigger is the
+  timer jumping back up). Test, drawn frame by frame on one fighter: Scam's
+  slap out of the switch, a super pressed in the air, a walk and a crouch
+  that keep it, a second switch that shows again. Fails without it.
+- **The round-start gesture's wiring was untested**. Test: each of
+  `render.js`'s three ways of drawing a match sets the round start next to
+  the 3D clock, before it draws a fighter. Fails with one path unwired.
+- **ROUND and FIGHT! moved in 2D too**: now 3D only (above).
+- **Letting go of down mid-move pops the crouching move up**: left as it is,
+  since the hurtbox stands up on that frame too; the v3.17 note that said
+  the crouch held through the move is corrected.
 
 ## v3.17, released 2026-11-05: every move in each form, and the dash fixed
 
@@ -1221,9 +1268,12 @@ so there was nothing to draw.
 ### Moves thrown from a crouch, thrown low
 
 Holding down and attacking keeps the hurtbox crouched through the move
-(`Fighter.crouching` is only cleared by a block), but the pose played the
-standing move: the fighter stood up to swing while the game went on hitting
-them as a crouching one.
+(`Fighter.crouching` follows down every frame on the ground, attacks
+included, and is cleared by a block), but the pose played the standing move:
+the fighter stood up to swing while the game went on hitting them as a
+crouching one. Letting go of down mid-move stands the hurtbox up, and the
+pose with it. (Reworked after v3.17 so a fist or foot stays where it hits:
+see the review fixes in the section above.)
 
 - **In 3D, the same move from the form's crouch** (`computePose`, after the
   move is posed): the hips, shoulders, head and hands dropped by the crouch's
