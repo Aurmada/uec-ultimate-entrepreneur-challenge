@@ -1,6 +1,6 @@
 // Boot, screen router, match lifecycle, render loop, menu background.
 
-import { STAGE, DEBUG, VERSION } from './config.js';
+import { STAGE, DEBUG, VERSION, AI_LEVELS } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
 import { graphicsFlags, hasWebGL2 } from './graphics.js';
 import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter, toCharacter } from './data/fighters.js';
@@ -18,10 +18,11 @@ import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
   showShareCard, openInvite, openModal, closeModals, renderProfile,
-  showIncomingLive, setLiveStatus, confirmDialog, playerDef, showAbout,
+  showIncomingLive, setLiveStatus, confirmDialog, savedSelfDef, rosterIdOf, showAbout,
   renderMoveCard,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
+import { levelOffer } from './ui/flow.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
 import { syncProfileUp, syncProfileDown, reportOnlineMatch, reportSoloMatch, fetchProfile } from './net/cloud.js';
 import {
@@ -138,6 +139,8 @@ function startMatch(cfg) {
   reallyStartMatch(cfg);
 }
 
+const HINT_MATCHES = 3;
+
 function reallyStartMatch(cfg) {
   clearTimeout(splashTimer);
   closeModals();
@@ -162,6 +165,9 @@ function reallyStartMatch(cfg) {
     isChallenge: cfg.isChallenge,
     hud,
     onEnd: onMatchEnd,
+    // the tips (SPECIAL READY, press L) for the first few matches, not
+    // every match for good
+    hints: (Save.data.stats?.matches ?? 0) < HINT_MATCHES,
   });
 
   hud.setup(currentGame);
@@ -179,6 +185,10 @@ function reallyStartMatch(cfg) {
   drawPortrait($('vsFace2'), cfg.p2Def, { mirror: true });   // a 3D bust turns to face P1
   $('vsName1').textContent = cfg.p1Def.name;
   $('vsName2').textContent = cfg.p2Def.name;
+  // the AI's level, said before every solo fight (it changed unannounced)
+  const level = cfg.mode === 'solo' ? AI_LEVELS[cfg.difficulty]?.label : null;
+  $('vsLevel').textContent = level || '';
+  $('vsLevel').classList.toggle('hidden', !level);
   vs.classList.remove('hidden');
   currentGame.paused = true;
 
@@ -234,10 +244,14 @@ function renderResults() {
   $('resNameL').textContent = lDef.name;
   $('result-score').textContent = `${r.score[r.winnerIdx]} – ${r.score[1 - r.winnerIdx]}`;
 
+  // Your own best combo (it was the higher of the two, so often the rival's);
+  // in versus, both are players, so the better one.
+  const li = r.localIdx ?? 0;
+  // Against the AI, the level it played at, in place of the arena.
   const stats = [
     [`${r.koRounds[r.winnerIdx]}`, 'KO ROUNDS'],
-    [`${Math.max(r.maxCombo[0], r.maxCombo[1])}`, 'BEST COMBO'],
-    [currentSetup.arena.name, 'ARENA'],
+    r.mode === 'versus' ? [`${Math.max(r.maxCombo[0], r.maxCombo[1])}`, 'BEST COMBO'] : [`${r.maxCombo[li]}`, 'YOUR BEST COMBO'],
+    r.mode === 'solo' && AI_LEVELS[r.difficulty] ? [AI_LEVELS[r.difficulty].label, 'AI LEVEL'] : [currentSetup.arena.name, 'ARENA'],
   ];
   $('result-stats').innerHTML = stats
     .map(([b, l]) => `<div class="rstat"><b>${b}</b><span>${l}</span></div>`).join('');
@@ -256,6 +270,19 @@ function renderResults() {
 
   $('result-cta').classList.toggle('hidden', !!Save.profile || r.mode === 'versus');
 
+  // A level to try next, offered, never imposed: up after a win, down after a
+  // loss. A ghost or a challenge sets its own level, so not after those.
+  const offer = r.mode === 'solo' && !currentSetup.isChallenge && levelOffer(r.difficulty, won);
+  $('result-level').classList.toggle('hidden', !offer);
+  if (offer) {
+    $('btn-level').textContent = `${offer.up ? '⬆ STEP UP TO' : '⬇ TRY'} ${AI_LEVELS[offer.to].label}`;
+    $('btn-level').onclick = () => {
+      audio.sfx('fight');
+      Save.rememberSelection(null, offer.to, null);
+      nextFight();
+    };
+  }
+
   // online: rematch needs both players; fighter change happens via a new room
   const online = r.mode === 'online';
   $('btn-changefighter').style.display = online ? 'none' : '';
@@ -271,10 +298,10 @@ function renderResults() {
 }
 
 function quickFight() {
-  const p1Def = playerDef();                    // always you
-  const pool = FIGHTERS.filter(f => f.id !== p1Def.baseId);
+  const p1Def = savedSelfDef();                 // always you, as you last fought
+  const pool = FIGHTERS.filter(f => f.id !== rosterIdOf(p1Def));
   const p2Def = pool[Math.floor(Math.random() * pool.length)];
-  const difficulty = Save.data.tutorialSeen ? (Save.data.lastDifficulty || 'founder') : 'intern';
+  const difficulty = Save.data.tutorialSeen ? (Save.data.lastDifficulty || 'intern') : 'intern';
   startMatch({ mode: 'solo', p1Def, p2Def, arena: randomArena(), difficulty, isChallenge: false });
 }
 
@@ -282,13 +309,12 @@ function quickFight() {
 // Keeps the current difficulty and avoids repeating the rival you just faced.
 function nextFight() {
   if (net) { net.sendQuit('left'); endNetSession(); }
-  const p1Def = playerDef();
-  const lastRivalId = lastResult?.defs?.[1 - (lastResult.localIdx ?? 0)]?.baseId
-    || lastResult?.defs?.[1 - (lastResult.localIdx ?? 0)]?.id;
-  let pool = FIGHTERS.filter(f => f.id !== p1Def.baseId && f.id !== lastRivalId);
-  if (!pool.length) pool = FIGHTERS.filter(f => f.id !== p1Def.baseId);
+  const p1Def = savedSelfDef();
+  const lastRivalId = rosterIdOf(lastResult?.defs?.[1 - (lastResult.localIdx ?? 0)]);
+  let pool = FIGHTERS.filter(f => f.id !== rosterIdOf(p1Def) && f.id !== lastRivalId);
+  if (!pool.length) pool = FIGHTERS.filter(f => f.id !== rosterIdOf(p1Def));
   const p2Def = pool[Math.floor(Math.random() * pool.length)];
-  const difficulty = Save.data.lastDifficulty || 'founder';
+  const difficulty = Save.data.lastDifficulty || 'intern';
   startMatch({ mode: 'solo', p1Def, p2Def, arena: randomArena(), difficulty, isChallenge: false });
 }
 
@@ -307,7 +333,7 @@ const netEvents = {
     // where one side locked in before the other had subscribed) and go.
     if (netAuto && netPhase === 'picking') {
       toast(`🥊 ${meta.n} is in — fight!`);
-      net?.sendPick(defToSpec(playerDef()));
+      net?.sendPick(defToSpec(savedSelfDef()));
       maybeHostStart();
       return;
     }
@@ -387,7 +413,13 @@ async function endNetSession() {
 let lobby = null;
 let lobbyPairing = false;
 
+// With nobody else in the lobby there was no way on but CANCEL: after a
+// while waiting, a fight with the AI is offered instead.
+const LOBBY_AI_AFTER_MS = 20000;
+let lobbyAiTimer = null;
+
 async function leaveLobby() {
+  clearTimeout(lobbyAiTimer);
   lobbyPairing = false;
   if (lobby) { const l = lobby; lobby = null; await l.leave(); }
 }
@@ -401,10 +433,17 @@ function setLobbyStatus(kind, text, count) {
 }
 
 async function enterLobby() {
+  // A new player meets the controls before a real opponent, as before the AI
+  // (the lobby was the one way into a fight that skipped them).
+  if (shouldShowTutorial()) { showTutorial(() => enterLobby()); return; }
   await endNetSession();
   await leaveLobby();
   openModal('modal-lobby');
   setLobbyStatus('wait', 'Joining the lobby…', null);
+  $('btn-lobby-ai').classList.add('hidden');
+  lobbyAiTimer = setTimeout(() => {
+    if (lobby && !lobbyPairing) $('btn-lobby-ai').classList.remove('hidden');
+  }, LOBBY_AI_AFTER_MS);
 
   lobby = new LobbySession({
     me: identity(),
@@ -453,7 +492,7 @@ async function startPairedMatch({ role, roomId }) {
   netAuto = true;
   netArenaChoice = 'random';
   netPickLocked = true;
-  net.sendPick(defToSpec(playerDef()));
+  net.sendPick(defToSpec(savedSelfDef()));
   maybeHostStart();
 }
 
@@ -606,7 +645,7 @@ function startOnlineMatch(cfg) {
     hud,
     onEnd: onOnlineMatchEnd,
   });
-  hud.setup(currentGame);
+  hud.setup(currentGame, netLocalIdx);   // only this player's meter is named
   showScreen('scr-fight');
   $('netStatus').classList.remove('hidden');
   const touch = isTouchDevice() || new URLSearchParams(location.search).has('touch');
@@ -764,6 +803,9 @@ function netStep(rawDt) {
 
 function togglePause() {
   if (!currentGame || currentGame.finished) return;
+  // Not while the VS splash is up: the match under it is held until the
+  // splash goes, and Esc there let it run behind the splash.
+  if (!$('vsSplash').classList.contains('hidden')) return;
   if (netMatchActive()) {
     // you can't pause a live opponent — offer to forfeit instead
     confirmDialog('LEAVE LIVE MATCH?', 'The fight keeps running — leaving now forfeits it.', leaveOnlineMatch);
@@ -854,7 +896,8 @@ function shareCard() {
     winnerIdx: r.winnerIdx,
     score: [r.score[r.winnerIdx], r.score[1 - r.winnerIdx]],
     kos: r.koRounds[r.winnerIdx],
-    maxCombo: Math.max(r.maxCombo[0], r.maxCombo[1]),
+    // the card is a brag: your own combo, as on the results (in versus, the better)
+    maxCombo: r.mode === 'versus' ? Math.max(r.maxCombo[0], r.maxCombo[1]) : r.maxCombo[r.localIdx ?? 0],
     arenaName: currentSetup.arena.name,
     pointsLine: lastRanked ? `+${lastRanked.gained} PTS → ${lastRanked.total} · ${lastRanked.rank}` : null,
     url: cleanUrl.replace(/\/$/, ''),
@@ -1028,6 +1071,7 @@ function boot() {
 
   $('btn-title-live').onclick = () => { audio.sfx('select'); enterLobby(); };
   $('btn-lobby-cancel').onclick = () => { audio.sfx('back'); leaveLobby(); closeModals(); };
+  $('btn-lobby-ai').onclick = () => { audio.sfx('fight'); leaveLobby(); closeModals(); quickFight(); };
 
   input.onPause = togglePause;
   $('btn-moves').onclick = () => { audio.sfx('click'); $('movesCard').classList.toggle('hidden'); };
@@ -1048,7 +1092,7 @@ function boot() {
     if (lastResult?.mode === 'online') requestOnlineRematch();
     else reallyStartMatch(currentSetup);
   };
-  $('btn-changefighter').onclick = () => { audio.sfx('select'); openSelect(currentSetup.mode); };
+  $('btn-changefighter').onclick = () => { audio.sfx('select'); openSelect(currentSetup.mode, currentSetup.mode === 'solo' ? 'p2' : 'p1'); };
   $('btn-res-menu').onclick = () => {
     audio.sfx('back');
     if (net) { net.sendQuit('left'); endNetSession(); }

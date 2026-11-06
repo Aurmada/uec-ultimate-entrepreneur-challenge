@@ -189,7 +189,7 @@
         <div id="hintToast" class="hidden"></div>
         <div id="vsSplash" class="hidden">
           <div class="vs-card vs-left"><canvas id="vsFace1" width="400" height="400"></canvas><div id="vsName1"></div></div>
-          <div class="vs-mark">VS</div>
+          <div class="vs-mid"><div class="vs-mark">VS</div><div id="vsLevel" class="vs-level hidden"></div></div>
           <div class="vs-card vs-right"><canvas id="vsFace2" width="400" height="400"></canvas><div id="vsName2"></div></div>
         </div>
       </div>
@@ -264,25 +264,24 @@
       </div>
       <div id="result-stats" class="result-stats"></div>
       <div id="result-points" class="result-points hidden"></div>
+      <!-- What to do next, in the order a player wants it: fight again first,
+           then elsewhere, then show it off (the share links are in the result
+           card). Eleven buttons in five rows left MENU below the fold. -->
       <div class="btn-row result-btns">
         <button id="btn-next" class="btn btn-primary">🎲 NEXT FIGHT</button>
-        <button id="btn-fight-live" class="btn">🌐 FIGHT LIVE</button>
         <button id="btn-rematch" class="btn">🔁 REMATCH</button>
+      </div>
+      <div class="btn-row result-btns hidden" id="result-level">
+        <button id="btn-level" class="btn btn-sm btn-level"></button>
       </div>
       <div class="btn-row result-btns">
         <button id="btn-changefighter" class="btn btn-sm">🎭 CHANGE RIVAL</button>
-      </div>
-      <div class="share-strip">
-        <span class="share-label">📣 FLEX IT →</span>
-        <button id="sh-li" class="btn btn-sm sh-li">in&nbsp;· LinkedIn</button>
-        <button id="sh-x" class="btn btn-sm sh-x">𝕏 Post</button>
-        <button id="sh-wa" class="btn btn-sm sh-wa">💬 WhatsApp</button>
-        <button id="sh-copy" class="btn btn-sm">⧉ Copy brag</button>
+        <button id="btn-fight-live" class="btn btn-sm">🌐 FIGHT LIVE</button>
+        <button id="btn-res-menu" class="btn btn-sm">🏠 MENU</button>
       </div>
       <div class="btn-row result-btns">
-        <button id="btn-sharecard" class="btn btn-sm">📸 SHARE RESULT</button>
+        <button id="btn-sharecard" class="btn btn-sm">📣 SHARE &amp; BRAG</button>
         <button id="btn-res-invite" class="btn btn-sm">🔗 CHALLENGE A FRIEND</button>
-        <button id="btn-res-menu" class="btn btn-sm">🏠 MENU</button>
       </div>
       <div id="result-cta" class="result-cta hidden">Create a founder profile to record wins on the leaderboard → <button id="btn-res-profile" class="linklike">CREATE PROFILE</button></div>
     </div>
@@ -372,7 +371,7 @@
         <div class="panel-title">CAREER</div>
         <div id="profile-stats" class="career-grid"></div>
       </div>
-      <div class="btn-row">
+      <div class="btn-row profile-save">
         <button id="btn-save-profile" class="btn btn-primary">💾 SAVE PROFILE</button>
         <button id="btn-invite" class="btn">🔗 INVITE A FRIEND</button>
       </div>
@@ -464,7 +463,7 @@
       </div>
       <div class="panel">
         <div class="panel-title">📄 DEFENSE &amp; METER</div>
-        <p><b>📄 NDA</b> (hold its own button — <b>/</b> or <b>Q</b>, never the crouch key) cuts damage to 15% chip, and chip can never finish you. <b>▼ Crouch</b> is separate: you duck under high attacks and can still attack from down there. You can't paper over a <b>Hostile Takeover</b> — jump away instead. <b>💨 Dash</b> (free, short cooldown) closes gaps or escapes corners and cancels straight into attacks. <b>PARRY:</b> tap block at the very last instant to turn an attack away — the attacker staggers and you pocket energy. Grabs beat parries. <b>Energy</b>: +12 when you land a hit, +8 when you take one — spend it 💣&nbsp;25 · ⚡&nbsp;50 · 🦄&nbsp;100. Unicorn Mode lasts 6 seconds: +35% damage, +25% speed, no chip taken. A <b>🛡 Legal Shield</b> briefcase absorbs one full hit — even a Takeover. A <b>📦 ring on the floor</b> under you means Jeff Bozo has shipped you a parcel: it lands a second and a half later and jumping won't dodge it, so step off the mark or block.</p>
+        <p><b>📄 NDA</b> (hold its own button — <b>/</b> or <b>Q</b>, never the crouch key) cuts damage to 15% chip, and chip can never finish you. <b>▼ Crouch</b> is separate: you duck under high attacks and can still attack from down there. You can't paper over a <b>Hostile Takeover</b> — jump away instead. <b>💨 Dash</b> (free, short cooldown) closes gaps or escapes corners and cancels straight into attacks. <b>PARRY:</b> tap block at the very last instant to turn an attack away — the attacker staggers and you pocket energy. Grabs beat parries. <b>Energy</b>: +12 when you land a hit, +8 when you take one — spend it ⚖️&nbsp;25 · ⚡&nbsp;50 · 🦄&nbsp;100. Unicorn Mode lasts 6 seconds: +35% damage, +25% speed, no chip taken. A <b>🛡 Legal Shield</b> briefcase absorbs one full hit — even a Takeover. A <b>📦 ring on the floor</b> under you means Jeff Bozo has shipped you a parcel: it lands a second and a half later and jumping won't dodge it, so step off the mark or block.</p>
       </div>
       <div class="panel">
         <div class="panel-title">⚡ SPECIAL ABILITIES</div>
@@ -576,6 +575,13 @@
     <div class="modal modal-wide hidden" id="modal-card">
       <div class="modal-title">📸 RESULT CARD</div>
       <div class="card-holder"><canvas id="shareCanvas" width="1200" height="630"></canvas></div>
+      <div class="share-strip">
+        <span class="share-label">📣 FLEX IT →</span>
+        <button id="sh-li" class="btn btn-sm sh-li">in&nbsp;· LinkedIn</button>
+        <button id="sh-x" class="btn btn-sm sh-x">𝕏 Post</button>
+        <button id="sh-wa" class="btn btn-sm sh-wa">💬 WhatsApp</button>
+        <button id="sh-copy" class="btn btn-sm">⧉ Copy brag</button>
+      </div>
       <div class="btn-row">
         <button id="btn-dl-card" class="btn btn-sm">⬇ DOWNLOAD PNG</button>
         <button id="btn-share-card" class="btn btn-sm">📤 SHARE…</button>
@@ -601,6 +607,7 @@
       <div class="live-status"><span class="live-dot" id="lobbyDot"></span><span id="lobbyStatusText">Joining the lobby…</span></div>
       <div class="lobby-count" id="lobbyCount"></div>
       <div class="hint center">Stay on this screen — you'll be matched automatically the moment another founder shows up.</div>
+      <button id="btn-lobby-ai" class="btn btn-sm hidden">🤖 FIGHT THE AI INSTEAD</button>
       <button id="btn-lobby-cancel" class="btn btn-sm btn-ghost">CANCEL</button>
     </div>
 

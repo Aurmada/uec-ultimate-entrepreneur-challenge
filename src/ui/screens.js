@@ -47,15 +47,30 @@ export function playerDef() {
   return resolveDef(sel.p1 || 'custom');
 }
 
+// Who you last fought as: the pick a fight was started with (Save), not one
+// made on the select screen and backed out of. Quick Fight, Next Fight and the
+// live lobby use this; they played as whoever was last tapped on the select
+// screen, so a first tap there (it picks your side) changed who you were.
+export function savedSelfDef() {
+  return resolveDef(Save.data.lastSelf || 'custom');
+}
+
+// The roster id a fighter is: a roster character's own, or the base a custom
+// founder is built on. A rival drawn at random is never this, so you never
+// meet yourself by chance (two of the same fighter look identical).
+export function rosterIdOf(def) {
+  return def?.baseId || def?.id;
+}
+
 // Your own founder, regardless of who you've picked to play as.
 export function myFounderDef() {
   return Save.profile ? buildCustomFighter(Save.profile) : getFighter(DEFAULT_BASE_ID);
 }
 
-function resolveDef(id) {
+function resolveDef(id, notId = null) {
   if (id === 'custom') return Save.profile ? buildCustomFighter(Save.profile) : getFighter(DEFAULT_BASE_ID);
   if (id === 'random') {
-    const pool = FIGHTERS.map(f => f.id);
+    const pool = FIGHTERS.map(f => f.id).filter((f) => f !== notId);
     return getFighter(pool[Math.floor(Math.random() * pool.length)]);
   }
   return getFighter(id);
@@ -78,12 +93,15 @@ function drawRandomTile(canvas) {
 // Which side of the select screen the next tile click fills.
 let pickSide = 'p1';
 
-export function openSelect(mode) {
+// `side` is the slot the first tap fills: CHOOSE RIVAL and CHANGE RIVAL open
+// on the rival's, so tapping a fighter there picks who you fight (it picked
+// who you played as, and the rival stayed RANDOM).
+export function openSelect(mode, side = 'p1') {
   sel.mode = mode;
   sel.p1 = Save.data.lastSelf || 'custom';
   sel.p2 = mode === 'solo' ? (Save.data.lastRival || 'random') : null;
-  pickSide = 'p1';
-  if (!sel.ghost) sel.difficulty = Save.data.lastDifficulty || 'founder';
+  pickSide = side;
+  if (!sel.ghost) sel.difficulty = Save.data.lastDifficulty || 'intern';
   renderSelect();
   A.showScreen('scr-select');
 }
@@ -248,7 +266,7 @@ function onFight() {
     isChallenge = !!sel.ghost.isChallenge;
     sel.ghost = null;
   } else {
-    p2Def = resolveDef(sel.p2 || 'random');
+    p2Def = resolveDef(sel.p2 || 'random', rosterIdOf(p1Def));
   }
 
   const arena = sel.arena === 'random' ? randomArena() : getArena(sel.arena);
@@ -1178,7 +1196,7 @@ export function initScreens(actions) {
 
   // title nav
   $('btn-quick').onclick = () => { audio.sfx('fight'); A.quickFight(); };
-  $('btn-arcade').onclick = () => { audio.sfx('select'); sel.ghost = null; openSelect('solo'); };
+  $('btn-arcade').onclick = () => { audio.sfx('select'); sel.ghost = null; openSelect('solo', 'p2'); };
   $('btn-challenges').onclick = () => { audio.sfx('select'); renderChallenges(); A.showScreen('scr-challenge'); };
   $('btn-leaderboard').onclick = () => { audio.sfx('select'); renderLeaderboard(); A.showScreen('scr-leaderboard'); };
   $('btn-profile').onclick = () => { audio.sfx('select'); renderProfile(); A.showScreen('scr-profile'); };

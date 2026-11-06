@@ -402,21 +402,26 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 @keyframes hpPulse { 50% { filter: brightness(1.35); } }
 .en-track {
   position: relative; height: clamp(7px, 1.4vw, 10px);
-  background: rgba(5,7,15,.82); border: 2px solid var(--shadow); border-radius: 5px; overflow: hidden; width: 78%;
+  background: rgba(5,7,15,.82); border: 2px solid var(--shadow); border-radius: 5px; width: 78%;
 }
 .hud-p2 .en-track { align-self: flex-end; }
 .en-fill {
-  position: absolute; inset: 0; transform-origin: left center;
+  position: absolute; inset: 0; transform-origin: left center; border-radius: 3px;
   background: linear-gradient(90deg, var(--cyan), var(--purple)); transition: transform .12s linear;
 }
 .hud-p2 .en-fill { transform-origin: right center; }
 .en-fill.full { background: linear-gradient(90deg, #ff9df3, var(--gold), var(--cyan)); animation: enGlow .7s infinite; }
 @keyframes enGlow { 50% { filter: brightness(1.5) } }
+/* The key to press, beside the bar toward the timer: inside a 10 px bar it
+   was 8 px text. */
 .en-spark {
-  position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-  font-size: 8px; font-weight: 900; letter-spacing: 2px; color: #08101d;
+  position: absolute; top: 50%; left: calc(100% + 6px); transform: translateY(-50%);
+  display: none; white-space: nowrap;
+  font-size: 11px; font-weight: 900; letter-spacing: 1px; color: var(--gold);
+  text-shadow: 1px 1px 0 var(--shadow);
 }
-.en-track.ready .en-spark { display: flex; }
+.hud-p2 .en-spark { left: auto; right: calc(100% + 6px); }
+.en-track.ready .en-spark { display: block; }
 
 /* RUNWAY — Adam's private clock, and the one bar in the HUD that goes DOWN on
    its own. Deliberately unlike the two above it in three ways at once, because
@@ -461,6 +466,12 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 }
 .combo-r { left: auto; right: 6%; transform: scale(.5) rotate(6deg); }
 .combo.show { animation: comboPop .45s ease-out forwards; }
+/* and goes when the combo is over (hud.js) */
+.combo.show.out { animation: comboOut .35s ease-in forwards; }
+@keyframes comboOut {
+  from { opacity: 1; transform: scale(1) rotate(-4deg); }
+  to { opacity: 0; transform: scale(.85) rotate(-4deg); }
+}
 @keyframes comboPop {
   0% { opacity: 0; transform: scale(.4) rotate(-8deg); }
   40% { opacity: 1; transform: scale(1.25) rotate(2deg); }
@@ -524,6 +535,13 @@ body.gl3d #announce.intro { inset: 14% 0 52% 0; }
   animation: vsMark .5s .25s cubic-bezier(.2,2,.4,1) both;
 }
 @keyframes vsMark { from { transform: scale(0) rotate(-30deg); } }
+.vs-mid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+/* the AI's level, said before every solo fight */
+.vs-level {
+  font-size: clamp(11px, 1.8vw, 16px); font-weight: 900; letter-spacing: 3px; color: var(--cyan);
+  background: rgba(5,7,15,.75); border: 2px solid var(--cyan); border-radius: 999px; padding: 4px 12px;
+  animation: vsMark .5s .4s cubic-bezier(.2,2,.4,1) both;
+}
 
 #btn-pause { position: absolute; top: 8px; right: 8px; z-index: 6; opacity: .85; }
 
@@ -608,8 +626,11 @@ body.gl3d #announce.intro { inset: 14% 0 52% 0; }
 .t-sp { background: rgba(41,217,255,.22); }
 
 /* ---------- Results ---------- */
-#scr-results { align-items: center; justify-content: center; overflow-y: auto; }
-.results-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 16px; width: 100%; max-width: 640px; }
+/* Centred by its own margins, not the screen's: centred by the screen, a
+   results screen taller than the window lost its top (VICTORY) above the
+   scroll, out of reach. */
+#scr-results { align-items: center; justify-content: flex-start; overflow-y: auto; }
+.results-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 16px; width: 100%; max-width: 640px; margin: auto 0; }
 .result-verdict {
   font-size: clamp(44px, 11vw, 96px); font-weight: 900; font-style: italic; letter-spacing: 3px;
   color: var(--gold); -webkit-text-stroke: 2px var(--shadow);
@@ -634,6 +655,9 @@ body.gl3d #announce.intro { inset: 14% 0 52% 0; }
 .result-points .pts { color: var(--gold); font-size: 22px; font-style: italic; }
 .result-points .rank-chip { color: var(--cyan); }
 .result-cta { color: var(--muted); font-size: 13px; text-align: center; }
+.btn-level { border-color: var(--cyan); color: var(--cyan); }
+#modal-card .share-strip { margin: 10px 0 4px; }
+#modal-card .share-strip .btn { width: auto; flex: 0 0 auto; }
 
 .share-strip {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
@@ -748,7 +772,19 @@ label.btn { display: inline-block; }
   color: var(--gold) !important; text-align: center; letter-spacing: .5px;
   text-shadow: 2px 2px 0 var(--shadow);
 }
-.about-cta { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; }
+/* The way on stays on screen while the story scrolls (on a laptop it sat
+   below the fold, and nothing said there was anything below). */
+.about-cta {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px;
+  position: sticky; bottom: 0; z-index: 4; padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(11,14,26,.96) 70%, rgba(11,14,26,0));
+}
+/* So does SAVE on the profile: it sat 2,500 px down, under the build, the
+   moves and the career, and a new player has to press it to fight. */
+.profile-save {
+  position: sticky; bottom: 0; z-index: 4; padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(11,14,26,.96) 70%, rgba(11,14,26,0));
+}
 .about-cta .btn { width: 100%; max-width: 340px; }
 
 /* Look customiser: reuses .pick-row / .arena-strip / .a-tile from the select screen */
@@ -890,9 +926,27 @@ label.btn { display: inline-block; }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
-  /* phones in landscape: tighten fight chrome */
-  .stage-wrap { max-width: calc(100dvh * 16 / 9 + 200px); }
-  .tbtn { width: 50px; height: 50px; font-size: 20px; border-radius: 14px; }
+  /* Phones in landscape: the stage keeps its 16:9, the bars either side
+     giving the pads room. It was let out 200 px wider than that, and the game
+     and the 3D layer stretched to fill it, everything 22% too wide. */
+  .stage-wrap { max-width: calc(100dvh * 16 / 9); }
+  /* The pads sit over the fight: see-through, and nothing blurred behind them
+     (a fighter in a corner was a blur under the buttons). */
+  .tbtn { width: 50px; height: 50px; font-size: 20px; border-radius: 14px;
+    backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(22,29,51,.38); }
+  .t-atk { background: rgba(255,61,110,.2); }
+  .t-sp { background: rgba(41,217,255,.16); }
+  /* The title: it is taller than the screen, and could not scroll (the logo
+     cut off, HOW TO PLAY halved, the story and sign-out out of reach). */
+  #scr-title { justify-content: flex-start; overflow-y: auto; }
+  #scr-title .title-wrap { margin: auto 0; gap: 10px; padding: 12px 20px; }
+  .logo-uec { font-size: clamp(48px, 15vh, 90px); }
+  /* The results: the next fight and the menu on the first screen. */
+  .results-wrap { gap: 8px; padding: 10px 16px; }
+  .result-verdict { font-size: clamp(34px, 11vh, 60px); }
+  .rf canvas { width: clamp(56px, 16vh, 90px); }
+  .rf-lose canvas { width: clamp(44px, 12vh, 70px); }
+  .result-score { font-size: clamp(26px, 8vh, 44px); }
 }
 
 @media (orientation: portrait) and (max-width: 760px) {

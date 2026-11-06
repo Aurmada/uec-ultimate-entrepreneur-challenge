@@ -21,7 +21,10 @@ const DEFAULTS = () => ({
   storySeen: false,        // the intro plays once, then lives under THE STORY
   lastSelf: 'custom',      // who you play AS (your founder, or a roster character)
   lastRival: 'random',     // who you faced
-  lastDifficulty: 'founder',
+  // A new player stays at Rookie until they choose to step up (the results
+  // screen offers it): after a Rookie first fight, everything was Contender,
+  // unannounced.
+  lastDifficulty: 'intern',
 });
 
 let mem = null;

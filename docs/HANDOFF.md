@@ -52,7 +52,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.17 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 553 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes, the game designer's animation fixes) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 564 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.17, plus the work after it (below: knockout falls, juggles, ROUND and FIGHT! moved up in 3D, Adam's super, the review fixes, the game designers' animation and flow fixes) | v3.17 merged into `main` on 2026-11-05; the rest is pushed to this branch but not released, for the owner to review. 572 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -994,7 +994,7 @@ introduce game designer (agent) to check and improve". A fresh agent, as a
 fighting-game designer and animation director, posed every fighter through
 every move in the shipping renderer, measured the poses against the hitboxes
 and hurtboxes, and ranked what a player would notice. A second, on flow and
-game feel, was stopped before it reported; it has not been rerun. What the
+game feel, was stopped before it reported; a fresh one ran after (next section). What the
 first found, and what changed (all render only: nothing in the simulation,
 no `SIM_VERSION` change; 3D only, except Carl's briefcase):
 
@@ -1080,6 +1080,88 @@ Not done, for the owner:
 - Smaller: Kim's RUG PULL stops at her knees, Scam's SAFETY MEMO and bomb read
   as two straight arms, Carl's walk nearly kneels, several round-start
   gestures are small on a phone.
+
+### A game designer's review of the flow and the feel (2026-11-06)
+
+The owner: "yes, let's start a fresh one". A second fresh agent, as a game
+designer for arcade fighters and first-time players, played from a cold load
+to the results and back at 1280 by 720 and on a phone held sideways (844 by
+390, touch), ran headless matches through the real `Game` to time the pacing,
+and read the online code (it wrote nothing anywhere). What it found, and what
+changed (UI, CSS and copy only: no simulation change, no `SIM_VERSION`):
+
+- **The level changed unannounced.** The first Quick Fight was Rookie and
+  every one after it Contender (`lastDifficulty` defaulted to `'founder'`),
+  with nothing on screen saying so; its bots that win at Rookie won nothing at
+  Contender unless they mashed. A new save now stays at Rookie (existing saves
+  keep theirs). The VS splash says the level before every solo fight, the
+  results show it (AI LEVEL, in place of the arena), and offer the next level
+  up after a win or down after a loss (`levelOffer`, `src/ui/flow.js`), one
+  tap into the next fight. Never changed without asking.
+- **The select screen picked the wrong side.** CHOOSE RIVAL's first tap picked
+  who you played as, and the rival stayed RANDOM; backing out still left Quick
+  Fight playing as that pick; and a rival drawn at random could be yourself
+  (the roster's own fighters have no `baseId`), Elo against Elo in the same
+  colours. CHOOSE RIVAL and CHANGE RIVAL now open on the rival's side; Quick
+  Fight, Next Fight and the live lobby fight as you last fought
+  (`savedSelfDef`); a random rival is never you (`rosterIdOf`).
+- **"3 HITS!" never went away**: it stayed up for the rest of the round and
+  into the next. It now fades as the combo ends (`hud.js`).
+- **The meter labels**: 8 px text in a 10 px bar, on the AI's bar too (naming
+  the key U, read as an instruction), and in versus naming P2's key on P1's bar. The
+  key now sits beside the bar at 11 px, only on a bar someone at this keyboard
+  plays, with that side's own key (`meterKeysFor`).
+- **A phone held sideways stretched the fight 22% wide**: the stage was let
+  out 200 px past 16:9 and the game and the 3D layer filled it (the owner's
+  iPhone included). It is now 16:9, the bars either side; the touch pads are
+  see-through and blur nothing behind them (a fighter in a corner was a blur).
+- **The phone's title could not scroll** to THE STORY, sign-out or the profile
+  chip, and the results lost their top (VICTORY) above the scroll on a short
+  window. Both now scroll from the top.
+- **The results**: eleven buttons in five rows, MENU below the fold at 720p,
+  and BEST COMBO the better of the two (often the rival's). Now NEXT FIGHT and
+  REMATCH, the level offer, CHANGE RIVAL, FIGHT LIVE and MENU, then SHARE &
+  BRAG (the LinkedIn, X, WhatsApp and copy links moved into the result card)
+  and CHALLENGE A FRIEND; YOUR BEST COMBO.
+- **The first run**: the story's button and the profile's SAVE were below the
+  fold (SAVE 2,500 px down a form a new player must finish to fight). Both now
+  stay on screen at the bottom while the page scrolls. The story still opens
+  once by itself (that was the owner's design).
+- **The tutorial**: never mentioned Launch, taught two right-hand clusters, and
+  only ran before a fight with the AI, so FIGHT A REAL PLAYER sent a newcomer
+  in untaught. It now says left hand on W A S D, right hand on H J K, teaches
+  Launch and points to the fighter's own moves, and runs before the first
+  lobby too. The in-fight tips come in the first three matches only.
+- **The lobby with nobody in it** had no way on but CANCEL. After 20 s it
+  offers FIGHT THE AI INSTEAD.
+- Small: Esc on the VS splash let the match run behind it (now ignored there);
+  the help said 💣 for the 25-meter move, ⚖️ everywhere else.
+
+Tests: `test/hud.test.js` (the combo fade, the meter labels) and
+`test/flow.test.js` (the level, the select screen, the results, the phone
+layout, the splash, the lobby, the tips); each fails on the code before.
+
+For the owner (gameplay, so `SIM_VERSION` and your say, or yours by design):
+
+- **Specials and Unicorn come so often they stop being special**: in its
+  simulated matches a Contender match had about 6.6 specials and 4.5 Unicorns,
+  Unicorn on screen 36 to 52% of live time, and the cut-in band (top third,
+  stage dimmed) every few seconds. Slowing the meter (`METER.HIT_TAKE` 8 to 4,
+  `HIT_DEAL` 12 to 9, aiming at about one Unicorn a player a match) is a
+  gameplay change. Keeping the full band only for Unicorn, and a nameplate for
+  other specials, would be render only.
+- **The wait after a knockout**: 4.65 s to control between rounds and 5.4 s to
+  the results, unskippable; 26 to 37% of a match's time is cinematics. Trimming
+  `ROUND.KO_SLOWMO_T` or `ROUND.ROUND_END_T` paces the lockstep simulation; a
+  solo-only skip of the victory pose would not.
+- **Sign-in before the first fight** (`AUTH.REQUIRED`) is the owner's; one
+  unranked Rookie fight before it ("sign in to keep this win") was suggested.
+- **Not done**: a mirror palette for a deliberate mirror pick; the touch pads
+  still cover part of the stage's corners (smaller, see-through now); the
+  select screen's dossier is small and the rival's special has no description;
+  a few sound cues are borrowed (a briefcase landing plays the block sound);
+  ROUND 1 on Demo Day sits over the stage's yellow sign; the 60 s clock never
+  ran out in 1,200 simulated rounds.
 
 ## v3.17, released 2026-11-05: every move in each form, and the dash fixed
 

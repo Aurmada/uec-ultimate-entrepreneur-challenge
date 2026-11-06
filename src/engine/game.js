@@ -56,7 +56,7 @@ function blowTilt(a) {
 const VICTORY_CRIES = ['ACQUIRED!', 'EXIT!', 'LIQUIDATED!', 'UNICORN!', 'IPO!', 'DUE DILIGENCE!'];
 
 export class Game {
-  constructor({ p1, p2, arena, mode, difficulty, isChallenge, onEnd, hud, seed }) {
+  constructor({ p1, p2, arena, mode, difficulty, isChallenge, onEnd, hud, seed, hints = true }) {
     this.arena = arena;
     this.mode = mode;                        // 'solo' | 'versus'
     this.difficulty = difficulty;
@@ -90,6 +90,7 @@ export class Game {
     this.roundWasKO = false;
     this.lastTickSec = -1;
     this.hintFlags = { special: false, super: false, combo: false };
+    this.hints = hints;                      // the first-match tips (main.js: the first few matches only)
     this.finished = false;
     this.introStep = -1;
     // mystery drops (seeded so online peers agree)
@@ -844,7 +845,7 @@ export class Game {
 
   // ---------------- hints ----------------
   updateHints() {
-    if (this.mode !== 'solo') return;
+    if (this.mode !== 'solo' || !this.hints) return;
     const f = this.fighters[0];
     if (!f.controller.isHuman) return;
     const touch = isTouchDevice();

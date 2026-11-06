@@ -6,7 +6,17 @@ import { drawPortrait } from '../engine/drawFighter.js';
 
 const $ = (id) => document.getElementById(id);
 
-class HUD {
+// Per side, the keys that fire that side's special and Unicorn Mode, or null
+// for a side nobody at this keyboard plays (the AI, the far player online).
+// Solo and online, either cluster drives the one human (L or B, U or G);
+// versus, P1 has B and G, P2 L and U (input.js).
+export function meterKeysFor(mode, localIdx = 0) {
+  const right = { special: 'L', super: 'U' };
+  if (mode === 'versus') return [{ special: 'B', super: 'G' }, right];
+  return localIdx === 1 ? [null, right] : [right, null];
+}
+
+export class HUD {
   bind() {
     this.el = {
       name: [$('hudName1'), $('hudName2')],
@@ -33,13 +43,16 @@ class HUD {
     this.touch = document.getElementById('touchControls')?.classList.contains('hidden') === false;
     this.announceTimer = null;
     this.hintTimer = null;
+    this.comboOn = [false, false];
     // Last frame's runway, per side. The tank only ever goes UP on a landed
     // hit, so a rise is the refill and nothing else — no event plumbing needed.
     this.lastRunway = [null, null];
   }
 
-  // Called once per match.
-  setup(game) {
+  // Called once per match. `localIdx` is the side this player fights on
+  // online (meterKeysFor).
+  setup(game, localIdx = 0) {
+    this.meterKeys = meterKeysFor(game.mode, localIdx);
     for (let i = 0; i < 2; i++) {
       const def = game.fighters[i].def;
       this.el.name[i].textContent = def.name;
@@ -51,7 +64,8 @@ class HUD {
         pip.className = 'pip';
         this.el.pips[i].appendChild(pip);
       }
-      this.el.combo[i].classList.remove('show');
+      this.el.combo[i].classList.remove('show', 'out');
+      this.comboOn[i] = false;
       // Only a fighter who actually burns one gets a bar. A permanently-full
       // gold bar under the other eight is a resource the player would try to
       // play around and could not.
@@ -95,12 +109,15 @@ class HUD {
       this.el.en[i].classList.toggle('full', f.energy >= METER.MAX);
       const ready = f.energy >= METER.SPECIAL_COST;
       this.el.enTrack[i].classList.toggle('ready', ready);
-      // Name the button to press, so a full meter is actionable and not a mystery.
-      if (ready) {
-        this.el.enSpark[i].textContent = f.energy >= METER.MAX
-          ? (this.touch ? '🦄 TAP UNICORN' : '🦄 MAX — U')
-          : (this.touch ? '⚡ TAP SPECIAL' : '⚡ READY — L');
-      }
+      // Name the button to press, so a full meter is actionable and not a
+      // mystery: only on a bar someone here plays, with that side's own key
+      // (the AI's bar named the key U as if to the player, and in versus P1's
+      // named P2's keys). Touch drives the left side only.
+      const keys = this.meterKeys[i];
+      this.el.enSpark[i].textContent = !ready || !keys ? ''
+        : f.energy >= METER.MAX
+          ? (this.touch && i === 0 ? '🦄 TAP 🦄' : `🦄 ${keys.super}`)
+          : (this.touch && i === 0 ? '⚡ TAP ⚡' : `⚡ ${keys.special}`);
       // Light up whichever touch buttons the local player can actually afford.
       if (i === 0 && this.el.costBtns) {
         for (const b of this.el.costBtns) {
@@ -131,6 +148,14 @@ class HUD {
         }
       }
     }
+    // A combo's count goes once the combo is over (the victim out of it, or a
+    // new round): it stayed up, "3 HITS!", through the rest of the round.
+    for (let i = 0; i < 2; i++) {
+      if (this.comboOn[i] && !(game.fighters[1 - i].comboTaken > 0)) {
+        this.comboOn[i] = false;
+        this.el.combo[i].classList.add('out');
+      }
+    }
     const sec = Math.ceil(game.timer);
     this.el.timer.textContent = sec;
     this.el.timer.classList.toggle('urgent', sec <= 10 && game.state === 'fighting');
@@ -159,9 +184,10 @@ class HUD {
   combo(idx, n) {
     const c = this.el.combo[idx];
     c.textContent = `${n} HITS!`;
-    c.classList.remove('show');
+    c.classList.remove('show', 'out');
     void c.offsetWidth;
     c.classList.add('show');
+    this.comboOn[idx] = true;
   }
 
   denyMeter(idx) {
