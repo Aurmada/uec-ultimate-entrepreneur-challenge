@@ -20,8 +20,8 @@ class El {
 const pair = () => [new El(), new El()];
 const hudWith = (mode, localIdx = 0) => {
   const h = new HUD();
-  h.el = { hp: pair(), ghost: pair(), en: pair(), enTrack: pair(), enSpark: pair(), rwTrack: pair(), rw: pair(), pips: pair(), timer: new El(), combo: pair(), costBtns: [] };
-  h.touch = false;
+  h.el = { hp: pair(), ghost: pair(), en: pair(), enTrack: pair(), enSpark: pair(), rwTrack: pair(), rw: pair(), pips: pair(), timer: new El(), combo: pair(), skip: new El(), costBtns: [] };
+  h.touchPad = null;                           // no touch pads
   h.comboOn = [false, false];
   h.lastRunway = [null, null];
   h.meterKeys = meterKeysFor(mode, localIdx);
@@ -57,4 +57,26 @@ test('only a human side is told which key fires its meter, and its own key', () 
   assert.deepEqual(text('versus', 0, full, half), ['🦄 G', '⚡ L'], "versus: P1's bar names P2's key");
   assert.deepEqual(text('online', 1, half, full), ['', '🦄 U'], 'online: the far player is labelled');
   assert.deepEqual(text('solo', 0, fighter(), fighter()), ['', ''], 'an empty meter is labelled');
+});
+
+// The touch pads are shown per match, after the HUD was bound at boot, so a
+// phone was told to press U for UNICORN MODE and to press any key; the HUD now
+// asks whether the pads are showing when it labels anything.
+test('on a phone the labels say tap, from the moment the pads show', () => {
+  const h = hudWith('solo');
+  h.touchPad = new El();
+  h.touchPad.classList.add('hidden');          // as at boot
+  const full = fighter({ energy: METER.MAX });
+  h.update(game(full, fighter()));
+  assert.match(h.el.enSpark[0].textContent, /U$/);
+  h.touchPad.classList.remove('hidden');       // the match shows them
+  h.update(game(full, fighter()));
+  assert.equal(h.el.enSpark[0].textContent, '🦄 TAP 🦄');
+  const end = game(fighter(), fighter(), { mode: 'solo', state: 'matchEnd', stateT: 0.5, finished: false, paused: false });
+  h.update(end);
+  assert.equal(h.el.skip.textContent, '▶ TAP TO CONTINUE');
+  assert.ok(!h.el.skip.classList.contains('hidden'));
+  h.touchPad.classList.add('hidden');
+  h.update(end);
+  assert.equal(h.el.skip.textContent, '▶ PRESS ANY KEY');
 });

@@ -22,7 +22,7 @@ import {
   renderMoveCard,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
-import { levelOffer } from './ui/flow.js';
+import { levelOffer, canSkipVictory, GUEST_SCREENS, guestFightOffered, pickGuestFight } from './ui/flow.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
 import { syncProfileUp, syncProfileDown, reportOnlineMatch, reportSoloMatch, fetchProfile } from './net/cloud.js';
 import {
@@ -112,15 +112,34 @@ function identity() {
 // Screens a signed-in player may visit before they've built their founder.
 const PRE_PROFILE_OK = new Set(['scr-auth', 'scr-profile', 'scr-help', 'scr-about']);
 
+// A visitor's one fight before signing in, from its start to its results
+// (flow.js). Any other screen ends it, and so does signing in.
+let guestFight = false;
+function endGuestFight() {
+  guestFight = false;
+  document.body.classList.remove('guest-fight');
+}
+
+// The offer is shown only once sign-in has said whether there is a session:
+// until then every returning player looks signed out, and a tap spent the
+// device's one fight on someone already signed in.
+let authSettled = false;
+function refreshGuestOffer() {
+  $('auth-guest').classList.toggle('hidden', !(authSettled && guestFightOffered(Save, currentUser())));
+}
+
 function showScreen(id) {
-  // hard sign-in gate (only once providers are configured — see src/auth.js)
-  if (AUTH.REQUIRED && !currentUser() && id !== 'scr-auth') id = 'scr-auth';
+  // hard sign-in gate (only once providers are configured: see src/auth.js),
+  // open only to the guest's one fight and its results
+  if (AUTH.REQUIRED && !currentUser() && id !== 'scr-auth' && !(guestFight && GUEST_SCREENS.has(id))) id = 'scr-auth';
   // profile gate: you fight AS YOURSELF, so a founder profile isn't optional.
   // Anything else would put an unnamed, faceless player on the global ladder.
   else if (AUTH.REQUIRED && currentUser() && !Save.profile && !PRE_PROFILE_OK.has(id)) {
     id = 'scr-profile';
     renderProfile();
   }
+  if (!GUEST_SCREENS.has(id)) endGuestFight();
+  if (id === 'scr-auth') refreshGuestOffer();
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
   input.enabled = id === 'scr-fight';
   if (id !== 'scr-fight') {
@@ -207,7 +226,8 @@ function reallyStartMatch(cfg) {
 
 function onMatchEnd(result) {
   lastResult = result;
-  const ranked = result.mode === 'solo';
+  // A guest's one fight does not count: the ladder is for signed-in founders.
+  const ranked = result.mode === 'solo' && !currentSetup?.guest;
   if (ranked) {
     lastRanked = Save.recordMatch({
       won: result.winnerIdx === 0,
@@ -268,7 +288,14 @@ function renderResults() {
     pts.classList.add('hidden');
   }
 
-  $('result-cta').classList.toggle('hidden', !!Save.profile || r.mode === 'versus');
+  $('result-cta').classList.toggle('hidden', !!Save.profile || r.mode === 'versus' || !!currentSetup.guest);
+  // After a guest's one fight, only the way in (the body's guest-fight class
+  // hides the rest).
+  if (currentSetup.guest) {
+    $('result-guest-text').textContent = won
+      ? 'That win was on the house. Sign in and the next one counts.'
+      : 'That one was on the house. Sign in for your rematch.';
+  }
 
   // A level to try next, offered, never imposed: up after a win, down after a
   // loss. A ghost or a challenge sets its own level, so not after those.
@@ -816,6 +843,7 @@ function togglePause() {
     currentGame.paused = false;
   } else {
     currentGame.paused = true;
+    $('skipHint').classList.add('hidden');   // the HUD is not updated while paused
     // Show YOUR moves, not the rival's — nobody memorises a move list from the
     // select screen thirty seconds before the fight starts.
     const mine = currentGame.fighters[netLocalIdx === 1 ? 1 : 0];
@@ -1074,6 +1102,23 @@ function boot() {
   $('btn-lobby-ai').onclick = () => { audio.sfx('fight'); leaveLobby(); closeModals(); quickFight(); };
 
   input.onPause = togglePause;
+  // The victory pose, skipped to the results in single player by a key or a
+  // tap (flow.js canSkipVictory; the HUD says so). Pause keys and browser
+  // shortcuts are left alone, and a key held down from the last blow does
+  // not repeat into a skip.
+  // Only with the fight on screen (a game left in its victory pose behind
+  // another screen is not skipped by typing there), and a tap on the pause or
+  // moves button does what it says.
+  const skipVictory = (e) => {
+    if (!canSkipVictory(currentGame) || !$('scr-fight').classList.contains('active')) return;
+    if (e.type === 'keydown' && (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.code === 'Escape' || e.code === 'KeyP')) return;
+    const btn = e.type === 'pointerdown' && e.target.closest?.('button');
+    if (btn && !btn.closest('#touchControls')) return;
+    currentGame.finish();
+    $('skipHint').classList.add('hidden');
+  };
+  window.addEventListener('keydown', skipVictory);
+  $('stageWrap').addEventListener('pointerdown', skipVictory);
   $('btn-moves').onclick = () => { audio.sfx('click'); $('movesCard').classList.toggle('hidden'); };
   $('btn-pause').onclick = togglePause;
   $('btn-resume').onclick = togglePause;
@@ -1129,7 +1174,26 @@ function boot() {
       .catch(authFail);
   };
   $('btn-auth-back').onclick = () => { audio.sfx('back'); if (!AUTH.REQUIRED || currentUser()) showScreen('scr-title'); };
+  // One fight before signing in, once on this device (flow.js).
+  $('btn-auth-guest').onclick = () => {
+    if (!guestFightOffered(Save, currentUser())) return;
+    audio.sfx('fight');
+    Save.data.guestFightUsed = true;      // taken at the start, so quitting does not hand out another
+    Save.persist();
+    guestFight = true;
+    document.body.classList.add('guest-fight');
+    const pick = pickGuestFight(FIGHTERS.map(f => f.id));
+    startMatch({
+      mode: 'solo', p1Def: getFighter(pick.p1), p2Def: getFighter(pick.p2),
+      arena: randomArena(), difficulty: pick.difficulty, isChallenge: false, guest: true,
+    });
+  };
+  $('btn-res-signin').onclick = () => { audio.sfx('click'); showScreen('scr-auth'); };
   onAuthChange((session) => {
+    // signed in during the guest fight (a magic link opened in another tab):
+    // whatever it was, it is a signed-in player's game now
+    if (session) endGuestFight();
+    refreshGuestOffer();
     $('btn-account').textContent = session ? `👤 ${userHandle()} · SIGN OUT` : '🔐 SIGN IN';
     // hard gate: no escape hatch until signed in, so hide the dead BACK control
     $('btn-auth-back').style.display = (AUTH.REQUIRED && !session) ? 'none' : '';
@@ -1166,7 +1230,7 @@ function boot() {
       }
     }
   });
-  initAuth();
+  initAuth().finally(() => { authSettled = true; refreshGuestOffer(); });
   if (AUTH.REQUIRED && !currentUser()) showScreen('scr-auth');
 
   showScreen('scr-title');

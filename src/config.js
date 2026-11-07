@@ -64,6 +64,10 @@ export const FX_ART = {
     SKEW: 0.2,            // horizontal shear across the band
     DIM: 0.5,             // how dark the stage goes behind the fighters
     BUST: 1.8,            // bust size, as a share of the band's height
+    // An ordinary special's nameplate, on its fighter's side: the full band
+    // and the dimmed stage are UNICORN MODE's alone. Centre and height in
+    // screen px, width as a share of the screen, the name's size in px.
+    PLATE: { Y: 132, H: 46, W: 0.42, FONT: 30 },
   },
   // The swipe behind a strike: the striking limb's path over SPAN seconds of
   // game time, WIDTH px at its head and nothing at its tail.
@@ -94,20 +98,33 @@ export const PHYS = {
   BODY_H: 148,         // hurtbox height standing
 };
 
+// After a knockout: the slow motion, the round's banner, then the next
+// round's intro or the winner's victory pose. A game designer's review
+// (2026-11-06) timed 4.65 s from a knockout to control in the next round and
+// 5.4 s to the results, a quarter to a third of a match in cinematics; trimmed
+// to about 3.6 s and 4.1 s.
 export const ROUND = {
   TIME: 60,
   WINS_NEEDED: 2,      // best of three
-  INTRO_ROUND_T: 1.0,  // "ROUND N" duration
+  INTRO_ROUND_T: 0.8,  // "ROUND N" duration
   INTRO_FIGHT_T: 0.55, // "FIGHT!" duration
-  KO_SLOWMO_T: 1.15,
-  ROUND_END_T: 1.6,
-  VICTORY_T: 2.3,
+  KO_SLOWMO_T: 0.85,
+  ROUND_END_T: 1.1,
+  VICTORY_T: 1.8,
+  // In single player a key or a tap skips the victory pose to the results,
+  // this long into it so the blow that won is not the one that skips it.
+  // Not simulation: nobody waits on the other side.
+  SKIP_AFTER: 0.4,
 };
 
+// What a landed hit is worth to each side. At 12 and 8 a match saw about two
+// UNICORN MODEs a player, on screen for nearly 40% of the fighting, so it
+// stopped being special (a game designer's review, 2026-11-06); at 9 and 4,
+// about one a player a match (simulated, every level).
 export const METER = {
   MAX: 100,
-  HIT_DEAL: 12,
-  HIT_TAKE: 8,
+  HIT_DEAL: 9,
+  HIT_TAKE: 4,
   CHIP_DEAL: 3,
   BOMB_COST: 25,
   SPECIAL_COST: 50,
@@ -590,6 +607,28 @@ export const GL3D = {
   // How far a sculpted body's limb may stretch past its length to reach a
   // target, as a share of it (rig.js solvePose); the stock body stretches freely.
   STRETCH_MOST: 1.1,
+  // The share of a crouch's depth a strike thrown from it rises out of as it
+  // goes out (drawFighter's crouch strikes): at the depth that puts the head on
+  // the hurtbox the arm could not reach where the standing strike lands.
+  CROUCH_STRIKE_RISE: 0.55,
+  // A basic slap swings (drawFighter's slapArc): the open lead hand wound out
+  // wide on its own side, in at the face, then on across the body, the
+  // shoulders turning with it. Slap and punch both went straight out at the
+  // shoulder and looked alike (a game designer's review, 2026-11-06). Keyed
+  // by the attack's phase (0 to 1 startup, 1 to 2 active, 2 to 3 recovery):
+  // wound up at AT[0], landed from the first active frame to the last (AT[1]
+  // to AT[2]: a hit lands on the first, and the hitstop holds it there),
+  // across the body at AT[3]. Depths are shares of the lead shoulder's (the
+  // form's handDepth at rest); the twist adds to the move's own; LIFT raises
+  // the hand and draws it back in the wind-up, DROP lowers it through the
+  // follow-through, in px.
+  SLAP_ARC: {
+    AT: [0.7, 1, 2, 2.5],
+    DEPTH: [1.9, 0.4, 0.4, -1.1],
+    TWIST: [-0.2, 0.22, 0.22, 0.42],
+    LIFT: { x: -12, y: -20 },
+    DROP: 34,
+  },
   SHOULDER_HALF: 0.27,  // model units, before body.shoulders
   HIP_HALF: 0.10,
   HIP_DROP: 0.02,

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { levelOffer, LEVEL_ORDER } from '../src/ui/flow.js';
+import { levelOffer, LEVEL_ORDER, GUEST_SCREENS, guestFightOffered, pickGuestFight } from '../src/ui/flow.js';
 import { Save } from '../src/state.js';
 import { Game } from '../src/engine/game.js';
 
@@ -60,7 +60,9 @@ test('the results show your own best combo and lead with the next fight', () => 
   const res = html.slice(html.indexOf('id="scr-results"'), html.indexOf('<!-- ============ PROFILE'));
   const order = ['btn-next', 'btn-rematch', 'btn-changefighter', 'btn-res-menu', 'btn-sharecard'].map((id) => res.indexOf(`id="${id}"`));
   assert.ok(order.every((v, i) => v > 0 && (i === 0 || v > order[i - 1])), `results buttons in the order ${order}`);
-  assert.equal(res.match(/<button/g).length <= 9, true, 'the results screen is back to eleven buttons');
+  // the guest's one way in replaces all of them (flow.js), so it is not counted
+  const shown = res.replace(/<div id="result-guest"[\s\S]*?<\/div>/, '');
+  assert.equal(shown.match(/<button/g).length <= 9, true, 'the results screen is back to eleven buttons');
   assert.doesNotMatch(res, /id="sh-li"/, 'the share links are back on the results screen');
 });
 
@@ -107,4 +109,47 @@ test('the in-fight tips can be turned off for a match', () => {
   Game.prototype.updateHints.call(g);
   assert.ok(said.length >= 2, 'with hints on, nothing is said');
   assert.match(src('src/main.js'), /hints: \(Save\.data\.stats\?\.matches \?\? 0\) < HINT_MATCHES/);
+});
+
+// Sign-in came before any fight at all. A visitor now gets one Rookie fight
+// first, once on this device, unranked, and its results ask them to sign in;
+// nothing on the way (restart, rematch, next fight) hands out a second.
+test('a visitor may try one unranked Rookie fight before signing in, once', () => {
+  assert.equal(Save.data.guestFightUsed, false);
+  assert.equal(guestFightOffered({ data: { guestFightUsed: false } }, null), true);
+  assert.equal(guestFightOffered({ data: { guestFightUsed: true } }, null), false, 'offered twice');
+  assert.equal(guestFightOffered({ data: { guestFightUsed: false } }, { id: 'u' }), false, 'offered to the signed in');
+  const ids = ['a', 'b', 'c'];
+  for (const r of [0, 0.5, 0.99]) {
+    const g = pickGuestFight(ids, () => r);
+    assert.ok(ids.includes(g.p1) && ids.includes(g.p2) && g.p1 !== g.p2, `${g.p1} against ${g.p2}`);
+    assert.equal(g.difficulty, 'intern');
+  }
+  assert.deepEqual([...GUEST_SCREENS].sort(), ['scr-fight', 'scr-results']);
+
+  const main = src('src/main.js');
+  const show = fn(main, 'showScreen');
+  assert.match(show, /!\(guestFight && GUEST_SCREENS\.has\(id\)\)\) id = 'scr-auth'/, 'the gate is not open to the guest fight, or open to more');
+  // any screen but the fight and its results ends it, and so does signing in
+  // (a magic link opened in another tab mid-fight left it on, and the next
+  // signed-in match had no restart, next fight or menu)
+  assert.match(show, /if \(!GUEST_SCREENS\.has\(id\)\) endGuestFight\(\);/, 'off the fight, the guest fight goes on');
+  assert.match(main, /onAuthChange\(\(session\) => \{\s*(\/\/.*\s*)*if \(session\) endGuestFight\(\);/, 'signing in leaves the guest fight on');
+  // offered only once sign-in has said there is no session, or every
+  // returning player sees it for a moment at load
+  assert.match(fn(main, 'refreshGuestOffer'), /authSettled && guestFightOffered\(Save, currentUser\(\)\)/);
+  assert.match(main, /initAuth\(\)\.finally\(\(\) => \{ authSettled = true; refreshGuestOffer\(\); \}\)/);
+  // and the victory pose is skipped only with the fight on screen, never by
+  // the pause button
+  const skip = main.slice(main.indexOf('const skipVictory'), main.indexOf("window.addEventListener('keydown', skipVictory)"));
+  assert.match(skip, /\$\('scr-fight'\)\.classList\.contains\('active'\)/, 'a game behind another screen is skipped by typing there');
+  assert.match(skip, /btn && !btn\.closest\('#touchControls'\)\) return;/, 'the pause button skips instead of pausing');
+  const click = main.slice(main.indexOf("$('btn-auth-guest').onclick"), main.indexOf("$('btn-res-signin')"));
+  assert.ok(click.indexOf('guestFightUsed = true') >= 0 && click.indexOf('guestFightUsed = true') < click.indexOf('startMatch('), 'taken only after the fight, so quitting hands out another');
+  assert.match(click, /guest: true/);
+  assert.match(fn(main, 'onMatchEnd'), /const ranked = result\.mode === 'solo' && !currentSetup\?\.guest;/, 'the guest fight is ranked');
+  const css = src('styles.css');
+  for (const sel of ['.guest-fight #btn-restart', '.guest-fight #scr-results .result-btns', '.guest-fight #result-cta']) {
+    assert.ok(css.includes(sel), `${sel} still shows: a way to a second free fight, or a profile without an account`);
+  }
 });

@@ -192,7 +192,8 @@ test('the simulation version was bumped for the behaviour change', () => {
   // 9: a throw goes behind the thrower from either side, corners included
   // (see online.js).
   // 10: a dash pressed with a direction held runs.
-  assert.equal(SIM_VERSION, 10);
+  // 11: a slower meter and a shorter wait after a knockout.
+  assert.equal(SIM_VERSION, 11);
 });
 
 // initState() now assigns every registry field in the constructor, so the

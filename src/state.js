@@ -25,6 +25,8 @@ const DEFAULTS = () => ({
   // screen offers it): after a Rookie first fight, everything was Contender,
   // unannounced.
   lastDifficulty: 'intern',
+  // The one fight a visitor may try before signing in (flow.js), taken.
+  guestFightUsed: false,
 });
 
 let mem = null;

@@ -3,6 +3,7 @@
 
 import { METER, ROUND, RUNWAY } from '../config.js';
 import { drawPortrait } from '../engine/drawFighter.js';
+import { canSkipVictory } from './flow.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -34,13 +35,16 @@ export class HUD {
       announce: $('announce'),
       combo: [$('combo1'), $('combo2')],
       hint: $('hintToast'),
+      skip: $('skipHint'),
       // touch buttons that cost meter — tagged with their cost so the HUD can
       // light them the moment they become affordable
       costBtns: [...document.querySelectorAll('#touchControls .tbtn')]
         .filter(b => b.querySelector('.tcost'))
         .map(b => { b.dataset.cost = b.querySelector('.tcost').textContent.trim(); return b; }),
     };
-    this.touch = document.getElementById('touchControls')?.classList.contains('hidden') === false;
+    // Whether the touch pads are showing, read when needed: at boot they were
+    // still hidden, so a phone was told to press U and to press any key.
+    this.touchPad = document.getElementById('touchControls');
     this.announceTimer = null;
     this.hintTimer = null;
     this.comboOn = [false, false];
@@ -51,8 +55,13 @@ export class HUD {
 
   // Called once per match. `localIdx` is the side this player fights on
   // online (meterKeysFor).
+  get touch() {
+    return !!this.touchPad && !this.touchPad.classList.contains('hidden');
+  }
+
   setup(game, localIdx = 0) {
     this.meterKeys = meterKeysFor(game.mode, localIdx);
+    this.el.skip?.classList.add('hidden');
     for (let i = 0; i < 2; i++) {
       const def = game.fighters[i].def;
       this.el.name[i].textContent = def.name;
@@ -155,6 +164,12 @@ export class HUD {
         this.comboOn[i] = false;
         this.el.combo[i].classList.add('out');
       }
+    }
+    // The victory pose can be skipped in single player; say how.
+    const skip = canSkipVictory(game);
+    if (this.el.skip) {
+      this.el.skip.classList.toggle('hidden', !skip);
+      if (skip) this.el.skip.textContent = this.touch ? '▶ TAP TO CONTINUE' : '▶ PRESS ANY KEY';
     }
     const sec = Math.ceil(game.timer);
     this.el.timer.textContent = sec;

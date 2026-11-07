@@ -17,7 +17,7 @@ import { FIGHTERS, BASE_CHARACTERS, getFighter } from '../src/data/fighters.js';
 import { MODELS3D, FIGHTER_MODELS, DEFAULT_MODEL } from '../src/data/models3d.js';
 import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { buildRig, solvePose, transformPoint } from '../src/engine/gl3d/rig.js';
-import { ATTACKS, STYLES } from '../src/config.js';
+import { ATTACKS, STYLES, PHYS, GL3D } from '../src/config.js';
 import { form3D } from '../src/engine/gl3d/index.js';
 
 const BOXING = FORMS.boxing;
@@ -1054,7 +1054,6 @@ test('every form falls its own way when it is knocked out', () => {
 // drawFighter draws it (which has to call it, in the 3D branch).
 test('a knocked-out body lies on the floor: nothing under it, the back on it', async () => {
   const { groundFall } = await import('../src/engine/drawFighter.js');
-  const { GL3D } = await import('../src/config.js');
   const src = readFileSync(new URL('../src/engine/drawFighter.js', import.meta.url), 'utf8');
   assert.match(src, /const g = groundFall\(P\);\s*ctx\.translate\(g\.x, g\.y\);/, 'drawFighter never grounds the fall');
   const L = GL3D.LIE;
@@ -1108,7 +1107,6 @@ test('every form takes a hit in the air in its own jump', () => {
 test('every form lands its basic strikes inside the hitbox', async () => {
   const { landStrike } = await import('../src/engine/drawFighter.js');
   const { Fighter } = await import('../src/engine/fighter.js');
-  const { GL3D } = await import('../src/config.js');
   const noop = () => {};
   const game = { audio: { sfx: noop }, fx: { dust: noop, burst: noop, ring: noop, text: noop, spark: noop }, onSpecialStart: noop, onSpecialDenied: noop, onUnicorn: noop, other: () => null };
   const m = GL3D.STRIKE_INSET;
@@ -1159,7 +1157,6 @@ test('every form lands its basic strikes inside the hitbox', async () => {
 // UNDERCUT and Carl's HOSTILE TAKEOVER grew by up to a third. A planted foot
 // still reaches the floor however far it is.
 test('a sculpted arm or lifted leg stretches no more than STRETCH_MOST', async () => {
-  const { GL3D } = await import('../src/config.js');
   const len = (m, bone) => { const a = joint(m, bone), b = joint(m, bone, true); return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); };
   const rest = solvePose(rig, posed('idle'));
   const base = { arm: len(rest, 'forearm.L'), leg: len(rest, 'shin.L') };
@@ -1207,5 +1204,112 @@ test('every form wins in a pose of its own, not its guard', () => {
       lean = Math.max(lean, Math.abs(V.bodyLean - G.bodyLean));
     }
     assert.ok(hands >= 60 || lean >= 0.12, `${name} wins in its guard: the hands ${hands.toFixed(0)} px from it, the lean ${lean.toFixed(2)}`);
+  }
+});
+
+// A crouch goes down until the head sits on the crouched hurtbox. The heads
+// stood 38 to 61 px over it, so a launcher went through a crouching head and
+// missed it (a game designer's review, 2026-11-06); the owner chose deeper
+// crouches over a taller hurtbox. Measured as drawn: the crown of each
+// sculpted head on its own rig, squash and all, no more than 12 px over the
+// box, and the head no further out than the box's front edge, or a punch that
+// falls short would go through it instead.
+test("every form's crouch puts the head on the crouched hurtbox, not over it or out in front", () => {
+  for (const [name, form] of Object.entries(FORMS)) {
+    const key = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name);
+    const def = getFighter(key.slice(7)), spec = MODELS3D[key];
+    const b = readFileSync(new URL(`../${spec.url}`, import.meta.url));
+    const model = extractModel(parseGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)));
+    const rig = buildRig(model, spec), hi = rig.names.indexOf('head');
+    const body = clampBody(def.body);
+    const P = figureFrame(applyProportions(computePose({ def, state: 'crouch', stateT: 0, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching: true, movingBack: false }, 0, form), body));
+    const m = solvePose(rig, P);
+    const at = (up) => transformPoint(m, hi, model.restHeads[hi].map((v, i) => v + (i === 1 ? up : 0)));
+    const crown = at(spec.leaf.head)[1] * GL3D.UNIT * (P.sy ?? 1);
+    const skullX = at(spec.skull)[0] * GL3D.UNIT;
+    const hurt = PHYS.BODY_H * body.height * 0.68, front = (PHYS.BODY_W * body.build) / 2;
+    assert.ok(crown <= hurt + 12.5, `${name}'s crouching head stands ${(crown - hurt).toFixed(0)} px over its hurtbox`);
+    assert.ok(skullX <= front + 4.5, `${name}'s crouching head is ${(skullX - front).toFixed(0)} px out past its hurtbox`);
+  }
+});
+
+// A slap swings where a punch goes straight. Both went straight out at the
+// shoulder and looked alike for most of the cast (a game designer's review,
+// 2026-11-06). Every form's basic slap now winds the open hand up and out
+// wide, lands where the form puts it, and follows through across the body
+// and down; the punch is untouched, and so is a command move off the slap
+// button, which has a track of its own.
+test("every form's slap swings across the body, where its punch goes straight", () => {
+  const A = GL3D.SLAP_ARC;
+  const atPhase = (atk, ph) => (ph < 1 ? ph * atk.startup : ph < 2 ? atk.startup + (ph - 1) * atk.active : atk.startup + atk.active + (ph - 2) * atk.recovery);
+  for (const [name, form] of Object.entries(FORMS)) {
+    const key = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name);
+    const def = getFighter(key.slice(7)), rest = form.handDepth?.F ?? GL3D.HAND_DEPTH;
+    const pose = (kind, ph, extra = {}) => {
+      const atk = { ...ATTACKS[kind], kind, button: kind, hasHit: false, ...extra };
+      return computePose({ def, state: 'attack', stateT: atPhase(atk, ph), walkPhase: 0, side: 0, vy: 0, airborne: false, crouching: false, movingBack: false, attack: atk }, 0, form);
+    };
+    const [windUp, , , through] = A.AT;
+    // the wind-up: out wide on its own side and up
+    const w = pose('slap', windUp);
+    assert.ok(w.handDepth.F > rest + 0.5, `${name}'s slap does not wind out wide`);
+    // lands where the form's slap does, from the first active frame (where a
+    // hit lands and the hitstop holds the pose) to the last
+    const plain = (ph) => { const P = pose('slap', ph, { cmd: { displayName: 'TEST' } }); return P.armF; };
+    for (const ph of [1, 1.5, 2]) {
+      const l = pose('slap', ph);
+      assert.ok(Math.abs(l.armF.x - plain(ph).x) < 1e-9 && Math.abs(l.armF.y - plain(ph).y) < 1e-9, `${name}'s slap is ${(l.armF.y - plain(ph).y).toFixed(0)} px off where it lands at phase ${ph}`);
+      assert.ok(Math.abs(l.handDepth.F - A.DEPTH[1]) < 1e-9, `${name}'s slap is still out wide at phase ${ph}`);
+    }
+    // and carries on across the body, lower
+    const t = pose('slap', through);
+    assert.ok(t.handDepth.F < 0, `${name}'s slap stops short of crossing the body`);
+    assert.ok(t.armF.y > plain(through).y + A.DROP * 0.9, `${name}'s slap does not follow through low`);
+    // the punch goes straight, as it did
+    for (const ph of A.AT) assert.equal(pose('punch', ph).handDepth, form.handDepth, `${name}'s punch swings too`);
+    assert.deepEqual(pose('slap', through, { cmd: { displayName: 'TEST' } }).handDepth, form.handDepth, `${name}'s command move off the slap button swings`);
+  }
+  // and the depth reaches the model: Jeff's open hand is on its own side of
+  // his chest winding up and on the other following through
+  const def = getFighter('bozo'), spec = MODELS3D['sculpt:bozo'];
+  const b = readFileSync(new URL(`../${spec.url}`, import.meta.url));
+  const rig = buildRig(extractModel(parseGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))), spec);
+  const fistZ = (ph) => {
+    const atk = { ...ATTACKS.slap, kind: 'slap', button: 'slap', hasHit: false };
+    const P = figureFrame(applyProportions(computePose({ def, state: 'attack', stateT: atPhase(atk, ph), walkPhase: 0, side: 0, vy: 0, airborne: false, crouching: false, movingBack: false, attack: atk }, 0, FORMS.boxing), clampBody(def.body)));
+    const m = solvePose(rig, P);
+    return transformPoint(m, rig.names.indexOf('forearm.L'), rig.rest['forearm.L'].tail)[2];
+  };
+  assert.ok(Math.sign(fistZ(A.AT[0])) !== Math.sign(fistZ(A.AT[3])), `Jeff's slap stays on one side: ${fistZ(A.AT[0]).toFixed(2)} to ${fistZ(A.AT[3]).toFixed(2)}`);
+});
+
+// A strike from the deeper crouch still reaches where the standing strike
+// lands. Held at the full depth, the shoulder sat so low that a sculpted
+// arm, stretching no further than GL3D.STRETCH_MOST, fell 9 to 21 px short,
+// low and behind (an independent review, 2026-11-07); the body now rises part
+// of the way out of the crouch as the strike goes out. Measured as drawn, on
+// each rig, after landStrike and the squash, at mid-active.
+test('every form strikes from its crouch where it strikes standing, on its own rig', async () => {
+  const { landStrike } = await import('../src/engine/drawFighter.js');
+  const { Fighter } = await import('../src/engine/fighter.js');
+  for (const [name, form] of Object.entries(FORMS)) {
+    const key = Object.keys(MODELS3D).find((k) => MODELS3D[k].form === name);
+    const def = getFighter(key.slice(7)), spec = MODELS3D[key];
+    const b = readFileSync(new URL(`../${spec.url}`, import.meta.url));
+    const rig = buildRig(extractModel(parseGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))), spec);
+    const body = clampBody(def.body);
+    for (const [kind, bone] of [['punch', 'forearm.L'], ['slap', 'forearm.L'], ['kick', 'shin.L']]) {
+      const end = (crouching) => {
+        const atk = { ...ATTACKS[kind], kind, button: kind, hasHit: false };
+        const f = { def, state: 'attack', stateT: atk.startup + atk.active / 2, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching, movingBack: false, attack: atk, hitbox: Fighter.prototype.hitbox };
+        const P = figureFrame(applyProportions(computePose(f, 0, form), body));
+        landStrike(f, P, 0, form, body, true);
+        const tip = transformPoint(solvePose(rig, P), rig.names.indexOf(bone), rig.rest[bone].tail);
+        return [tip[0] * GL3D.UNIT * (P.sx ?? 1), tip[1] * GL3D.UNIT * (P.sy ?? 1)];
+      };
+      const s = end(false), c = end(true);
+      const gap = Math.hypot(s[0] - c[0], s[1] - c[1]);
+      assert.ok(gap <= 7, `${name}'s ${kind} from a crouch lands ${gap.toFixed(0)} px from where it lands standing`);
+    }
   }
 });

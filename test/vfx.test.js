@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FXSystem, FX_STYLE } from '../src/engine/fx.js';
-import { burstEnvelope, cutInEnvelope, limbsInWorld, strikingLimb, signatureColour } from '../src/engine/vfx.js';
+import { burstEnvelope, cutInEnvelope, limbsInWorld, strikingLimb, signatureColour, drawStageDim, drawCutIn } from '../src/engine/vfx.js';
 import { FX_ART, METER } from '../src/config.js';
 import { Game } from '../src/engine/game.js';
 import { hashGameState } from '../src/net/online.js';
@@ -206,4 +206,65 @@ test('an effect wears the fighter\'s own colour, unless it is too pale to read',
   const kim = FIGHTERS.find((f) => f.id === 'zara');
   assert.equal(signatureColour(kim), kim.c.accent);
   assert.equal(signatureColour(undefined), '#ffd23f');
+});
+
+// A canvas that keeps where things were drawn, after its transform.
+function sketchpad() {
+  const marks = [];
+  let m = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  const at = (x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+  const ctx = new Proxy({}, {
+    get(_, k) {
+      if (k === 'save') return () => stack.push([...m]);
+      if (k === 'restore') return () => { m = stack.pop() || m; };
+      if (k === 'translate') return (x, y) => { m = [m[0], m[1], m[2], m[3], m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; };
+      if (k === 'scale') return (x, y) => { m = [m[0] * x, m[1] * x, m[2] * y, m[3] * y, m[4], m[5]]; };
+      if (['moveTo', 'lineTo', 'fillRect', 'fillText', 'strokeText', 'drawImage'].includes(k)) {
+        return (...a) => {
+          const [x, y] = k === 'fillText' || k === 'strokeText' ? [a[1], a[2]] : k === 'drawImage' ? [a[1], a[2]] : [a[0], a[1]];
+          marks.push({ k, p: at(x, y) });
+        };
+      }
+      if (k === 'createLinearGradient') return () => ({ addColorStop() {} });
+      if (k === 'measureText') return (t) => ({ width: t.length * 18 });
+      return () => {};
+    },
+    set() { return true; },
+  });
+  return { ctx, marks };
+}
+
+test("an ordinary special's nameplate stays on its fighter's side and dims nothing; UNICORN MODE keeps the band", () => {
+  // Every special used to dim the stage and run a band across the screen,
+  // every few seconds (a game designer's review, 2026-11-06)
+  withFlag(() => {
+    const W = 960, H = 540;
+    const f = { def: FIGHTERS.find((x) => x.id === 'kai') };
+    for (const side of [-1, 1]) {
+      const fx = new FXSystem();
+      fx.cutIn(f, 'ONE MORE THING', null, side);
+      fx.playing.t = fx.playing.dur / 2;
+      const dim = sketchpad();
+      drawStageDim(dim.ctx, fx, W, H);
+      assert.equal(dim.marks.length, 0, 'a special dimmed the stage');
+      const plate = sketchpad();
+      drawCutIn(plate.ctx, fx, W, H);
+      const xs = plate.marks.map((d) => d.p[0]);
+      assert.ok(xs.length > 0, 'nothing drawn');
+      if (side < 0) assert.ok(Math.max(...xs) < W * 0.5, `the left fighter's plate reaches ${Math.max(...xs)}`);
+      else assert.ok(Math.min(...xs) > W * 0.5, `the right fighter's plate reaches ${Math.min(...xs)}`);
+      assert.ok(plate.marks.some((d) => d.k === 'fillText'), 'the special is not named');
+    }
+    const fx = new FXSystem();
+    fx.cutIn(f, 'UNICORN MODE', '#ff9df3', -1, true);
+    fx.playing.t = fx.playing.dur / 2;
+    const dim = sketchpad();
+    drawStageDim(dim.ctx, fx, W, H);
+    assert.equal(dim.marks.filter((d) => d.k === 'fillRect').length, 1, 'UNICORN MODE no longer dims the stage');
+    const band = sketchpad();
+    drawCutIn(band.ctx, fx, W, H);
+    const xs = band.marks.map((d) => d.p[0]);
+    assert.ok(Math.min(...xs) < 0 && Math.max(...xs) > W, 'UNICORN MODE no longer runs a band across the screen');
+  });
 });

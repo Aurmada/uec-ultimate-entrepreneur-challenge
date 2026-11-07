@@ -53,7 +53,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.18 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 579 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.18; `main` is this branch | Merged into `main` on 2026-11-06. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.18, plus the owner's five decisions after it (below: a slower meter, a shorter wait after a knockout, one fight before sign-in, deeper crouches, a slap that swings; `SIM_VERSION` 11) | v3.18 merged into `main` on 2026-11-06; the rest is pushed to this branch but not released. 589 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -884,6 +884,120 @@ at the middle while it can hit.
   PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
+
+## The owner's five decisions (2026-11-07, on `claude/jeff-model`, not released)
+
+The game designers' reviews (below, under v3.18) left five calls for the
+owner. Offered them after v3.18, the owner: "I like all the 5 decision you
+mentioned, let's implement them all", and for the crouch, of the two fixes
+offered, deeper crouches. Two of the five change the fight, so `SIM_VERSION`
+is 11: a v3.18 tab and a tab with these cannot play each other online.
+
+- **Specials and UNICORN MODE came too often.** A landed hit gave the hitter
+  12 meter and the one hit 8; AI against AI (the scratch pace runner on
+  `lab/balance.js runMatch`, 36 matches a level) saw about two UNICORN MODEs
+  a player a match, on screen for 37 to 40% of the fighting. At 9 and 4
+  (`METER.HIT_DEAL`, `HIT_TAKE`), about one a player a match at every level,
+  on screen 20 to 27% of the time. The costs (25, 50, 100) are as they were.
+  Render only, an ordinary special no longer runs the full band with its
+  bust across a dimmed stage: it gets a nameplate on its fighter's side
+  (`FX_ART.CUTIN.PLATE`, `vfx.js drawPlate`), and the band is UNICORN MODE's.
+- **The wait after a knockout.** 4.65 s from a knockout to control in the
+  next round and 5.4 s to the results; now about 3.6 s and 4.1 s
+  (`ROUND.INTRO_ROUND_T` 0.8, `KO_SLOWMO_T` 0.85, `ROUND_END_T` 1.1,
+  `VICTORY_T` 1.8). The round-start gestures scale with the intro. In single
+  player a key or a tap skips the victory pose to the results once it is
+  `ROUND.SKIP_AFTER` (0.4 s) in, so the winning blow does not skip it, and the
+  HUD says so (`flow.js canSkipVictory`, `#skipHint`); never online or in
+  versus, never behind the pause menu or another screen.
+- **One fight before sign-in.** The sign-in screen offers TRY ONE FIGHT FIRST
+  to a visitor not signed in (once the sign-in check has answered), once on
+  the device (`Save.data.guestFightUsed`,
+  taken as the fight starts, so quitting does not hand out another): the
+  tutorial, then a Rookie fight as a founder of the roster against another.
+  The sign-in gate opens only to that fight and its results
+  (`flow.js GUEST_SCREENS`); any other screen ends it, and so does signing in.
+  A second tab opened before the fight was taken still offers it, as a
+  private window would: the limit is a nudge, not a lock.
+  It is unranked: nothing recorded, nothing reported (the server owns ranked
+  stats, `report_match`, so a guest win cannot be carried into an account).
+  The results show only the way in ("That win was on the house. Sign in and
+  the next one counts."); the `guest-fight` class on the page hides restart,
+  next fight, rematch, the profile prompt and the points.
+- **Deeper crouches.** A crouching head stood 38 to 61 px over the crouched
+  hurtbox (68% of standing height), so a launcher went through it and missed.
+  Measured on each sculpted rig (the crown is the head joint plus
+  `leaf.head`), every form's crouch now puts the crown no more than 12 px
+  over the box and the head's centre no further out than its front edge, or
+  a punch that falls short would go through the head instead. A sculpted
+  body keeps its own trunk and neck (`rig.js solvePose`), so the depth comes
+  from the knees, a lean and the squash; a first try leaning further put the
+  heads 40 to 70 px out in front, and was taken back. The hands keep where
+  the guard holds them about the head (Scam's in his pocket goes down with
+  his hips), and each form's own touches stay. Jeff's `shoulder` and `head`
+  sit 14 px deeper than his hip, which moves nothing on the model (it keeps
+  its own trunk) and keeps the 2D pose's fists over its shoulders. The
+  hurtbox is unchanged. A strike thrown from the crouch rises part of the
+  way out of it as it goes out (`GL3D.CROUCH_STRIKE_RISE`, 0.55 of the
+  depth) and sinks back after, leaving from the crouch itself.
+- **A slap swings.** Slap and punch both went straight out at the shoulder.
+  Every form's basic slap now winds the open hand up and out wide on its own
+  side, lands where the form puts it (`landStrike` still brings it into the
+  hitbox) from the first active frame to the last, and follows through
+  across the body and down, the shoulders turning with it
+  (`drawFighter.js slapArc`, `GL3D.SLAP_ARC`: the lead hand's depth,
+  `handDepth.F`, keyed by the move's phase). A command move off the slap
+  button keeps its own track.
+
+Tests, each failing on the code before: `test/pace.test.js` (UNICORN MODE a
+player a match over nine seeded Contender matches, 1.89 before and 1.11 now;
+the knockout waits through the real `Game`, 4.65 s and 5.40 s before; when
+the victory pose can be skipped); `test/vfx.test.js` (the nameplate stays on
+its side and dims nothing, UNICORN MODE keeps the band); `test/flow.test.js`
+(the guest fight: offered once, unranked, the gate, the hidden buttons; the
+results' button count leaves the guest's one button out, since it replaces
+the rest; the skip only with the fight on screen); `test/forms.test.js` (the
+crouching head on the hurtbox; strikes from the crouch reaching, on each rig;
+the slap's arc, landed through the active window, down to the model's hand
+crossing Jeff's chest); `test/hud.test.js` (the labels on a phone);
+`test/fighterState.test.js` (`SIM_VERSION` 11).
+
+`lab/pixels.js` against v3.18 differs in every frame, as it must: the round
+intro is shorter and the meter fills differently, so the seeded matches are
+elsewhere by frame 200. With the old meter and timers put back in a scratch
+copy of the config, the 2D game is identical in all 30 frames; with
+`--flags gl`, only the six frames that catch a special differ, the nameplate
+in place of the band. The guest fight, the skip and its hint were driven in
+the real page; a live 3D frame shows the nameplate under the HUD.
+
+A fresh agent then reviewed the change, played it in a browser and
+measured it; what it found, all fixed and each pinned by a test that fails
+without the fix:
+
+- **Signing in during the guest fight** (a magic link opened in another tab)
+  left the guest mode on: the next signed-in match had no restart, and its
+  results only SIGN IN. Any screen but the fight and its results now ends it,
+  and so does a session arriving.
+- **Strikes from the deeper crouch fell short**, 9 to 21 px low and behind
+  where the standing strike lands (5.8 at most before), as the arm could not
+  stretch to it; hence the rise above, after which 3.8 px at most.
+- **The skip** could fire by typing in another screen with a game left in
+  its victory pose behind it, and a tap on ⏸ skipped instead of pausing; the
+  hint stayed on after a skip (over the next match's VS splash) and behind
+  the pause menu. Now only with the fight on screen, buttons outside the
+  touch pads excluded, and the hint hidden on a skip, on pause and at a
+  match's start.
+- **Phones were told to press a key**, and to press U for UNICORN MODE (the
+  last since before this work): the HUD read whether the touch pads showed
+  once at boot, while they were still hidden. It reads them when it labels.
+- **The slap was still wound up when it landed**: settled only by mid-active,
+  where a hit lands on the first active frame and the hitstop holds it.
+- **The guest offer showed to signed-in players at load**, until the sign-in
+  check answered; now it waits for it.
+
+Not done: the mirror palette for a deliberate mirror pick, the touch pads
+over the stage's corners, the rival's special on the select screen, Kim's
+RUG PULL at her knees, Carl's walk, and kicks that end short of their box.
 
 ## v3.18, released 2026-11-06: knockouts, faces, and the designers' fixes
 

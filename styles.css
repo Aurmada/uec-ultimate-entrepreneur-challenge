@@ -206,6 +206,16 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .auth-google { background: #f4f6ff; color: #1c2333; }
 .auth-ms { background: #1a66d0; }
 .auth-div { color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: 2px; }
+.auth-guest { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+/* A guest's one fight before signing in (flow.js): no restart, and its
+   results offer only the way in. */
+body:not(.guest-fight) #result-guest { display: none; }
+.guest-fight #btn-restart,
+.guest-fight #scr-results .result-btns,
+.guest-fight #result-points,
+.guest-fight #result-cta { display: none !important; }
+.result-guest { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.result-guest p { margin: 0; font-weight: 800; color: var(--gold); }
 .auth-card .link-row { flex-direction: column; gap: 10px; }
 .auth-card .link-row input { width: 100%; font-size: 15px; padding: 12px; text-align: center; }
 .auth-card .link-row .btn { width: 100%; }
@@ -512,6 +522,15 @@ body.gl3d #announce.intro { inset: 14% 0 52% 0; }
   animation: hintIn .3s ease-out;
 }
 @keyframes hintIn { from { opacity: 0; transform: translate(-50%, 12px); } }
+
+/* The victory pose can be skipped in single player (flow.js canSkipVictory). */
+.skip-hint {
+  position: absolute; bottom: 5%; right: 3%; z-index: 4; pointer-events: none;
+  color: var(--gold); font-weight: 900; font-size: clamp(10px, 1.6vw, 14px);
+  letter-spacing: 2px; text-shadow: 2px 2px 0 var(--shadow);
+  animation: skipPulse 1.1s ease-in-out infinite alternate;
+}
+@keyframes skipPulse { from { opacity: .45; } to { opacity: 1; } }
 
 #vsSplash {
   position: absolute; inset: 0; z-index: 5;

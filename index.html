@@ -90,6 +90,10 @@
           <button id="btn-auth-email" class="btn btn-sm">SEND LINK</button>
         </div>
         <div class="hint">We'll email you a one-tap magic sign-in link.</div>
+        <div id="auth-guest" class="auth-guest hidden">
+          <button id="btn-auth-guest" class="btn btn-sm">🥊 TRY ONE FIGHT FIRST</button>
+          <div class="hint">One Rookie fight, no account. It does not count on the ladder.</div>
+        </div>
         <button id="btn-auth-back" class="btn btn-sm btn-ghost">← BACK</button>
       </div>
     </div>
@@ -158,6 +162,7 @@
   <section id="scr-fight" class="screen screen-fight">
     <div class="stage-wrap" id="stageWrap">
       <canvas id="gameCanvas" width="960" height="540"></canvas>
+      <div id="skipHint" class="skip-hint hidden"></div>
       <div id="hud">
         <div class="hud-top">
           <div class="hud-side hud-p1">
@@ -282,6 +287,10 @@
       <div class="btn-row result-btns">
         <button id="btn-sharecard" class="btn btn-sm">📣 SHARE &amp; BRAG</button>
         <button id="btn-res-invite" class="btn btn-sm">🔗 CHALLENGE A FRIEND</button>
+      </div>
+      <div id="result-guest" class="result-guest">
+        <p id="result-guest-text"></p>
+        <button id="btn-res-signin" class="btn btn-primary">🔐 SIGN IN TO KEEP FIGHTING</button>
       </div>
       <div id="result-cta" class="result-cta hidden">Create a founder profile to record wins on the leaderboard → <button id="btn-res-profile" class="linklike">CREATE PROFILE</button></div>
     </div>

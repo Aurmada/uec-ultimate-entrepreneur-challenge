@@ -143,7 +143,13 @@ export const CHARACTER_WIRE_VERSION = 1;
 // dash's first frame, so a v9 peer walks where a v10 peer dashes (a dash back
 // included), and the two disagree on x from the first such dash. v9 shipped
 // in v3.9.2 through v3.16.
-export const SIM_VERSION = 10;
+//
+// v11: a slower meter and a shorter wait after a knockout (METER.HIT_DEAL and
+// HIT_TAKE, ROUND's intro, slow motion, round end and victory times). A v10
+// peer fills its meter and starts the next round at other times than a v11
+// peer, so the two part from the first landed hit. v10 shipped in v3.17 and
+// v3.18.
+export const SIM_VERSION = 11;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

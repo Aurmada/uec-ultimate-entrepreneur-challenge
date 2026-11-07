@@ -468,9 +468,16 @@ export function computePose(f, t, form = null, intro = null) {
   // of down mid-move stands it up, as it does the hurtbox.
   if (f.state === 'attack' && f.crouching && !f.airborne && form.crouch) {
     const C = form.crouch, G = restingGuard({ ...f, def }), d0 = C.drop ?? 0;
-    const full = C.hip ?? d0;
+    // Out of a crouch deep enough to put the head on the hurtbox, the body
+    // rises part of the way as the strike goes out (GL3D.CROUCH_STRIKE_RISE),
+    // and sinks back after: held at the full depth, the shoulder sat so low
+    // that the arm could not reach where the standing strike lands. It leaves
+    // from the crouch itself.
+    const atk = f.attack, ph = atk ? attackPhaseT(f.stateT, atk.startup, atk.active, atk.recovery) : 0;
+    const rise = (ph < 1 ? ease.smooth(ph) : ph <= 2 ? 1 : 1 - ease.smooth(Math.min(1, ph - 2))) * GL3D.CROUCH_STRIKE_RISE;
+    const depth = C.hip ?? d0, full = depth * (1 - rise);
     const drop = Math.max(0, Math.min(full, G.hipY + full - P.hipY));
-    const k = full ? drop / full : 0;
+    const k = depth ? drop / depth : 0;
     const shoulder = (C.shoulder ?? d0) * k;
     P.hipY += drop; P.shoulderY += shoulder; P.headY += (C.head ?? d0) * k;
     P.bodyLean += ((C.lean ?? G.bodyLean) - G.bodyLean) * k;
@@ -547,6 +554,7 @@ export function computePose(f, t, form = null, intro = null) {
   }
   P.handDepth = form.handDepth;
   P.guardTurn = form.guardTurn;
+  slapArc(f, P, form);
   // The lead hand's shape, for a model that has more than a fist: what the
   // attack track says, else open for a slap (as figure.js draws everyone's)
   // or wherever the form holds it open.
@@ -555,6 +563,33 @@ export function computePose(f, t, form = null, intro = null) {
     if (slap || form.open?.includes(f.state)) P.hand = 'open';
   }
   return P;
+}
+
+// A basic slap swings where a punch goes straight (GL3D.SLAP_ARC): laid over
+// the form's own slap, the lead hand winds out wide on its own side, comes in
+// at the face, and carries on across the body, lower, the shoulders turning
+// through it. Through the whole active window the hand is where the form puts
+// it (landStrike brings it into the hitbox), from the first frame, where a hit
+// lands and the hitstop holds the pose.
+// A command move thrown off the slap button has its own track and keeps it.
+export function slapArc(f, P, form) {
+  const atk = f.attack;
+  if (f.state !== 'attack' || !atk || atk.cmd || atk.special || (atk.button || atk.kind) !== 'slap') return;
+  const A = GL3D.SLAP_ARC, rest = form.handDepth?.F ?? GL3D.HAND_DEPTH;
+  const k = attackPhaseT(f.stateT, atk.startup, atk.active, atk.recovery);
+  // eased between rest, the keys and rest again
+  const at = [0, ...A.AT, 3];
+  const curve = (vals) => {
+    let i = 0;
+    while (i < at.length - 2 && k > at[i + 1]) i++;
+    const u = Math.min(1, Math.max(0, (k - at[i]) / (at[i + 1] - at[i])));
+    const e = u * u * (3 - 2 * u);
+    return vals[i] + (vals[i + 1] - vals[i]) * e;
+  };
+  P.handDepth = { ...(P.handDepth || {}), F: curve([rest, ...A.DEPTH, rest]) };
+  P.twist = (P.twist || 0) + curve([0, ...A.TWIST, 0]);
+  const lift = curve([0, 1, 0, 0, 0, 0]), drop = curve([0, 0, 0, 0, A.DROP, 0]);
+  P.armF = { x: P.armF.x + A.LIFT.x * lift, y: P.armF.y + A.LIFT.y * lift + drop };
 }
 
 // A held pose `S` (joints, hand) laid over P at weight k, clamped and eased.

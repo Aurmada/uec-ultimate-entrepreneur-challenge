@@ -452,15 +452,67 @@ export function cutInEnvelope(c) {
   return { enter: ease(c.t / C.IN), leave: ease((c.t - (c.dur - C.OUT)) / C.OUT) };
 }
 
-// The stage behind the fighters goes dark while a cut-in plays. Drawn in the
-// world layer after the grade, before the fighters, so they stay lit.
+// The stage behind the fighters goes dark while UNICORN MODE's band plays.
+// Drawn in the world layer after the grade, before the fighters, so they stay
+// lit. An ordinary special's nameplate dims nothing.
 export function drawStageDim(ctx, fx, W, H) {
-  if (!FX_STYLE.impact || !fx.playing) return;
+  if (!FX_STYLE.impact || !fx.playing || !fx.playing.big) return;
   const { enter, leave } = cutInEnvelope(fx.playing);
   const a = FX_ART.CUTIN.DIM * enter * (1 - leave);
   if (a <= 0) return;
   ctx.fillStyle = `rgba(4,6,16,${a})`;
   ctx.fillRect(0, 0, W, H);
+}
+
+// An ordinary special, announced on a nameplate on its fighter's side, in
+// from that edge and back out to it. The full band, the stage dimmed behind
+// it, came every few seconds for every special and stopped meaning anything
+// (a game designer's review, 2026-11-06), so it is UNICORN MODE's alone.
+function drawPlate(ctx, c, W, color, enter, leave) {
+  const P = FX_ART.CUTIN.PLATE;
+  const w = Math.round(W * P.W), h = P.H, y0 = P.Y - h / 2, shear = FX_ART.CUTIN.SKEW * h;
+  const off = (1 - enter + leave) * (w + shear + 24);
+  ctx.save();
+  // drawn as the left side's plate, mirrored for the right
+  if (c.side > 0) { ctx.translate(W, 0); ctx.scale(-1, 1); }
+  ctx.translate(-off, 0);
+  const plate = () => {
+    ctx.beginPath();
+    ctx.moveTo(-24, y0);
+    ctx.lineTo(w + shear, y0);
+    ctx.lineTo(w, y0 + h);
+    ctx.lineTo(-24, y0 + h);
+    ctx.closePath();
+  };
+  const fill = ctx.createLinearGradient(0, y0, 0, y0 + h);
+  fill.addColorStop(0, tone(color, 0.8));
+  fill.addColorStop(0.5, tone(color, 0.3));
+  fill.addColorStop(1, tone(color, 0.55));
+  plate();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = tone(color, 1.3);
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+  // the name, unmirrored, shrunk to fit the plate
+  const title = c.name.toUpperCase();
+  let size = P.FONT;
+  ctx.save();
+  ctx.font = `900 italic ${size}px system-ui, sans-serif`;
+  const room = w - 48;
+  const wide = ctx.measureText ? ctx.measureText(title).width : 0;
+  if (wide > room) { size = Math.floor(size * room / wide); ctx.font = `900 italic ${size}px system-ui, sans-serif`; }
+  ctx.textAlign = c.side < 0 ? 'left' : 'right';
+  ctx.textBaseline = 'middle';
+  const tx = c.side < 0 ? 24 - off : W - 24 + off;
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#05070f';
+  ctx.strokeText(title, tx, P.Y + 2);
+  ctx.fillStyle = tone(color, 1.55);
+  ctx.fillText(title, tx, P.Y + 2);
+  ctx.restore();
 }
 
 // Screen space, over everything but the full-screen flash.
@@ -470,6 +522,7 @@ export function drawCutIn(ctx, fx, W, H) {
   const C = FX_ART.CUTIN;
   const { enter, leave } = cutInEnvelope(c);
   const color = c.color || signatureColour(c.fighter.def);
+  if (!c.big) { drawPlate(ctx, c, W, color, enter, leave); return; }
   // In from the fighter's side, out through the other.
   const slide = (1 - enter) * c.side * W - leave * c.side * W;
   const y0 = C.Y - C.H / 2, y1 = C.Y + C.H / 2, shear = C.SKEW * C.H;
