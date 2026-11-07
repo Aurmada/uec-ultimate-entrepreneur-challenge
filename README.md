@@ -71,6 +71,16 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.18: nine faces, and the game feels right
+
+- 🙂 **Nine different faces.** The founders' faces looked alike. Each now has an original face of their own, built from their character: Steve's knowing smile, Elo's crooked half smile and one raised brow, Scam the freckled choirboy, Lizbeth's unblinking stare, Kim bored of you, Cathie's crinkled smile and rosy cheeks, Carl's heavy lids and jowls. Portraits come in closer so you can see them, and Scam, Lizbeth and Cathie keep their cool even in a super.
+- 🥊 **Hits look like they hit.** A punch, slap or kick no longer sails over a shorter founder's head or past the one it hits, limbs no longer stretch like rubber, feet stay planted as they walk, and knocked-out founders fall onto the floor in their own way, not through it.
+- 🎚️ **You always know the level.** A new player stays at Rookie until they choose otherwise, the level shows on the VS screen and the results, and the results offer the next level up after a win or down after a loss.
+- 🎯 **CHOOSE RIVAL picks your rival**, not who you play as, and a rival drawn at random is never yourself.
+- 📱 **Better on a phone held sideways**: the fight keeps its shape, and the title, story and results all fit or scroll.
+- 🔢 **Clearer HUD.** The combo count clears when the combo ends, and the meter names the key to press only on your own bar.
+- 🌐 **The lobby offers the computer** if nobody joins within 20 seconds. What happens in the fight is unchanged: v3.17 and v3.18 still play each other online.
+
 ## What's new in v3.17: every move is theirs
 
 - 🕺 **They move their own way.** In 3D each founder now walks, jumps, crouches and dashes in their own style, keeping their own stance as they go: Jeff bounces in on the balls of his feet, Adam swaggers, Carl stalks you hunched over, Steve struts, Lizbeth advances like a fencer, Kim bobs and weaves, Cathie glides.
