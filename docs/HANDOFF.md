@@ -6,14 +6,15 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.18 on GitHub Pages
+The game is live at v3.19 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-11-06: 3D by default, the nine founders the sculpted cast below, each
+on 2026-11-07: 3D by default, the nine founders the sculpted cast below, each
 in their own fighting form for everything they do (every move, special and
 reaction, how they move, start a round and go into their super) and each
-with a face of their own, and 2D a choice in Settings (see "v3.18" back to
-"v3.13"). v3.17 fixed the dash (`SIM_VERSION` 10); v3.18 changes nothing in
-the fight, so `SIM_VERSION` is still 10. v3.12 was built on 2026-10-30 but never reached `main`; it went
+with a face of their own, and 2D a choice in Settings (see "v3.19" back to
+"v3.13"). v3.17 fixed the dash (`SIM_VERSION` 10); v3.18 changed nothing in
+the fight; v3.19 slowed the meter and shortened the wait after a knockout
+(`SIM_VERSION` 11). v3.12 was built on 2026-10-30 but never reached `main`; it went
 out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
@@ -52,8 +53,8 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.18 (`SIM_VERSION` 10): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 579 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.18, plus the owner's five decisions after it (below: a slower meter, a shorter wait after a knockout, one fight before sign-in, deeper crouches, a slap that swings; `SIM_VERSION` 11) | v3.18 merged into `main` on 2026-11-06; the rest is pushed to this branch but not released. 589 tests pass. |
+| `main` | The live game, v3.19 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 589 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.19; `main` is this branch | Merged into `main` on 2026-11-07. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -885,7 +886,10 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## The owner's five decisions (2026-11-07, on `claude/jeff-model`, not released)
+## v3.19, released 2026-11-07: the owner's five decisions
+
+The owner, after the five below were built and reviewed: "Yes, let's
+release."
 
 The game designers' reviews (below, under v3.18) left five calls for the
 owner. Offered them after v3.18, the owner: "I like all the 5 decision you

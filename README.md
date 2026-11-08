@@ -71,6 +71,16 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.19: a faster, fairer fight
+
+- 🦄 **UNICORN MODE is special again.** The meter fills more slowly, so it comes about once a player a match instead of twice. Ordinary specials get a nameplate on their fighter's side; the full banner across a darkened stage is UNICORN MODE's alone.
+- ⏱️ **Less waiting after a knockout.** About 3.6 seconds to the next round instead of 4.6, and 4 instead of 5.4 to the results. In single player, press any key or tap to skip the victory pose.
+- 🥊 **Try one fight before you sign in.** A new visitor gets one Rookie fight, no account needed. It does not count on the ladder.
+- 🦆 **A crouch really ducks.** All nine founders crouch low enough that a high attack passes over their head instead of through it, and they still reach with a punch or kick from down there.
+- 👋 **A slap looks like a slap.** The open hand winds up wide and swings through across the body; the punch still goes straight.
+- 📱 **On a phone, the HUD says tap**, not "press U".
+- 🌐 Online, v3.19 plays v3.19 only: the slower meter and the shorter waits change the fight.
+
 ## What's new in v3.18: nine faces, and the game feels right
 
 - 🙂 **Nine different faces.** The founders' faces looked alike. Each now has an original face of their own, built from their character: Steve's knowing smile, Elo's crooked half smile and one raised brow, Scam the freckled choirboy, Lizbeth's unblinking stare, Kim bored of you, Cathie's crinkled smile and rosy cheeks, Carl's heavy lids and jowls. Portraits come in closer so you can see them, and Scam, Lizbeth and Cathie keep their cool even in a super.
