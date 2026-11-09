@@ -93,7 +93,15 @@ export const PHYS = {
   GRAVITY: 2100,
   KB_DECAY: 7,         // knockback velocity decay per second (exponential)
   BODY_W: 56,          // hurtbox width
-  PUSH_GAP: 0.92,      // two bodies are pushed apart to this share of BODY_W
+  // How near another body may come: each fighter keeps PUSH_HALF px either
+  // side of their centre, or their own `pushHalf` (fighters.js) where their
+  // sculpt is broader, and pushApart parts two whose centres are nearer than
+  // the two added (Fighter pushGap). Until v3.21 it was one gap for everyone,
+  // 0.92 of a body width (51.5 px), narrower than the cast in 3D: Jeff's
+  // belly and Adam's chest stand 30 px in front of their centres in a guard,
+  // so the pair stood inside each other. test/push.test.js measures every
+  // sculpt's trunk against it.
+  PUSH_HALF: 28,
   HITBOX_LEAD: 14,     // px in front of the body's centre where a swing's hitbox starts
   BODY_H: 148,         // hurtbox height standing
 };
@@ -268,7 +276,41 @@ export const STEAL = {
 // bodies on one x by slot. Any room at all is enough. A thrower with less than
 // this behind them (flush against a wall) steps forward to make it, and that
 // is what brings them out of the corner.
-export const THROW = { BEHIND: 1 };
+// A throw (doGrab) holds the fight for HOLD seconds while the victim is
+// hoisted over the thrower and set down behind them, a push gap away, then
+// thrown on from there. Until v3.21 the hold was 0.3 s with nothing drawn in
+// it, and the victim was set down 1 px behind, on top of the thrower, for
+// pushApart to part them with a jump of 25 px each on the next frame.
+export const THROW = { HOLD: 0.45 };
+
+// A rush that has locked on (moves.js rush) chases a rival knocked further
+// than CHASE px past the push gap, and closes to GLUE px past it: near enough
+// for the next hit of the flurry, never into the body.
+export const RUSH = { CHASE: 10, GLUE: 6 };
+
+// How the throw is drawn through its hold and just after: RENDER-ONLY
+// (drawFighter.js throwPose). Positions are px from the thrower's centre
+// along the way they face (x) and up from the floor (y, negative up); `u` is
+// how far through the hold. The victim is turned about their hips (PIVOT, px
+// above the feet at height 1) by `rot` radians, head first toward the
+// thrower's back; OUT is how long after the hold the drawing takes to give
+// way to the fight's own pose.
+export const THROW_ARC = {
+  OUT: 0.22,
+  PIVOT: 86,
+  // where the victim goes: the start is wherever they stood
+  VICTIM: [
+    { u: 0.28, x: 34, y: -40, rot: 0.3 },     // hoisted to his chest
+    { u: 0.62, x: 2, y: -108, rot: 1.75 },    // over the shoulder
+    { u: 1, x: null, y: 58, rot: 1.45 },      // down on their back behind him (x: where the fight set them)
+  ],
+  // the thrower's hands and trunk, from whatever the move's own pose was
+  THROWER: [
+    { u: 0.28, armF: [58, -150], armB: [46, -146], bodyLean: 0.05, twist: 0, hipTwist: 0, sink: 6 },
+    { u: 0.62, armF: [8, -214], armB: [-2, -206], bodyLean: -0.22, twist: -0.25, hipTwist: -0.1, sink: 0 },
+    { u: 1, armF: [-66, -112], armB: [-58, -104], bodyLean: -0.1, twist: -0.55, hipTwist: -0.3, sink: 8 },
+  ],
+};
 
 // Perfectly timed block (tap block just before impact) = parry.
 export const PARRY = { WINDOW: 0.12, STAGGER: 0.5, ENERGY: 10 };

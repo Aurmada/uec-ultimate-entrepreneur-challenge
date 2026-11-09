@@ -12,10 +12,18 @@ function blankPad() {
   return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false };
 }
 
+// How near two fighters' centres may come (PHYS.PUSH_HALF): each keeps their
+// own half. Read by pushApart, a throw setting its victim down, a rush closing
+// in and the AI working out where a jump comes to rest.
+export const pushGap = (a, b) => a.pushHalf + b.pushHalf;
+
 export class Fighter {
   constructor(def, side, controller) {
     this.def = def;
     this.body = clampBody(def.body);
+    // a roster fighter's own, measured from their sculpt; anyone else (a
+    // player's own founder, whatever the challenge link says) the shared one
+    this.pushHalf = Math.max(PHYS.PUSH_HALF, Number.isFinite(def.pushHalf) ? def.pushHalf : 0);
     this.side = side;                       // 0 = left start, 1 = right start
     this.controller = controller;
     // STYLE is the single source of character variation. The roster's legacy

@@ -3,6 +3,7 @@
 
 import { AI_LEVELS, METER, STAGE, RUNWAY, PHYS, DASH, COMBO, TELEPORT, ATTACKS, AI_MOMENT, AI_READ, AI_EASE } from '../config.js';
 import { slotButton } from '../data/schema.js';
+import { pushGap } from './fighter.js';
 
 // How far outside a trap's radius the AI stops. The bite is measured from the
 // body's centre, and pushApart can nudge a fighter a pixel or two after it has
@@ -386,8 +387,7 @@ export class AIController {
   // runs into the rival stops that far short of them, and a landing inside
   // their body is parted from it. Found in review: a quick Steve jumped a trap
   // toward Kim, met her in the air and dropped onto the trap he was clearing.
-  restsAt(x0, x, opp) {
-    const gap = PHYS.BODY_W * PHYS.PUSH_GAP;
+  restsAt(x0, x, opp, gap) {
     const d = Math.sign(x - x0);
     if (d && Math.sign(opp.x - x0) === d && Math.abs(x - x0) > Math.abs(opp.x - x0) - gap) {
       return onStage(opp.x - d * gap);
@@ -474,7 +474,7 @@ export class AIController {
       // And on the stage: a drift that would carry past a wall stops at it,
       // which can be on the trap (found in review: a jump toward the left
       // wall over a trap at x 140 judged x 20 clear and came down at 70).
-      const clearAt = (x) => this.landsClear(x, airT, traps) && this.landsClear(this.restsAt(f.x, x, opp), airT, traps);
+      const clearAt = (x) => this.landsClear(x, airT, traps) && this.landsClear(this.restsAt(f.x, x, opp, pushGap(f, opp)), airT, traps);
       const clear = (d) => clearAt(onStage(f.x + d * speed * airT))
         && clearAt(onStage(f.x + d * speed * (airT + game.dt)));
       // An attack in the air holds the body where it is until it ends, so one
@@ -508,7 +508,7 @@ export class AIController {
         const land = onStage(f.x + walk * this.jumpDrift(f));
         const beyond = Math.sign(opp.x - t.x) === walk && !this.inTrap(opp.x, t);
         if (beyond && this.landsClear(land, JUMP_AIR, traps)
-          && this.landsClear(this.restsAt(f.x, land, opp), JUMP_AIR, traps)) pad.up = true;
+          && this.landsClear(this.restsAt(f.x, land, opp, pushGap(f, opp)), JUMP_AIR, traps)) pad.up = true;
         else walk = 0;
       }
     }
@@ -520,7 +520,7 @@ export class AIController {
     if (pad.up && f.grounded && !(incoming(opp) && opp.attack.kind === 'grab')) {
       const land = onStage(f.x + walk * this.jumpDrift(f));
       if (!this.landsClear(land, JUMP_AIR, traps)
-        || !this.landsClear(this.restsAt(f.x, land, opp), JUMP_AIR, traps)) pad.up = false;
+        || !this.landsClear(this.restsAt(f.x, land, opp, pushGap(f, opp)), JUMP_AIR, traps)) pad.up = false;
     }
     if (pad.dash) {
       const d = walk || f.facing;              // where startDash will send it

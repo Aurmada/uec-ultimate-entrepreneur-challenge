@@ -1,6 +1,6 @@
 // Juice: particles, comic-book word popups, screen shake, hitstop, rings, flashes.
 
-import { FX_ART } from '../config.js';
+import { FX_ART, THROW_ARC } from '../config.js';
 
 // Fighting-game effects for the live 3D prototype (?gl): layered impact bursts,
 // guard flashes, and a cut-in when a special starts. This file only keeps their
@@ -42,6 +42,7 @@ export class FXSystem {
     this.rings = [];
     this.bursts = [];            // FX_STYLE.impact only
     this.playing = null;         // the cut-in on screen
+    this.throws = [];            // throws being drawn (throwArc)
     this.shakeMag = 0;
     this.hitstopT = 0;
     this.flashCol = null;
@@ -77,6 +78,30 @@ export class FXSystem {
       this.playing.t += dt;
       if (this.playing.t >= this.playing.dur) this.playing = null;
     }
+    if (this.throws.length) {
+      for (const c of this.throws) {
+        c.age += dt;
+        if (c.landed || c.age < c.hold) continue;
+        c.landed = true;
+        const v = c.victim, dir = Math.sign(v.x - c.thrower.x) || 1;
+        this.shake(14);
+        this.spark(v.x, v.y - 30, '#ff3d6e', 16, 460);
+        this.impact(v.x, v.y - 30, dir, '#ff3d6e', 1);
+        c.land?.();
+      }
+      this.throws = this.throws.filter((c) => c.age < c.hold + THROW_ARC.OUT);
+    }
+  }
+
+  // A throw being drawn (game.js doGrab): the victim hoisted over the thrower
+  // through the hold and set down behind him (drawFighter.js throwPose), and
+  // the slam's shake, sparks and `land` (the thud) as they come down. Kept
+  // THROW_ARC.OUT past the hold while the drawing gives way to the fight's own
+  // pose. Like everything here it only draws: the fight has already put both
+  // bodies where they end up, and ages it through the hold on the real clock.
+  throwArc(thrower, victim, from, hold, land = null) {
+    this.throws = this.throws.filter((c) => c.victim !== victim && c.thrower !== thrower);
+    this.throws.push({ thrower, victim, from, hold, age: 0, land, landed: false });
   }
 
   // A landed hit: a white-hot core, spikes thrown away from the attacker and

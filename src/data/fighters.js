@@ -250,6 +250,9 @@ export const FIGHTERS = [
     figure: { muscle: 1.0, chest: 1.12, belly: 0.15, jaw: 1.08, neck: 1.1,
       costume: { fit: 'oversized', hem: 0.1, legs: 'baggy' } },
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
+    // How near a rival may stand (PHYS.PUSH_HALF): Adam's sculpt stands 30 px
+    // in front of his centre in a guard, the ink line and a hair beyond (test/push.test.js).
+    pushHalf: 32,
     stats: { speed: 0.95, power: 1.2, hp: 95 },
     ai: { aggr: 0.85, jump: 0.35, prefRange: 'close', ease: { intern: 0.32, founder: 0.22 } },
     c: { skin: '#c68a5a', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#3b2a1c', pants: '#33241d', shoe: '#f5f5f5' },
@@ -501,6 +504,9 @@ export const FIGHTERS = [
     figure: { muscle: 0.6, chest: 1.04, waist: 1.18, belly: 0.65, jaw: 1.08, neck: 1.2,
       costume: { fit: 'regular', legs: 'suit' } },
     body: { height: 0.94, build: 1.08, reach: 0.98, stride: 0.9, shoulders: 1.25, head: 1.06 },
+    // How near a rival may stand (PHYS.PUSH_HALF): Carl's sculpt stands 28 px
+    // in front of his centre in a guard, the ink line and a hair beyond (test/push.test.js).
+    pushHalf: 30,
     stats: { speed: 0.85, power: 1.25, hp: 110 },
     ai: { aggr: 0.8, jump: 0.15, prefRange: 'close', ease: { intern: 0.11 } },
     // A raider takes what he can reach. ASSET SEIZURE is unblockable and hits
@@ -611,6 +617,9 @@ export const FIGHTERS = [
     figure: { muscle: 1.6, chest: 1.3, waist: 0.92, jaw: 1.1, neck: 1.35,
       costume: { fit: 'regular', sleeves: 'tight', legs: 'suit' } },
     body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
+    // How near a rival may stand (PHYS.PUSH_HALF): Jeff's sculpt stands 30 px
+    // in front of his centre in a guard, the ink line and a hair beyond (test/push.test.js).
+    pushHalf: 32,
     stats: { speed: 0.9, power: 1.2, hp: 108 },
     ai: { aggr: 0.75, jump: 0.2, prefRange: 'close', ease: { intern: 0.11, founder: -0.11 } },
     c: { skin: '#e2ab84', suit: '#1f4a56', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
@@ -878,6 +887,9 @@ export function buildCustomFighter(profile) {
     // client only ever sends a BASE_CHARACTERS id here; a roster id means a
     // stale save or a forged live spec, and `...base` would spread the runway.
     usesRunway: false,
+    // His breadth too (pushHalf): a player's founder wears the founder model,
+    // which the shared push half fits, whatever base it was built on.
+    pushHalf: undefined,
     photo: profile.photo || null,
     stats: { ...PLAYER_STATS },   // look is cosmetic; every player hits the same
     // PINNED, not inherited. Fighter derives speed and HP from `style`, so

@@ -149,7 +149,15 @@ export const CHARACTER_WIRE_VERSION = 1;
 // peer fills its meter and starts the next round at other times than a v11
 // peer, so the two part from the first landed hit. v10 shipped in v3.17 and
 // v3.18.
-export const SIM_VERSION = 11;
+//
+// v12: bodies as broad as their sculpts and a throw that holds. Each fighter
+// keeps a push half of their own (PHYS.PUSH_HALF, fighters.js pushHalf), so
+// two bodies part at a wider gap than v11's 51.5 px; a rush closes to that gap
+// (RUSH); a throw stops the fight for THROW.HOLD, not 0.3 s, and sets its
+// victim down a push gap behind, not 1 px. A v11 peer parts the bodies and
+// lands throws elsewhere, so the two disagree on x from the first time the
+// fighters meet. v11 shipped in v3.19 and v3.20.
+export const SIM_VERSION = 12;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

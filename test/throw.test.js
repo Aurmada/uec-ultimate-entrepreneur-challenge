@@ -16,7 +16,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/engine/game.js';
 import { FIGHTERS } from '../src/data/fighters.js';
-import { METER, PHYS, STAGE } from '../src/config.js';
+import { METER, PHYS, STAGE, THROW, THROW_ARC } from '../src/config.js';
+import { pushGap } from '../src/engine/fighter.js';
+import { setThrows, throwPose, drawnAt } from '../src/engine/drawFighter.js';
 
 const STUB_HUD = new Proxy({}, { get: () => () => {} });
 const STUB_ARENA = { id: 'test', name: 'TEST', draw() {}, mood: 'none' };
@@ -64,7 +66,7 @@ function throwKim(slot, side, keys, at = AT) {
   game.update(1 / 60);               // one free frame so both face the new layout
   carl.controller = presser(keys);
   const hp0 = kim.hp;
-  // Long enough for the 0.3 s throw freeze, the flight and the landing.
+  // Long enough for the throw's hold (THROW.HOLD), the flight and the landing.
   for (let i = 0; i < 150; i++) game.update(1 / 60);
   return { landed: hp0 - kim.hp, kimSide: Math.sign(kim.x - carl.x), carlMoved: carl.x - at, kim, carl };
 }
@@ -114,3 +116,78 @@ for (const [name, keys] of MOVES) {
     }
   });
 }
+
+// The hold (v3.21). On contact the fight stops for THROW.HOLD while the throw
+// is drawn: the victim hoisted over the thrower and set down behind him. Until
+// v3.21 the victim was behind him from one frame to the next, set down 1 px
+// away, and pushApart then parted the two by 25 px each in a single frame.
+function grabKim(keys, side = 1) {
+  const game = new Game({
+    p1: { def: CARL, controller: idler() }, p2: { def: KIM, controller: idler() },
+    arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
+    hud: STUB_HUD, onEnd: () => {}, seed: 20261109,
+  });
+  for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+  const [carl, kim] = game.fighters;
+  carl.x = AT; kim.x = AT + side * GAP;
+  carl.energy = METER.MAX;
+  game.update(1 / 60);
+  carl.controller = presser(keys);
+  for (let i = 0; i < 90 && !game.fx.throws.length; i++) game.update(1 / 60);
+  return { game, carl, kim };
+}
+
+for (const [name, keys] of MOVES) {
+  test(`${name} holds for THROW.HOLD, sets Kim down a push gap behind and nothing jumps after`, () => {
+    for (const side of [-1, 1]) {
+      const { game, carl, kim } = grabKim(keys, side);
+      const [cue] = game.fx.throws;
+      assert.ok(cue, `${name}: no throw was drawn`);
+      assert.equal(cue.thrower, carl);
+      assert.equal(cue.victim, kim);
+      assert.ok(Math.abs(cue.from.def - cue.from.att) < GAP + 20, 'the throw does not start where Kim stood');
+      assert.equal(Math.abs(kim.x - carl.x), pushGap(carl, kim), 'Kim was not set down a push gap behind Carl');
+      assert.equal(Math.sign(kim.x - carl.x), -side);
+      // the hold: nothing moves in the fight, and the drawing runs through it
+      const held = { carl: carl.x, kim: kim.x };
+      const frames = Math.round(THROW.HOLD * 60);
+      for (let i = 0; i < frames - 2; i++) game.update(1 / 60);
+      assert.deepEqual({ carl: carl.x, kim: kim.x }, held, 'the fight moved during the hold');
+      assert.equal(game.fx.throws.length, 1, 'the drawing ended before the hold did');
+      // the first frames after it: Carl is not shoved (he was, 25 px, by pushApart)
+      for (let i = 0; i < 6; i++) game.update(1 / 60);
+      assert.ok(Math.abs(carl.x - held.carl) < 2, `Carl jumped ${(carl.x - held.carl).toFixed(1)} px as the hold ended`);
+      for (let i = 0; i < Math.ceil(THROW_ARC.OUT * 60) + 2; i++) game.update(1 / 60);
+      assert.equal(game.fx.throws.length, 0, 'the drawing outlived its fade');
+    }
+  });
+}
+
+test('the throw is drawn from where Kim stood, over Carl and down behind him, then gives way', () => {
+  const carl = { x: 400, y: STAGE.FLOOR, facing: 1 }, kim = { x: 400 - 58, y: STAGE.FLOOR, facing: 1 };
+  const cue = { thrower: carl, victim: kim, from: { att: 400, def: 460, defY: STAGE.FLOOR }, hold: THROW.HOLD, age: 0 };
+  setThrows([cue]);
+  try {
+    // where she stood
+    let at = drawnAt(kim);
+    assert.ok(Math.abs(at.x - 460) < 1e-6 && Math.abs(at.y - STAGE.FLOOR) < 1e-6, 'the drawing does not start where Kim stood');
+    assert.equal(throwPose(kim).held, true);
+    // over him: up off the floor, near his centre, turned head first
+    cue.age = THROW.HOLD * 0.62;
+    at = drawnAt(kim);
+    assert.ok(at.y < STAGE.FLOOR - 80, `Kim is only ${(STAGE.FLOOR - at.y).toFixed(0)} px up going over`);
+    assert.ok(Math.abs(at.x - carl.x) < 20, 'Kim does not go over Carl');
+    assert.ok(throwPose(kim).rot > 1, 'Kim is not turned going over');
+    // the thrower's arms are over his head, then behind him
+    assert.ok(throwPose(carl).heave, 'Carl is not drawn heaving');
+    // down where the fight set her, then the drawing gives way
+    cue.age = THROW.HOLD;
+    assert.ok(Math.abs(drawnAt(kim).x - kim.x) < 1e-6, 'Kim is not set down where the fight put her');
+    cue.age = THROW.HOLD + THROW_ARC.OUT;
+    const end = throwPose(kim);
+    assert.ok(Math.abs(end.dx) < 1e-6 && Math.abs(end.dy) < 1e-6 && Math.abs(end.rot) < 1e-6, 'the drawing never gives way');
+    assert.equal(end.held, false, 'the hit flash stays held back after the hold');
+  } finally {
+    setThrows([]);
+  }
+});

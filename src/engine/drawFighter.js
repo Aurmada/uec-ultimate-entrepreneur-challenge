@@ -3,7 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE, GL3D, PHYS, UNICORN, ROUND, STANCE } from '../config.js';
+import { STYLES, STYLIZE, GL3D, PHYS, UNICORN, ROUND, STANCE, THROW_ARC } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
@@ -1848,15 +1848,88 @@ export const poseOf = (f) => lastPoses.get(f);
 let roundStart = null;
 export function setRoundStart(sec) { roundStart = sec; }
 
+// The throws being drawn (fx.throwArc, from game.js doGrab), set by the
+// render loop for the frame as setRoundStart is. The fight holds still for a
+// throw (THROW.HOLD) with the victim already set down behind the thrower;
+// this says where to draw the two on the way there: the victim hoisted to
+// his chest, over his shoulder and down on their back behind him, the
+// thrower heaving them over. Until v3.21 nothing was drawn: on contact the
+// victim was behind him from one frame to the next.
+let throws = [];
+export function setThrows(list) { throws = list || []; }
+
+const smooth = (k) => k * k * (3 - 2 * k);
+// The keys either side of `u`, and how far from the one to the other.
+function keysAt(keys, u) {
+  for (let i = 1; i < keys.length; i++) {
+    if (u <= keys[i].u) {
+      const a = keys[i - 1], b = keys[i];
+      return [a, b, smooth(Math.min(1, Math.max(0, (u - a.u) / (b.u - a.u))))];
+    }
+  }
+  const last = keys[keys.length - 1];
+  return [last, last, 1];
+}
+const mixN = (a, b, k) => a + (b - a) * k;
+
+// How a throw moves `f` this frame, or null: for the victim, `dx` and `dy`
+// (world px off where the fight has them) and `rot` (radians about their
+// hips, head first toward the thrower's back); for the thrower, `heave`, how
+// far through and how much of the drawing to use (it gives way to the
+// move's own recovery over THROW_ARC.OUT after the hold).
+export function throwPose(f) {
+  const c = throws.find((x) => x.victim === f || x.thrower === f);
+  if (!c) return null;
+  const u = Math.min(1, c.age / c.hold);
+  const w = c.age > c.hold ? 1 - smooth(Math.min(1, (c.age - c.hold) / THROW_ARC.OUT)) : 1;
+  if (c.thrower === f) return { heave: { u, w } };
+  const th = c.thrower, F = th.facing;
+  const start = { u: 0, x: (c.from.def - th.x) * F, y: c.from.defY - f.y, rot: 0 };
+  const [a, b, k] = keysAt([start, ...THROW_ARC.VICTIM], u);
+  // a key with no x is where the fight set them down
+  const along = (key) => (key.x === null ? (f.x - th.x) * F : key.x);
+  const x = th.x + F * mixN(along(a), along(b), k);
+  return { dx: (x - f.x) * w, dy: mixN(a.y, b.y, k) * w, rot: mixN(a.rot, b.rot, k) * w, held: c.age < c.hold };
+}
+
+// Where the fighter is drawn this frame: where the fight has them, unless a
+// throw is carrying them (their shadow follows).
+export function drawnAt(f) {
+  const h = throwPose(f);
+  return h && !h.heave ? { x: f.x + h.dx, y: f.y + h.dy } : { x: f.x, y: f.y };
+}
+
+// The thrower's hands and trunk through the heave, from the move's own pose
+// at the moment the hand closed (the first key) to the keys in THROW_ARC.
+function heave(P, { u, w }) {
+  const own = { u: 0, armF: [P.armF.x, P.armF.y], armB: [P.armB.x, P.armB.y], bodyLean: P.bodyLean || 0, twist: P.twist || 0, hipTwist: P.hipTwist || 0, sink: 0 };
+  const [a, b, k] = keysAt([own, ...THROW_ARC.THROWER], u);
+  const at = (name) => mixN(a[name], b[name], k);
+  const arm = (name) => ({
+    x: mixN(P[name].x, mixN(a[name][0], b[name][0], k), w),
+    y: mixN(P[name].y, mixN(a[name][1], b[name][1], k), w),
+  });
+  P.armF = arm('armF');
+  P.armB = arm('armB');
+  for (const key of ['bodyLean', 'twist', 'hipTwist']) P[key] = mixN(P[key] || 0, at(key), w);
+  if (Number.isFinite(P.hipY)) P.hipY += at('sink') * w;
+  return P;
+}
+
 export function drawFighter(ctx, f, t) {
   const tDraw = timing3D() ? performance.now() : 0;
   const def = f.def;
   const body = f.body || clampBody(def.body);
-  const P = applyProportions(computePose(f, t, form3D(def), roundStart), body);
+  const thrown = throwPose(f);
+  const own = computePose(f, t, form3D(def), roundStart);
+  const P = applyProportions(thrown?.heave ? heave(own, thrown.heave) : own, body);
+  // The hit's white flash fades on the fight's clock, which a throw's hold
+  // stops: held, it would stay white all the way over. It shows as they land.
+  const flashing = f.flashT > 0 && !thrown?.held;
   if (FX_STYLE.impact) lastPoses.set(f, { P, t });
   const c = def.c;
   ctx.save();
-  ctx.translate(f.x, f.y);
+  ctx.translate(f.x + (thrown?.dx || 0), f.y + (thrown?.dy || 0));
 
   // unicorn aura behind body (world space, never shaded)
   if (f.unicornT > 0) {
@@ -1869,6 +1942,11 @@ export function drawFighter(ctx, f, t) {
   }
 
   ctx.scale(f.facing, 1);
+  if (thrown?.rot) {
+    // turned about the hips, so they go over his shoulder rather than about their feet
+    const pivot = THROW_ARC.PIVOT * body.height;
+    ctx.translate(0, -pivot); ctx.rotate(thrown.rot); ctx.translate(0, pivot);
+  }
   if (P.rot) ctx.rotate(P.rot);
 
   // Live 3D path (?gl, prototype). The model is posed from this same P and
@@ -1895,7 +1973,7 @@ export function drawFighter(ctx, f, t) {
       elbowB: stanceEl?.elbowB ?? STYLIZE.ELBOW,
       jitter: f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0,
       face: FACE_PAINTER,
-      flash: f.flashT > 0,
+      flash: flashing,
       keyline: STYLIZE.KEYLINE_A > 0 ? { px: STYLIZE.KEYLINE_PX, color: STYLIZE.KEYLINE_COL, alpha: STYLIZE.KEYLINE_A } : null,
     })) {
       ctx.restore();
@@ -1909,7 +1987,7 @@ export function drawFighter(ctx, f, t) {
       face: FACE_PAINTER,
     })) {
       if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);
-      if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
+      if (flashing && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
       ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
       ctx.filter = 'none';
       ctx.restore();
@@ -1926,7 +2004,7 @@ export function drawFighter(ctx, f, t) {
       scaleY: 1,
     });
     if (drew) {
-      if (f.flashT > 0 && FILTER_OK) {
+      if (flashing && FILTER_OK) {
         ctx.save();
         ctx.globalCompositeOperation = 'source-atop';
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
@@ -1952,7 +2030,7 @@ export function drawFighter(ctx, f, t) {
     g.scale(SS, SS);
     g.translate(B.ox, B.oy);
     INK = 1.32;                 // bolder ink for the buffer render only
-  } else if (f.flashT > 0 && FILTER_OK) {
+  } else if (flashing && FILTER_OK) {
     ctx.filter = 'brightness(2.2) saturate(0.4)';
   }
 
@@ -2067,7 +2145,7 @@ export function drawFighter(ctx, f, t) {
     shadeBuffer(g, B);         // cel-shade the whole silhouette at once
     if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);   // separation, under the body
     ctx.save();
-    if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
+    if (flashing && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
     ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
     ctx.restore();
   }

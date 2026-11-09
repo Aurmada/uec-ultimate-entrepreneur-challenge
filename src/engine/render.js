@@ -2,7 +2,7 @@
 // → projectiles → particles/popups → full-screen flashes.
 
 import { STAGE, GL3D } from '../config.js';
-import { drawFighter, setRoundStart } from './drawFighter.js';
+import { drawFighter, setRoundStart, setThrows, drawnAt } from './drawFighter.js';
 import { stageFor, drawStage } from './stage.js';
 import { drawBursts, drawTrail, drawAura, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
 import { setLight3D, setClock3D, has3D, layerCanvas3D, beginLayer3D, endLayer3D } from './gl3d/index.js';
@@ -177,19 +177,20 @@ function drawVignette(ctx) {
 
 // Contact shadow — softer, wider, layered so fighters feel planted on the floor.
 function drawShadow(ctx, f) {
-  const airK = Math.max(0, Math.min(1, (FLOOR - f.y) / 260));
+  const at = drawnAt(f);                  // under a thrown body, not where the fight set it down
+  const airK = Math.max(0, Math.min(1, (FLOOR - Math.min(FLOOR, at.y)) / 260));
   const s = 1 - airK * 0.45;
   ctx.save();
   ctx.filter = 'blur(3px)';
   ctx.fillStyle = `rgba(0,0,0,${0.30 * (1 - airK * 0.5)})`;
   ctx.beginPath();
-  ctx.ellipse(f.x, FLOOR + 11, 50 * s, 11 * s, 0, 0, 7);
+  ctx.ellipse(at.x, FLOOR + 11, 50 * s, 11 * s, 0, 0, 7);
   ctx.fill();
   ctx.filter = 'none';
   // tight core shadow directly under the feet
   ctx.fillStyle = `rgba(0,0,0,${0.28 * (1 - airK * 0.6)})`;
   ctx.beginPath();
-  ctx.ellipse(f.x, FLOOR + 11, 26 * s, 6 * s, 0, 0, 7);
+  ctx.ellipse(at.x, FLOOR + 11, 26 * s, 6 * s, 0, 0, 7);
   ctx.fill();
   ctx.restore();
 }
@@ -514,6 +515,7 @@ function frontCanvas() {
 
 export function renderGame(ctx, game) {
   const t = game.t;
+  setThrows(game.fx.throws);              // a throw in flight, drawn where it carries them
   const c = updateCamera(game);
   if (RENDER.sharpFighters) { renderSharp(ctx, game, t, c); return; }
   hideStack(ctx.canvas);

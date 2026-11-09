@@ -2,7 +2,7 @@
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
 import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT, FX_ART } from '../config.js';
-import { Fighter } from './fighter.js';
+import { Fighter, pushGap } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
 import { isTouchDevice } from './input.js';
@@ -211,7 +211,7 @@ export class Game {
     const [a, b] = this.fighters;
     if (a.state === 'ko' || b.state === 'ko') return;
     const dx = b.x - a.x;
-    const minGap = PHYS.BODY_W * PHYS.PUSH_GAP;
+    const minGap = pushGap(a, b);
     if (Math.abs(dx) < minGap && Math.abs(a.y - b.y) < 120) {
       const push = (minGap - Math.abs(dx)) / 2;
       const dir = dx >= 0 ? 1 : -1;
@@ -443,7 +443,7 @@ export class Game {
     const sp = a.special;
     const dmg = Math.max(1, Math.round(sp.dmg * att.dmgMult * def.takenMult));
     this.audio.sfx('grab');
-    this.fx.hitstop(0.3);
+    this.fx.hitstop(THROW.HOLD);
     this.fx.popup(def.x, def.y - 150, 'ACQUIRED!', '#ff3d6e');
     // Hoisted, set down just behind the attacker and thrown that way: sides
     // swap. `back` is the direction of the throw, and applyHit multiplies kb by
@@ -455,18 +455,23 @@ export class Game {
     // tie-break by slot whenever the attacker was flush against a wall. Now a
     // cornered attacker steps forward to make the room, and walks out of the
     // corner as the bodies separate (THROW in config.js, test/throw.test.js).
+    // Since v3.21 the victim is set down a push gap behind, not 1 px: on the
+    // thrower, pushApart parted the two with a jump of 25 px each on the
+    // first frame after the hold.
     const back = -dir;
     const wall = back > 0 ? STAGE.MAX_X : STAGE.MIN_X;
-    if ((wall - att.x) * back < THROW.BEHIND) att.x = wall - back * THROW.BEHIND;
-    def.x = att.x + back * THROW.BEHIND;
+    const from = { att: att.x, def: def.x, defY: def.y };
+    const gap = pushGap(att, def);
+    if ((wall - att.x) * back < gap) att.x = wall - back * gap;
+    def.x = att.x + back * gap;
     def.applyHit({ dmg, kb: sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: back });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
     this.refillRunway(att);
-    this.audio.sfx('throwSlam');
-    this.fx.shake(14);
-    this.fx.spark(att.x, att.y - 110, '#ff3d6e', 16, 460);
-    this.fx.impact(att.x, att.y - 110, -dir, '#ff3d6e', 1);
+    // The hold is drawn (fx.throwArc, render-only): the victim hoisted over
+    // the thrower and down behind him, and the slam's thud, shake and sparks
+    // land with them, at the end of the hold, not as the hand closes.
+    this.fx.throwArc(att, def, from, THROW.HOLD, () => this.audio.sfx('throwSlam'));
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
   }

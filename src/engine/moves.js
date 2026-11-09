@@ -9,6 +9,8 @@
 // that lands later. Each has a shape below, a per-frame tick, or both.
 
 // Per-archetype shaping applied when a special starts.
+import { RUSH } from '../config.js';
+
 export const ARCHETYPE_SHAPES = {
   strike: (a) => { a.words = ['ZAP!']; },
   projectile: (a, sp) => {
@@ -120,12 +122,14 @@ export const ARCHETYPE_TICKS = {
   rush: (f, a, sp, dt, game, activeT) => {
     if (activeT > a.active) return;
     // free flight until contact; after lock-on, chase to stay glued for the flurry
+    // (the two bodies' push gap, as fighter.js pushGap: not imported, as
+    // fighter.js imports this module)
     const opp = game.other(f);
-    const gap = (opp.x - f.x) * f.facing;
+    const gap = (opp.x - f.x) * f.facing, near = f.pushHalf + opp.pushHalf;
     if (!a.lockedOn) {
       f.x += f.facing * sp.speed * dt;
-    } else if (gap > 62) {
-      f.x += f.facing * Math.min(sp.speed * dt, gap - 58);
+    } else if (gap > near + RUSH.CHASE) {
+      f.x += f.facing * Math.min(sp.speed * dt, gap - near - RUSH.GLUE);
     }
     if (Math.random() < 30 * dt) game.fx.spark(f.x - f.facing * 30, f.y - 80, f.def.c.accent, 2, 160);
     game.pushAfterimage(f);

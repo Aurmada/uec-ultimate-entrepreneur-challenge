@@ -193,7 +193,8 @@ test('the simulation version was bumped for the behaviour change', () => {
   // (see online.js).
   // 10: a dash pressed with a direction held runs.
   // 11: a slower meter and a shorter wait after a knockout.
-  assert.equal(SIM_VERSION, 11);
+  // 12: bodies as broad as their sculpts, and a throw that holds.
+  assert.equal(SIM_VERSION, 12);
 });
 
 // initState() now assigns every registry field in the constructor, so the
@@ -210,7 +211,7 @@ test('the simulation version was bumped for the behaviour change', () => {
 // lifecycle). Anything else is undeclared state — invisible to the hash,
 // untouched by resetForRound — exactly what this registry exists to prevent.
 const NOT_REGISTRY_STATE = new Set([
-  'def', 'body', 'side', 'controller', 'stats', 'maxHp', 'hp',
+  'def', 'body', 'pushHalf', 'side', 'controller', 'stats', 'maxHp', 'hp',
   'x', 'y', 'vx', 'vy', 'facing', 'state', 'attack', 'pad', 'prevPad',
   'special', 'cmdBySlot',
 ]);
