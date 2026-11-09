@@ -6,10 +6,9 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.19 on GitHub Pages
+The game is live at v3.20, the launch build, on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-11-07, and v3.20, the launch build (see "v3.20"), is on
-`claude/jeff-model` waiting for the owner's word to release: 3D by default, the nine founders the sculpted cast below, each
+on 2026-11-09 (see "v3.20"): 3D by default, the nine founders the sculpted cast below, each
 in their own fighting form for everything they do (every move, special and
 reaction, how they move, start a round and go into their super) and each
 with a face of their own, and 2D a choice in Settings (see "v3.19" back to
@@ -54,8 +53,8 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.19 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/jeff-model` | The remodel of the cast and everything after it: v3.19 plus the v3.20 launch build | v3.20 committed, not pushed: waiting for the owner's word. 617 tests pass. |
+| `main` | The live game, v3.20 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20 on 2026-11-09. 617 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -887,7 +886,7 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## v3.20, built 2026-11-08 and 09: ready for launch
+## v3.20, released 2026-11-09: ready for launch
 
 The owner: "can we get to the finish version so we are ready to launch this
 with everything updated. Work till the end. ensure to check all the bugs and
