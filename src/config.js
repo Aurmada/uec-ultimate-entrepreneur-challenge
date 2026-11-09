@@ -276,12 +276,15 @@ export const STEAL = {
 // bodies on one x by slot. Any room at all is enough. A thrower with less than
 // this behind them (flush against a wall) steps forward to make it, and that
 // is what brings them out of the corner.
-// A throw (doGrab) holds the fight for HOLD seconds while the victim is
-// hoisted over the thrower and set down behind them, a push gap away, then
-// thrown on from there. Until v3.21 the hold was 0.3 s with nothing drawn in
-// it, and the victim was set down 1 px behind, on top of the thrower, for
-// pushApart to part them with a jump of 25 px each on the next frame.
-export const THROW = { HOLD: 0.45 };
+// A throw (doGrab) holds the fight for HOLD seconds, drawn as the victim
+// hoisted over the thrower (THROW_ARC), and sets them down BEHIND px behind
+// him, for pushApart to part the two on the first frame after. Until v3.21
+// the hold was 0.3 s with nothing drawn in it. Setting the victim down a
+// whole push gap away instead looked tidier in the fight and changed it:
+// pushApart no longer took in the first frame of the knockback, every throw
+// ended 9 to 13 px further apart, just outside the AI's reach for Carl's next
+// grab, and he won 8 points more of the AI's matches (lab/balance.js).
+export const THROW = { BEHIND: 1, HOLD: 0.45 };
 
 // A rush that has locked on (moves.js rush) chases a rival knocked further
 // than CHASE px past the push gap, and closes to GLUE px past it: near enough
@@ -293,8 +296,9 @@ export const RUSH = { CHASE: 10, GLUE: 6 };
 // along the way they face (x) and up from the floor (y, negative up); `u` is
 // how far through the hold. The victim is turned about their hips (PIVOT, px
 // above the feet at height 1) by `rot` radians, head first toward the
-// thrower's back; OUT is how long after the hold the drawing takes to give
-// way to the fight's own pose.
+// thrower's back. The two are drawn coming down where pushApart will part
+// them, a push gap apart either side of where he stood; OUT is how long after
+// the hold the drawing takes to give way to the fight's own places and pose.
 export const THROW_ARC = {
   OUT: 0.22,
   PIVOT: 86,
@@ -302,7 +306,7 @@ export const THROW_ARC = {
   VICTIM: [
     { u: 0.28, x: 34, y: -40, rot: 0.3 },     // hoisted to his chest
     { u: 0.62, x: 2, y: -108, rot: 1.75 },    // over the shoulder
-    { u: 1, x: null, y: 58, rot: 1.45 },      // down on their back behind him (x: where the fight set them)
+    { u: 1, x: null, y: 58, rot: 1.45 },      // down on their back behind him (x: half a push gap behind where he stood)
   ],
   // the thrower's hands and trunk, from whatever the move's own pose was
   THROWER: [

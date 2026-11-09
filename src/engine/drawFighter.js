@@ -3,7 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES, STYLIZE, GL3D, PHYS, UNICORN, ROUND, STANCE, THROW_ARC } from '../config.js';
+import { STYLES, STYLIZE, GL3D, PHYS, UNICORN, ROUND, STANCE, THROW_ARC, STAGE } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
@@ -1872,9 +1872,9 @@ function keysAt(keys, u) {
 }
 const mixN = (a, b, k) => a + (b - a) * k;
 
-// How a throw moves `f` this frame, or null: for the victim, `dx` and `dy`
-// (world px off where the fight has them) and `rot` (radians about their
-// hips, head first toward the thrower's back); for the thrower, `heave`, how
+// How a throw moves `f` this frame, or null: `dx` and `dy`, world px off
+// where the fight has them; for the victim `rot` too (radians about their
+// hips, head first toward the thrower's back); for the thrower `heave`, how
 // far through and how much of the drawing to use (it gives way to the
 // move's own recovery over THROW_ARC.OUT after the hold).
 export function throwPose(f) {
@@ -1882,13 +1882,23 @@ export function throwPose(f) {
   if (!c) return null;
   const u = Math.min(1, c.age / c.hold);
   const w = c.age > c.hold ? 1 - smooth(Math.min(1, (c.age - c.hold) / THROW_ARC.OUT)) : 1;
-  if (c.thrower === f) return { heave: { u, w } };
-  const th = c.thrower, F = th.facing;
-  const start = { u: 0, x: (c.from.def - th.x) * F, y: c.from.defY - f.y, rot: 0 };
+  // Where pushApart will part them as the hold ends: a push gap apart either
+  // side of the thrower (the fight sets the victim down 1 px behind him,
+  // THROW.BEHIND), the victim no further than the wall. They are drawn coming
+  // down there, so nothing jumps as the fight takes them back.
+  const th = c.thrower, v = c.victim, F = Math.sign(c.from.def - c.from.att) || th.facing;
+  const gap = th.pushHalf + v.pushHalf;
+  const onStage = (x) => Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, x));
+  // (from where he stood as the hand closed: the fight moves him after)
+  const down = onStage(c.from.att - F * gap / 2), stands = onStage(down + F * gap);
+  // the thrower steps through the throw as the victim goes over
+  const thx = mixN(c.from.att, stands, smooth(u));
+  if (th === f) return { heave: { u, w }, dx: (thx - f.x) * w, dy: 0 };
+  const start = { u: 0, x: (c.from.def - c.from.att) * F, y: c.from.defY - f.y, rot: 0 };
   const [a, b, k] = keysAt([start, ...THROW_ARC.VICTIM], u);
-  // a key with no x is where the fight set them down
-  const along = (key) => (key.x === null ? (f.x - th.x) * F : key.x);
-  const x = th.x + F * mixN(along(a), along(b), k);
+  // a key with no x is where they come down
+  const along = (key) => (key.x === null ? (down - stands) * F : key.x);
+  const x = thx + F * mixN(along(a), along(b), k);
   return { dx: (x - f.x) * w, dy: mixN(a.y, b.y, k) * w, rot: mixN(a.rot, b.rot, k) * w, held: c.age < c.hold };
 }
 
@@ -1896,7 +1906,7 @@ export function throwPose(f) {
 // throw is carrying them (their shadow follows).
 export function drawnAt(f) {
   const h = throwPose(f);
-  return h && !h.heave ? { x: f.x + h.dx, y: f.y + h.dy } : { x: f.x, y: f.y };
+  return h ? { x: f.x + h.dx, y: f.y + h.dy } : { x: f.x, y: f.y };
 }
 
 // The thrower's hands and trunk through the heave, from the move's own pose

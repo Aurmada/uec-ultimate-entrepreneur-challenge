@@ -17,7 +17,6 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/engine/game.js';
 import { FIGHTERS } from '../src/data/fighters.js';
 import { METER, PHYS, STAGE, THROW, THROW_ARC } from '../src/config.js';
-import { pushGap } from '../src/engine/fighter.js';
 import { setThrows, throwPose, drawnAt } from '../src/engine/drawFighter.js';
 
 const STUB_HUD = new Proxy({}, { get: () => () => {} });
@@ -138,15 +137,13 @@ function grabKim(keys, side = 1) {
 }
 
 for (const [name, keys] of MOVES) {
-  test(`${name} holds for THROW.HOLD, sets Kim down a push gap behind and nothing jumps after`, () => {
+  test(`${name} holds for THROW.HOLD, drawn coming down where the fight parts them`, () => {
     for (const side of [-1, 1]) {
       const { game, carl, kim } = grabKim(keys, side);
       const [cue] = game.fx.throws;
       assert.ok(cue, `${name}: no throw was drawn`);
       assert.equal(cue.thrower, carl);
       assert.equal(cue.victim, kim);
-      assert.ok(Math.abs(cue.from.def - cue.from.att) < GAP + 20, 'the throw does not start where Kim stood');
-      assert.equal(Math.abs(kim.x - carl.x), pushGap(carl, kim), 'Kim was not set down a push gap behind Carl');
       assert.equal(Math.sign(kim.x - carl.x), -side);
       // the hold: nothing moves in the fight, and the drawing runs through it
       const held = { carl: carl.x, kim: kim.x };
@@ -154,9 +151,22 @@ for (const [name, keys] of MOVES) {
       for (let i = 0; i < frames - 2; i++) game.update(1 / 60);
       assert.deepEqual({ carl: carl.x, kim: kim.x }, held, 'the fight moved during the hold');
       assert.equal(game.fx.throws.length, 1, 'the drawing ended before the hold did');
-      // the first frames after it: Carl is not shoved (he was, 25 px, by pushApart)
-      for (let i = 0; i < 6; i++) game.update(1 / 60);
-      assert.ok(Math.abs(carl.x - held.carl) < 2, `Carl jumped ${(carl.x - held.carl).toFixed(1)} px as the hold ended`);
+      // across the end of the hold the fight parts them (pushApart, 25 px or
+      // more each in one frame) and the drawing does not jump with it
+      setThrows(game.fx.throws);
+      try {
+        let was = { carl: drawnAt(carl).x, kim: drawnAt(kim).x }, jump = 0;
+        for (let i = 0; i < 8; i++) {
+          game.update(1 / 60);
+          const now = { carl: drawnAt(carl).x, kim: drawnAt(kim).x };
+          jump = Math.max(jump, Math.abs(now.carl - was.carl), Math.abs(now.kim - was.kim));
+          was = now;
+        }
+        assert.ok(Math.abs(carl.x - held.carl) > 20, 'the fight no longer parts them after the hold (the test lost its point)');
+        assert.ok(jump < 12, `the drawing jumped ${jump.toFixed(1)} px in a frame as the hold ended`);
+      } finally {
+        setThrows([]);
+      }
       for (let i = 0; i < Math.ceil(THROW_ARC.OUT * 60) + 2; i++) game.update(1 / 60);
       assert.equal(game.fx.throws.length, 0, 'the drawing outlived its fade');
     }
@@ -164,7 +174,7 @@ for (const [name, keys] of MOVES) {
 }
 
 test('the throw is drawn from where Kim stood, over Carl and down behind him, then gives way', () => {
-  const carl = { x: 400, y: STAGE.FLOOR, facing: 1 }, kim = { x: 400 - 58, y: STAGE.FLOOR, facing: 1 };
+  const carl = { x: 400, y: STAGE.FLOOR, facing: 1, pushHalf: 28 }, kim = { x: 399, y: STAGE.FLOOR, facing: 1, pushHalf: 28 };
   const cue = { thrower: carl, victim: kim, from: { att: 400, def: 460, defY: STAGE.FLOOR }, hold: THROW.HOLD, age: 0 };
   setThrows([cue]);
   try {
@@ -176,13 +186,14 @@ test('the throw is drawn from where Kim stood, over Carl and down behind him, th
     cue.age = THROW.HOLD * 0.62;
     at = drawnAt(kim);
     assert.ok(at.y < STAGE.FLOOR - 80, `Kim is only ${(STAGE.FLOOR - at.y).toFixed(0)} px up going over`);
-    assert.ok(Math.abs(at.x - carl.x) < 20, 'Kim does not go over Carl');
+    assert.ok(Math.abs(at.x - drawnAt(carl).x) < 20, 'Kim does not go over Carl');
     assert.ok(throwPose(kim).rot > 1, 'Kim is not turned going over');
     // the thrower's arms are over his head, then behind him
     assert.ok(throwPose(carl).heave, 'Carl is not drawn heaving');
-    // down where the fight set her, then the drawing gives way
+    // down half a push gap behind where Carl stood, where pushApart will put her
     cue.age = THROW.HOLD;
-    assert.ok(Math.abs(drawnAt(kim).x - kim.x) < 1e-6, 'Kim is not set down where the fight put her');
+    assert.ok(Math.abs(drawnAt(kim).x - (400 - 28)) < 1e-6, `Kim comes down at ${drawnAt(kim).x.toFixed(1)}, not where the fight will part them`);
+    assert.ok(Math.abs(drawnAt(carl).x - (400 + 28)) < 1e-6, 'Carl does not step through the throw');
     cue.age = THROW.HOLD + THROW_ARC.OUT;
     const end = throwPose(kim);
     assert.ok(Math.abs(end.dx) < 1e-6 && Math.abs(end.dy) < 1e-6 && Math.abs(end.rot) < 1e-6, 'the drawing never gives way');

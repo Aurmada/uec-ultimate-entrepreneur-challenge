@@ -455,15 +455,14 @@ export class Game {
     // tie-break by slot whenever the attacker was flush against a wall. Now a
     // cornered attacker steps forward to make the room, and walks out of the
     // corner as the bodies separate (THROW in config.js, test/throw.test.js).
-    // Since v3.21 the victim is set down a push gap behind, not 1 px: on the
-    // thrower, pushApart parted the two with a jump of 25 px each on the
-    // first frame after the hold.
+    // pushApart still parts the two on the first frame after the hold; the
+    // drawing shows them coming down there (THROW in config.js says why the
+    // fight does not set them down apart itself).
     const back = -dir;
     const wall = back > 0 ? STAGE.MAX_X : STAGE.MIN_X;
     const from = { att: att.x, def: def.x, defY: def.y };
-    const gap = pushGap(att, def);
-    if ((wall - att.x) * back < gap) att.x = wall - back * gap;
-    def.x = att.x + back * gap;
+    if ((wall - att.x) * back < THROW.BEHIND) att.x = wall - back * THROW.BEHIND;
+    def.x = att.x + back * THROW.BEHIND;
     def.applyHit({ dmg, kb: sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: back });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
