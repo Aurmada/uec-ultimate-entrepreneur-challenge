@@ -159,6 +159,9 @@ export class FXSystem {
     if (!FX_STYLE.impact) return;
     const C = FX_ART.CUTIN;
     this.playing = { fighter, name, color, side, big, t: 0, dur: big ? C.SUPER_DUR : C.DUR, bust: null };
+    // The band says the name: the word popped at head height said it again
+    // under the band, cut in half by it.
+    if (big) this.popups = this.popups.filter((w) => w.text.replace(/!$/, '') !== name);
   }
 
   get shakeX() { return this.shakeMag ? (Math.random() * 2 - 1) * this.shakeMag : 0; }

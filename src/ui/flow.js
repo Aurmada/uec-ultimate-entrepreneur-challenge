@@ -43,3 +43,41 @@ export function pickGuestFight(ids, rand = Math.random) {
   const rest = ids.filter((id) => id !== p1);
   return { p1, p2: rest[Math.floor(rand() * rest.length)], difficulty: LEVEL_ORDER[0] };
 }
+
+// Both sides the same fighter (picked on purpose; a random rival is never
+// you) fought in the same colours, so nobody could tell which was theirs. The
+// second takes a colourway of its own: the clothes turned round the colour
+// wheel, or, where they are nearly grey, light for dark; the skin and hair
+// stay, so it is still the same person. Render only: the colours are not in
+// the simulation, and both peers make the same one from the same fighter.
+const MIRRORED = ['suit', 'suit2', 'accent', 'pants', 'shoe'];
+export function mirrorDef(mine, theirs) {
+  if (!mine || !theirs || mine.id !== theirs.id || !theirs.c) return theirs;
+  const c = { ...theirs.c };
+  for (const k of MIRRORED) if (c[k]) c[k] = mirrorColour(c[k]);
+  return { ...theirs, c, mirrored: true };
+}
+
+export function mirrorColour(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+  let h = 0, s = 0;
+  if (d) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  let H = h, L = l;
+  // a grey goes at least a third of the way from dark to light, or a mid
+  // grey (Scam's suit) would come back nearly as it was; a dark colour comes
+  // up a little too, or a navy came back a dark olive no easier to tell apart
+  if (s >= 0.2) {
+    H = (h + 180) % 360;
+    if (l < 0.3) L = l + 0.2;
+  } else L = Math.min(0.88, Math.max(0.12, l < 0.5 ? Math.max(l + 0.35, 1 - l) : Math.min(l - 0.35, 1 - l)));
+  const C = (1 - Math.abs(2 * L - 1)) * s, X = C * (1 - Math.abs(((H / 60) % 2) - 1)), m = L - C / 2;
+  const [R, G, B] = H < 60 ? [C, X, 0] : H < 120 ? [X, C, 0] : H < 180 ? [0, C, X] : H < 240 ? [0, X, C] : H < 300 ? [X, 0, C] : [C, 0, X];
+  const to = (v) => Math.round(Math.min(1, Math.max(0, v + m)) * 255).toString(16).padStart(2, '0');
+  return `#${to(R)}${to(G)}${to(B)}`;
+}

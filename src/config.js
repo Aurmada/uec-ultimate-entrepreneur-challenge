@@ -599,11 +599,22 @@ export const GL3D = {
   // A knocked-out body lies on the floor (drawFighter's groundFall): how far
   // above it the hip and shoulders sit on the back, the head's centre, and a
   // hand (a foot's point is its sole), in px.
-  LIE: { BACK: 13, HEAD: 15, LIMB: 4 },
+  LIE: { BACK: 13, HEAD: 15, LIMB: 4, SOLE: 5 },   // SOLE: a 3D model's lowest point, as deep as its soles stand
   // A basic punch, slap or kick lands where it hits (drawFighter's landStrike):
   // the fist or foot no nearer than this to the hitbox's top, bottom or far
   // edge, in px.
   STRIKE_INSET: 8,
+  // A kick written short of where its hitbox reaches is pushed out to it, the
+  // hips driving in after the foot (rig.js solvePose, P.hipX) so the leg keeps
+  // its length: at most this far, in px. The hitbox reached 21 to 30 px past
+  // the foot on Kim, Carl, Jeff, Scam and Steve, so a kick hit from out of reach.
+  KICK_DRIVE: 30,
+  // A knee joint is kept this far over the floor, model units: bent toward
+  // its pole under a deep crouch's hips, it went through it (rig.js ik).
+  KNEE_FLOOR: 0.1,
+  // ...and a planted foot behind hips driven in skids after them once its
+  // leg is this share of its full length (rig.js solvePose).
+  SKID_REACH: 1,
   // How far a sculpted body's limb may stretch past its length to reach a
   // target, as a share of it (rig.js solvePose); the stock body stretches freely.
   STRETCH_MOST: 1.1,
@@ -646,6 +657,7 @@ export const GL3D = {
   HEAD_SCALE: 1.25,
   ARM_GIRTH: 1.40, LEG_GIRTH: 1.40, TORSO_GIRTH: 1.12, FOOT_SCALE: 1.15,
   INK: 0.011,           // outline thickness, model units
+  INK_BIAS: 0.02,      // how far back the outline sits, model units (toon.js)
   INK_COLOR: '#140c08',
   KEY: [0.42, 0.58, 0.70],  // toward the key light: forward, up, toward camera
   BANDS: [0.40, -0.12],     // lit above the first, mid above the second
@@ -707,7 +719,10 @@ export const GL3D = {
     // A visor is lighter there too (glass opacity by material, over the
     // model's own), so the eyes behind it read: Lizbeth's stare is her
     // character. In a match it stays the strong band that marks her.
-    CLOSE: { SPAN: 48, HEAD_AT: [0.5, 0.46], GLASS: { visor: 0.25 } },
+    // HEAD_MOST: a head taller than this (joint to crown, model units: the
+    // founder model's 0.36 against the cast's 0.25 to 0.28) widens the frame
+    // by as much, or its crown was cut off.
+    CLOSE: { SPAN: 48, HEAD_AT: [0.5, 0.46], GLASS: { visor: 0.25 }, HEAD_MOST: 0.3 },
     TURN: { yaw: 0.9, hipYaw: 0.6, headYaw: 0.35 },
     HAND_F: [14, 16],
     HAND_B: [-8, 16],

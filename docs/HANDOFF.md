@@ -8,13 +8,14 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 The game is live at v3.19 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-11-07: 3D by default, the nine founders the sculpted cast below, each
+on 2026-11-07, and v3.20, the launch build (see "v3.20"), is on
+`claude/jeff-model` waiting for the owner's word to release: 3D by default, the nine founders the sculpted cast below, each
 in their own fighting form for everything they do (every move, special and
 reaction, how they move, start a round and go into their super) and each
 with a face of their own, and 2D a choice in Settings (see "v3.19" back to
 "v3.13"). v3.17 fixed the dash (`SIM_VERSION` 10); v3.18 changed nothing in
 the fight; v3.19 slowed the meter and shortened the wait after a knockout
-(`SIM_VERSION` 11). v3.12 was built on 2026-10-30 but never reached `main`; it went
+(`SIM_VERSION` 11); v3.20 changes nothing in the fight. v3.12 was built on 2026-10-30 but never reached `main`; it went
 out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
@@ -23,10 +24,10 @@ Since v3.10, `main` also carries a working prototype that answers the
 owner's question "can the fighters look and move more like a modern fighting
 game, without copying one": every fighter rendered as a toon-shaded 3D model
 posed live from the existing 2D animation, arenas rendered in Blender, fighters
-lit by their stage, and fighting-game hit effects. It is all behind URL flags
-(`?gl`), render-only, and off by default. On the owner's iPhone the 3D fighters
-cost 0.7 ms a frame; whether 3D becomes the default is the open question, and a
-mid-range phone has not been measured.
+lit by their stage, and fighting-game hit effects. It was behind URL flags
+(`?gl`) then and has been the default since v3.14, render-only throughout. On
+the owner's iPhone the 3D fighters cost 1.0 ms a frame with the two heaviest
+sculpts (budget 2 ms); a mid-range phone has not been measured.
 
 A review session on 2026-10-18 built **v3.9**, released on 2026-10-25: step 3 of
 the move system, a deferred effect, as Jeff Bozo's own signature (SAME-DAY
@@ -53,8 +54,8 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.19 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. 589 tests pass. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, released through v3.19; `main` is this branch | Merged into `main` on 2026-11-07. |
+| `main` | The live game, v3.19 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `claude/jeff-model` | The remodel of the cast and everything after it: v3.19 plus the v3.20 launch build | v3.20 committed, not pushed: waiting for the owner's word. 616 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -885,6 +886,152 @@ at the middle while it can hit.
   PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
+
+## v3.20, built 2026-11-08 and 09: ready for launch
+
+The owner: "can we get to the finish version so we are ready to launch this
+with everything updated. Work till the end. ensure to check all the bugs and
+errors. Check design and graphic work. let's get all the work done in one
+go." So: the look-only list left after v3.19, then two fresh agents, a QA
+lead and screen designer on the flow and a character artist on the 3D
+graphics, each playing the whole game in a browser in a copy of the repo
+(nothing written to it), and everything they found fixed but three calls left
+for the owner (below). Nothing in the fight changed (`SIM_VERSION` stays 11:
+v3.20 and v3.19 play each other online); `lab/pixels.js` against v3.19 is
+identical in all 30 frames with the flags off and with `--flags gl`, except
+where noted. 616 tests pass.
+
+**The look-only list:**
+
+- **Kicks reached as far as they hit** only on paper: the hitbox went 21 to
+  30 px past the drawn foot on Kim, Carl, Jeff, Scam and Steve, the leg
+  already straight. `landStrike` pushes a short kick's foot out to the box's
+  far edge (`GL3D.KICK_DRIVE`, 30 px at most) and the hips go in after it
+  (`P.hipX`, which `rig.js solvePose` adds to the hips, trunk, head and
+  hands), so the leg keeps its length; a planted foot behind hips driven in
+  skids after them once its leg is straight (`GL3D.SKID_REACH`), where
+  Jeff's stretched by a tenth.
+- **Kim's RUG PULL** stopped at her knees: her trunk now tips well over the
+  squat, both hands on the floor, then yanks the rug back to her shins. The
+  rear hand rode her lean as a guarding fist does, 38 px past where it was
+  written; a track can now say `rearHome: false`.
+- **Scam's SAFETY MEMO and bomb** read as two arms held straight out: the
+  flicks come from up by his ear and the lob swings low and up, the lead
+  hand drawn in to his chest out of the way.
+- **Carl's walk nearly knelt** (his rear knee 18 px off the floor against 27
+  standing): his guard is a crouch already, so the walk keeps his hips where
+  it has them (`low: -4`; a negative `low` walks taller than the guard).
+- **Round-start gestures** swung a hand 6 to 22 px, too small to see on a
+  phone, where a fighter is about 100 px tall: Jeff taps his gloves wider,
+  Adam slaps harder, Carl tugs his cuff and rolls his neck, Steve waves
+  wider, Elo beckons bigger, Scam rocks on his heels, Kim waves wider. Each
+  now swings a hand 24 px or leans 0.2.
+- **Jeff's shades and Steve's quiff**: the ink is the back faces pushed out
+  along their normals, and in a hollow (the crease by a nose, the comb lines
+  on the quiff) or under a frame lying on the skin they came out through the
+  surface in front as black streaks and spikes. The ink pass now sets the
+  outline back by `GL3D.INK_BIAS` (0.02 model units), so it stays behind a
+  surface it only grazes; the outline against the background is untouched.
+  Every head and body was compared before and after.
+- **Mirror matches** fought in the same colours: the second fighter takes a
+  colourway of its own (`flow.js mirrorDef`), the clothes turned round the
+  colour wheel or, nearly grey, light for dark; skin and hair stay. Solo,
+  versus and online alike; render only.
+- **The touch pads** reached up over the fighters' heads in the right-hand
+  corner on a phone held sideways (four rows, 224 px of 390): three rows of
+  four now, NDA, DASH and RAID down the inside.
+- **The select screen** says what each side's special does. On a phone held
+  sideways the dossier cut off its own portrait and special; there the
+  portrait (the grid shows the faces) gives way and the dossier scrolls.
+- **A briefcase dropped on the stage** played the block's tick: it thuds.
+- **ROUND 1 on Demo Day** sat yellow over the stage's yellow sign: in 3D a
+  dark halo goes behind ROUND and FIGHT!.
+- Steve and Carl at fight size were looked at again and left: tall in teal
+  against squat in brown, clear glasses against dark shades.
+
+**The flow and screens review** (all fixed, each pinned in
+`test/launch.test.js`):
+
+- Sign-in could not scroll on a phone held sideways, so TRY ONE FIGHT FIRST
+  was out of reach.
+- A friend's call-out card was squashed into a 110 px square (an old rule for
+  a portrait that is gone).
+- Tapping outside FIGHT A REAL PLAYER hid it but left the player queued: they
+  were paired, unseen, in whatever they did next. Outside a modal (or Esc) is
+  now CANCEL there (`screens.js dismissModal`).
+- On the first-time profile, BACK or HOW TO PLAY wiped everything typed: the
+  gate made a new draft each time (`renderProfile({ keep })`).
+- One failed load of the Supabase client at boot broke every sign-in until a
+  reload: a failed load is no longer kept, and the toast says to check the
+  connection instead of showing a CDN address.
+- The challenge and room links were squeezed to 20 px beside a COPY the width
+  of the modal, and an empty link was "copied". A guest who could not join
+  was told the room was gone, whatever the cause.
+- On a phone held sideways the share card showed at a quarter of its height.
+- Upright, the select screen's names broke one letter a line (a leftover
+  `.pv-name` rule), and CHAMPION ran past its control.
+- A lobby that could not connect said "stay on this screen" and never
+  offered the AI (its timer waited on a lobby already left).
+- The VS splash's level was stroked dark by the select screen's VS rule.
+- The profile on a phone held sideways left the form 120 px: the header and
+  avatar now scroll away.
+- TAP TO CONTINUE sat under the 🦄 button; BUILD YOUR FOUNDER ran out of its
+  button; toasts lost their ends; the HUD cut a fighter's name before the
+  company; upright, half the screen was empty (it now suggests turning the
+  phone sideways).
+- Keyboard: Esc closed nothing and went back from nowhere; the fighter and
+  style tiles could not be reached with Tab; the fight took the arrow keys
+  from the pause menu's volume slider (`input.js` now leaves a focused
+  control its keys).
+
+**The graphics review:**
+
+- **No horn in UNICORN MODE** on any of the nine in 3D: only the founder
+  model was built with one, and the 3D path draws no 2D horn. A model without
+  one is given it as it loads (`gl3d/horn.js`): the founder's horn, made in
+  code at the model's own crown and skinned to the head.
+- **Knocked-out bodies sank** 15 to 22 px under the floor: `groundFall` lays
+  the 2D figure's points, and a sculpt keeps its own longer trunk. A
+  knockout is now laid no lower than the model's own lowest point
+  (`gl3d sink3D`, one vertex in 40, only while falling or down).
+- **Knees through the floor** in a deep crouch (Adam's 14 px): `rig.js ik`
+  turns a knee the least way round its leg that keeps it over
+  `GL3D.KNEE_FLOOR`; it goes out to the side, as a real one does.
+- **Adam's BURN IT ALL** wind-up hid his head under his arms: the fists go
+  up behind it.
+- **Steve and Cathie blocked** holding their device and tablet as well as the
+  briefcase (Carl's was fixed in v3.18). This one shows in 2D too.
+- **UNICORN MODE's word** popped under its own band, cut in half, and the
+  FULL METER hint stayed up through the super and across the fighters' feet
+  through specials. The band takes the word's place in 3D, and a special or
+  the super clears the hint.
+- **Demo Day's LIVE dot** sat on the L in a wider font: it is placed by the
+  words' measured width. This changes the 2D game's Demo Day by those few
+  pixels, the one place it differs from v3.19 (`lab/pixels.js` with the
+  flags off shows only the demoday frames, there).
+- **Steve's victory** carried his tablet across his face: the device hand
+  goes out and back under his chin.
+- **A player's own founder** had its crown cut off in close portraits: a head
+  taller than the cast's widens the frame (`GL3D.BUST.CLOSE.HEAD_MOST`).
+
+**For the owner** (not done: each changes the fight or needs new art):
+
+- **Bodies pass through each other at close range** (Kim inside Cathie in a
+  GROWTH HACK rush, Carl inside Jeff before his seizure): the push gap is
+  `PHYS.BODY_W * PUSH_GAP`, 51.5 px between centres, narrower than the
+  sculpts. Widening it is a gameplay change (`SIM_VERSION`).
+- **Carl's ASSET SEIZURE** shows no hold: on contact the victim is behind him
+  in one frame. A grab and throw animation needs a held state in the fight.
+- **Cathie's coat** is one stiff piece riding her hips (in a crouch it juts
+  out, in a knockout it pokes through the floor): it wants cloth in the
+  sculpt (`fighter3d.py coat()`).
+- Smaller art notes: the Unicorn Club's neon unicorn and disco ball sit
+  behind the HUD timer, the sponsor boards are hard to read under the scrim,
+  and Lizbeth and Cathie are another similar pair (pale hair, blue jacket).
+
+New lab tool: `lab/strip3d.js`, a strip of frames of one fighter in 3D
+through a move, a command, the special, the bomb or any state, posed as a
+match poses them, with the floor and the hitbox drawn over.
 
 ## v3.19, released 2026-11-07: the owner's five decisions
 
@@ -2270,7 +2417,14 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
    adds canvases (trails, glow, vignette, cut-in) for the browser to composite:
    0.70 ms a frame over 2D on the layer (mean frame 1.23 ms, 2.00 ms at the 95th
    percentile, 60.3 fps), against 3.95 ms copied, with 2D at 0.61 and 0.46 ms
-   before and after. The added canvases cost nothing measurable. **Next:** the
+   before and after. The added canvases cost nothing measurable. **Sixth run,
+   2026-11-08**, v3.19 as shipped with its two heaviest sculpts (Cathie, 66,376
+   triangles, against Carl, 65,478), the hosted page refreshed for them (it now
+   times 2D, 3D on the layer and 2D again, and counts slow frames): 1.01 ms a
+   frame over 2D (mean frame 1.40 ms, 2.00 ms at the 95th percentile, 60 fps, no
+   slow frames), with 2D at 0.38 and 0.40 ms before and after. The same iPhone
+   again (iOS 18.7, 402 by 874), so inside the budget on a fast phone, about
+   0.3 ms more than the founder model cost. **Next:** the
    same hosted test on a mid-range phone (an Android phone or an iPhone several
    years old), which the budget is set for. Or, as before: from a checkout of
    `main`, serve with `python3 dev-server.py 4173`, open
@@ -2305,6 +2459,11 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
 - Kim's ring light still sits off-square in a bust; body knobs still scale bones.
+- In 3D: bodies can pass into each other at close range, Carl's seizure shows
+  no hold, and Cathie's coat is one stiff piece (v3.20, "For the owner").
+- A local `main` in a checkout can lag `origin/main` (this one sat at v3.12),
+  and `lab/pixels.js` compares against `main` by default: run
+  `git branch -f main origin/main`, or name the release commit.
 - The debug sign-in (`UEC.signInAs()`) uses the id `test-uid`, which is not a
   UUID, so one profile fetch to Supabase returns a harmless 400 in the console.
 - Full-frame pixel hashes changed between September and October with no code

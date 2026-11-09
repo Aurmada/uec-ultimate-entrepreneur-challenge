@@ -235,3 +235,26 @@ test('an overlay that sits at a depth says so, and it is a depth', () => {
     assert.ok(p > 0 && p <= 1.5, `${arena.id} overlay at ${p}`);
   }
 });
+
+// Demo Day's LIVE dot was drawn at a fixed x, on the L of LIVE in a wider
+// font (it read ●IVE). It goes just before the words, however wide they are.
+test("Demo Day's LIVE dot sits before the word, in any font", async () => {
+  const { getArena } = await import('../src/data/arenas.js');
+  for (const wide of [140, 230, 300]) {
+    const dots = [], texts = [];
+    const ctx = new Proxy({}, {
+      get: (_, k) => k === 'measureText' ? (s) => ({ width: s.startsWith('LIVE') ? wide : s.length * 10 })
+        : k === 'arc' ? (x, y, r) => dots.push({ x, y, r })
+          : k === 'fillText' ? (s, x, y) => texts.push({ s, x, y })
+            : k === 'createLinearGradient' || k === 'createRadialGradient' ? () => ({ addColorStop() {} })
+              : () => {},
+      set: () => true,
+    });
+    getArena('demoday').draw(ctx, 1, { W: 960, H: 540 });
+    const live = texts.find((t) => t.s.startsWith('LIVE'));
+    assert.ok(live, 'no LIVE line drawn');
+    const dot = dots.find((d) => Math.abs(d.y - live.y) < 1);
+    assert.ok(dot, 'no dot beside LIVE');
+    assert.ok(dot.x + dot.r <= live.x - wide / 2 - 2, `the dot (${dot.x.toFixed(0)}) is on the words, which start at ${(live.x - wide / 2).toFixed(0)}`);
+  }
+});

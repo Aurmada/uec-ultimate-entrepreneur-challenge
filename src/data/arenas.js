@@ -130,9 +130,13 @@ function demoScreen(ctx, t) {
   ctx.font = '900 italic 64px system-ui';
   ctx.fillText('DEMO DAY', 480, 150);
   ctx.font = '800 22px system-ui'; ctx.fillStyle = '#29d9ff';
-  ctx.fillText('LIVE  ·  PITCH BATTLE', 480, 205);
+  const live = 'LIVE  ·  PITCH BATTLE';
+  ctx.fillText(live, 480, 205);
+  // The dot goes just before the words, wherever the font ends them: at a
+  // fixed x it sat on the L in a wider font (●IVE, a graphics review).
   ctx.fillStyle = '#ff3d6e';
-  ctx.beginPath(); ctx.arc(365, 205, 6 + 2 * Math.sin(t * 6), 0, 7); ctx.fill();
+  const left = 480 - ctx.measureText(live).width / 2;
+  ctx.beginPath(); ctx.arc(left - 14, 205, 6 + 2 * Math.sin(t * 6), 0, 7); ctx.fill();
 }
 
 function spotlights(ctx, t) {

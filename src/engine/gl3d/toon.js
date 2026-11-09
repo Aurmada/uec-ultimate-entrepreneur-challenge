@@ -37,6 +37,7 @@ layout(location = 3) in vec4 aWeight;
 uniform mat4 uBones[${MAX_JOINTS}];
 uniform mat4 uView;
 uniform float uInflate;
+uniform float uInkBias;   // the ink pushed this far back, model units
 uniform vec4 uFaceMap;    // face centre across and up; model units the cell spans across, down
 uniform float uFaceFront; // how far forward a surface must be to take the face
 uniform vec2 uFaceAxis;   // the projection's forward axis in the bind xz plane
@@ -57,6 +58,12 @@ void main() {
   float hang = clamp(dot(aPos.xy - uSwayHang.xy, uSwayDir) / max(uSwayHang.z, 1e-4), 0.0, 1.0);
   p.xy += uSway * hang * hang;
   p.xyz += n * uInflate;
+  // A back face pushed out in a hollow (a crease by the nose, the comb lines
+  // in a quiff) or under a frame lying on the skin came out through the
+  // surface in front of it, as black streaks and spikes. Set back a little,
+  // it stays behind any surface it only grazes; where there is nothing in
+  // front, the outline, nothing changes.
+  p.z -= uInkBias;
   vNrm = n;
   gl_Position = uView * p;
   // Bind-space projection, so the face stays where it is on the head. The
@@ -228,7 +235,7 @@ export function createToon({ onScreen = null } = {}) {
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
     loc = {};
-    for (const n of ['uBones', 'uView', 'uInflate', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
+    for (const n of ['uBones', 'uView', 'uInflate', 'uInkBias', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
       'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
       'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
       'uSway', 'uSwayHang', 'uSwayDir', 'uRimDir', 'uFlash']) {
@@ -454,6 +461,7 @@ export function createToon({ onScreen = null } = {}) {
 
       gl.uniform1f(loc.uAlpha, 1);
       gl.uniform1f(loc.uInflate, 0);
+      gl.uniform1f(loc.uInkBias, 0);
       gl.uniform1f(loc.uInk, 0);
 
       // 0. The silhouette mask, from every opaque primitive this fighter
@@ -524,6 +532,7 @@ export function createToon({ onScreen = null } = {}) {
         gl.cullFace(ink ? gl.FRONT : gl.BACK);
         gl.uniform1f(loc.uInk, ink ? 1 : 0);
         gl.uniform1f(loc.uInflate, ink ? GL3D.INK : 0);
+        gl.uniform1f(loc.uInkBias, ink ? GL3D.INK_BIAS : 0);
         for (const p of gpu) {
           if (!visible(p)) continue;
           const alpha = glass.get(p.role);

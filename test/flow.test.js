@@ -78,6 +78,14 @@ test('a phone held sideways keeps the stage 16:9 and every screen reachable', ()
   assert.doesNotMatch(css, /16 \/ 9 \+ 200px/);
   assert.match(block, /#scr-title \{[^}]*overflow-y: auto/, 'the title cannot scroll');
   assert.match(block, /\.tbtn \{[^}]*backdrop-filter: none/, 'the pads blur the fighter behind them');
+  // the buttons three rows high, not four: four reached up over the fighters'
+  // heads in the right-hand corner
+  assert.match(block, /\.t-right \{ display: grid; grid-template-columns: repeat\(4, auto\)/, 'the pad is four rows high');
+  assert.match(block, /\.t-right \.t-defend, \.t-right \.t-grid \{ display: contents; \}/);
+  for (const k of ['block', 'dash', 'steal', 'slap', 'punch', 'kick', 'launch', 'bomb', 'special']) {
+    assert.match(block, new RegExp(`\\[data-k="${k}"\\] \\{ grid-column: \\d; grid-row: [123]; \\}`), `${k} has no place in the three rows`);
+  }
+  assert.match(block, /\[data-k="super"\] \{ grid-column: 2 \/ 5; grid-row: 3; \}/);
   assert.match(css, /\.about-cta \{[^}]*position: sticky/, "the story's button is below the fold");
   assert.match(css, /\.profile-save \{[^}]*position: sticky/, "the profile's SAVE is below the fold");
 });
@@ -152,4 +160,56 @@ test('a visitor may try one unranked Rookie fight before signing in, once', () =
   for (const sel of ['.guest-fight #btn-restart', '.guest-fight #scr-results .result-btns', '.guest-fight #result-cta']) {
     assert.ok(css.includes(sel), `${sel} still shows: a way to a second free fight, or a profile without an account`);
   }
+});
+
+// A mirror match (both sides the same fighter, picked on purpose) was fought
+// in the same colours: nobody could tell which Elo was theirs. The second
+// takes a colourway of its own, the clothes changed and the person not, in
+// every way a match starts.
+test('a mirror match puts the second fighter in a colourway of its own', async () => {
+  const { mirrorDef } = await import('../src/ui/flow.js');
+  const { FIGHTERS, getFighter } = await import('../src/data/fighters.js');
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const apart = (a, b) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
+  for (const def of FIGHTERS) {
+    const m = mirrorDef(def, def);
+    assert.equal(m.id, def.id);
+    assert.equal(m.name, def.name);
+    assert.deepEqual(m.stats, def.stats);
+    assert.equal(m.c.skin, def.c.skin, `${def.id}'s skin changed`);
+    assert.equal(m.c.hair, def.c.hair, `${def.id}'s hair changed`);
+    assert.ok(apart(m.c.suit, def.c.suit) >= 120, `${def.id}'s mirror suit ${m.c.suit} is too near ${def.c.suit}`);
+    assert.notEqual(def.c, m.c, 'the original palette was changed');
+  }
+  const elo = getFighter('elo'), kim = getFighter('zara');
+  assert.equal(mirrorDef(elo, kim), kim, 'two different fighters were recoloured');
+  const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(src, /const p2Def = mirrorDef\(cfg\.p1Def, cfg\.p2Def\);[\s\S]*?p2: \{ def: p2Def,/, 'a solo or versus match does not take the mirror colourway');
+  assert.match(src, /drawPortrait\(\$\('vsFace2'\), p2Def,/, 'the VS splash shows the original colours');
+  assert.match(src, /const guestDef = mirrorDef\(hostDef, specToDef\(cfg\.guest\)\);/, 'an online match does not take the mirror colourway');
+});
+
+// The select screen named each side's special and said nothing of what it
+// does, so the rival's was a word until it hit you. Both dossiers now carry
+// its description; on a phone held sideways, where the dossier cut off its own
+// portrait and special, the portrait (the grid shows the faces) makes room.
+test("the select screen says what each side's special does, and fits a phone", async () => {
+  const { SPECIALS } = await import('../src/data/fighters.js');
+  for (const sp of Object.values(SPECIALS)) assert.ok(sp.desc && sp.desc.length > 20, `${sp.id} has no description`);
+  const html = src('index.html'), screens = src('src/ui/screens.js'), css = src('styles.css');
+  for (const side of ['you', 'rival']) assert.match(html, new RegExp(`id="${side}-sp"></div>\\s*<div class="pv-sp-desc" id="${side}-sp-desc">`), `the ${side} dossier has no description`);
+  assert.match(fn(screens, 'renderSide'), /\$\(`\$\{prefix\}-sp-desc`\)\.textContent = sp\?\.desc \|\| ''/);
+  const land = css.slice(css.indexOf('@media (max-height: 500px) and (orientation: landscape)'));
+  const block = land.slice(0, land.indexOf('\n}\n'));
+  assert.match(block, /\.vs-side \{ justify-content: flex-start; overflow-y: auto; \}/, 'a short dossier is cut off at both ends');
+  assert.match(block, /\.vs-side canvas \{ display: none; \}/);
+});
+
+// In 3D, ROUND and FIGHT! go up over the fighters' heads, where they sat over
+// the stage's own signs: Demo Day's yellow DEMO DAY under a yellow ROUND 1. A
+// dark halo goes behind them there; the 2D game's announcements are as they were.
+test("the round's announcements stand out from the stage behind them in 3D", () => {
+  const css = src('styles.css');
+  assert.match(css, /body\.gl3d #announce\.intro \{ background: radial-gradient\([^)]*rgba\(5,7,15,\.8\d?\)/, 'nothing behind ROUND 1 in 3D');
+  assert.doesNotMatch(css.replace(/body\.gl3d #announce\.intro \{[^}]*\}/g, ''), /#announce[^{]*\{[^}]*background:/, 'the 2D announcements changed');
 });

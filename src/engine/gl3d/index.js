@@ -14,6 +14,7 @@
 import { parseGLB, extractModel } from './glb.js';
 import { buildRig, solvePose, transformPoint } from './rig.js';
 import { createToon, roleColour, MAX_JOINTS } from './toon.js';
+import { hornFor } from './horn.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import { FORMS } from '../../data/forms.js';
@@ -158,6 +159,9 @@ function load(id) {
     .then((buf) => {
       const model = extractModel(parseGLB(buf));
       if (model.jointNames.length > MAX_JOINTS) throw new Error(`${id} has more than ${MAX_JOINTS} joints`);
+      // UNICORN MODE's horn, made here for a model built without one (horn.js)
+      const horn = hornFor(model, spec);
+      if (horn) model.primitives.push(horn);
       entry.rig = buildRig(model, spec);
       entry.model = model;                 // kept for each renderer's upload (gpuFor)
       if (!renderer.lost) gpuFor(entry, renderer);   // now, not on the first frame
@@ -165,6 +169,7 @@ function load(id) {
       entry.glass = new Map(Object.entries(spec.glass || {}));
       entry.sway = new Map(Object.entries(spec.sway || {}));
       entry.head = model.jointNames.indexOf('head');
+      entry.headLen = spec.leaf?.head ?? null;
       entry.skull = model.restHeads[entry.head].map((v, i) => v + (i === 1 ? spec.skull : 0));
       if (spec.face) entry.face = faceSlot(id, spec.face);
       entry.ready = true;
@@ -239,6 +244,50 @@ export function renderFull3D(ctx, rect, def, P, { state = 'idle', face = null, s
   return true;
 }
 
+// How far under the floor the model goes in this pose, turned by `rot` about
+// its feet, in the 2D pose's px (feet at the origin, y down, before the pose's
+// squash): the most any of its vertices goes, sampled. A knocked-out sculpt
+// is laid on the floor by the 2D figure's points (drawFighter's groundFall),
+// but it keeps its own trunk and neck, longer than the figure's, and its head
+// and shoulders went 15 to 22 px under (a graphics review, 2026-11-09).
+// Null when the fighter is not drawn in 3D. One vertex in SINK_EVERY.
+const SINK_EVERY = 40;
+export function sink3D(def, P) {
+  const entry = modelFor(def);
+  return entry?.ready ? sinkOf(entry, P) : null;
+}
+// The same for a loaded model ({ model, rig }), which keeps its samples.
+export function sinkOf(entry, P) {
+  if (!entry.samples) {
+    const out = [];
+    for (const p of entry.model.primitives) {
+      // what is always worn on the body (not props, effects or the other hand)
+      if (p.name !== 'body' && !p.name.startsWith('hair') && !p.name.startsWith('headwear')) continue;
+      for (let v = 0; v < p.positions.length / 3; v += SINK_EVERY) {
+        out.push(p.positions[v * 3], p.positions[v * 3 + 1], p.positions[v * 3 + 2],
+          p.joints[v * 4], p.joints[v * 4 + 1], p.joints[v * 4 + 2], p.joints[v * 4 + 3],
+          p.weights[v * 4], p.weights[v * 4 + 1], p.weights[v * 4 + 2], p.weights[v * 4 + 3]);
+      }
+    }
+    entry.samples = new Float32Array(out);
+  }
+  const m = solvePose(entry.rig, P), S = entry.samples, U = GL3D.UNIT;
+  const c = Math.cos(P.rot || 0), s = Math.sin(P.rot || 0), sx = P.sx ?? 1, sy = P.sy ?? 1;
+  let most = -Infinity;
+  for (let i = 0; i < S.length; i += 11) {
+    let X = 0, Y = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = S[i + 7 + k];
+      if (!w) continue;
+      const o = S[i + 3 + k] * 16;
+      X += w * (m[o] * S[i] + m[o + 4] * S[i + 1] + m[o + 8] * S[i + 2] + m[o + 12]);
+      Y += w * (m[o + 1] * S[i] + m[o + 5] * S[i + 1] + m[o + 9] * S[i + 2] + m[o + 13]);
+    }
+    most = Math.max(most, X * U * sx * s - Y * U * sy * c);
+  }
+  return most;
+}
+
 // True while def would render in 3D but its model is still on the way.
 // Screens drawn in that window can ask to be drawn again (on3DReady).
 // Whether the model this fighter wears is on its way. Asking starts the
@@ -306,7 +355,11 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
   const entry = modelFor(def);
   if (!entry) return false;
   const U = GL3D.UNIT, BUST = GL3D.BUST;
-  const { SPAN, HEAD_AT } = close ? BUST.CLOSE : BUST;
+  // A head taller than the cast's (the founder model's, which a player's own
+  // founder wears) is framed wider in close, or its crown was cut off.
+  const big = close ? Math.max(1, (entry.headLen ?? 0) / BUST.CLOSE.HEAD_MOST) : 1;
+  const { SPAN: span, HEAD_AT } = close ? BUST.CLOSE : BUST;
+  const SPAN = span * big;
   solvePose(entry.rig, P, {}, BUST.TURN);
   const [hx, hy] = transformPoint(entry.rig.matrices, entry.head, entry.skull);
   const w = SPAN, h = (SPAN * rect.h) / rect.w;

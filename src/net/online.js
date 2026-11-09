@@ -198,7 +198,11 @@ function loadClient() {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
         // must exceed our send rate (1000/SEND_MS ≈ 30/s) or packets get throttled
         realtime: { params: { eventsPerSecond: 50 } },
-      }));
+      }))
+      // A load that failed (offline at boot, the CDN unreachable) is not kept:
+      // kept, every sign-in failed until the page was reloaded, long after the
+      // network was back.
+      .catch((e) => { sbPromise = null; throw e; });
   }
   return sbPromise;
 }

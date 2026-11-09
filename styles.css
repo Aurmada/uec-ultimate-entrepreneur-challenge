@@ -292,13 +292,14 @@ body:not(.guest-fight) #result-guest { display: none; }
 }
 .vs-side .pv-title, .vs-side .pv-co { max-width: 100%; overflow-wrap: anywhere; }
 .vs-side .pv-sp-name { font-size: 12px; max-width: 100%; overflow-wrap: anywhere; }
+.vs-side .pv-sp-desc { font-size: 11px; line-height: 1.35; max-width: 100%; margin: 1px 0 2px; }
 .vs-mid {
   align-self: center; font: 900 italic clamp(22px, 3.4vw, 38px)/1 system-ui;
   color: #fff; -webkit-text-stroke: 2px var(--shadow);
   text-shadow: 0 0 22px rgba(255,210,63,.5);
 }
 .pv-style { font-size: 11px; font-weight: 900; letter-spacing: 2px; color: var(--gold); margin-top: 3px; }
-.pv-rap { font-size: 10px; color: var(--pink); font-weight: 800; letter-spacing: .5px; }
+.pv-rap { font-size: 11px; color: var(--pink); font-weight: 800; letter-spacing: .5px; }
 #style-blurb { margin: 2px 0 0; }
 
 .preview-card {
@@ -391,7 +392,9 @@ body:not(.guest-fight) #result-guest { display: none; }
 .hud-p2 .hud-name { flex-direction: row-reverse; }
 /* long parody names must not run off the edge of the HUD */
 .hud-name > span:first-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.hud-co { color: var(--cyan); font-size: .78em; font-weight: 800; }
+.hud-co { color: var(--cyan); font-size: .78em; font-weight: 800;
+  /* it gives way first: on a phone held sideways CARL I… sat beside ICAHNT HOLDINGS in full */
+  min-width: 0; flex-shrink: 100; overflow: hidden; text-overflow: ellipsis; }
 .hp-track {
   position: relative; height: clamp(12px, 2.4vw, 18px);
   background: rgba(5,7,15,.82); border: 2px solid var(--shadow); border-radius: 6px; overflow: hidden;
@@ -506,6 +509,9 @@ body:not(.guest-fight) #result-guest { display: none; }
    fighters' heads. Only in 3D (body.gl3d, set in main.js): 2D fighters make
    no gesture, and the 2D game stays as it was. */
 body.gl3d #announce.intro { inset: 14% 0 52% 0; }
+/* Up there it sits over the stage's own signs (Demo Day's yellow DEMO DAY
+   under a yellow ROUND 1), so a soft dark halo goes behind it. */
+body.gl3d #announce.intro { background: radial-gradient(ellipse 44% 46% at 50% 50%, rgba(5,7,15,.82), rgba(5,7,15,.45) 62%, rgba(5,7,15,0)); }
 @keyframes annPop {
   0% { opacity: 0; transform: scale(2.4) rotate(3deg); }
   60% { opacity: 1; transform: scale(.96) rotate(-2deg); }
@@ -557,6 +563,7 @@ body.gl3d #announce.intro { inset: 14% 0 52% 0; }
 .vs-mid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 /* the AI's level, said before every solo fight */
 .vs-level {
+  -webkit-text-stroke: 0;   /* .vs-mid's, meant for the select screen's VS, made it unreadable */
   font-size: clamp(11px, 1.8vw, 16px); font-weight: 900; letter-spacing: 3px; color: var(--cyan);
   background: rgba(5,7,15,.75); border: 2px solid var(--cyan); border-radius: 999px; padding: 4px 12px;
   animation: vsMark .5s .4s cubic-bezier(.2,2,.4,1) both;
@@ -587,6 +594,9 @@ body.gl3d #announce.intro { inset: 14% 0 52% 0; }
 .touch-active .moves-ref { display: none; }
 
 /* ---------- Touch controls ---------- */
+/* Not over the VS splash: on a phone held sideways the pads covered the
+   rival's name and portrait for the splash's second and a half. */
+#scr-fight:has(#vsSplash:not(.hidden)) .touch { visibility: hidden; }
 .touch {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
   display: flex; justify-content: space-between; align-items: flex-end;
@@ -804,7 +814,7 @@ label.btn { display: inline-block; }
   position: sticky; bottom: 0; z-index: 4; padding: 12px 0 max(12px, env(safe-area-inset-bottom));
   background: linear-gradient(0deg, rgba(11,14,26,.96) 70%, rgba(11,14,26,0));
 }
-.about-cta .btn { width: 100%; max-width: 340px; }
+.about-cta .btn { width: 100%; max-width: 400px; }
 
 /* Look customiser: reuses .pick-row / .arena-strip / .a-tile from the select screen */
 .look-panel { display: flex; flex-direction: column; gap: 10px; }
@@ -894,14 +904,16 @@ label.btn { display: inline-block; }
 .slider-row input { flex: 1; accent-color: var(--gold); }
 .sound-inline { display: flex; flex-direction: column; gap: 10px; background: var(--bg2); padding: 12px; border-radius: 12px; }
 .link-row { display: flex; gap: 8px; }
+/* COPY sits beside the link: `.modal .btn` made it the whole row, and the
+   link it copies was squeezed to 20 px. */
+.modal .link-row .btn { width: auto; flex: none; }
 .link-row input {
   flex: 1; min-width: 0; background: var(--bg2); border: 2px solid var(--line); border-radius: 10px;
   color: var(--cyan); font-family: ui-monospace, Menlo, monospace; font-size: 12px; padding: 10px;
 }
-#modal-incoming canvas { width: 110px; height: 110px; margin: 0 auto; }
 .incoming-text { font-size: 15px; line-height: 1.6; }
 .incoming-text b { color: var(--gold); }
-.card-holder { border-radius: 12px; overflow: hidden; border: 2px solid var(--line); }
+.card-holder { border-radius: 12px; overflow: hidden; border: 2px solid var(--line); flex-shrink: 0; }
 #shareCanvas, #challengeCard { width: 100%; height: auto; display: block; }
 
 /* ---------- Tutorial ---------- */
@@ -923,7 +935,7 @@ label.btn { display: inline-block; }
   position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
   background: var(--panel2); border: 2px solid var(--gold); color: var(--text);
   padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 13px; z-index: 90;
-  animation: hintIn .25s ease-out; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
+  animation: hintIn .25s ease-out; max-width: min(92vw, 520px); text-align: center; line-height: 1.4;
 }
 
 /* ---------- Small screens ---------- */
@@ -931,11 +943,8 @@ label.btn { display: inline-block; }
   .select-body { flex-direction: column; overflow-y: auto; }
   .select-left { overflow: visible; flex: 0 0 auto; }
   .select-right { flex: 0 0 auto; }
-  .preview-card { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; text-align: left; gap: 2px 14px; }
-  #preview-portrait { width: 92px; }
-  .preview-card > div:not(.pv-stats):not(.pv-special) { width: calc(100% - 120px); }
-  .pv-name { width: calc(100% - 120px); }
-  .pv-stats { max-width: none; }
+  /* a narrow AI LEVEL row: CHAMPION ran 12 px past the edge */
+  .seg button { padding-left: 10px; padding-right: 10px; letter-spacing: 1px; }
   .fighter-grid { grid-template-columns: repeat(4, 1fr); }
   .style-grid { grid-template-columns: repeat(3, 1fr); }
   .cols-2 { grid-template-columns: 1fr; }
@@ -955,6 +964,36 @@ label.btn { display: inline-block; }
     backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(22,29,51,.38); }
   .t-atk { background: rgba(255,61,110,.2); }
   .t-sp { background: rgba(41,217,255,.16); }
+  /* The buttons in four columns of three, NDA, DASH and RAID down the inside:
+     four rows high, the pad reached up over the fighters' heads in the
+     right-hand corner (224 px of a 390 px screen); three rows stay below them. */
+  .t-right { display: grid; grid-template-columns: repeat(4, auto); gap: 8px; align-items: stretch; }
+  .t-right .t-defend, .t-right .t-grid { display: contents; }
+  .t-right [data-k="block"] { grid-column: 1; grid-row: 1; }
+  .t-right [data-k="dash"] { grid-column: 1; grid-row: 2; }
+  .t-right [data-k="steal"] { grid-column: 1; grid-row: 3; }
+  .t-right [data-k="slap"] { grid-column: 2; grid-row: 1; }
+  .t-right [data-k="punch"] { grid-column: 3; grid-row: 1; }
+  .t-right [data-k="kick"] { grid-column: 4; grid-row: 1; }
+  .t-right [data-k="launch"] { grid-column: 2; grid-row: 2; }
+  .t-right [data-k="bomb"] { grid-column: 3; grid-row: 2; }
+  .t-right [data-k="special"] { grid-column: 4; grid-row: 2; }
+  .t-right .t-grid .t-sp[data-k="super"] { grid-column: 2 / 5; grid-row: 3; }
+  /* The select screen's dossiers: a short screen cut off the portrait at the
+     top and the special at the bottom. The grid beside them shows the faces
+     already, so here they give their room to the words. */
+  .vs-side { justify-content: flex-start; overflow-y: auto; }
+  .vs-side canvas { display: none; }
+  /* Sign-in: as the title, taller than the screen, and it could not scroll to
+     TRY ONE FIGHT FIRST. */
+  #scr-auth { justify-content: flex-start; overflow-y: auto; }
+  #scr-auth .auth-wrap { margin: auto 0; padding: 12px 20px; gap: 12px; }
+  /* The profile: the header and the avatar scroll away, leaving the form more
+     than the 120 px the two of them and SAVE left it. */
+  .profile-sticky { position: static; box-shadow: none; }
+  .avatar-frame { width: 64px; height: 64px; }
+  /* TAP TO CONTINUE between the pads, not under the unicorn button */
+  .skip-hint { right: auto; left: 50%; bottom: 8%; transform: translateX(-50%); }
   /* The title: it is taller than the screen, and could not scroll (the logo
      cut off, HOW TO PLAY halved, the story and sign-out out of reach). */
   #scr-title { justify-content: flex-start; overflow-y: auto; }
@@ -971,6 +1010,13 @@ label.btn { display: inline-block; }
 @media (orientation: portrait) and (max-width: 760px) {
   /* portrait phones: stage up top, thumbs get the bottom */
   .screen-fight { justify-content: flex-start; padding-top: max(8px, env(safe-area-inset-top)); }
+  /* Upright, the stage is a strip 220 px tall over an empty screen: the space
+     under it says how to get a bigger fight. */
+  .screen-fight::after {
+    content: '⟲ Turn your phone sideways for a bigger fight'; display: block;
+    margin-top: 18px; padding: 0 20px; text-align: center;
+    color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: 1px;
+  }
 }
 
 @media (max-width: 480px) {

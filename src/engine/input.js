@@ -63,6 +63,9 @@ class Input {
   onKey(e, down) {
     if (!this.enabled) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // never swallow browser shortcuts (Cmd+R, Ctrl+F…)
+    // A control with focus keeps its keys: the pause menu's volume slider
+    // could not be moved with the arrows, which the fight took.
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName || '') && e.code !== 'Escape') return;
     if (down && (e.code === 'Escape' || e.code === 'KeyP')) {
       if (this.onPause) this.onPause();
       e.preventDefault();

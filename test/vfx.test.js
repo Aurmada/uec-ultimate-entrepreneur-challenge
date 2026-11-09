@@ -268,3 +268,30 @@ test("an ordinary special's nameplate stays on its fighter's side and dims nothi
     assert.ok(Math.min(...xs) < 0 && Math.max(...xs) > W, 'UNICORN MODE no longer runs a band across the screen');
   });
 });
+
+// UNICORN MODE's word popped at head height under its own band and was cut in
+// half by it, saying again what the band says; and the "FULL METER, press U"
+// hint stayed up through the super, and across the fighters' feet through a
+// special (a graphics review, 2026-11-09).
+test("the super's band does not repeat its word under itself, and a hint goes when a special starts", async () => {
+  const { FXSystem: FX, FX_STYLE } = await import('../src/engine/fx.js');
+  const { readFileSync } = await import('node:fs');
+  const fx = new FX();
+  const was = FX_STYLE.impact;
+  FX_STYLE.impact = true;
+  try {
+    fx.popup(400, 200, 'UNICORN MODE!', '#ff9df3');
+    fx.popup(400, 300, 'BOOM!', '#ffd23f');
+    fx.cutIn({ x: 400, def: {} }, 'UNICORN MODE', '#ff9df3', -1, true);
+    assert.deepEqual(fx.popups.map((w) => w.text), ['BOOM!']);
+  } finally { FX_STYLE.impact = was; }
+  const plain = new FX();
+  plain.popup(400, 200, 'UNICORN MODE!', '#ff9df3');
+  plain.cutIn({ x: 400, def: {} }, 'UNICORN MODE', '#ff9df3', -1, true);
+  assert.equal(plain.popups.length, 1, 'the 2D game, with no band, lost its word');
+  const game = readFileSync(new URL('../src/engine/game.js', import.meta.url), 'utf8');
+  for (const fn of ['onUnicorn', 'onSpecialStart']) {
+    const body = game.slice(game.indexOf(`  ${fn}(`), game.indexOf('\n  }\n', game.indexOf(`  ${fn}(`)));
+    assert.match(body, /this\.hud\.hideHint\?\.\(\)/, `${fn} leaves the hint up`);
+  }
+});

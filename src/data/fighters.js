@@ -333,8 +333,11 @@ export const FIGHTERS = [
       { id: 'guard-case', shape: 'roundRect', anchor: 'armF', dx: 8, dy: 52,
         w: 40, h: 32, fill: '#6b4a2b', z: 'front', states: ['block'] },
       // kai — STEVE NOJOBS, PEAR. The device, held out in the rear hand.
+      // Put away while he blocks behind the briefcase, as Carl's case is: he
+      // blocked holding both.
       { id: 'device', shape: 'roundRect', anchor: 'armB', dx: 0, dy: 0,
-        w: 20, h: 34, fill: 'accent', z: 'front' },
+        w: 20, h: 34, fill: 'accent', z: 'front',
+        states: ['idle', 'walk', 'jump', 'crouch', 'attack', 'dash', 'hitstun', 'ko', 'victory'] },
     ],
   },
   {
@@ -457,8 +460,10 @@ export const FIGHTERS = [
       // eleanor — CATHIE WOODZ, ARKK. The tablet, chart out.
       // `accent`, not `suit2`: her suit2 is #111a3d against a #1c2a5e suit, so
       // the first version was dark navy on dark navy and vanished.
+      // Put away while she blocks behind the briefcase, as Carl's case is.
       { id: 'tablet', shape: 'roundRect', anchor: 'armB', dx: 20, dy: -10,
-        w: 34, h: 46, rot: -0.2, fill: 'accent', z: 'front' },
+        w: 34, h: 46, rot: -0.2, fill: 'accent', z: 'front',
+        states: ['idle', 'walk', 'jump', 'crouch', 'attack', 'dash', 'hitstun', 'ko', 'victory'] },
       // A coat, and the first use of cloth lag: it trails the hips and settles.
       //
       // `hair` (#f2ece0), not `suit2`. suit2 is #111a3d against a #1c2a5e suit

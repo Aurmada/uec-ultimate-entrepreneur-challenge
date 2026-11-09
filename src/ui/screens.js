@@ -156,13 +156,13 @@ function renderSelect() {
       b.textContent = t.badge;
       tile.appendChild(b);
     }
-    tile.onclick = () => {
+    pressable(tile, t.id, t.def ? t.def.name : 'RANDOM', () => {
       audio.sfx('select');
       sel[pickSide] = t.id;
       // picking your own fighter naturally hands over to picking the rival
       if (pickSide === 'p1' && !rivalFixed) pickSide = 'p2';
       renderSelect();
-    };
+    });
     grid.appendChild(tile);
   }
 
@@ -209,6 +209,9 @@ function renderSide(prefix, def, fallbackLabel) {
   $(`${prefix}-rap`).textContent = def?.rap || (def?.id === 'custom' ? 'Unindicted · so far' : '');
   const sp = def ? SPECIALS[def.special] : null;
   $(`${prefix}-sp`).textContent = sp ? `${sp.icon} ${sp.name}` : '🎲 MYSTERY';
+  // what the special does, for the rival as for you: the name alone said
+  // nothing about what was coming
+  $(`${prefix}-sp-desc`).textContent = sp?.desc || '';
 
   renderMoveCard($(`${prefix}-cmds`), def);
 }
@@ -336,8 +339,11 @@ function applyPhotoColors(source) {
   }
 }
 
-export function renderProfile() {
-  draft = newDraft();
+// `keep` carries on with a draft already begun: the first-time gate sends a
+// new player back here from BACK or HOW TO PLAY, and started them over each
+// time, name, company and looks gone.
+export function renderProfile({ keep = false } = {}) {
+  if (!(keep && draft && !Save.profile)) draft = newDraft();
   $('inp-name').value = draft.name || '';
   $('inp-company').value = draft.company || '';
   $('inp-c1').value = draft.c1 || '#5865f2';
@@ -392,13 +398,13 @@ function renderStyleGrid() {
     c.width = c.height = 180;
     drawPortrait(c, f);
     tile.appendChild(c);
-    tile.onclick = () => {
+    pressable(tile, f.id, f.name, () => {
       audio.sfx('click');
       draft.baseId = f.id;
       renderStyleGrid();
       renderLookRows();     // unset layers follow the new base character
       renderAvatarPreview();
-    };
+    });
     grid.appendChild(tile);
   }
 }
@@ -991,6 +997,25 @@ export function renderHelp() {
   }
 }
 
+// A tile drawn as a div (a canvas portrait and a name) taken by Tab and
+// pressed with Enter or Space as a button is: a keyboard-only player could
+// not pick a fighter, a rival or a base style. Re-rendering the grid on a pick
+// replaces the tile, so the one with the same key takes the focus back.
+function pressable(tile, key, label, fn) {
+  tile.tabIndex = 0;
+  tile.setAttribute('role', 'button');
+  tile.setAttribute('aria-label', label);
+  tile.dataset.key = key;
+  tile.onclick = fn;
+  tile.onkeydown = (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    const grid = tile.parentElement;
+    fn();
+    grid?.querySelector(`[data-key="${CSS.escape(key)}"]`)?.focus();
+  };
+}
+
 // ---------------------------------------------------------------- modals
 
 export function openModal(id) {
@@ -1006,6 +1031,19 @@ export function closeModals() {
 
 export function isModalOpen(id) {
   return !$(id).classList.contains('hidden') && !$('modal-root').classList.contains('hidden');
+}
+
+// What a tap outside a modal, or Esc, does: closes it, except the two that
+// ask for a choice with a button (the pause menu, a private room). In the
+// lobby it is CANCEL: only hidden, it left the player queued, and they were
+// paired, unseen, in the middle of whatever they did next.
+export function dismissModal() {
+  if ($('modal-root').classList.contains('hidden')) return false;
+  if (isModalOpen('modal-pause') || isModalOpen('modal-live')) return false;
+  if (isModalOpen('modal-lobby')) { $('btn-lobby-cancel').click(); return true; }
+  closeModals();
+  A.onModalClosed?.();
+  return true;
 }
 
 let confirmCb = null;
@@ -1224,6 +1262,8 @@ export function initScreens(actions) {
   // live rooms
   $('btn-live-create').onclick = () => { audio.sfx('select'); A.createLiveRoom(); };
   $('btn-live-copy').onclick = async () => {
+    // a room that never opened has no link: copying nothing said it was copied
+    if (!$('liveLink').value) { toast('No link yet: the room is not open.'); return; }
     const ok = await copyText($('liveLink').value, $('liveLink'));
     toast(ok ? '🔗 Live link copied — send it now!' : 'Link selected — press Ctrl/Cmd+C to copy.');
     audio.sfx('click');
@@ -1249,16 +1289,24 @@ export function initScreens(actions) {
   document.querySelectorAll('[data-close]').forEach(b => {
     b.onclick = () => { audio.sfx('back'); closeModals(); A.onModalClosed?.(); };
   });
-  document.querySelector('.modal-backdrop').onclick = () => {
-    // these require an explicit button choice
-    if (isModalOpen('modal-pause') || isModalOpen('modal-live')) return;
-    closeModals();
-    A.onModalClosed?.();
-  };
+  document.querySelector('.modal-backdrop').onclick = () => dismissModal();
   $('btn-confirm-yes').onclick = () => { const cb = confirmCb; confirmCb = null; closeModals(); cb?.(); };
+  // Esc closed nothing and went back from nowhere. Out of the fight (where it
+  // pauses, input.js) it closes a modal as a tap outside does, or else takes
+  // a screen's BACK; never from inside a text field, where it may only mean
+  // "stop typing".
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.repeat || $('scr-fight').classList.contains('active')) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
+    if (dismissModal()) { audio.sfx('back'); e.preventDefault(); return; }
+    if (!$('modal-root').classList.contains('hidden')) return;
+    const back = document.querySelector('.screen.active [data-back]');
+    if (back && back.offsetParent) { back.click(); e.preventDefault(); }
+  });
 
   // invite modal
   $('btn-copylink').onclick = async () => {
+    if (!$('inviteLink').value) { toast('No link yet.'); return; }
     const ok = await copyText($('inviteLink').value, $('inviteLink'));
     toast(ok ? '🔗 Link copied — go start a rivalry.' : 'Link selected — press Ctrl/Cmd+C to copy.');
     audio.sfx('click');

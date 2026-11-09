@@ -93,7 +93,7 @@ export function buildRig(model, spec) {
 // Two-bone IK from a toward t, bending toward `pole`. Past full reach both
 // segments stretch equally, as the 2D rig's limbs do, up to `most` times
 // their length (then the limb falls short of t).
-export function ik(a, t, l1, l2, pole, most = Infinity) {
+export function ik(a, t, l1, l2, pole, most = Infinity, floor = -Infinity) {
   const d = sub(t, a);
   let reach = Math.hypot(d[0], d[1], d[2]);
   const u = normalize(d, [0, -1, 0]);
@@ -103,8 +103,26 @@ export function ik(a, t, l1, l2, pole, most = Infinity) {
   const ca = Math.max(-1, Math.min(1, (L1 * L1 + reach * reach - L2 * L2) / (2 * L1 * reach)));
   const sa = Math.sqrt(1 - ca * ca);
   const along = pole[0] * u[0] + pole[1] * u[1] + pole[2] * u[2];
-  const bend = normalize(sub(pole, scale(u, along)), Math.abs(u[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]);
-  const mid = add(a, add(scale(u, L1 * ca), scale(bend, L1 * sa)));
+  let bend = normalize(sub(pole, scale(u, along)), Math.abs(u[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]);
+  const centre = add(a, scale(u, L1 * ca)), rad = L1 * sa;
+  // The joint may turn about the limb's own line, a circle of places it can
+  // be: a knee bent toward its pole under hips this low went through the
+  // floor (Adam's 14 px, a graphics review, 2026-11-09). Turned the least way
+  // round that circle that keeps it at `floor` or above, the knee goes out to
+  // the side instead, as a real one does.
+  if (centre[1] + bend[1] * rad < floor && rad > 1e-6) {
+    const side = cross(u, bend);
+    const A = bend[1], B = side[1], Rr = Math.hypot(A, B), q = (floor - centre[1]) / rad;
+    const phi = Math.atan2(B, A);
+    let th = phi;
+    if (Rr > 1e-9 && q / Rr <= 1) {
+      const w = Math.acos(Math.max(-1, q / Rr));
+      const near = (x) => Math.abs(Math.atan2(Math.sin(x), Math.cos(x)));
+      th = near(phi - w) < near(phi + w) ? phi - w : phi + w;
+    }
+    bend = normalize(add(scale(bend, Math.cos(th)), scale(side, Math.sin(th))));
+  }
+  const mid = add(centre, scale(bend, rad));
   // The hinge the joint turns about. Both bones of the limb twist from this one
   // axis: u and bend are perpendicular, so it never degenerates, where using
   // `bend` itself as each bone's reference did whenever a forearm swung into
@@ -123,6 +141,11 @@ const onHinge = (hinge, from, to) => cross(hinge, normalize(sub(to, from)));
 export function solvePose(rig, P, elbow = {}, turn = null) {
   const U = GL3D.UNIT;
   const pt = (x, y, z = 0) => [x / U, -y / U, z];
+  // The body over the feet, moved forward by P.hipX (a kick driving the hips
+  // in after the foot, drawFighter's landStrike): the hips, the trunk, the
+  // head and the hands go with it; the feet stay where the pose puts them.
+  const hx = P.hipX || 0;
+  const bt = (x, y, z = 0) => pt(x + hx, y, z);
   const fit = rig.fit;
   const own = !!fit;
   const lean2D = (P.bodyLean || 0) * GL3D.LEAN;
@@ -167,12 +190,12 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
   };
 
   // ---- torso: joints spaced along the leaned torso, stretched to its length
-  const hip = pt(0, P.hipY);
+  const hip = bt(0, P.hipY);
   const [scx, scy] = socket(0, P.shoulderY + GL3D.SOCKET_DROP);
   // A model sculpted to its own proportions keeps its own torso: the 2D
   // figure's is shorter, built under a head three times the size, and
   // stretching a real body to it squashed the spine into a hunch.
-  const shoulderC = own ? add(hip, scale(chestUp, rig.torso)) : pt(scx, scy);
+  const shoulderC = own ? add(hip, scale(chestUp, rig.torso)) : bt(scx, scy);
   const ts = own ? 1 : dist(hip, shoulderC) / rig.torso;
   const spineJ = add(hip, scale(pelUp, rig.spineOff * ts));
   const chestJ = add(hip, scale(chestUp, rig.chestOff * ts));
@@ -180,7 +203,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
 
   const headR = P.headR ?? STYLIZE.HEAD_R;
   const headTop = P.shoulderY - (headR - STYLIZE.NECK_OVERLAP);
-  const [hx, hy] = socket(P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX, Math.max(P.headY, headTop));
+  const [headX, headY] = socket(P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX, Math.max(P.headY, headTop));
   let hs, headBase, headTail, neckFwd = chestFwd, faceFwd = headFwd;
   if (own) {
     // ...and its head stays on its own neck. From the 2D pose it takes only
@@ -192,7 +215,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     // neck takes part of the trunk's lean and the head little of it, so the
     // head does not jut forward with the shoulders. A snap back from a hit
     // goes less far than a nod forward.
-    const h2 = sub(pt(hx, hy), pt(scx, scy));
+    const h2 = sub(pt(headX, headY), pt(scx, scy));
     const lim = fit.nod ?? 0.35;
     const nod = Math.max(-lim * 0.7, Math.min(lim, Math.atan2(h2[0], h2[1]) - lean2D));
     const neckUp = tip([0, 1, 0], leanRad * 0.6 + nod);
@@ -204,7 +227,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     faceFwd = tip([Math.cos(yh), 0, Math.sin(yh)], leanRad * 0.15 + nod);
   } else {
     hs = (headR / STYLIZE.HEAD_R) * GL3D.HEAD_SCALE;
-    headBase = sub(pt(hx, hy), scale(chestUp, rig.skull * hs));
+    headBase = sub(bt(headX, headY), scale(chestUp, rig.skull * hs));
     headTail = add(headBase, scale(chestUp, rig.rest.head.len * hs));
   }
 
@@ -232,7 +255,7 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
       return add(o, tip([u[0] * c - u[2] * sn, u[1], u[0] * sn + u[2] * c], leanRad));
     };
     const depthOf = a ? turned(shoulder, -a, shoulderC) : shoulder;
-    let target = pt(hand.x, hand.y, depthOf[2] * depth);
+    let target = bt(hand.x, hand.y, depthOf[2] * depth);
     if (a) target = turned(target, a, shoulderC);
     // Elbows point down and back, and out a little. drawFighter bends toward
     // the perpendicular of shoulder-to-hand instead, which flips sign when a
@@ -278,8 +301,20 @@ export function solvePose(rig, P, elbow = {}, turn = null) {
     const target = pt(foot.x, foot.y - GL3D.ANKLE_PX, hipJ[2] * GL3D.FOOT_DEPTH);
     const pole = normalize(add([1, 0, 0], scale(pelLat, flare * GL3D.KNEE_FLARE)));
     const th = rig.rest[`thigh.${side}`], sn = rig.rest[`shin.${side}`], ft = rig.rest[`foot.${side}`];
+    // Hips driven in after a kick would pull a planted foot behind them out
+    // past the leg's length (Jeff's by a tenth): the foot skids in after them
+    // instead, no further than they went, so the leg stays a leg.
+    if (hx > 0 && foot.y >= 0 && target[0] < hipJ[0]) {
+      const reach = (th.len + sn.len) * stride * GL3D.SKID_REACH;
+      const across = (target[1] - hipJ[1]) ** 2 + (target[2] - hipJ[2]) ** 2;
+      if (reach * reach > across) {
+        const most = hipJ[0] - Math.sqrt(reach * reach - across);
+        if (most > target[0]) target[0] = Math.min(most, target[0] + hx / U);
+      }
+    }
     // a planted foot always reaches the floor
-    const s = ik(hipJ, target, th.len * stride, sn.len * stride, pole, foot.y < 0 ? most : Infinity);
+    const s = ik(hipJ, target, th.len * stride, sn.len * stride, pole, foot.y < 0 ? most : Infinity,
+      P.rot ? -Infinity : GL3D.KNEE_FLOOR);   // not in a fall, where the model is turned off its feet
     const girth = build * G('LEG_GIRTH');
     set(`thigh.${side}`, hipJ, s.mid, onHinge(s.hinge, hipJ, s.mid), dist(hipJ, s.mid) / th.len, girth, girth);
     set(`shin.${side}`, s.mid, s.end, onHinge(s.hinge, s.mid, s.end), dist(s.mid, s.end) / sn.len, girth, girth);

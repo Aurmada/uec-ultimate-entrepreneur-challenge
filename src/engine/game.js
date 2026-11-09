@@ -479,6 +479,7 @@ export class Game {
 
   // ---------------- specials plumbing ----------------
   onSpecialStart(f, sp) {
+    this.hud.hideHint?.();      // a hint across their feet through the special
     this.fx.flash(f.def.c.accent, 0.12);
     this.fx.cutIn(f, sp.name || 'SPECIAL', null, f.x <= this.other(f).x ? -1 : 1);
     if (sp.type === 'grab') this.audio.sfx('grab');
@@ -706,7 +707,7 @@ export class Game {
           d.y = STAGE.FLOOR - 6;
           d.landed = true;
           this.fx.dust(d.x, STAGE.FLOOR, 6);
-          this.audio.sfx('block');
+          this.audio.sfx('drop');
         }
         continue;
       }
@@ -779,6 +780,9 @@ export class Game {
 
   onUnicorn(f) {
     this.audio.sfx('unicorn');
+    // "FULL METER, press U" said nothing once U was pressed, and stayed up
+    // through the super it announced (HUD only, not the simulation)
+    this.hud.hideHint?.();
     this.fx.hitstop(UNICORN.POP_FREEZE);
     this.fx.flash('#ffffff', 0.5);
     this.fx.ring(f.x, f.y - 80, '#ffd23f', 900, 8, 0.5);

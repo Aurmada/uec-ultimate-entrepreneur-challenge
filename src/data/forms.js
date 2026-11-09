@@ -825,13 +825,15 @@ const BOX_DELIVERY = {
 
 // BURN IT ALL: both fists hauled up over his head, then brought down on you
 // with everything, the step and the whole body behind them; winded after,
-// bent over, before he straightens up.
+// bent over, before he straightens up. The fists go up behind his head, the
+// elbows out: straight up over it, his arms hid his head (a graphics review,
+// 2026-11-09).
 const BRAWL_BURN = {
   own: true,
   keys: carried([
     { t: 0,    joints: BRAWL_AT },
-    { t: 0.55, joints: { armF: { x: 30, y: -222 }, armB: { x: 10, y: -218 }, hipY: B_HIP - 4, headX: -2, bodyLean: -0.12, twist: -0.05, sx: 1, sy: 1.04 }, ease: 'outCubic' },
-    { t: 0.95, joints: { armF: { x: 22, y: -230 }, armB: { x: 4, y: -226 }, bodyLean: -0.16, sy: 1.06 }, ease: 'outQuad' },
+    { t: 0.55, joints: { armF: { x: -16, y: -210 }, armB: { x: -32, y: -206 }, hipY: B_HIP - 4, headX: 4, bodyLean: -0.04, twist: -0.05, sx: 1, sy: 1.04 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: -22, y: -216 }, armB: { x: -38, y: -212 }, bodyLean: -0.06, sy: 1.06 }, ease: 'outQuad' },
     { t: 1.12, joints: { armF: { x: 138, y: -112 }, armB: { x: 120, y: -116 }, hipY: B_HIP + 8, headX: 8, bodyLean: 0.5, twist: 0.04, sx: 1.1, sy: 0.92, legF: { x: 50, y: 0 }, legB: { x: -34, y: 0 } }, ease: 'outBack', smear: true },
     { t: 2,    joints: { armF: { x: 134, y: -110 }, armB: { x: 116, y: -114 } }, hold: true },
     { t: 2.5,  joints: { armF: { x: 72, y: -108 }, armB: { x: 52, y: -114 }, hipY: B_HIP + 4, headX: 6, bodyLean: 0.32, twist: 0, sx: 1.06, sy: 0.96, legF: { x: 40, y: 0 }, legB: { x: -32, y: 0 } }, ease: 'outQuad' },
@@ -1108,16 +1110,19 @@ const FENCE_STEAL = {
   ]),
 };
 
-// Lobbed underhand by the pocket hand, which goes straight back in.
+// Lobbed underhand by the pocket hand, which goes straight back in: swung
+// back low past the hip and up through the release. The lead hand comes in to
+// the chest out of its way; left out in front, the release read as both arms
+// punching straight out.
 const FENCE_BOMB = {
   own: true,
   keys: carried([
     { t: 0, hand: 'open', joints: FENCE_AT },
-    { t: 0.55, hand: 'open', joints: { armB: { x: -20, y: -98 }, twist: -0.12 }, ease: 'outCubic' },
-    { t: 0.95, hand: 'open', joints: { armB: { x: -26, y: -96 } }, ease: 'outQuad' },
-    { t: 1.1, hand: 'open', joints: { armB: { x: 80, y: -160 }, headX: F_HEADX + 1, bodyLean: 0.1, twist: 0.2 }, ease: 'outBack', smear: true },
-    { t: 2, hand: 'open', joints: { armB: { x: 80, y: -162 } }, hold: true },
-    { t: 2.5, hand: 'open', joints: { armB: { x: 6, y: -108 }, headX: F_HEADX, bodyLean: 0.04, twist: 0.02 }, ease: 'outQuad' },
+    { t: 0.55, hand: 'open', joints: { armB: { x: -30, y: -78 }, armF: { x: 38, y: -128 }, twist: -0.25 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armB: { x: -36, y: -74 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'open', joints: { armB: { x: 58, y: -136 }, headX: F_HEADX + 1, bodyLean: 0.1, twist: 0.25 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armB: { x: 64, y: -170 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armB: { x: 6, y: -108 }, armF: { x: 56, y: -144 }, headX: F_HEADX, bodyLean: 0.04, twist: 0.02 }, ease: 'outQuad' },
     { t: 3, hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1280,18 +1285,20 @@ const ROLL_PLATFORM = {
 };
 
 // SAFETY MEMO: the pocket hand brings out the memo and flicks it at you,
-// twice (they leave at 1 and 1.4 of the clock), then goes back in.
+// twice (they leave at 1 and 1.4 of the clock), then goes back in. Each flick
+// comes from up by the ear, and the lead hand draws in to the chest: left out
+// in front, the flicks read as both arms held straight out.
 const FENCE_MEMO = {
   own: true,
   keys: carried([
     { t: 0, hand: 'open', joints: FENCE_AT },
-    { t: 0.55, hand: 'open', joints: { armB: { x: 10, y: -150 }, twist: -0.12 }, ease: 'outCubic' },
-    { t: 0.95, hand: 'open', joints: { armB: { x: 14, y: -160 } }, ease: 'outQuad' },
-    { t: 1.03, hand: 'open', joints: { armB: { x: 84, y: -150 }, headX: F_HEADX + 1, bodyLean: 0.1, twist: 0.18 }, ease: 'outBack', smear: true },
-    { t: 1.2, hand: 'open', joints: { armB: { x: 20, y: -156 }, twist: -0.08 }, ease: 'inOutCubic' },
-    { t: 1.44, hand: 'open', joints: { armB: { x: 86, y: -148 }, twist: 0.2 }, ease: 'outBack', smear: true },
-    { t: 2, hand: 'open', joints: { armB: { x: 84, y: -148 } }, hold: true },
-    { t: 2.5, hand: 'open', joints: { armB: { x: 4, y: -108 }, headX: F_HEADX, bodyLean: 0.04, twist: 0.02 }, ease: 'outQuad' },
+    { t: 0.55, hand: 'open', joints: { armB: { x: 12, y: -168 }, armF: { x: 36, y: -126 }, twist: -0.18 }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armB: { x: 16, y: -174 } }, ease: 'outQuad' },
+    { t: 1.03, hand: 'open', joints: { armB: { x: 82, y: -148 }, headX: F_HEADX + 1, bodyLean: 0.1, twist: 0.2 }, ease: 'outBack', smear: true },
+    { t: 1.2, hand: 'open', joints: { armB: { x: 24, y: -170 }, twist: -0.1 }, ease: 'inOutCubic' },
+    { t: 1.44, hand: 'open', joints: { armB: { x: 84, y: -146 }, twist: 0.22 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'open', joints: { armB: { x: 82, y: -146 } }, hold: true },
+    { t: 2.5, hand: 'open', joints: { armB: { x: 4, y: -108 }, armF: { x: 56, y: -144 }, headX: F_HEADX, bodyLean: 0.04, twist: 0.02 }, ease: 'outQuad' },
     { t: 3, hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1326,15 +1333,19 @@ const PEEK_PUMP = {
 };
 
 // RUG PULL: down low, both hands on the floor in front of her, and the rug
-// yanked back as she lays it.
+// yanked back as she lays it. Her hands stopped at her knees: the trunk now
+// tips well over the squat (a sculpted body keeps its own trunk, so the
+// reach down comes from the lean), and the rear hand goes where it is written
+// rather than riding her lean as a guarding fist does.
 const PEEK_RUG = {
   own: true,
+  rearHome: false,
   keys: carried([
     { t: 0, hand: 'fist', joints: PEEK_AT },
-    { t: 0.55, hand: 'open', joints: { armF: { x: 62, y: -70 }, armB: { x: 52, y: -74 }, hipY: K_HIP + 24, shoulderY: K_SHOULDER + 30, headY: K_HEAD + 32, headX: 6, bodyLean: 0.5, sx: 1.06, sy: 0.9, legF: { x: 34, y: 0 }, legB: { x: -24, y: 0 } }, ease: 'outCubic' },
-    { t: 0.95, hand: 'open', joints: { armF: { x: 66, y: -64 }, armB: { x: 56, y: -68 } }, ease: 'outQuad' },
-    { t: 1.1, hand: 'fist', joints: { armF: { x: 20, y: -76 }, armB: { x: 10, y: -80 }, bodyLean: 0.3, twist: -0.2 }, ease: 'outBack', smear: true },
-    { t: 2, hand: 'fist', joints: { armF: { x: 20, y: -76 } }, hold: true },
+    { t: 0.55, hand: 'open', joints: { armF: { x: 70, y: -16 }, armB: { x: 54, y: -22 }, hipY: K_HIP + 30, shoulderY: K_SHOULDER + 30, headY: K_HEAD + 32, headX: 6, bodyLean: 1.5, sx: 1.06, sy: 0.9, legF: { x: 34, y: 0 }, legB: { x: -24, y: 0 } }, ease: 'outCubic' },
+    { t: 0.95, hand: 'open', joints: { armF: { x: 72, y: -12 }, armB: { x: 56, y: -20 } }, ease: 'outQuad' },
+    { t: 1.1, hand: 'fist', joints: { armF: { x: 30, y: -24 }, armB: { x: 20, y: -28 }, bodyLean: 1.1, twist: -0.2 }, ease: 'outBack', smear: true },
+    { t: 2, hand: 'fist', joints: { armF: { x: 28, y: -26 } }, hold: true },
     { t: 2.5, hand: 'fist', joints: { armF: { x: 50, y: -130 }, armB: { x: 40, y: -140 }, hipY: K_HIP + 6, shoulderY: K_SHOULDER + 6, headY: K_HEAD + 6, headX: 2, bodyLean: 0.2, twist: 0, sx: 0.97, sy: 1, legF: { x: 22, y: 0 }, legB: { x: -20, y: 0 } }, ease: 'outQuad' },
     { t: 3, hand: 'fist', joints: PEEK_AT, ease: 'inOutCubic' },
   ]),
@@ -1360,14 +1371,16 @@ const CALM_CONVICTION = {
 // 1 across the two, ending in the guard by 0.85, after which computePose hands
 // over to the live idle.
 
-// He taps his gloves together twice in front of him and puts them up.
+// He taps his gloves together twice in front of him and puts them up. The
+// gestures below are big enough to read at a phone's fight size (a fighter
+// there is about 100 px tall): a hand moving 8 px, as his taps did, did not.
 const BOX_INTRO = {
   keys: carried([
-    { t: 0, joints: { ...BOX_AT, armF: { x: 40, y: -150 }, armB: { x: 34, y: -150 }, bodyLean: 0.08 } },
-    { t: 0.2, joints: { armF: { x: 44, y: -160 }, armB: { x: 38, y: -160 } }, ease: 'inOutCubic' },
-    { t: 0.3, joints: { armF: { x: 52, y: -150 }, armB: { x: 30, y: -150 } }, ease: 'inOutCubic' },
-    { t: 0.42, joints: { armF: { x: 44, y: -160 }, armB: { x: 38, y: -160 } }, ease: 'inOutCubic' },
-    { t: 0.6, joints: { armF: { x: 52, y: -150 }, armB: { x: 30, y: -150 } }, ease: 'inOutCubic' },
+    { t: 0, joints: { ...BOX_AT, armF: { x: 62, y: -146 }, armB: { x: 20, y: -142 }, bodyLean: 0.08 } },
+    { t: 0.2, joints: { armF: { x: 44, y: -162 }, armB: { x: 38, y: -162 }, hipY: BOX_AT.hipY + 4 }, ease: 'inOutCubic' },
+    { t: 0.32, joints: { armF: { x: 64, y: -144 }, armB: { x: 18, y: -140 }, hipY: BOX_AT.hipY }, ease: 'inOutCubic' },
+    { t: 0.44, joints: { armF: { x: 44, y: -162 }, armB: { x: 38, y: -162 }, hipY: BOX_AT.hipY + 4 }, ease: 'inOutCubic' },
+    { t: 0.6, joints: { armF: { x: 60, y: -146 }, armB: { x: 22, y: -142 }, hipY: BOX_AT.hipY }, ease: 'inOutCubic' },
     { t: 0.85, joints: BOX_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1376,20 +1389,24 @@ const BOX_INTRO = {
 const BRAWL_INTRO = {
   keys: carried([
     { t: 0, joints: { ...BRAWL_AT, armF: { x: 34, y: -156 }, armB: { x: 20, y: -146 }, headX: -2, bodyLean: 0.04 } },
-    { t: 0.15, joints: { armF: { x: 16, y: -150 } }, ease: 'inOutCubic' },
-    { t: 0.3, joints: { armF: { x: 44, y: -162 } }, ease: 'inOutCubic' },
-    { t: 0.45, joints: { armF: { x: 16, y: -148 } }, ease: 'inOutCubic' },
-    { t: 0.6, joints: { armF: { x: 44, y: -160 }, headX: 0 }, ease: 'inOutCubic' },
+    { t: 0.15, joints: { armF: { x: 12, y: -148 }, bodyLean: -0.06 }, ease: 'inOutCubic' },
+    { t: 0.3, joints: { armF: { x: 56, y: -176 }, bodyLean: 0.04 }, ease: 'inOutCubic' },
+    { t: 0.45, joints: { armF: { x: 12, y: -146 }, bodyLean: -0.06 }, ease: 'inOutCubic' },
+    { t: 0.6, joints: { armF: { x: 50, y: -168 }, headX: 0, bodyLean: 0.04 }, ease: 'inOutCubic' },
     { t: 0.85, joints: BRAWL_AT, ease: 'inOutCubic' },
   ]),
 };
 
-// He stands up straight to fix a cufflink, then settles into his hunch.
+// He stands up straight to fix a cufflink, tugging the cuff down twice, rolls
+// his neck, then settles into his hunch. (The cuff moved 4 px: on a phone he
+// only stood there.)
 const GRAB_INTRO = {
   keys: carried([
-    { t: 0, hand: 'open', joints: { ...GRAB_AT, armF: { x: 36, y: -122 }, armB: { x: 34, y: -120 }, hipY: -80, shoulderY: -150, headY: -176, headX: 2, bodyLean: 0.02, sx: 1, sy: 1 } },
-    { t: 0.3, hand: 'open', joints: { armF: { x: 38, y: -124 } }, ease: 'inOutCubic' },
-    { t: 0.55, hand: 'open', joints: { armF: { x: 34, y: -120 } }, ease: 'inOutCubic' },
+    { t: 0, hand: 'open', joints: { ...GRAB_AT, armF: { x: 36, y: -124 }, armB: { x: 34, y: -122 }, hipY: -80, shoulderY: -150, headY: -176, headX: 2, bodyLean: 0.02, sx: 1, sy: 1 } },
+    { t: 0.18, hand: 'open', joints: { armF: { x: 52, y: -112 }, armB: { x: 22, y: -130 } }, ease: 'inOutCubic' },
+    { t: 0.3, hand: 'open', joints: { armF: { x: 36, y: -126 }, armB: { x: 34, y: -124 } }, ease: 'inOutCubic' },
+    { t: 0.42, hand: 'open', joints: { armF: { x: 52, y: -112 }, armB: { x: 22, y: -130 } }, ease: 'inOutCubic' },
+    { t: 0.6, hand: 'open', joints: { armF: { x: 28, y: -118 }, armB: { x: 14, y: -110 }, shoulderY: -156, headX: 8, bodyLean: 0.08 }, ease: 'inOutCubic' },
     { t: 0.85, hand: 'open', joints: GRAB_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1398,10 +1415,10 @@ const GRAB_INTRO = {
 const SHOW_INTRO = {
   keys: carried([
     { t: 0, hand: 'open', joints: { ...SHOW_AT, armF: { x: 50, y: -206 }, bodyLean: -0.08, twist: -0.1 } },
-    { t: 0.15, hand: 'open', joints: { armF: { x: 66, y: -210 } }, ease: 'inOutCubic' },
-    { t: 0.3, hand: 'open', joints: { armF: { x: 44, y: -206 } }, ease: 'inOutCubic' },
-    { t: 0.45, hand: 'open', joints: { armF: { x: 66, y: -210 } }, ease: 'inOutCubic' },
-    { t: 0.6, hand: 'open', joints: { armF: { x: 50, y: -200 }, twist: -0.04 }, ease: 'inOutCubic' },
+    { t: 0.15, hand: 'open', joints: { armF: { x: 76, y: -200 }, twist: -0.02 }, ease: 'inOutCubic' },
+    { t: 0.3, hand: 'open', joints: { armF: { x: 36, y: -214 }, twist: -0.14 }, ease: 'inOutCubic' },
+    { t: 0.45, hand: 'open', joints: { armF: { x: 76, y: -200 }, twist: -0.02 }, ease: 'inOutCubic' },
+    { t: 0.6, hand: 'open', joints: { armF: { x: 46, y: -206 }, twist: -0.06 }, ease: 'inOutCubic' },
     { t: 0.85, hand: 'open', joints: SHOW_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1409,11 +1426,11 @@ const SHOW_INTRO = {
 // He beckons you on with the lead hand, twice, then drops it.
 const ROLL_INTRO = {
   keys: carried([
-    { t: 0, hand: 'open', joints: { ...ROLL_AT, armF: { x: 60, y: -140 }, bodyLean: -0.06 } },
-    { t: 0.2, hand: 'open', joints: { armF: { x: 44, y: -150 } }, ease: 'inOutCubic' },
-    { t: 0.35, hand: 'open', joints: { armF: { x: 62, y: -140 } }, ease: 'inOutCubic' },
-    { t: 0.5, hand: 'open', joints: { armF: { x: 44, y: -150 } }, ease: 'inOutCubic' },
-    { t: 0.65, hand: 'open', joints: { armF: { x: 56, y: -134 } }, ease: 'inOutCubic' },
+    { t: 0, hand: 'open', joints: { ...ROLL_AT, armF: { x: 68, y: -136 }, bodyLean: -0.06 } },
+    { t: 0.2, hand: 'open', joints: { armF: { x: 34, y: -158 }, bodyLean: -0.1 }, ease: 'inOutCubic' },
+    { t: 0.35, hand: 'open', joints: { armF: { x: 70, y: -136 }, bodyLean: -0.04 }, ease: 'inOutCubic' },
+    { t: 0.5, hand: 'open', joints: { armF: { x: 34, y: -158 }, bodyLean: -0.1 }, ease: 'inOutCubic' },
+    { t: 0.65, hand: 'open', joints: { armF: { x: 58, y: -134 }, bodyLean: -0.06 }, ease: 'inOutCubic' },
     { t: 0.85, hand: 'fist', joints: ROLL_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1423,9 +1440,9 @@ const ROLL_INTRO = {
 const FENCE_INTRO = {
   keys: carried([
     { t: 0, hand: 'open', joints: { ...FENCE_AT, armF: { x: 6, y: -104 }, bodyLean: -0.04 } },
-    { t: 0.25, hand: 'open', joints: { bodyLean: 0.05 }, ease: 'inOutCubic' },
-    { t: 0.5, hand: 'open', joints: { bodyLean: -0.05 }, ease: 'inOutCubic' },
-    { t: 0.7, hand: 'open', joints: { armF: { x: 40, y: -130 }, bodyLean: 0.02 }, ease: 'inOutCubic' },
+    { t: 0.25, hand: 'open', joints: { bodyLean: 0.14, headX: F_HEADX + 4, hipY: F_HIP + 3 }, ease: 'inOutCubic' },
+    { t: 0.5, hand: 'open', joints: { bodyLean: -0.14, headX: F_HEADX - 3, hipY: F_HIP - 2 }, ease: 'inOutCubic' },
+    { t: 0.7, hand: 'open', joints: { armF: { x: 40, y: -130 }, bodyLean: 0.02, headX: F_HEADX, hipY: F_HIP }, ease: 'inOutCubic' },
     { t: 0.85, hand: 'open', joints: FENCE_AT, ease: 'inOutCubic' },
   ]),
 };
@@ -1447,9 +1464,9 @@ const EN_INTRO = {
 const PEEK_INTRO = {
   keys: carried([
     { t: 0, hand: 'open', joints: { ...PEEK_AT, armF: { x: 60, y: -196 }, hipY: -78, shoulderY: -148, headY: -172, bodyLean: 0.04 } },
-    { t: 0.15, hand: 'open', joints: { armF: { x: 72, y: -200 } }, ease: 'inOutCubic' },
-    { t: 0.3, hand: 'open', joints: { armF: { x: 58, y: -196 } }, ease: 'inOutCubic' },
-    { t: 0.45, hand: 'open', joints: { armF: { x: 72, y: -200 } }, ease: 'inOutCubic' },
+    { t: 0.15, hand: 'open', joints: { armF: { x: 84, y: -188 } }, ease: 'inOutCubic' },
+    { t: 0.3, hand: 'open', joints: { armF: { x: 52, y: -204 } }, ease: 'inOutCubic' },
+    { t: 0.45, hand: 'open', joints: { armF: { x: 84, y: -188 } }, ease: 'inOutCubic' },
     { t: 0.6, hand: 'open', joints: { armF: { x: 60, y: -186 } }, ease: 'inOutCubic' },
     { t: 0.85, hand: 'fist', joints: PEEK_AT, ease: 'inOutCubic' },
   ]),
@@ -1622,11 +1639,14 @@ export const FORMS = {
         { t: 1,   hand: 'fist', joints: { armF: { x: 14, y: -144 }, armB: { x: -4, y: -100 }, hipY: -84, shoulderY: -152, headY: -178, headX: 2, bodyLean: -0.02, sy: 1.02 }, ease: 'inOutCubic' },
       ]),
     },
-    // He stalks you, slow and heavy: hunched lower than he stands, his weight
-    // rolling from foot to foot, the open hand pushing out with each step.
+    // He stalks you, slow and heavy: hunched over, his weight rolling from
+    // foot to foot, the open hand pushing out with each step. His guard is
+    // already a wrestler's crouch, so the walk keeps his hips where the guard
+    // has them: lower still, his rear knee came down to 18 px off the floor
+    // in the stride and he seemed to walk on his knees.
     // He barely leaves the floor and does not look as if he means to: a
     // heavy hop, the knees only bent, the hunch kept.
-    walk: { cycle: 100, slip: 0.3, lift: 4, bob: 4, low: 4, lean: 0.26, back: 0.18, roll: 0.06, hip: 0.04, swing: 4 },
+    walk: { cycle: 100, slip: 0.3, lift: 4, bob: 2, low: -4, lean: 0.26, back: 0.18, roll: 0.06, hip: 0.04, swing: 4 },
     jump: {
       up: { legF: { x: 28, y: -18 }, legB: { x: -22, y: -14 }, lean: 0.26 },
       down: { legF: { x: 30, y: -8 }, legB: { x: -26, y: -6 }, lean: 0.28 },
@@ -1677,10 +1697,14 @@ export const FORMS = {
       keys: carried([
         // a hand on his chest (himself), then both swept out and up to the
         // crowd, the chest out (the presenting hand alone, a little higher,
-        // was his guard)
-        { t: 0,   hand: 'open', joints: { armF: { x: 40, y: -158 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.06 } },
-        { t: 0.5, hand: 'open', joints: { armF: { x: 86, y: -204 }, armB: { x: -32, y: -172 }, hipY: -85, shoulderY: -153, headY: -185, headX: -2, bodyLean: -0.15 }, ease: 'inOutCubic' },
-        { t: 1,   hand: 'open', joints: { armF: { x: 40, y: -158 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.06 }, ease: 'inOutCubic' },
+        // was his guard). The device hand goes out and back under his chin,
+        // not past his face: carried at face height, the tablet hid it
+        // (a graphics review, 2026-11-09).
+        { t: 0,    hand: 'open', joints: { armF: { x: 40, y: -158 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.06 } },
+        { t: 0.22, hand: 'open', joints: { armF: { x: 62, y: -180 }, armB: { x: 8, y: -118 }, bodyLean: -0.1 }, ease: 'inOutCubic' },
+        { t: 0.5,  hand: 'open', joints: { armF: { x: 86, y: -204 }, armB: { x: -36, y: -136 }, hipY: -85, shoulderY: -153, headY: -185, headX: -2, bodyLean: -0.15 }, ease: 'inOutCubic' },
+        { t: 0.78, hand: 'open', joints: { armF: { x: 62, y: -180 }, armB: { x: 8, y: -118 }, bodyLean: -0.1 }, ease: 'inOutCubic' },
+        { t: 1,    hand: 'open', joints: { armF: { x: 40, y: -158 }, armB: { x: 30, y: -150 }, hipY: -84, shoulderY: -152, headY: -182, headX: 2, bodyLean: -0.06 }, ease: 'inOutCubic' },
       ]),
     },
     // He struts: tall, the chest out, the knees lifting high, the presenting

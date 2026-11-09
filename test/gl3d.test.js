@@ -180,6 +180,14 @@ test('a prop follows its part\'s states', () => {
   // and he blocks with one briefcase, not two: his own goes while the
   // guard's is up, and is back for everything else
   assert.equal(wearing(carl, 'block')('prop:case'), false, 'Carl blocks holding two briefcases');
+  // and Steve and Cathie blocked holding their device and tablet with it
+  // (a graphics review, 2026-11-09)
+  for (const [id, prop] of [['kai', 'device'], ['eleanor', 'tablet']]) {
+    const def = FIGHTERS.find((f) => f.id === id);
+    assert.equal(wearing(def, 'block')(`prop:${prop}`), false, `${id} blocks holding the ${prop} and the briefcase`);
+    assert.equal(wearing(def, 'idle')(`prop:${prop}`), true, `${id} has put the ${prop} away for good`);
+    assert.equal(wearing(def, 'block')('prop:guard-case'), true);
+  }
   for (const s of ['idle', 'walk', 'jump', 'crouch', 'attack', 'dash', 'hitstun', 'ko', 'victory']) assert.equal(wearing(carl, s)('prop:case'), true, `Carl puts his case down to ${s}`);
 });
 
@@ -485,4 +493,40 @@ test('a sway never exceeds its limit, and a turn or a teleport starts it over', 
   assert.equal(Math.hypot(...lag.head), 0, 'turning round flung the hair');
   lag = stepSway(s, worldAt(x + 400), -1, 22 / 60);
   assert.equal(Math.hypot(...lag.hips), 0, 'a teleport flung the coat');
+});
+
+// UNICORN MODE showed no horn in 3D on any of the nine: only the founder
+// model was built with one ('fx:unicorn'), and the 3D path draws no 2D horn
+// (a graphics review, 2026-11-09). A model without one is given it as it
+// loads (horn.js): out of the forehead, its base inside the skull and its tip
+// well over the crown, skinned to the head alone, and shown only in the super.
+test('every sculpted fighter wears a horn in UNICORN MODE, and only then', async () => {
+  const { hornFor } = await import('../src/engine/gl3d/horn.js');
+  const { MODELS3D } = await import('../src/data/models3d.js');
+  const src = readFileSync(new URL('../src/engine/gl3d/index.js', import.meta.url), 'utf8');
+  assert.match(src, /const horn = hornFor\(model, spec\);\s*if \(horn\) model\.primitives\.push\(horn\);/, 'the loader does not give it');
+  const ids = Object.keys(MODELS3D).filter((k) => k.startsWith('sculpt:'));
+  assert.equal(ids.length, 9);
+  for (const id of ids) {
+    const spec = MODELS3D[id];
+    const b = readFileSync(new URL(`../${spec.url}`, import.meta.url));
+    const model = extractModel(parseGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)));
+    const horn = hornFor(model, spec);
+    assert.ok(horn, `${id} has no horn`);
+    const head = model.jointNames.indexOf('head');
+    const crown = model.restHeads[head][1] + spec.leaf.head;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < horn.positions.length; i += 3) { lo = Math.min(lo, horn.positions[i + 1]); hi = Math.max(hi, horn.positions[i + 1]); }
+    assert.ok(lo < crown, `${id}'s horn floats over the head`);
+    assert.ok(hi > crown + spec.leaf.head * 0.4, `${id}'s horn barely clears the crown`);
+    for (let v = 0; v < horn.positions.length / 3; v++) assert.deepEqual([horn.joints[v * 4], horn.weights[v * 4]], [head, 1]);
+    assert.equal(Math.max(...horn.indices) < horn.positions.length / 3, true);
+    model.primitives.push(horn);
+    assert.equal(hornFor(model, spec), null, 'a model given a horn is given another');
+    const def = FIGHTERS.find((f) => f.id === id.slice(7));
+    assert.equal(wearing(def, 'idle', { unicorn: true })('fx:unicorn'), true);
+    assert.equal(wearing(def, 'idle', {})('fx:unicorn'), false);
+  }
+  const f = readFileSync(new URL('../assets/models/founder.glb', import.meta.url));
+  assert.equal(hornFor(extractModel(parseGLB(f.buffer.slice(f.byteOffset, f.byteOffset + f.byteLength))), MODELS3D.founder), null, 'the founder has two horns');
 });

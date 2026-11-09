@@ -203,3 +203,21 @@ test("a close portrait lightens a visor so the eyes behind it read, and a match 
   assert.match(src, /const glass = close \? closeGlass\(entry\) : undefined;/);
   assert.match(src, /glass: view\.glass \|\| entry\.glass/);
 });
+
+// A player's own founder wears the founder model, whose head is taller than
+// the cast's, and the close portrait cut its crown off on the select screen
+// (a graphics review, 2026-11-09). A head over BUST.CLOSE.HEAD_MOST widens
+// the frame by as much; the cast's are under it, framed as they were.
+test("a close portrait frames a taller head wider, and the cast's as before", async () => {
+  const { MODELS3D } = await import('../src/data/models3d.js');
+  const { GL3D } = await import('../src/config.js');
+  const { readFileSync } = await import('node:fs');
+  for (const [id, spec] of Object.entries(MODELS3D)) {
+    if (id.startsWith('sculpt:')) assert.ok(spec.leaf.head <= GL3D.BUST.CLOSE.HEAD_MOST, `${id}'s portrait would be reframed`);
+  }
+  assert.ok(MODELS3D.founder.leaf.head > GL3D.BUST.CLOSE.HEAD_MOST, "the founder's head is framed as the cast's");
+  const src = readFileSync(new URL('../src/engine/gl3d/index.js', import.meta.url), 'utf8');
+  assert.match(src, /const big = close \? Math\.max\(1, \(entry\.headLen \?\? 0\) \/ BUST\.CLOSE\.HEAD_MOST\) : 1;/);
+  assert.match(src, /const SPAN = span \* big;/);
+  assert.match(src, /entry\.headLen = spec\.leaf\?\.head \?\? null;/);
+});

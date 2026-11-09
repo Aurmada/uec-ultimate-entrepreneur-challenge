@@ -71,6 +71,21 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.20: ready for launch
+
+- 🦄 **The horn is back.** In 3D, UNICORN MODE now puts a gold horn on every founder, in the fight and in the cut-in.
+- 🥋 **Moves that land where they look.** Kicks reach as far as they hit, the hips driving in after the foot. Kim really lays RUG PULL on the floor, Scam's SAFETY MEMO and briefcase lob read as throws, and Adam no longer hides his head winding up BURN IT ALL.
+- 🧍 **Nobody sinks into the floor.** Knees stay above it in a deep crouch, and a knocked-out founder lies on the floor instead of half under it. Carl walks instead of shuffling on his knees.
+- 👋 **Bigger round-start gestures**, so you can see them on a phone. Steve keeps his tablet off his face when he wins, and Steve and Cathie put their gadgets away to block.
+- 🎨 **Mirror matches.** Pick the same founder as your rival and the second one comes out in a colourway of their own.
+- ✨ **Cleaner ink.** No black streaks down Jeff's nose or spikes in Steve's quiff.
+- 📋 **The select screen says what each special does**, your rival's included.
+- 📱 **Better on phones.** Sign-in scrolls to TRY ONE FIGHT FIRST, the touch buttons sit three rows high so they stay below the fighters' heads, TAP TO CONTINUE sits between the pads, names no longer break one letter a line, messages show in full, and holding the phone upright suggests turning it sideways.
+- 🔗 **Sharing and live play.** A friend's call-out card shows at full size, challenge and room links can be read, tapping outside the lobby cancels the search, a lobby that cannot connect offers the computer straight away, and sign-in tries again after a dropped connection instead of needing a reload.
+- ⌨️ **Keyboard.** Esc closes windows and goes back, fighters and styles can be picked with Tab and Enter, and the arrow keys move the volume slider. A new founder's details now survive a trip to HOW TO PLAY.
+- 🔊 **Small things.** A briefcase dropped on the stage thuds instead of making the block sound, ROUND 1 stands out from Demo Day's sign, and the LIVE dot no longer covers the L.
+- 🌐 Online, v3.20 still plays v3.19: nothing in the fight itself changed.
+
 ## What's new in v3.19: a faster, fairer fight
 
 - 🦄 **UNICORN MODE is special again.** The meter fills more slowly, so it comes about once a player a match instead of twice. Ordinary specials get a nameplate on their fighter's side; the full banner across a darkened stage is UNICORN MODE's alone.

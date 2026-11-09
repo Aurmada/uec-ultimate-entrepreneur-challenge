@@ -9,7 +9,7 @@ import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
-import { has3D, form3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D, athlete3D } from './gl3d/index.js';
+import { has3D, form3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D, athlete3D, sink3D } from './gl3d/index.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 import { FX_STYLE } from './fx.js';
 import { drawFigure, figureHead, figureFrame } from './figure.js';
@@ -234,8 +234,11 @@ function trackedAttackPose(f, atk) {
   // where the track starts: the stock guard (REST) for the shared tracks, the
   // fighter's own for a form's, or measured from REST the rear hand left a
   // form's guard by up to 4 px on the first frame and came back on the last.
+  // A move that puts the rear hand somewhere else on purpose (`rearHome:
+  // false`, Kim's RUG PULL down on the floor) has it placed where it is
+  // written: carried with her lean onto the rug, it went 38 px past it.
   const head = (P) => P.headX + (P.bodyLean || 0) * GL3D.HEAD_LEAN_PX;
-  pose.armB.x += head(pose) - head(track.own ? trackStart(track) : REST);
+  if (track.rearHome !== false) pose.armB.x += head(pose) - head(track.own ? trackStart(track) : REST);
   return pose;
 }
 
@@ -667,7 +670,7 @@ export function groundFall(P) {
     const under = down([P[l].x, P[l].y]) + r(l) + shift;
     if (under > 0) P[l] = { x: P[l].x - (under * s) / sx, y: P[l].y - (under * c) / sy };
   }
-  return { x: shift * s, y: shift * c };
+  return { x: shift * s, y: shift * c, shift };
 }
 
 // A basic punch, slap or kick lands where it hits. The forms write their
@@ -705,13 +708,19 @@ export function landStrike(f, P, t, form, body, athlete) {
       tx = ox + Math.sqrt(Math.max(0, r * r - up * up));
     }
     tx = Math.min(tx, box.x + box.w - m);
-    L = { limb, dx: (tx - x) / sx, dy: (ty - y) / sy };
+    // A kick that stops short of the box's far edge is pushed out to it, and
+    // the hips go with it (P.hipX), so the leg is no longer than it was: a
+    // straight leg cannot reach further on its own, and a foot short of the
+    // box hit from out of reach. Punches and slaps already reach.
+    const drive = limb === 'legF' ? Math.max(0, Math.min(GL3D.KICK_DRIVE, box.x + box.w - m - tx)) : 0;
+    L = { limb, dx: (tx + drive - x) / sx, dy: (ty - y) / sy, hip: drive / sx };
     LANDING.set(atk, L);
   }
   if (!L.dx && !L.dy) return;
   const k = attackPhaseT(f.stateT, atk.startup, atk.active, atk.recovery);
   const w = k < 1 ? ease.smooth(k) : k <= 2 ? 1 : 1 - ease.smooth(k - 2);
   P[L.limb] = { x: P[L.limb].x + L.dx * w, y: P[L.limb].y + L.dy * w };
+  if (L.hip) P.hipX = (P.hipX || 0) + L.hip * w;
 }
 
 // A form's own walk (forms.js `walk`): the feet staggered where the stance put
@@ -1869,7 +1878,11 @@ export function drawFighter(ctx, f, t) {
     if (athlete3D(def)) figureFrame(P);    // the athlete body stands on the figure's longer legs
     if (P.fall !== undefined) {
       const g = groundFall(P);
-      ctx.translate(g.x, g.y);
+      // and no lower than the model itself allows: laid by the 2D figure's
+      // points, a sculpt's own longer trunk went under the floor
+      const under = sink3D(def, P);
+      const lift = under === null ? 0 : Math.min(0, GL3D.LIE.SOLE - (under + g.shift));
+      ctx.translate(g.x + lift * Math.sin(P.rot || 0), g.y + lift * Math.cos(P.rot || 0));
     }
     if (form3D(def)) landStrike(f, P, t, form3D(def), body, athlete3D(def));
     const metrics = bufferMetrics(body);

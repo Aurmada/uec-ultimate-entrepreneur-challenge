@@ -22,7 +22,7 @@ import {
   renderMoveCard,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
-import { levelOffer, canSkipVictory, GUEST_SCREENS, guestFightOffered, pickGuestFight } from './ui/flow.js';
+import { levelOffer, canSkipVictory, GUEST_SCREENS, guestFightOffered, pickGuestFight, mirrorDef } from './ui/flow.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
 import { syncProfileUp, syncProfileDown, reportOnlineMatch, reportSoloMatch, fetchProfile } from './net/cloud.js';
 import {
@@ -136,7 +136,7 @@ function showScreen(id) {
   // Anything else would put an unnamed, faceless player on the global ladder.
   else if (AUTH.REQUIRED && currentUser() && !Save.profile && !PRE_PROFILE_OK.has(id)) {
     id = 'scr-profile';
-    renderProfile();
+    renderProfile({ keep: true });
   }
   if (!GUEST_SCREENS.has(id)) endGuestFight();
   if (id === 'scr-auth') refreshGuestOffer();
@@ -174,10 +174,12 @@ function reallyStartMatch(cfg) {
 
   input.mode = cfg.mode === 'versus' ? 'versus' : 'solo';
   input.reset();
+  // the same fighter on both sides: the second in a colourway of its own
+  const p2Def = mirrorDef(cfg.p1Def, cfg.p2Def);
 
   currentGame = new Game({
     p1: { def: cfg.p1Def, controller: p1Controller },
-    p2: { def: cfg.p2Def, controller: p2Controller },
+    p2: { def: p2Def, controller: p2Controller },
     arena: cfg.arena,
     mode: cfg.mode,
     difficulty: cfg.difficulty,
@@ -201,9 +203,9 @@ function reallyStartMatch(cfg) {
   // VS splash
   const vs = $('vsSplash');
   drawPortrait($('vsFace1'), cfg.p1Def);
-  drawPortrait($('vsFace2'), cfg.p2Def, { mirror: true });   // a 3D bust turns to face P1
+  drawPortrait($('vsFace2'), p2Def, { mirror: true });   // a 3D bust turns to face P1
   $('vsName1').textContent = cfg.p1Def.name;
-  $('vsName2').textContent = cfg.p2Def.name;
+  $('vsName2').textContent = p2Def.name;
   // the AI's level, said before every solo fight (it changed unannounced)
   const level = cfg.mode === 'solo' ? AI_LEVELS[cfg.difficulty]?.label : null;
   $('vsLevel').textContent = level || '';
@@ -443,6 +445,7 @@ let lobbyPairing = false;
 // With nobody else in the lobby there was no way on but CANCEL: after a
 // while waiting, a fight with the AI is offered instead.
 const LOBBY_AI_AFTER_MS = 20000;
+const LOBBY_HINT = 'Stay on this screen — you\'ll be matched automatically the moment another founder shows up.';
 let lobbyAiTimer = null;
 
 async function leaveLobby() {
@@ -467,6 +470,7 @@ async function enterLobby() {
   await leaveLobby();
   openModal('modal-lobby');
   setLobbyStatus('wait', 'Joining the lobby…', null);
+  $('lobbyHint').textContent = LOBBY_HINT;
   $('btn-lobby-ai').classList.add('hidden');
   lobbyAiTimer = setTimeout(() => {
     if (lobby && !lobbyPairing) $('btn-lobby-ai').classList.remove('hidden');
@@ -495,6 +499,11 @@ async function enterLobby() {
   } catch (e) {
     setLobbyStatus('wait', 'Could not reach the lobby — check your connection.', null);
     await leaveLobby();
+    // Nobody can join a lobby that is not there: no "stay on this screen", and
+    // the AI on offer now rather than after the 20 s wait that never came (it
+    // waited on a lobby this had already left).
+    $('lobbyHint').textContent = 'Fight the AI now, or try FIGHT A REAL PLAYER again in a moment.';
+    $('btn-lobby-ai').classList.remove('hidden');
   }
 }
 
@@ -555,7 +564,8 @@ async function joinLiveRoom(roomId) {
   try {
     await net.connect();
   } catch (e) {
-    setLiveStatus('wait', 'Could not join — the room may be gone.');
+    // a dropped connection said the room was gone, sending them looking for a new link
+    setLiveStatus('wait', 'Could not join — check your connection, or the room may have closed.');
     await endNetSession();
     return;
   }
@@ -647,7 +657,7 @@ function startOnlineMatch(cfg) {
   net.resetMatch();
   netAccum = 0;
   const hostDef = specToDef(cfg.host);
-  const guestDef = specToDef(cfg.guest);
+  const guestDef = mirrorDef(hostDef, specToDef(cfg.guest));
   // Both sides run this, so a character either peer rejects stops the match on
   // both clients rather than starting a fight only one of them believes in.
   if (!hostDef || !guestDef) {
@@ -1151,10 +1161,14 @@ function boot() {
   wireShareStrip();
 
   // ---- sign in ----
+  // A network failure said "Failed to fetch dynamically imported module:" and
+  // the CDN's address; it says what to do instead.
   const authFail = (e) => toast(
     /not enabled|unsupported|disabled/i.test(e?.message || '')
       ? '🔐 That provider isn\'t switched on yet — see README → Enabling sign-in.'
-      : `Sign-in failed: ${e?.message || e}`);
+      : /fetch|network|import|load/i.test(e?.message || '')
+        ? 'Sign-in could not connect. Check your connection and try again.'
+        : `Sign-in failed: ${e?.message || e}`);
   $('btn-account').onclick = () => {
     audio.sfx('click');
     if (currentUser()) {
