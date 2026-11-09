@@ -15,6 +15,7 @@ import { parseGLB, extractModel } from './glb.js';
 import { buildRig, solvePose, transformPoint } from './rig.js';
 import { createToon, roleColour, MAX_JOINTS } from './toon.js';
 import { hornFor } from './horn.js';
+import { clothFor } from './cloth.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import { FORMS } from '../../data/forms.js';
@@ -162,6 +163,8 @@ function load(id) {
       // UNICORN MODE's horn, made here for a model built without one (horn.js)
       const horn = hornFor(model, spec);
       if (horn) model.primitives.push(horn);
+      // and a skirt riding the hips handed to the legs as it falls (cloth.js)
+      entry.cloth = new Set(clothFor(model, spec));
       entry.rig = buildRig(model, spec);
       entry.model = model;                 // kept for each renderer's upload (gpuFor)
       if (!renderer.lost) gpuFor(entry, renderer);   // now, not on the first frame
@@ -261,8 +264,9 @@ export function sinkOf(entry, P) {
   if (!entry.samples) {
     const out = [];
     for (const p of entry.model.primitives) {
-      // what is always worn on the body (not props, effects or the other hand)
-      if (p.name !== 'body' && !p.name.startsWith('hair') && !p.name.startsWith('headwear')) continue;
+      // what is always worn on the body (not props, effects or the other hand),
+      // and a coat's skirt, which lies on the floor too (cloth.js)
+      if (p.name !== 'body' && !p.name.startsWith('hair') && !p.name.startsWith('headwear') && !entry.cloth?.has(p.name)) continue;
       for (let v = 0; v < p.positions.length / 3; v += SINK_EVERY) {
         out.push(p.positions[v * 3], p.positions[v * 3 + 1], p.positions[v * 3 + 2],
           p.joints[v * 4], p.joints[v * 4 + 1], p.joints[v * 4 + 2], p.joints[v * 4 + 3],

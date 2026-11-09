@@ -340,6 +340,14 @@ export const SCULPTED = {
       // laughing; serene even angry (calm)
       style: { eye: 'smile', iris: '#4a6e94', lash: 1, brow: { arch: 1.6, w: 0.8 }, mouth: 'warm', calm: true, lips: '#c07a78', blush: 0.6, lines: { crow: 2, smile: 1, brow: 1 } },
     },
+    // Her coat's skirt was built riding the hips (1.28 at the waist, under
+    // the jacket, to 0.77 above the knee) and stood out stiff in a crouch: from
+    // just under the waist it is handed to the thigh it hangs over, most of
+    // it by the hem, the sides to their own leg and the back shared between
+    // both a little less (engine/gl3d/cloth.js). Less still (0.25) pulled the
+    // back into a point behind her crouch; as much (1) wrapped it round her
+    // knees like shorts.
+    cloth: { 'prop:coat': { anchor: 'hips', legs: ['thigh.L', 'thigh.R'], from: 1.2, to: 0.85, follow: 0.85, back: 0.6 } },
     form: 'taiChi',
   },
 };
