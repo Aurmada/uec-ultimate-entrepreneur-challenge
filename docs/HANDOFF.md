@@ -55,7 +55,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.19 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/jeff-model` | The remodel of the cast and everything after it: v3.19 plus the v3.20 launch build | v3.20 committed, not pushed: waiting for the owner's word. 616 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it: v3.19 plus the v3.20 launch build | v3.20 committed, not pushed: waiting for the owner's word. 617 tests pass. |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -899,7 +899,7 @@ graphics, each playing the whole game in a browser in a copy of the repo
 for the owner (below). Nothing in the fight changed (`SIM_VERSION` stays 11:
 v3.20 and v3.19 play each other online); `lab/pixels.js` against v3.19 is
 identical in all 30 frames with the flags off and with `--flags gl`, except
-where noted. 616 tests pass.
+where noted. 617 tests pass.
 
 **The look-only list:**
 
@@ -1028,6 +1028,35 @@ where noted. 616 tests pass.
 - Smaller art notes: the Unicorn Club's neon unicorn and disco ball sit
   behind the HUD timer, the sponsor boards are hard to read under the scrim,
   and Lizbeth and Cathie are another similar pair (pale hair, blue jacket).
+
+**The final review.** A third fresh agent reviewed the whole change (the diff
+from v3.19) and probed it in a browser and in Node. It confirmed the fight is
+unchanged (five seeded AI matches, mirrored defs included, hash for hash
+against v3.19), the horn's geometry, the ink bias's passes, the knee floor in
+every crouch and never in the air, and `sinkOf` at 0.04 ms a knocked-out
+fighter a frame. What it found, all fixed:
+
+- **The mirror colourway recoloured almost every online guest**: every
+  player's own founder has the id `custom`, so two players meeting online
+  looked like a mirror. Same fighter now means the same id in the same
+  colours.
+- **The sign-in retry did not retry in Chromium**, which answers a second
+  import of an address that failed with the same failure without fetching it
+  again: a retry asks for the client under a fresh query (`clientUrl`),
+  proved against a local server that fails the first load.
+- **A key let go while the volume slider had the focus stayed held**, as
+  `input.js` skipped the release too: only the press is left to the control
+  now, and the fight resumes with every key let go.
+- **The UNICORN cut-in's bust had no horn**: it asks for it.
+- **Esc under the first-fight tutorial** went back on the screen behind it,
+  and **Esc stopped closing a window** once a slider or a link field had the
+  focus: only a field being typed in keeps Esc now, and the tutorial ignores
+  it.
+- Toasts shrank to half the screen once they could wrap: they take their own
+  width, up to 520 px.
+
+On a phone held sideways the select screen's special description is below
+the dossier's fold, reached by scrolling it.
 
 New lab tool: `lab/strip3d.js`, a strip of frames of one fighter in 3D
 through a move, a command, the special, the bomb or any state, posed as a

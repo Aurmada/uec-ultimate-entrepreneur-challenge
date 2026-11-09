@@ -50,9 +50,13 @@ export function pickGuestFight(ids, rand = Math.random) {
 // wheel, or, where they are nearly grey, light for dark; the skin and hair
 // stay, so it is still the same person. Render only: the colours are not in
 // the simulation, and both peers make the same one from the same fighter.
+// Same fighter means the same id in the same colours: every player's own
+// founder has the id 'custom', and compared by id alone two different players
+// online had the guest's chosen colours turned round the wheel.
 const MIRRORED = ['suit', 'suit2', 'accent', 'pants', 'shoe'];
+const sameColours = (a, b) => !!a && !!b && Object.keys({ ...a, ...b }).every((k) => a[k] === b[k]);
 export function mirrorDef(mine, theirs) {
-  if (!mine || !theirs || mine.id !== theirs.id || !theirs.c) return theirs;
+  if (!mine || !theirs || mine.id !== theirs.id || !sameColours(mine.c, theirs.c)) return theirs;
   const c = { ...theirs.c };
   for (const k of MIRRORED) if (c[k]) c[k] = mirrorColour(c[k]);
   return { ...theirs, c, mirrored: true };

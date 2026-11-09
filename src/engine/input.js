@@ -65,7 +65,9 @@ class Input {
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // never swallow browser shortcuts (Cmd+R, Ctrl+F…)
     // A control with focus keeps its keys: the pause menu's volume slider
     // could not be moved with the arrows, which the fight took.
-    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName || '') && e.code !== 'Escape') return;
+    // Only the press: a key let go there is let go in the fight too, or one
+    // held into the pause menu stayed held after it.
+    if (down && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName || '') && e.code !== 'Escape') return;
     if (down && (e.code === 'Escape' || e.code === 'KeyP')) {
       if (this.onPause) this.onPause();
       e.preventDefault();

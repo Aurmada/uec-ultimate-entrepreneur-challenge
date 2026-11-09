@@ -849,6 +849,10 @@ function togglePause() {
     return;
   }
   if (currentGame.paused) {
+    // a control in the pause menu (the volume slider) keeps the fight's keys
+    // while it has the focus (input.js), so it gives the focus up here
+    if (document.getElementById('modal-pause')?.contains(document.activeElement)) document.activeElement.blur();
+    input.reset();          // and nothing held through the pause stays held
     closeModals();
     currentGame.paused = false;
   } else {

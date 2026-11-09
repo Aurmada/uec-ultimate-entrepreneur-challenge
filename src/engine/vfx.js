@@ -562,7 +562,8 @@ export function drawCutIn(ctx, fx, W, H) {
   if (!c.bust && typeof document !== 'undefined') {
     c.bust = document.createElement('canvas');
     c.bust.width = c.bust.height = size;
-    drawPortrait(c.bust, c.fighter.def, { face: 'angry', bare: true, mirror: c.side > 0 });
+    // UNICORN MODE's band shows its horn, as the fighter in the match wears it
+    drawPortrait(c.bust, c.fighter.def, { face: 'angry', bare: true, mirror: c.side > 0, unicorn: !!c.big });
   }
   if (c.bust) {
     // the portrait puts the head 42% of the way down, so that is the band's centre

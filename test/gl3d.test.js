@@ -527,6 +527,8 @@ test('every sculpted fighter wears a horn in UNICORN MODE, and only then', async
     assert.equal(wearing(def, 'idle', { unicorn: true })('fx:unicorn'), true);
     assert.equal(wearing(def, 'idle', {})('fx:unicorn'), false);
   }
+  // and the super's cut-in band wears it too (the final review)
+  assert.match(readFileSync(new URL('../src/engine/vfx.js', import.meta.url), 'utf8'), /drawPortrait\(c\.bust, c\.fighter\.def, \{[^}]*unicorn: !!c\.big \}\)/);
   const f = readFileSync(new URL('../assets/models/founder.glb', import.meta.url));
   assert.equal(hornFor(extractModel(parseGLB(f.buffer.slice(f.byteOffset, f.byteOffset + f.byteLength))), MODELS3D.founder), null, 'the founder has two horns');
 });

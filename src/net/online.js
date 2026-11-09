@@ -190,9 +190,14 @@ export function hashGameState(game) {
 }
 
 let sbPromise = null;
+let sbTries = 0;
+// The client's address on a try: after a failure, with a query of its own,
+// since Chromium answers a second import of an address that failed with the
+// same failure, without fetching it again.
+export const clientUrl = (tries) => `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm${tries ? `?retry=${tries}` : ''}`;
 function loadClient() {
   if (!sbPromise) {
-    sbPromise = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
+    sbPromise = import(clientUrl(sbTries++))
       .then(({ createClient }) => createClient(SUPABASE_URL, SUPABASE_KEY, {
         // persist so sign-in survives reloads; detect the OAuth redirect fragment
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },

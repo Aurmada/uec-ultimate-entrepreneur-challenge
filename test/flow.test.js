@@ -183,6 +183,15 @@ test('a mirror match puts the second fighter in a colourway of its own', async (
   }
   const elo = getFighter('elo'), kim = getFighter('zara');
   assert.equal(mirrorDef(elo, kim), kim, 'two different fighters were recoloured');
+  // every player's own founder is 'custom': two players meeting online are
+  // two founders, not a mirror, unless they also wear the same colours
+  const { buildCustomFighter } = await import('../src/data/fighters.js');
+  const a = buildCustomFighter({ name: 'A', company: 'ACO', c1: '#2040c0', c2: '#ffd23f' });
+  const b = buildCustomFighter({ name: 'B', company: 'BCO', c1: '#20a050', c2: '#29d9ff' });
+  assert.equal(a.id, b.id);
+  assert.equal(mirrorDef(a, b), b, "a guest's own colours were turned round the wheel");
+  const twin = buildCustomFighter({ name: 'A', company: 'ACO', c1: '#2040c0', c2: '#ffd23f' });
+  assert.notEqual(mirrorDef(a, twin).c.suit, twin.c.suit, 'the same founder in the same colours is not told apart');
   const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
   assert.match(src, /const p2Def = mirrorDef\(cfg\.p1Def, cfg\.p2Def\);[\s\S]*?p2: \{ def: p2Def,/, 'a solo or versus match does not take the mirror colourway');
   assert.match(src, /drawPortrait\(\$\('vsFace2'\), p2Def,/, 'the VS splash shows the original colours');

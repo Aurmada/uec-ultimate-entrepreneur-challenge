@@ -39,9 +39,16 @@ test('the first-time profile keeps what was typed through BACK and HOW TO PLAY',
   assert.match(src('src/ui/screens.js'), /export function renderProfile\(\{ keep = false \} = \{\}\) \{\s*if \(!\(keep && draft && !Save\.profile\)\) draft = newDraft\(\);/);
 });
 
-test('a sign-in service that failed to load is tried again, and the error is plain', () => {
+test('a sign-in service that failed to load is tried again, and the error is plain', async () => {
   const online = src('src/net/online.js');
   assert.match(online, /\.catch\(\(e\) => \{ sbPromise = null; throw e; \}\);/, 'a failed load is kept');
+  // under a fresh address: Chromium answers a second import of an address
+  // that failed with the same failure, without fetching it (the final review)
+  const { clientUrl } = await import('../src/net/online.js');
+  assert.notEqual(clientUrl(1), clientUrl(0));
+  assert.notEqual(clientUrl(2), clientUrl(1));
+  assert.match(clientUrl(0), /^https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\/\+esm$/);
+  assert.match(online, /sbPromise = import\(clientUrl\(sbTries\+\+\)\)/);
   assert.match(src('src/main.js'), /'Sign-in could not connect\. Check your connection and try again\.'/);
 });
 
@@ -76,6 +83,8 @@ test('toasts wrap instead of losing their ends', () => {
   const css = src('styles.css');
   const toast = css.slice(css.indexOf('#toast {'), css.indexOf('}', css.indexOf('#toast {')));
   assert.doesNotMatch(toast, /text-overflow: ellipsis|white-space: nowrap/);
+  // and as wide as its words: placed at left 50%, it shrank to half the screen
+  assert.match(toast, /width: max-content; max-width: min\(92vw, 520px\)/);
 });
 
 test('on a phone, the HUD gives way on the company first, TAP TO CONTINUE sits clear of the pads, and upright asks to turn', () => {
@@ -101,7 +110,19 @@ test('a keyboard can pick fighters, close modals and go back, and a focused cont
   assert.equal(prevented, false, 'the volume slider lost its arrow keys');
   input.onKey({ code: 'KeyA', target: { tagName: 'BODY' }, preventDefault: () => { prevented = true; } }, true);
   assert.equal(prevented, true, 'the fight lost its keys');
+  // a key held into the pause menu and let go on the slider is let go
+  input.reset();
+  input.onKey({ code: 'KeyD', target: { tagName: 'BODY' }, preventDefault() {} }, true);
+  assert.equal(input.pads[0].right, true);
+  input.onKey({ code: 'KeyD', target: { tagName: 'INPUT' }, preventDefault() {} }, false);
+  assert.equal(input.pads[0].right, false, 'a key let go on the slider stayed held');
   input.enabled = false;
+  assert.match(src('src/main.js'), /input\.reset\(\);\s+\/\/ and nothing held through the pause stays held/);
+  // Esc: not under the tutorial, and a slider or a link to copy does not keep it
+  assert.match(screens, /if \(!\$\('tutorial'\)\.classList\.contains\('hidden'\) \|\| typing\(document\.activeElement\)\) return;/);
+  assert.match(screens, /el\.tagName === 'INPUT' && !el\.readOnly && \/\^\(text\|email\|search\|tel\|url\|password\|number\)\$\/\.test\(el\.type\)/);
+  // and the pause menu's slider gives the focus back as the fight resumes
+  assert.match(src('src/main.js'), /if \(document\.getElementById\('modal-pause'\)\?\.contains\(document\.activeElement\)\) document\.activeElement\.blur\(\);\s*input\.reset\(\);[^\n]*\n\s*closeModals\(\);\s*currentGame\.paused = false;/);
 });
 
 test('the touch pads are not over the VS splash', () => {

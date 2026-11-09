@@ -1295,9 +1295,14 @@ export function initScreens(actions) {
   // pauses, input.js) it closes a modal as a tap outside does, or else takes
   // a screen's BACK; never from inside a text field, where it may only mean
   // "stop typing".
+  // Not under the tutorial, which covers the screen it opened from (Esc went
+  // back on that screen and SKIP then started the fight from the title).
+  // Only a field being typed in keeps it: a slider or a link to copy did too.
+  const typing = (el) => !!el && (el.tagName === 'TEXTAREA' || el.isContentEditable
+    || (el.tagName === 'INPUT' && !el.readOnly && /^(text|email|search|tel|url|password|number)$/.test(el.type)));
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || e.repeat || $('scr-fight').classList.contains('active')) return;
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
+    if (!$('tutorial').classList.contains('hidden') || typing(document.activeElement)) return;
     if (dismissModal()) { audio.sfx('back'); e.preventDefault(); return; }
     if (!$('modal-root').classList.contains('hidden')) return;
     const back = document.querySelector('.screen.active [data-back]');
