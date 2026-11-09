@@ -73,7 +73,7 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 ## What's new in v3.21: bodies, a throw and a coat
 
-- 🧍 **Nobody stands inside anybody.** Jeff, Adam and Carl are as broad in the fight as they look, so up close they stand chest to chest instead of one inside the other.
+- 🧍 **Broad fighters keep their distance.** Jeff, Adam and Carl are as broad in the fight as they look, so up close they stand chest to chest instead of one inside the other.
 - 🦈 **Throws you can see.** Carl's HOSTILE TAKEOVER and ASSET SEIZURE, and your own founder's DUE DILIGENCE, now hoist the victim, carry them over the shoulder and slam them down behind, with the thud as they land.
 - 🧥 **Cathie's coat moves like cloth.** It follows her legs in a walk, a kick and a crouch, and lies on the floor when she's knocked out.
 - 🌐 Online, v3.21 plays v3.21 only: the bodies and the throw change the fight.
