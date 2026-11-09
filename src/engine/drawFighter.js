@@ -12,6 +12,7 @@ import { resolveParts, drawParts, partLagState } from './parts.js';
 import { has3D, form3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D, athlete3D, sink3D } from './gl3d/index.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 import { FX_STYLE } from './fx.js';
+import { throwParted } from './fighter.js';
 import { drawFigure, figureHead, figureFrame } from './figure.js';
 
 // How many idle loops per second. The stock track is one breath.
@@ -1882,24 +1883,28 @@ export function throwPose(f) {
   if (!c) return null;
   const u = Math.min(1, c.age / c.hold);
   const w = c.age > c.hold ? 1 - smooth(Math.min(1, (c.age - c.hold) / THROW_ARC.OUT)) : 1;
-  // Where pushApart will part them as the hold ends: a push gap apart either
-  // side of the thrower (the fight sets the victim down 1 px behind him,
-  // THROW.BEHIND), the victim no further than the wall. They are drawn coming
-  // down there, so nothing jumps as the fight takes them back.
+  // Where they come down: where pushApart parts them as the hold ends, or
+  // the fight already has when the throw ended the round (fighter.js
+  // throwParted), from where he stood as the hand closed. The fight sets the
+  // victim down 1 px behind him through the hold (THROW.BEHIND), so they are
+  // drawn coming down there and nothing jumps as the fight takes them back.
   const th = c.thrower, v = c.victim, F = Math.sign(c.from.def - c.from.att) || th.facing;
-  const gap = th.pushHalf + v.pushHalf;
-  const onStage = (x) => Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, x));
-  // (from where he stood as the hand closed: the fight moves him after)
-  const down = onStage(c.from.att - F * gap / 2), stands = onStage(down + F * gap);
+  const { victim: down, thrower: stands } = throwParted(th, v, c.from.att, F);
   // the thrower steps through the throw as the victim goes over
   const thx = mixN(c.from.att, stands, smooth(u));
   if (th === f) return { heave: { u, w }, dx: (thx - f.x) * w, dy: 0 };
   const start = { u: 0, x: (c.from.def - c.from.att) * F, y: c.from.defY - f.y, rot: 0 };
   const [a, b, k] = keysAt([start, ...THROW_ARC.VICTIM], u);
-  // a key with no x is where they come down
+  // a key with no x is where they come down, laid as low as their hips are
+  // high; the keys between are on him, measured from where he is (an air
+  // throw goes over him, not through his chest)
   const along = (key) => (key.x === null ? (down - stands) * F : key.x);
+  const high = (key) => (key === start ? key.y : key.x === null ? key.y * (f.body?.height ?? 1) : key.y + th.y - f.y);
   const x = thx + F * mixN(along(a), along(b), k);
-  return { dx: (x - f.x) * w, dy: mixN(a.y, b.y, k) * w, rot: mixN(a.rot, b.rot, k) * w, held: c.age < c.hold };
+  // head first toward his back whichever way they faced (the turn is drawn
+  // after the victim's own mirror, ctx.scale(facing))
+  const turn = -F * (f.facing || -F);
+  return { dx: (x - f.x) * w, dy: mixN(high(a), high(b), k) * w, rot: mixN(a.rot, b.rot, k) * w * turn, held: c.age < c.hold };
 }
 
 // Where the fighter is drawn this frame: where the fight has them, unless a

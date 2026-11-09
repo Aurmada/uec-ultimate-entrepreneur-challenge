@@ -14,10 +14,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { Game } from '../src/engine/game.js';
 import { FIGHTERS } from '../src/data/fighters.js';
 import { METER, PHYS, STAGE, THROW, THROW_ARC } from '../src/config.js';
 import { setThrows, throwPose, drawnAt } from '../src/engine/drawFighter.js';
+import { pushGap, throwParted } from '../src/engine/fighter.js';
 
 const STUB_HUD = new Proxy({}, { get: () => () => {} });
 const STUB_ARENA = { id: 'test', name: 'TEST', draw() {}, mood: 'none' };
@@ -174,7 +176,7 @@ for (const [name, keys] of MOVES) {
 }
 
 test('the throw is drawn from where Kim stood, over Carl and down behind him, then gives way', () => {
-  const carl = { x: 400, y: STAGE.FLOOR, facing: 1, pushHalf: 28 }, kim = { x: 399, y: STAGE.FLOOR, facing: 1, pushHalf: 28 };
+  const carl = { x: 400, y: STAGE.FLOOR, facing: 1, pushHalf: 28 }, kim = { x: 399, y: STAGE.FLOOR, facing: -1, pushHalf: 28 };
   const cue = { thrower: carl, victim: kim, from: { att: 400, def: 460, defY: STAGE.FLOOR }, hold: THROW.HOLD, age: 0 };
   setThrows([cue]);
   try {
@@ -188,6 +190,11 @@ test('the throw is drawn from where Kim stood, over Carl and down behind him, th
     assert.ok(at.y < STAGE.FLOOR - 80, `Kim is only ${(STAGE.FLOOR - at.y).toFixed(0)} px up going over`);
     assert.ok(Math.abs(at.x - drawnAt(carl).x) < 20, 'Kim does not go over Carl');
     assert.ok(throwPose(kim).rot > 1, 'Kim is not turned going over');
+    // turned away from him (a cross-up, a teleport), she still goes over head
+    // first toward his back: the turn is drawn inside her own mirror
+    kim.facing = 1;
+    assert.ok(throwPose(kim).rot < -1, 'Kim facing away is thrown feet first');
+    kim.facing = -1;
     // the thrower's arms are over his head, then behind him
     assert.ok(throwPose(carl).heave, 'Carl is not drawn heaving');
     // down half a push gap behind where Carl stood, where pushApart will put her
@@ -201,4 +208,61 @@ test('the throw is drawn from where Kim stood, over Carl and down behind him, th
   } finally {
     setThrows([]);
   }
+});
+
+// A throw that ends the round: pushApart parts no one knocked out, and runs
+// only while the round is live, so the two lay 1 px apart and the drawing's
+// step through the throw slid back as it gave way (the v3.21 review). The
+// fight parts them itself, where the drawing brings them down.
+for (const [name, keys] of MOVES) {
+  test(`${name} that knocks out lays the two apart where the throw was drawn landing`, () => {
+    for (const side of [-1, 1]) {
+      const game = new Game({
+        p1: { def: CARL, controller: idler() }, p2: { def: KIM, controller: idler() },
+        arena: STUB_ARENA, mode: 'solo', difficulty: 'founder',
+        hud: STUB_HUD, onEnd: () => {}, seed: 20261109,
+      });
+      for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+      const [carl, kim] = game.fighters;
+      carl.x = AT; kim.x = AT + side * GAP;
+      carl.energy = METER.MAX;
+      kim.hp = 1;
+      game.update(1 / 60);
+      carl.controller = presser(keys);
+      for (let i = 0; i < 90 && !game.fx.throws.length; i++) game.update(1 / 60);
+      const [cue] = game.fx.throws;
+      assert.ok(cue && kim.hp <= 0, `${name} did not knock Kim out`);
+      const at = throwParted(carl, kim, cue.from.att, side);
+      assert.ok(Math.abs(carl.x - at.thrower) < 1e-9 && Math.abs(kim.x - at.victim) < 1e-9,
+        `knocked out, Kim lies at ${kim.x.toFixed(1)} and Carl stands at ${carl.x.toFixed(1)}, not where the throw lands them (${at.victim.toFixed(1)}, ${at.thrower.toFixed(1)})`);
+      assert.equal(Math.abs(kim.x - carl.x), pushGap(carl, kim));
+      // and the knockout is called once she is down, not as the hand closes
+      assert.notEqual(kim.state, 'ko', 'K.O. was called with Kim still going over');
+      const frames = Math.round(THROW.HOLD * 60);
+      for (let i = 0; i < frames - 2; i++) game.update(1 / 60);
+      assert.notEqual(kim.state, 'ko', 'K.O. was called during the hold');
+      for (let i = 0; i < 4; i++) game.update(1 / 60);
+      assert.equal(kim.state, 'ko', 'K.O. never came after the hold');
+    }
+  });
+}
+
+test('the slam lands where the victim is drawn coming down, not on the thrower', () => {
+  const { game, carl, kim } = grabKim(['special'], 1);
+  const [cue] = game.fx.throws;
+  const at = throwParted(carl, kim, cue.from.att, 1).victim;
+  const sparks = [];
+  const spark = game.fx.spark.bind(game.fx);
+  game.fx.spark = (x, ...rest) => { sparks.push(x); spark(x, ...rest); };
+  for (let i = 0; i < Math.round(THROW.HOLD * 60) + 2; i++) game.update(1 / 60);
+  assert.ok(sparks.length, 'the slam threw no sparks');
+  assert.ok(Math.abs(sparks[0] - at) < 1e-9, `the slam's sparks are at ${sparks[0].toFixed(1)}, Kim comes down at ${at.toFixed(1)}`);
+});
+
+test("a thrown fighter's aura, floor sheen and buff icons go with the body, not stay on the thrower", () => {
+  const src = readFileSync(new URL('../src/engine/render.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/atDrawn\(ctx, f, \(\) => drawAura\(ctx, f, t\)\)/g) || []).length, 3, 'an aura is drawn where the fight has them');
+  assert.match(src, /atDrawn\(ctx, f, \(\) => drawFloorSheen\(ctx, f\), false\)/);
+  assert.match(src, /atDrawn\(ctx, f, \(\) => drawBuffIcons\(ctx, f\)\)/);
+  assert.match(src, /const at = drawnAt\(f\);\s+\/\/ under a thrown body/, 'the shadow stays where the fight has them');
 });

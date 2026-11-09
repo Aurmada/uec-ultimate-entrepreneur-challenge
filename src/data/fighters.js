@@ -922,6 +922,9 @@ export function buildGhostFighter(ch) {
     ...base,
     ...pickLook(ch),             // so a challenge card shows THEIR look
     id: 'ghost-' + base.id,
+    // a challenger wears the founder model, which the shared push half fits,
+    // whatever roster fighter the link names (as buildCustomFighter)
+    pushHalf: undefined,
     name: (ch.n || 'RIVAL').toUpperCase(),
     company: (ch.co || 'RIVAL VENTURES').toUpperCase(),
     title: 'CHALLENGER',

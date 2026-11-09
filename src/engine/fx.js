@@ -1,6 +1,7 @@
 // Juice: particles, comic-book word popups, screen shake, hitstop, rings, flashes.
 
 import { FX_ART, THROW_ARC } from '../config.js';
+import { throwParted } from './fighter.js';
 
 // Fighting-game effects for the live 3D prototype (?gl): layered impact bursts,
 // guard flashes, and a cut-in when a special starts. This file only keeps their
@@ -83,10 +84,13 @@ export class FXSystem {
         c.age += dt;
         if (c.landed || c.age < c.hold) continue;
         c.landed = true;
-        const v = c.victim, dir = Math.sign(v.x - c.thrower.x) || 1;
+        // where the drawing brings them down (throwParted), not where the
+        // fight has them through the hold, 1 px behind the thrower
+        const v = c.victim, dir = Math.sign(c.from.def - c.from.att) || c.thrower.facing;
+        const x = throwParted(c.thrower, v, c.from.att, dir).victim;
         this.shake(14);
-        this.spark(v.x, v.y - 30, '#ff3d6e', 16, 460);
-        this.impact(v.x, v.y - 30, dir, '#ff3d6e', 1);
+        this.spark(x, v.y - 30, '#ff3d6e', 16, 460);
+        this.impact(x, v.y - 30, -dir, '#ff3d6e', 1);
         c.land?.();
       }
       this.throws = this.throws.filter((c) => c.age < c.hold + THROW_ARC.OUT);

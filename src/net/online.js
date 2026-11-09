@@ -153,10 +153,11 @@ export const CHARACTER_WIRE_VERSION = 1;
 // v12: bodies as broad as their sculpts and a throw that holds. Each fighter
 // keeps a push half of their own (PHYS.PUSH_HALF, fighters.js pushHalf), so
 // two bodies part at a wider gap than v11's 51.5 px; a rush closes to that gap
-// (RUSH); a throw stops the fight for THROW.HOLD, not 0.3 s, and sets its
-// victim down a push gap behind, not 1 px. A v11 peer parts the bodies and
-// lands throws elsewhere, so the two disagree on x from the first time the
-// fighters meet. v11 shipped in v3.19 and v3.20.
+// (RUSH); a body against the wall no longer keeps the walker inside the gap;
+// a throw stops the fight for THROW.HOLD, not 0.3 s, a throw that ends the
+// round parts the two itself, and that round is called after the hold. A v11
+// peer parts the bodies elsewhere, so the two disagree on x from the first
+// time the fighters meet. v11 shipped in v3.19 and v3.20.
 export const SIM_VERSION = 12;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.

@@ -56,7 +56,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.20 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/v3.21` | `main` plus the owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat (see "v3.21") | Committed, not pushed: waiting for the owner's word. 628 tests pass. |
+| `claude/v3.21` | `main` plus the owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat (see "v3.21") | Committed, not pushed: waiting for the owner's word. 633 tests pass. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
@@ -894,7 +894,7 @@ at the middle while it can hit.
 The owner, on the three v3.20 calls (below, "For the owner"): "Let's fix
 that", "Let's get that done", "Let's work on it". All three are done, the
 first two changing the fight (`SIM_VERSION` 12: v3.21 does not play v3.20
-online). 628 tests pass.
+online). 633 tests pass.
 
 **Bodies as broad as their sculpts.** One push gap held for everyone, 0.92
 of a body width (51.5 px between centres), and in 3D the broad sculpts are
@@ -934,6 +934,39 @@ whole push gap apart was tried and looked tidier, but it changed the fight:
 9 to 13 px further apart, just outside the AI's reach for Carl's next grab,
 and Carl won 8 points more of the AI's matches across four seeds
 (`lab/balance.js`, found by turning each part of the change off in turn).
+
+**The review.** A fresh agent reviewed the change in a copy of the repo, in
+the browser and in Node. It proved the fight unchanged by the drawing (a
+3000-frame match with 8 throws hashed the same frame for frame with the
+throw drawn and without), online characters pinned to the shared push half,
+the shield and same-frame grabs as before, every move still reaching at the
+widest gap, and the throw drawn in 2D as in 3D. What it found, all fixed and
+each pinned in a test that fails without it:
+
+- **The slam's sparks landed on the thrower**, where the fight has the
+  victim through the hold, not where the drawing brings them down: the two
+  now ask one place (`fighter.js throwParted`).
+- **A throw that ended the round slid back**: `pushApart` parts no one
+  knocked out and runs only in a live round, so the two lay 1 px apart and
+  the step through the throw slid back as the drawing gave way. A throw that
+  knocks out, or lands as the clock runs out, now parts the two itself, and
+  the round is called on the first frame after the hold (`thrownNow`), so
+  K.O.! no longer comes up with the victim on the thrower's shoulder.
+- **A victim facing away went over feet first** (a cross-up, a teleport):
+  the turn is now drawn inside their own mirror.
+- **A challenge link's ghost kept a roster fighter's push half**
+  (`buildGhostFighter` spreads the fighter the link names): pinned, as a
+  player's own founder is.
+- **In a corner a body stopped up to 4 px inside the gap** (Adam walked into
+  a cornered Jeff stood 60 of 64 px away, chests touching): the wall cannot
+  give the cornered body's half of the push, so `pushApart` has the free body
+  give it. Balance unchanged.
+- **Auras, the floor sheen and buff icons stayed** where the fight had a
+  thrown fighter: they go with the body (`render.js atDrawn`).
+- **The landing ignored size and the air**: a tall victim landed propped up,
+  and an air throw carried its victim through the thrower's chest. The lie is
+  as low as the victim's hips are high, and the carry is measured from the
+  thrower.
 
 **Cathie's coat** rode her hips as one stiff piece: in a crouch it jutted out
 under the floor, in a knockout it went 12 px through it. It is re-weighted as

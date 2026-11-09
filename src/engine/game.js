@@ -2,7 +2,7 @@
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
 import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT, FX_ART } from '../config.js';
-import { Fighter, pushGap } from './fighter.js';
+import { Fighter, pushGap, throwParted } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
 import { isTouchDevice } from './input.js';
@@ -146,6 +146,7 @@ export class Game {
 
   // ---------------- fighting ----------------
   updateFighting(dt) {
+    this.thrownNow = false;                  // set by doGrab: a round it ends is called after the hold
     this.timer = Math.max(0, this.timer - dt);
     const sec = Math.ceil(this.timer);
     if (sec <= 10 && sec !== this.lastTickSec && sec > 0) {
@@ -163,6 +164,12 @@ export class Game {
     this.updateDrops(dt);
     this.updateAfterimages(dt);
     this.updateHints();
+
+    // A throw holds the fight (THROW.HOLD) while its victim is drawn going
+    // over: a round it ends, by a knockout or the clock, is called on the
+    // first frame after the hold, once they are down, not as the hand closes
+    // (K.O.! came up with the victim still on the thrower's shoulder).
+    if (this.thrownNow) return;
 
     // KO?
     for (let i = 0; i < 2; i++) {
@@ -217,8 +224,17 @@ export class Game {
       const dir = dx >= 0 ? 1 : -1;
       a.x -= dir * push;
       b.x += dir * push;
-      a.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, a.x));
-      b.x = Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, b.x));
+      const onStage = (x) => Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, x));
+      a.x = onStage(a.x);
+      b.x = onStage(b.x);
+      // A body against the wall cannot give its half, so the other gives it:
+      // split evenly and clamped, a fighter walked into a cornered rival
+      // stopped up to 4 px inside the gap, Adam's chest on Jeff's (v3.21).
+      const short = minGap - Math.abs(b.x - a.x);
+      if (short > 0) {
+        if (a.x === STAGE.MIN_X || a.x === STAGE.MAX_X) b.x = onStage(b.x + dir * short);
+        else a.x = onStage(a.x - dir * short);
+      }
     }
   }
 
@@ -464,6 +480,15 @@ export class Game {
     if ((wall - att.x) * back < THROW.BEHIND) att.x = wall - back * THROW.BEHIND;
     def.x = att.x + back * THROW.BEHIND;
     def.applyHit({ dmg, kb: sp.kb, kbUp: sp.kbUp, stun: 0.55, dir: back });
+    // A throw that ends the round (a knockout, or the clock run out on this
+    // frame) is parted here: pushApart parts no one knocked out and runs only
+    // while the round is live, so they lay 1 px apart, the drawing's step
+    // through the throw sliding back as it gave way (v3.21 review).
+    if (def.hp <= 0 || this.timer <= 0) {
+      const p = throwParted(att, def, from.att, dir);
+      att.x = p.thrower;
+      def.x = p.victim;
+    }
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
     this.refillRunway(att);
@@ -471,6 +496,7 @@ export class Game {
     // the thrower and down behind him, and the slam's thud, shake and sparks
     // land with them, at the end of the hold, not as the hand closes.
     this.fx.throwArc(att, def, from, THROW.HOLD, () => this.audio.sfx('throwSlam'));
+    this.thrownNow = true;
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
   }

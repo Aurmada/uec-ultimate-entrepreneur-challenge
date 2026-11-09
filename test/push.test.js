@@ -17,11 +17,11 @@ import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { buildRig, solvePose } from '../src/engine/gl3d/rig.js';
 import { MODELS3D } from '../src/data/models3d.js';
 import { FORMS } from '../src/data/forms.js';
-import { FIGHTERS, buildCustomFighter } from '../src/data/fighters.js';
+import { FIGHTERS, buildCustomFighter, buildGhostFighter } from '../src/data/fighters.js';
 import { computePose } from '../src/engine/drawFighter.js';
 import { applyProportions, clampBody } from '../src/engine/proportions.js';
 import { figureFrame } from '../src/engine/figure.js';
-import { GL3D, PHYS } from '../src/config.js';
+import { GL3D, PHYS, STAGE } from '../src/config.js';
 import { Fighter, pushGap } from '../src/engine/fighter.js';
 import { Game } from '../src/engine/game.js';
 
@@ -84,6 +84,11 @@ test('a push half is no wider than its sculpt needs, so close range stays close'
   // Jeff's breadth onto it)
   const own = buildCustomFighter({ name: 'TEST', company: 'TESTCO', baseId: 'bozo' });
   assert.equal(new Fighter(own, 0, { update() {} }).pushHalf, PHYS.PUSH_HALF, "a founder built on Jeff's base took his breadth");
+  // and a challenge link's ghost, which spreads the fighter the link names
+  for (const f of ['bozo', 'max', 'dex']) {
+    const ghost = buildGhostFighter({ n: 'RIVAL', co: 'CO', f, pts: 0 });
+    assert.equal(new Fighter(ghost, 0, { update() {} }).pushHalf, PHYS.PUSH_HALF, `a ghost named after ${f} took his breadth`);
+  }
   assert.equal(new Fighter({ id: 'custom', body: {}, pushHalf: 5 }, 0, { update() {} }).pushHalf, PHYS.PUSH_HALF,
     'a push half narrower than the shared one');
 });
@@ -108,6 +113,37 @@ test('two fighters walked into each other stop with their trunks apart, every pa
       assert.ok(gap >= pushGap(p, q) - 1e-6, `${a.name} and ${b.name} came within ${gap.toFixed(1)} px`);
       assert.ok(gap >= fronts.get(a.id) + fronts.get(b.id) + 2 * INK,
         `${a.name} and ${b.name} stand ${gap.toFixed(1)} px apart, their trunks ${(fronts.get(a.id) + fronts.get(b.id)).toFixed(1)} px deep`);
+    }
+  }
+});
+
+// In a corner the wall takes the cornered body's half of the push: split
+// evenly and clamped, a fighter walked into a cornered rival stopped up to
+// 4 px inside the gap (Adam into Jeff 60 of 64, their chests touching; the
+// v3.21 review). The free body gives what the wall cannot.
+test('a fighter walked into a cornered rival stops a push gap away, either wall, either slot', () => {
+  const STUB_HUD = new Proxy({}, { get: () => () => {} });
+  const STUB_ARENA = { id: 'test', name: 'TEST', draw() {}, mood: 'none' };
+  const still = { isHuman: false, update(f) { f.pad = {}; } };
+  const pairs = [['max', 'bozo'], ['bozo', 'dex'], ['zara', 'max']];
+  for (const [ia, ib] of pairs) {
+    for (const wall of [STAGE.MIN_X, STAGE.MAX_X]) {
+      for (const slot of [0, 1]) {
+        const a = FIGHTERS.find((f) => f.id === ia), b = FIGHTERS.find((f) => f.id === ib);
+        const game = new Game({
+          p1: { def: slot ? b : a, controller: still }, p2: { def: slot ? a : b, controller: still },
+          arena: STUB_ARENA, mode: 'solo', difficulty: 'founder', hud: STUB_HUD, onEnd: () => {}, seed: 7,
+        });
+        for (let i = 0; i < 600 && game.state !== 'fighting'; i++) game.update(1 / 60);
+        const walker = game.fighters[slot ? 1 : 0], cornered = game.fighters[slot ? 0 : 1];
+        const out = wall === STAGE.MIN_X ? 1 : -1;
+        cornered.x = wall; walker.x = wall + out * 140;
+        walker.controller = { isHuman: false, update(f) { f.pad = { left: out > 0, right: out < 0 }; } };
+        for (let i = 0; i < 60; i++) game.update(1 / 60);
+        const gap = Math.abs(walker.x - cornered.x);
+        assert.ok(gap >= pushGap(walker, cornered) - 1e-6,
+          `${walker.def.name} walked into ${cornered.def.name} in the ${out > 0 ? 'left' : 'right'} corner and stopped ${gap.toFixed(1)} px away, inside ${pushGap(walker, cornered)}`);
+      }
     }
   }
 });

@@ -17,6 +17,19 @@ function blankPad() {
 // in and the AI working out where a jump comes to rest.
 export const pushGap = (a, b) => a.pushHalf + b.pushHalf;
 
+// Where a throw leaves the two once they are parted: a push gap apart either
+// side of where the thrower stood (`fromX`), the victim, on the far side from
+// `dir` (the way they stood from him), no further than the wall. pushApart
+// parts them there on the first frame after the hold; the fight parts them
+// itself when no such frame comes (game.js doGrab); the drawing of the throw
+// and its slam land them there (drawFighter.js throwPose, fx.js).
+export function throwParted(att, def, fromX, dir) {
+  const gap = pushGap(att, def);
+  const onStage = (x) => Math.max(STAGE.MIN_X, Math.min(STAGE.MAX_X, x));
+  const victim = onStage(fromX - dir * gap / 2);
+  return { victim, thrower: onStage(victim + dir * gap) };
+}
+
 export class Fighter {
   constructor(def, side, controller) {
     this.def = def;

@@ -175,6 +175,18 @@ function drawVignette(ctx) {
   ctx.restore();
 }
 
+// What is drawn round a fighter (an aura, the floor sheen, buff icons) goes
+// where a throw carries them (drawFighter.js drawnAt), not where the fight
+// has them through the hold; `lift` false keeps it on the floor.
+function atDrawn(ctx, f, draw, lift = true) {
+  const at = drawnAt(f), dx = at.x - f.x, dy = lift ? at.y - f.y : 0;
+  if (!dx && !dy) { draw(); return; }
+  ctx.save();
+  ctx.translate(dx, dy);
+  draw();
+  ctx.restore();
+}
+
 // Contact shadow — softer, wider, layered so fighters feel planted on the floor.
 function drawShadow(ctx, f) {
   const at = drawnAt(f);                  // under a thrown body, not where the fight set it down
@@ -732,7 +744,7 @@ function renderSharp(ctx, game, t, c) {
   setClock3D(game.simT);                   // and sway on the match's clock
   setRoundStart(game.state === 'intro' ? game.stateT : null);   // and open the round their own way
   for (const f of order) {
-    drawAura(ctx, f, t);
+    atDrawn(ctx, f, () => drawAura(ctx, f, t));
     drawFighter(ctx, f, t);
     drawTrail(ctx, f, game.simT);
   }
@@ -798,7 +810,7 @@ function renderLayered(ctx, L, game, t, c) {
   let over = false, trails = false;
   for (const f of order) {
     const in3D = drawing3D && has3D(f.def);
-    drawAura(ctx, f, t);
+    atDrawn(ctx, f, () => drawAura(ctx, f, t));
     if (in3D) {
       drawFighter(ctx, f, t);              // onto the layer (drawFighter asks layerActive3D)
       over = true;
@@ -854,7 +866,7 @@ function renderWorld(ctx, game, t, cam = null) {
   setClock3D(game.simT);
   setRoundStart(game.state === 'intro' ? game.stateT : null);
   for (const f of fighterOrder(game)) {
-    drawAura(ctx, f, t);
+    atDrawn(ctx, f, () => drawAura(ctx, f, t));
     drawFighter(ctx, f, t);
     drawTrail(ctx, f, game.simT);
   }
@@ -875,7 +887,7 @@ function renderBehind(ctx, game, t, stageOnScreen = false, cam = null) {
   for (const tr of game.traps || []) drawTrap(ctx, tr, t);
   for (const f of game.fighters) if (f.deliveryT > 0) drawDeliveryMark(ctx, f, t);
   for (const d of game.drops) drawDrop(ctx, d, t);
-  for (const f of game.fighters) { drawShadow(ctx, f); drawFloorSheen(ctx, f); }
+  for (const f of game.fighters) { drawShadow(ctx, f); atDrawn(ctx, f, () => drawFloorSheen(ctx, f), false); }
   for (const g of game.afterimages) drawAfterimage(ctx, g);
   drawStageDim(ctx, game.fx, W, H);     // a special's cut-in darkens everything behind the fighters
 }
@@ -889,7 +901,7 @@ function fighterOrder(game) {
 }
 
 function renderInFront(ctx, game, t) {
-  for (const f of game.fighters) drawBuffIcons(ctx, f);
+  for (const f of game.fighters) atDrawn(ctx, f, () => drawBuffIcons(ctx, f));
 
   for (const p of game.projectiles) {
     drawProjectileGlow(ctx, p, game.simT);
