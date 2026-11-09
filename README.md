@@ -71,6 +71,13 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.21: bodies, a throw and a coat
+
+- 🧍 **Nobody stands inside anybody.** Jeff, Adam and Carl are as broad in the fight as they look, so up close they stand chest to chest instead of one inside the other.
+- 🦈 **Throws you can see.** Carl's HOSTILE TAKEOVER and ASSET SEIZURE, and your own founder's DUE DILIGENCE, now hoist the victim, carry them over the shoulder and slam them down behind, with the thud as they land.
+- 🧥 **Cathie's coat moves like cloth.** It follows her legs in a walk, a kick and a crouch, and lies on the floor when she's knocked out.
+- 🌐 Online, v3.21 plays v3.21 only: the bodies and the throw change the fight.
+
 ## What's new in v3.20: ready for launch
 
 - 🦄 **The horn is back.** In 3D, UNICORN MODE now puts a gold horn on every founder, in the fight and in the cut-in.

@@ -8,13 +8,15 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 The game is live at v3.20, the launch build, on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-11-09 (see "v3.20"): 3D by default, the nine founders the sculpted cast below, each
+on 2026-11-09 (see "v3.20"), and v3.21 (see "v3.21") is on `claude/v3.21`
+waiting for the owner's word to release: 3D by default, the nine founders the sculpted cast below, each
 in their own fighting form for everything they do (every move, special and
 reaction, how they move, start a round and go into their super) and each
 with a face of their own, and 2D a choice in Settings (see "v3.19" back to
 "v3.13"). v3.17 fixed the dash (`SIM_VERSION` 10); v3.18 changed nothing in
 the fight; v3.19 slowed the meter and shortened the wait after a knockout
-(`SIM_VERSION` 11); v3.20 changes nothing in the fight. v3.12 was built on 2026-10-30 but never reached `main`; it went
+(`SIM_VERSION` 11); v3.20 changes nothing in the fight; v3.21 widens the
+broad fighters' bodies and holds a throw longer (`SIM_VERSION` 12). v3.12 was built on 2026-10-30 but never reached `main`; it went
 out with v3.13. The repository
 moved to the Aurmada organisation in October 2026; GitHub forwards the old
 repository address but not the old Pages site (`firdous-aurmada.github.io`), which
@@ -54,7 +56,8 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.20 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20 on 2026-11-09. 617 tests pass. |
+| `claude/v3.21` | `main` plus the owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat (see "v3.21") | Committed, not pushed: waiting for the owner's word. 628 tests pass. |
+| `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
 | `claude/gfx-v3.9.4` | The branch v3.10 merged: the review branch below, `main` to v3.9.4, and the 3D layer | Merged into `main`. |
@@ -886,6 +889,78 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
+## v3.21, built 2026-11-09: bodies, a throw and a coat
+
+The owner, on the three v3.20 calls (below, "For the owner"): "Let's fix
+that", "Let's get that done", "Let's work on it". All three are done, the
+first two changing the fight (`SIM_VERSION` 12: v3.21 does not play v3.20
+online). 628 tests pass.
+
+**Bodies as broad as their sculpts.** One push gap held for everyone, 0.92
+of a body width (51.5 px between centres), and in 3D the broad sculpts are
+wider than that: measured from each model as a match poses it (standing,
+walking, blocking, hit), Jeff's belly and Adam's chest stand 30 px in front of
+their centres and Carl's 28, so those pairs stood inside each other. Each
+fighter now keeps a push half of their own: `PHYS.PUSH_HALF` (28) for
+everyone, Adam and Jeff 32 and Carl 30 (`pushHalf` in `fighters.js`, a 1 px
+ink line and a hair past the trunk), and two bodies part at the two added
+(`Fighter pushGap`, read by `pushApart`, a locked-on rush, now `RUSH` in
+config instead of 62 and 58 in `moves.js`, and the AI's landing guess). A
+player's own founder wears the founder model, whose trunk stands 25.6 px
+out whatever its build, and gets the shared one whatever base it names
+(`buildCustomFighter` pins it, so a forged link cannot widen itself).
+Guards and lead feet still cross at close range, as in any fighting game:
+the measure and the test are the trunk (`test/push.test.js`, every sculpt
+against its push half, and every pair walked into each other).
+
+**A throw that holds.** A throw froze the fight for 0.3 s with nothing drawn
+in it, and the victim was behind the thrower from one frame to the next.
+Now the fight holds for `THROW.HOLD` (0.45 s) and the hold is drawn,
+render-only (`fx.throwArc`, `drawFighter throwPose`, keys in `THROW_ARC`):
+the victim is hoisted to the thrower's chest, carried over his shoulder,
+turned about their hips, and brought down on their back behind him, while
+he heaves, arms over his head and down behind, and steps through the throw.
+The slam's thud, shake and sparks land with them at the end of the hold, the
+hit's white flash waits for the landing too (it fades on the fight's clock,
+which the hold stops), and the shadow follows the body. It serves every
+grab: Carl's HOSTILE TAKEOVER and ASSET SEIZURE, and a player's DUE
+DILIGENCE.
+
+What the fight does with the victim did not change: they are set down 1 px
+behind (`THROW.BEHIND`) for `pushApart` to part the two on the first frame
+after, and the drawing brings both down where it will. Setting them down a
+whole push gap apart was tried and looked tidier, but it changed the fight:
+`pushApart` no longer took in the knockback's first frame, every throw ended
+9 to 13 px further apart, just outside the AI's reach for Carl's next grab,
+and Carl won 8 points more of the AI's matches across four seeds
+(`lab/balance.js`, found by turning each part of the change off in turn).
+
+**Cathie's coat** rode her hips as one stiff piece: in a crouch it jutted out
+under the floor, in a knockout it went 12 px through it. It is re-weighted as
+it loads (`gl3d/cloth.js`, data on her sculpt in `models3d.js`): the top stays
+on the hips, and further down the skirt follows the thighs, each side panel
+its own and the back between both (`back` 0.6: at 1 it wrapped her knees
+like shorts, at 0.25 it pulled into a spike). The vertex count is the same,
+so the 3D cost is too. In a crouch it now bunches round the rear knee above
+the floor, in a kick it lifts with the knee, and a knockout lies on it
+(`sinkOf` samples it). No gravity: in a deep crouch it bunches rather than
+hanging to the heels. The founder model's coat, worn by players' own
+founders, still rides the hips; it can opt in with a `cloth` entry.
+
+**Checked:**
+
+- Balance, `lab/balance.js` at Champion, 60 a pair, against v3.20 on the same
+  seeds: every fighter within noise (Carl 55.0% against 54.8%).
+- `lab/pixels.js` against v3.20 differs from frame 200 on, as a fight change
+  must (the bodies meet at other places). With the fight's old numbers put
+  back in a scratch copy, all 30 frames are identical with the flags off, and
+  with `--flags gl` identical but for the frames in or just after a throw (the
+  drawn hold, and the slam's shake moved to the landing).
+- The throw and the bodies were looked at frame by frame in the real game in
+  3D (Carl against Jeff, Adam against Jeff, Kim's GROWTH HACK into Cathie).
+- The phone test page was brought up to v3.20 for the owner's Android phones
+  and iPhone 12 Pro (round seven); its results are still to come.
+
 ## v3.20, released 2026-11-09: ready for launch
 
 The owner: "can we get to the finish version so we are ready to launch this
@@ -1013,7 +1088,8 @@ where noted. 617 tests pass.
 - **A player's own founder** had its crown cut off in close portraits: a head
   taller than the cast's widens the frame (`GL3D.BUST.CLOSE.HEAD_MOST`).
 
-**For the owner** (not done: each changes the fight or needs new art):
+**For the owner** (not done: each changes the fight or needs new art; the
+first three are done in v3.21):
 
 - **Bodies pass through each other at close range** (Kim inside Cathie in a
   GROWTH HACK rush, Carl inside Jeff before his seizure): the push gap is
@@ -2171,7 +2247,7 @@ and the two shipped together as v3.9.3.
     onto the trap. Every jump now checks where it comes to rest, treating the
     rival's body as a wall (`restsAt`), including jump-ins `decide()` chooses.
   - The teleport distance and the push gap are now `TELEPORT.PAST` and
-    `PHYS.PUSH_GAP` in `config.js`, read by both `game.js` and `ai.js` (same
+    `PHYS.PUSH_GAP` (since v3.21 `PHYS.PUSH_HALF` and a fighter's own `pushHalf`) in `config.js`, read by both `game.js` and `ai.js` (same
     values, so no simulation change).
 - **Measured on the train** (20 matches per ordered pair, seeded, AI against AI at
   the same level): Kim at Champion 75% on `main`, 66% with the trap AI as built,
@@ -2231,7 +2307,7 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
   (x is clamped there, which is where a cornered fighter stands) there was no
   room for that, both bodies shared one x, and `pushApart` broke the tie by slot:
   as p1 Carl threw out of the right corner but not the left, as p2 the reverse.
-  Now the victim is set down `THROW.BEHIND` (1 px, `config.js`) behind the
+  Now the victim is set down `THROW.BEHIND` (1 px, `config.js`; v3.21 holds and draws the throw, and keeps this) behind the
   thrower, and a thrower with less room than that steps forward to make it. A
   cornered throw always swaps: Kim goes into the corner and Carl comes out to
   51 px from the wall, from either wall and either slot. Mid-stage, landings move
@@ -2344,9 +2420,13 @@ not read it), which the determinism and effects tests check.
 
 ## Decisions that belong to the owner
 
-0. **Delete the superseded branches** (`live-3d`,
-   `claude/game-review-enhance-29bffb`, `claude/gfx-v3.9.4`), or keep them as
-   history. Settled on 2026-10-29: the prototype merged into `main` as v3.10,
+0. **Delete the superseded branches.** Asked for on 2026-11-09. Every branch
+   on GitHub but `main` is wholly in `main`, so deleting them loses nothing:
+   `live-3d`, `claude/jeff-model`, `claude/ai-levels`,
+   `claude/game-review-enhance-29bffb`, `claude/gfx-v3.9.4` and
+   `claude/gl3d-restore`. A cloud session cannot delete a branch on GitHub
+   (the push is cut off and the API call refused), so the owner deletes them
+   on the repository's Branches page. Settled on 2026-10-29: the prototype merged into `main` as v3.10,
    dark, after the phone check. (Also settled on 2026-10-28: the owner set
    Supabase's Site URL and Redirect URLs to the new address.)
 1. **Whether 3D becomes the default.** Settled: the owner made it the default
@@ -2366,11 +2446,9 @@ not read it), which the determinism and effects tests check.
 5. **Art direction.** The model and stages are scripted, which has a ceiling. An
    artist working in Blender to the same contract (ARCHITECTURE section 7, "The
    model contract") is the step up, and the runtime would not need to change.
-6. **Fighters overlap at close range.** `pushApart` keeps bodies
-   `PHYS.BODY_W * 0.92` (51 px) apart whatever their build, while the hurtbox
-   scales with `build`, so a wide fighter (Adam, Carl, Jeff) visibly stands inside
-   a narrow one. Widening the push box with `build` would fix the look, but it is a
-   simulation change (spacing, combo step-ins, `SIM_VERSION`), so it was left.
+6. **Fighters overlap at close range.** Settled in v3.21 at the owner's word:
+   each fighter keeps a push half of their own, measured from their sculpt
+   (see "v3.21"), not by `build`, which does not follow the sculpts' trunks.
 7. **Balance as the AI plays it.** Champion: Jeff (29%) and Elo (28%) are the
    bottom, Lizbeth, Steve, Scam and Cathie (62 to 65%) the top, a 37 point
    spread; untouched by v3.11. Rookie and Contender were evened out in v3.11
@@ -2487,8 +2565,8 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
 - Kim's ring light still sits off-square in a bust; body knobs still scale bones.
-- In 3D: bodies can pass into each other at close range, Carl's seizure shows
-  no hold, and Cathie's coat is one stiff piece (v3.20, "For the owner").
+- In 3D, at close range guards and lead feet still cross (trunks no longer
+  do, v3.21), and Cathie's coat bunches in a deep crouch rather than hanging.
 - A local `main` in a checkout can lag `origin/main` (this one sat at v3.12),
   and `lab/pixels.js` compares against `main` by default: run
   `git branch -f main origin/main`, or name the release commit.

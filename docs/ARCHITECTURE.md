@@ -1217,6 +1217,7 @@ exists for the same reason: hooks for a driver that isn't committed yet.
   steps in `COMBO.STEP_IN`, a rush runs to the rival and a teleport lands
   `TELEPORT.PAST` beyond them, and an attack in the air holds the body still
   until it ends. And the rival's body is a wall: `pushApart` keeps two bodies
-  `PHYS.PUSH_GAP` of a body width apart, in the air too until one is 120 px above
+  their push gap apart (each fighter's `pushHalf`, at least `PHYS.PUSH_HALF`,
+  added: `Fighter pushGap`), in the air too until one is 120 px above
   the other, so a jump toward the rival stops against them rather than passing
   (`restsAt` in `ai.js`).
