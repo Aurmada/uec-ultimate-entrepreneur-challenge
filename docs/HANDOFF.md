@@ -993,6 +993,19 @@ founders, still rides the hips; it can opt in with a `cloth` entry.
   3D (Carl against Jeff, Adam against Jeff, Kim's GROWTH HACK into Cathie).
 - The phone test page was brought up to v3.20 for the owner's Android phones
   and iPhone 12 Pro (round seven); its results are still to come.
+- A last pass on 2026-11-10, at the owner's word to get it ready, after the
+  review's fixes: 633 tests; twelve seeded AI matches (30,387 frames, 69
+  throws) hash the same frame for frame with the throw's drawing asked for
+  every frame and without; balance within noise of v3.20 on two more seeds;
+  whole AI matches in the real page in 3D and 2D with no page or console
+  error; a knockout throw looked at frame by frame (hoist, slam, then K.O.!);
+  and with the fight's old numbers all 30 frames identical to v3.20 again.
+
+**To release** (only at the owner's word, rule 7): `VERSION` is already
+`v3.21` on the branch. Change this section's heading to "released" with the
+date, the opening paragraph and the branch table to say `main` is v3.21, and
+the Branches line in `CLAUDE.md`; run `npm test`; push `claude/v3.21` to
+`main`; and watch the Pages build finish.
 
 ## v3.20, released 2026-11-09: ready for launch
 
