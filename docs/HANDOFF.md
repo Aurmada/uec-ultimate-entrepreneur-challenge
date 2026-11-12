@@ -6,10 +6,9 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.20, the launch build, on GitHub Pages
+The game is live at v3.21 on GitHub Pages
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-11-09 (see "v3.20"), and v3.21 (see "v3.21") is on `claude/v3.21`
-waiting for the owner's word to release: 3D by default, the nine founders the sculpted cast below, each
+on 2026-11-12 (see "v3.21"; v3.20, the launch build, went out on 2026-11-09): 3D by default, the nine founders the sculpted cast below, each
 in their own fighting form for everything they do (every move, special and
 reaction, how they move, start a round and go into their super) and each
 with a face of their own, and 2D a choice in Settings (see "v3.19" back to
@@ -55,8 +54,8 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.20 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/v3.21` | `main` plus the owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat (see "v3.21") | Committed, not pushed: waiting for the owner's word. 634 tests pass. |
+| `main` | The live game, v3.21 (`SIM_VERSION` 12): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `claude/v3.21` | The owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat, and the phone test on the site (see "v3.21") | Released in v3.21 on 2026-11-12, pushed straight to `main`; it was never a branch on GitHub. 634 tests pass. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
@@ -889,7 +888,7 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## v3.21, built 2026-11-09: bodies, a throw and a coat
+## v3.21, released 2026-11-12: bodies, a throw and a coat
 
 The owner, on the three v3.20 calls (below, "For the owner"): "Let's fix
 that", "Let's get that done", "Let's work on it". All three are done, the
@@ -998,7 +997,7 @@ founders, still rides the hips; it can opt in with a `cloth` entry.
   whatever version is live, needs no sign-in, and opens in any phone's
   browser at
   `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/lab/phone-test.html`
-  once v3.21 is released. The earlier rounds' hosted pages carried a copy of
+  (live with v3.21). The earlier rounds' hosted pages carried a copy of
   the game and went stale with each release.
 - A last pass on 2026-11-10, at the owner's word to get it ready, after the
   review's fixes: 633 tests; twelve seeded AI matches (30,387 frames, 69
@@ -1008,11 +1007,10 @@ founders, still rides the hips; it can opt in with a `cloth` entry.
   error; a knockout throw looked at frame by frame (hoist, slam, then K.O.!);
   and with the fight's old numbers all 30 frames identical to v3.20 again.
 
-**To release** (only at the owner's word, rule 7): `VERSION` is already
-`v3.21` on the branch. Change this section's heading to "released" with the
-date, the opening paragraph and the branch table to say `main` is v3.21, and
-the Branches line in `CLAUDE.md`; run `npm test`; push `claude/v3.21` to
-`main`; and watch the Pages build finish.
+**Released** on 2026-11-12 at the owner's word ("yes, release"), three days
+after it was built: he first asked for the phone test to go on the site
+with it. Still to come: the phone test's results from his Android phones
+and iPhone 12 Pro, and the old branches' deletion on GitHub (Decisions, 0).
 
 ## v3.20, released 2026-11-09: ready for launch
 
