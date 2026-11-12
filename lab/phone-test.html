@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>UEC 3D phone test</title>
+<!--
+  Times the 3D fighters against the 2D ones on a real phone, with no sign-in
+  and nothing to install: a live AI match between the two heaviest sculpts on
+  a rendered stage, 2D, then 3D as shipped, then 2D again, about 45 seconds in
+  all, and a block of results to copy. Rule 9's budget (about 2 ms a frame on
+  a mid-range phone) is checked with this.
+
+  It reads the game's own files, so on the site it tests whatever version is
+  live:  https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/lab/phone-test.html
+  Locally, serve with `python3 dev-server.py 4173` and open
+  http://<this machine's LAN address>:4173/lab/phone-test.html on a phone on
+  the same network. Rounds one to seven of this test were pages hosted
+  elsewhere with a copy of the game's files inside; this one cannot go stale.
+  lab/gl3d-bench.html is the older bench, for comparing renderer settings.
+-->
+<style>
+  /* One column, phone first: the live match on top, the run control, then the numbers.
+     A single dark arcade look on purpose, the game's own palette. */
+  :root {
+    --bg: #0b0e1a;
+    --panel: #161d33;
+    --line: #2a3358;
+    --text: #f0f3ff;
+    --muted: #8b93b8;
+    --gold: #ffd23f;
+    --pink: #ff3d6e;
+    --good: #2ee66b;
+    --warn: #ffb03a;
+    --ink: #111522;
+    --display: "Arial Black", Impact, system-ui, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    margin: 0;
+    font: 15px/1.5 var(--body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 16px 32px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; display: grid; gap: 16px; }
+  header { display: grid; gap: 6px; }
+  h1 { font: 900 clamp(22px, 6vw, 32px)/1.1 var(--display); margin: 0; color: var(--gold); letter-spacing: 0.02em; text-wrap: balance; }
+  h1 span { color: var(--pink); }
+  .lede { margin: 0; color: var(--muted); max-width: 62ch; }
+  .lede b { color: var(--text); font-weight: 600; }
+  .steps { margin: 0; padding-left: 20px; color: var(--muted); max-width: 62ch; display: grid; gap: 2px; }
+  .steps b { color: var(--text); font-weight: 600; }
+  .stagebox { position: relative; max-width: 100%; }
+  canvas#c { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 6px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  button {
+    font: 600 15px/1 var(--body); color: var(--ink); background: var(--gold); border: 0; border-radius: 8px;
+    padding: 12px 18px; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--gold); border: 1px solid var(--line); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+  .status { font: 13px/1.4 var(--mono); color: var(--muted); min-width: 0; }
+  .status b { color: var(--text); font-weight: 600; }
+  .meter { height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--pink); transition: width 0.25s linear; }
+  .verdict { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; }
+  .verdict .big { font: 600 18px/1.3 var(--body); }
+  .verdict .ok { color: var(--good); }
+  .verdict .over { color: var(--warn); }
+  .verdict p { margin: 0; color: var(--muted); font-size: 14px; }
+  .table { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font: 13px/1.4 var(--mono); font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  td.now { color: var(--gold); }
+  .device { font: 12px/1.5 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .copied { color: var(--good); font-size: 13px; }
+  textarea#out { width: 100%; min-height: 140px; font: 12px/1.4 var(--mono); background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
+  /* The renderer's own timing readout; the numbers land in the results instead. */
+  body > div[style*="ui-monospace"] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>UEC <span>3D</span> phone test</h1>
+    <p class="lede">The game as it ships in <span id="ver">this version</span>, with the two heaviest fighters, <b id="pair">Cathie and Carl</b>, fighting on the garage stage with every effect on. The 3D fighters should cost no more than about 2 ms a frame on a mid-range phone. An older or mid-range phone tells the most.</p>
+    <ol class="steps">
+      <li>Open this page in the phone's own browser (Chrome on Android, Safari on an iPhone), with nothing else running and the battery above 30%.</li>
+      <li>Tap <b>Run the test</b>, keep the screen on and leave the phone for about 45 seconds.</li>
+      <li>Tap <b>Copy results</b> and send them on: paste them into a message or an email. Chrome on Android names the phone's model in the results.</li>
+    </ol>
+  </header>
+
+  <div class="stagebox"><canvas id="c" aria-label="Live AI match used for timing"></canvas></div>
+
+  <div class="bar">
+    <button id="run" type="button">Run the test</button>
+    <div class="status" id="status">Loading the fighters and the stage&hellip;</div>
+  </div>
+  <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+
+  <div class="verdict" id="verdict" hidden>
+    <div class="big" id="verdictBig"></div>
+    <p id="verdictSmall"></p>
+  </div>
+
+  <div class="table">
+    <table>
+      <thead><tr><th>Setup</th><th>fps</th><th>mean ms</th><th>p95 ms</th><th>slow</th><th>3D cost</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="bar">
+    <button id="copy" type="button" class="ghost" disabled>Copy results</button>
+    <span class="copied" id="copied" hidden>Copied</span>
+  </div>
+  <textarea id="out" readonly hidden aria-label="Results as text"></textarea>
+  <div class="device" id="device"></div>
+</div>
+
+<script type="module">
+import { STAGE, STAGE_ART, GL3D, VERSION } from '../src/config.js';
+import { Game } from '../src/engine/game.js';
+import { renderGame, RENDER } from '../src/engine/render.js';
+import { getFighter } from '../src/data/fighters.js';
+import { getArena } from '../src/data/arenas.js';
+import { AIController } from '../src/engine/ai.js';
+import { enable3D, disable3D, reset3D, stats3D, pending3D, sculpts3D } from '../src/engine/gl3d/index.js';
+import { STAGES, stageFor } from '../src/engine/stage.js';
+import { FX_STYLE } from '../src/engine/fx.js';
+
+// The two heaviest sculpts (about 66,000 and 65,000 triangles), so this is
+// the worst case. 2D before and after, so a phone warming up over the run
+// shows as a difference between the two baselines.
+const cathie = getFighter('eleanor'), carl = getFighter('dex');
+const SETUPS = [
+  { id: 'base1', short: '2D', name: '2D fighters, rendered stage', three: false },
+  { id: 'three', short: '3D, as shipped', name: '3D fighters, as shipped', three: true },
+  { id: 'base2', short: '2D again', name: '2D fighters, rendered stage (again)', three: false },
+];
+const WARM = 2000, MEASURE = 10000;
+const BUDGET = 2;
+
+const $ = (id) => document.getElementById(id);
+// The roster's names are in capitals for the game's own type; a sentence
+// reads them better in title case.
+const title = (s) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+const pairName = `${title(cathie.name)} and ${title(carl.name)}`;
+$('pair').textContent = pairName;
+$('ver').textContent = VERSION;
+const canvas = $('c');
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+canvas.width = STAGE.W * dpr;
+canvas.height = STAGE.H * dpr;
+const ctx = canvas.getContext('2d');
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+// As main.js sets the game up in 3D: the roster in their sculpted models and
+// their own forms, fighters at screen resolution, rendered stages, hit effects.
+sculpts3D(true);
+RENDER.sharpFighters = true;
+STAGE_ART.PARALLAX = true;
+STAGES.enabled = true;
+FX_STYLE.impact = true;
+const arena = getArena('garage');
+
+const HUD = new Proxy({}, { get: () => () => {} });
+let game = null;
+function newGame() {
+  game = new Game({
+    p1: { def: cathie, controller: new AIController('mogul', cathie) },
+    p2: { def: carl, controller: new AIController('mogul', carl) },
+    arena, mode: 'solo', difficulty: 'mogul',
+    hud: HUD, onEnd: () => setTimeout(newGame, 0), seed: (Date.now() & 0xffff),
+  });
+}
+newGame();
+
+let frames = null;
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  const gap = now - last;
+  last = now;
+  game.update(dt);
+  const t0 = performance.now();
+  renderGame(ctx, game);
+  const t1 = performance.now();
+  if (frames) frames.push({ render: t1 - t0, gap });
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+let gpuName = 'unknown GPU';
+try {
+  const probe = document.createElement('canvas').getContext('webgl2');
+  const ext = probe && probe.getExtension('WEBGL_debug_renderer_info');
+  if (probe) gpuName = ext ? probe.getParameter(ext.UNMASKED_RENDERER_WEBGL) : probe.getParameter(probe.RENDERER);
+  else gpuName = 'no WebGL2';
+  probe?.getExtension('WEBGL_lose_context')?.loseContext();   // a page may hold only so many contexts
+} catch (e) { /* keep the default */ }
+const cores = navigator.hardwareConcurrency ? ` | ${navigator.hardwareConcurrency} cores` : '';
+const memory = navigator.deviceMemory ? ` | ${navigator.deviceMemory} GB` : '';
+let deviceLine = `${navigator.userAgent.replace(/^Mozilla\/5.0 /, '')} | GPU ${gpuName} | dpr ${dpr} | screen ${screen.width}x${screen.height}${cores}${memory}`;
+$('device').textContent = deviceLine;
+// Chrome on Android writes the model as "K" in its user agent; it gives the
+// real one only when asked. Safari has no such call, and an iPhone is told
+// apart by its screen and pixel ratio instead.
+navigator.userAgentData?.getHighEntropyValues?.(['model', 'platformVersion']).then((h) => {
+  if (h.model) deviceLine = `${h.model} (Android ${h.platformVersion || '?'}) | ${deviceLine}`;
+  $('device').textContent = deviceLine;
+}).catch(() => {});
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const modelsReady = () => !pending3D(cathie) && !pending3D(carl);
+
+// Builds the renderer and waits for both models.
+async function start3D() {
+  reset3D();
+  GL3D.LAYER = true;
+  if (!enable3D({ ids: null })) return { ok: false, why: 'no WebGL2' };
+  for (let i = 0; i < 150 && !modelsReady(); i++) await sleep(100);
+  // Only the two fighters' own models count: the renderer also loads the
+  // founder body, which no one here wears.
+  const states = stats3D().models;
+  const failed = ['sculpt:eleanor', 'sculpt:dex'].some((id) => states[id] === 'failed');
+  return { ok: modelsReady() && !failed, why: failed ? 'a model failed to load' : 'the models took too long to load' };
+}
+
+const runBtn = $('run');
+runBtn.disabled = true;
+(async () => {
+  const first = await start3D();
+  for (let i = 0; i < 100 && !stageFor(arena); i++) await sleep(100);
+  $('status').innerHTML = first.ok
+    ? 'Ready. Tap <b>Run the test</b>.'
+    : `<b>3D could not start on this device</b> (${first.why}). Send on the line at the bottom of the page instead.`;
+  runBtn.disabled = !first.ok;
+})();
+
+// Frame times, and the share of frames that took more than one and a half
+// times the run's usual frame: a dropped frame at 60 or at 120 Hz alike.
+const summary = (list) => {
+  const sorted = (key) => list.map((f) => f[key]).sort((a, b) => a - b);
+  const r = sorted('render'), g = sorted('gap');
+  const mean = (s) => s.reduce((a, b) => a + b, 0) / s.length;
+  const median = g[Math.floor(g.length / 2)];
+  return {
+    fps: 1000 / (mean(g) || 16.7), mean: mean(r), p95: r[Math.floor(r.length * 0.95)],
+    slow: g.filter((x) => x > median * 1.5).length / g.length, n: list.length,
+  };
+};
+const results = {};
+const baseline = () => {
+  const b = [results.base1, results.base2].filter((r) => r && !r.skipped);
+  return b.length ? b.reduce((a, r) => a + r.mean, 0) / b.length : null;
+};
+const baseFps = () => {
+  const b = [results.base1, results.base2].filter((r) => r && !r.skipped);
+  return b.length ? b.reduce((a, r) => a + r.fps, 0) / b.length : null;
+};
+
+function drawRows(active) {
+  const base = baseline();
+  $('rows').innerHTML = SETUPS.map((s) => {
+    const r = results[s.id];
+    const cls = s.id === active ? ' class="now"' : '';
+    if (!r) return `<tr><td${cls}>${s.short}</td>${'<td>&ndash;</td>'.repeat(5)}</tr>`;
+    if (r.skipped) return `<tr><td>${s.short}</td><td colspan="5">skipped (${r.why})</td></tr>`;
+    const cost = s.three && base !== null ? (r.mean - base).toFixed(2) : '';
+    return `<tr><td>${s.short}</td><td>${r.fps.toFixed(1)}</td><td>${r.mean.toFixed(2)}</td><td>${r.p95.toFixed(2)}</td><td>${(r.slow * 100).toFixed(1)}%</td><td>${cost}</td></tr>`;
+  }).join('');
+}
+drawRows(null);
+
+async function measure(s, index) {
+  for (;;) {
+    frames = null;
+    $('status').innerHTML = `Warming up <b>${s.name}</b> (${index + 1} of ${SETUPS.length})`;
+    await sleep(WARM);
+    frames = [];
+    const start = performance.now();
+    let hidden = false;
+    while (performance.now() - start < MEASURE) {
+      if (document.hidden) hidden = true;
+      const done = (index + (performance.now() - start) / MEASURE) / SETUPS.length;
+      $('meter').style.width = `${(done * 100).toFixed(1)}%`;
+      $('status').innerHTML = `Timing <b>${s.name}</b> (${index + 1} of ${SETUPS.length})`;
+      await sleep(250);
+    }
+    const list = frames;
+    frames = null;
+    // A run the phone hid partway (a call, the screen locking) is timed again.
+    if (!hidden && list.length) return summary(list);
+  }
+}
+
+function report() {
+  const base = baseline(), fps0 = baseFps();
+  const lines = [`UEC 3D phone test (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
+  for (const s of SETUPS) {
+    const r = results[s.id];
+    if (!r || r.skipped) { lines.push(`${s.name.padEnd(36)} skipped${r ? ` (${r.why})` : ''}`); continue; }
+    const cost = s.three ? `  3D cost ${(r.mean - base).toFixed(2).padStart(5)} ms` : '';
+    const got = s.three && r.got !== 'layer' ? '  (no layer: ran as a copy)' : '';
+    lines.push(`${s.name.padEnd(36)} fps ${r.fps.toFixed(1).padStart(5)}  mean ${r.mean.toFixed(2).padStart(5)}  p95 ${r.p95.toFixed(2).padStart(5)}  slow ${(r.slow * 100).toFixed(1).padStart(4)}%${cost}${got}`);
+  }
+  const r3 = results.three;
+  if (r3 && !r3.skipped && base !== null) {
+    const cost = r3.mean - base, ok = cost <= BUDGET;
+    const dropped = fps0 !== null && r3.fps < fps0 * 0.92;
+    lines.push('', `3D fighters: ${cost.toFixed(2)} ms a frame over 2D, budget about ${BUDGET} ms; ${r3.fps.toFixed(1)} fps against ${fps0.toFixed(1)} in 2D.`);
+    // Under a tenth of a millisecond is within the noise between the two 2D runs.
+    const said = cost < 0.1 ? 'too little to measure (under 0.1 ms a frame)' : `${cost.toFixed(2)} ms a frame`;
+    $('verdictBig').innerHTML = `${ok ? '<span class="ok">Within budget</span>' : '<span class="over">Over budget</span>'}: the 3D fighters cost ${said}.`;
+    $('verdictSmall').textContent = `${dropped ? `The frame rate fell, ${fps0.toFixed(0)} fps in 2D to ${r3.fps.toFixed(0)} in 3D, so the phone's graphics chip is also working hard. ` : `The frame rate held, ${r3.fps.toFixed(0)} fps in 3D against ${fps0.toFixed(0)} in 2D. `}Budget about ${BUDGET} ms. Averages, against the mean of the two 2D runs.`;
+    $('verdict').hidden = false;
+  }
+  return lines.join('\n');
+}
+
+let wake = null;
+runBtn.addEventListener('click', async () => {
+  runBtn.disabled = true;
+  $('copy').disabled = true;
+  $('verdict').hidden = true;
+  for (const k of Object.keys(results)) delete results[k];
+  try { wake = await navigator.wakeLock?.request('screen'); } catch (e) { wake = null; }
+  for (let i = 0; i < SETUPS.length; i++) {
+    const s = SETUPS[i];
+    drawRows(s.id);
+    let got = null;
+    if (s.three) {
+      $('status').innerHTML = `Setting up <b>${s.name}</b>`;
+      GL3D.LAYER = true;
+      if (!stats3D().renderer) {
+        const u = await start3D();
+        if (!u.ok) { results[s.id] = { skipped: true, why: u.why }; continue; }
+      } else {
+        enable3D({ ids: null });
+      }
+      got = stats3D().layer ? 'layer' : 'copy';
+    } else {
+      GL3D.LAYER = false;
+      disable3D();
+    }
+    results[s.id] = { ...(await measure(s, i)), got };
+    drawRows(null);
+  }
+  GL3D.LAYER = true;
+  enable3D({ ids: null });
+  $('meter').style.width = '100%';
+  $('out').value = report();
+  $('out').hidden = false;
+  $('status').innerHTML = '<b>Done.</b> Copy the results and send them on.';
+  $('copy').disabled = false;
+  runBtn.disabled = false;
+  runBtn.textContent = 'Run it again';
+  try { await wake?.release(); } catch (e) { /* already released */ }
+});
+
+$('copy').addEventListener('click', () => {
+  const ta = $('out');
+  const fallback = () => { ta.focus(); ta.select(); };
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => {
+      $('copied').hidden = false;
+      setTimeout(() => { $('copied').hidden = true; }, 2000);
+    }, fallback);
+  } catch (e) { fallback(); }
+});
+</script>
+</body>
+</html>

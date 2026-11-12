@@ -129,3 +129,20 @@ test('the touch pads are not over the VS splash', () => {
   assert.match(src('styles.css'), /#scr-fight:has\(#vsSplash:not\(\.hidden\)\) \.touch \{ visibility: hidden; \}/);
   assert.match(src('index.html'), /<section id="scr-fight"[\s\S]*id="vsSplash"[\s\S]*id="touchControls"[\s\S]*<\/section>/, 'the pads or the splash left the fight screen');
 });
+
+// The phone test (rule 9's budget) used to be a page hosted elsewhere with a
+// copy of the game's files inside, which went stale with every release and
+// needed that host to open. It lives on the site now and reads the game's own
+// files, so it tests whatever version is live, in any phone's browser.
+test("the phone test page is the site's own: the game's files, nothing from outside, nothing to sign in to", () => {
+  const page = src('lab/phone-test.html');
+  const code = page.slice(page.indexOf('<script type="module">'));
+  const imports = [...code.matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
+  assert.ok(imports.length >= 8, 'the page no longer imports the game');
+  for (const from of imports) assert.match(from, /^\.\.\/src\//, `${from} is not the game's own file`);
+  assert.match(code, /import \{[^}]*\bVERSION\b[^}]*\} from '\.\.\/src\/config\.js';/);
+  assert.match(code, /\$\('ver'\)\.textContent = VERSION;/, 'the page does not say which version it timed');
+  // rule 1: no outside script, stylesheet or font, and no fetch of its own
+  assert.doesNotMatch(page.replace(/<!--[\s\S]*?-->/g, ''), /https?:\/\//, 'the page loads something from outside the site');
+  assert.doesNotMatch(code, /\bfetch\(|localStorage|supabase/i);
+});

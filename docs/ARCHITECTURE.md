@@ -779,7 +779,9 @@ holds 46 meshes and 42.7k triangles in 1.3 MB, and a fighter draws about 10k of
 them. Phone numbers come from `lab/gl3d-bench.html`, a match that
 needs no sign-in: serve with `python3 dev-server.py 4173` and open
 `http://<this machine's LAN address>:4173/lab/gl3d-bench.html` on a phone on the
-same network. `lab/gl3d-gallery.js` renders one fighter through every state, the
+same network. Since v3.21 the budget itself is checked with
+`lab/phone-test.html`, which times 2D, 3D as shipped and 2D again and gives a
+block of results to copy; it is on the live site too, under `lab/`. `lab/gl3d-gallery.js` renders one fighter through every state, the
 whole roster, every look option (as bodies or as busts), every face close up in
 each expression, or every portrait, and `lab/blender/build_founder.py` rebuilds
 the model in about five seconds.

@@ -56,7 +56,7 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.20 (`SIM_VERSION` 11): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/v3.21` | `main` plus the owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat (see "v3.21") | Committed, not pushed: waiting for the owner's word. 633 tests pass. |
+| `claude/v3.21` | `main` plus the owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat (see "v3.21") | Committed, not pushed: waiting for the owner's word. 634 tests pass. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
@@ -894,7 +894,7 @@ at the middle while it can hit.
 The owner, on the three v3.20 calls (below, "For the owner"): "Let's fix
 that", "Let's get that done", "Let's work on it". All three are done, the
 first two changing the fight (`SIM_VERSION` 12: v3.21 does not play v3.20
-online). 633 tests pass.
+online). 634 tests pass.
 
 **Bodies as broad as their sculpts.** One push gap held for everyone, 0.92
 of a body width (51.5 px between centres), and in 3D the broad sculpts are
@@ -992,7 +992,14 @@ founders, still rides the hips; it can opt in with a `cloth` entry.
 - The throw and the bodies were looked at frame by frame in the real game in
   3D (Carl against Jeff, Adam against Jeff, Kim's GROWTH HACK into Cathie).
 - The phone test page was brought up to v3.20 for the owner's Android phones
-  and iPhone 12 Pro (round seven); its results are still to come.
+  and iPhone 12 Pro (round seven); its results are still to come. Those
+  phones have no Claude app and the owner wants none, so the test moved
+  onto the site: `lab/phone-test.html` reads the game's own files, tests
+  whatever version is live, needs no sign-in, and opens in any phone's
+  browser at
+  `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/lab/phone-test.html`
+  once v3.21 is released. The earlier rounds' hosted pages carried a copy of
+  the game and went stale with each release.
 - A last pass on 2026-11-10, at the owner's word to get it ready, after the
   review's fixes: 633 tests; twelve seeded AI matches (30,387 frames, 69
   throws) hash the same frame for frame with the throw's drawing asked for
