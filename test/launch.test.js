@@ -146,3 +146,14 @@ test("the phone test page is the site's own: the game's files, nothing from outs
   assert.doesNotMatch(page.replace(/<!--[\s\S]*?-->/g, ''), /https?:\/\//, 'the page loads something from outside the site');
   assert.doesNotMatch(code, /\bfetch\(|localStorage|supabase/i);
 });
+
+test('the stage light is on unless the phone test turns it off, and off it is left out of both paths', async () => {
+  const { RENDER } = await import('../src/engine/render.js');
+  assert.equal(RENDER.light, true, 'the default game lost its stage light');
+  const render = src('src/engine/render.js');
+  assert.match(render, /function drawStageLight\(ctx\) \{\s*if \(!RENDER\.light\) return;/);
+  assert.match(render, /function lightStack\(L, base, shake\) \{\s*showLayer\(L, 'glow', RENDER\.light\);\s*showLayer\(L, 'vig', RENDER\.light\);\s*if \(!RENDER\.light\) return;/);
+  // and the page times every switch it names
+  const page = src('lab/phone-test.html');
+  for (const key of ["blank: true", "dpr: 1", "light: false", "stage: 'one'", "stage: 'none'", "fx: false", "three: false"]) assert.ok(page.includes(key), `the breakdown lost ${key}`);
+});

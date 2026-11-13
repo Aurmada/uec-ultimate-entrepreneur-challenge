@@ -145,6 +145,7 @@ function drawForeground(ctx, arena, t) {
 }
 
 function drawStageLight(ctx) {
+  if (!RENDER.light) return;
   // subtle top key glow
   ctx.save();
   ctx.globalCompositeOperation = 'soft-light';
@@ -515,7 +516,10 @@ function worldCanvas() {
 // cropped drawImage per layer; only the fighters are drawn under a scale, and a
 // fighter is a couple of image blits, not gradients. Off by default until the
 // cost is measured on phones.
-export const RENDER = { sharpFighters: false };
+// `light` off leaves out the stage light (the key glow, a soft-light blend
+// over the whole frame, and the vignette): lab/phone-test.html times a frame
+// without it, to find what a slow phone spends its frame on.
+export const RENDER = { sharpFighters: false, light: true };
 let front = null;
 function frontCanvas() {
   if (!front) {
@@ -691,6 +695,9 @@ function hideStack(canvas) {
 // The glow and vignette, drawn as drawStageLight draws them, onto their small
 // canvases: the same transform, scaled down to their size.
 function lightStack(L, base, shake) {
+  showLayer(L, 'glow', RENDER.light);
+  showLayer(L, 'vig', RENDER.light);
+  if (!RENDER.light) return;
   const key = `${shake.x},${shake.y},${base.a},${base.d},${base.e},${base.f}`;
   if (key === L.lit) return;
   L.lit = key;

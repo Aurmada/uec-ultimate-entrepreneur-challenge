@@ -30,7 +30,7 @@ npm test                      # Node 21+, no npm install: there are no dependenc
 6. **Privacy and safety.** Never put emails in the world-readable `profiles` table. Every user-authored string goes through `esc()` before `innerHTML`.
 7. **Push or deploy only when the owner explicitly asks.** Anything that creates or changes paid resources (Supabase) needs the owner's OK first.
 8. **Writing.** Docs and comments in Canadian English, no em dashes. Comments explain why, in the voice already in the file.
-9. **Performance.** The 3D rig should stay within about 2 ms a frame, worst case, on a mid-range phone. Measured so far only on the owner's iPhone, a fast one: 1.0 ms a frame for the two heaviest sculpts in v3.19 with the 3D layer (`GL3D.LAYER`; 0.7 ms for the founder model in October), against about 4 ms copying into the 2D canvas. Do not go back to the copy for on-screen fighters. `lab/phone-test.html` measures it on any phone, on the live site or from `dev-server.py`.
+9. **Performance.** The 3D rig should stay within about 2 ms a frame, worst case, on a mid-range phone. Measured on the owner's fast iPhone (1.0 ms a frame for the two heaviest sculpts in v3.19), and in v3.21 on a budget Android (Ahlo 1, 0.01 ms) and an iPhone 12 Pro (0.11 ms); but those two show 21 and, in 2D, 19 frames a second, the screen's drawing being the limit (HANDOFF "v3.21.1"). The figures are with the 3D layer (`GL3D.LAYER`; 0.7 ms for the founder model in October), against about 4 ms copying into the 2D canvas. Do not go back to the copy for on-screen fighters. `lab/phone-test.html` measures it on any phone, on the live site or from `dev-server.py`.
 
 ## Before calling something done
 

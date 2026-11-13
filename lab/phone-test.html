@@ -6,11 +6,16 @@
 <meta name="robots" content="noindex">
 <title>UEC 3D phone test</title>
 <!--
-  Times the 3D fighters against the 2D ones on a real phone, with no sign-in
-  and nothing to install: a live AI match between the two heaviest sculpts on
-  a rendered stage, 2D, then 3D as shipped, then 2D again, about 45 seconds in
-  all, and a block of results to copy. Rule 9's budget (about 2 ms a frame on
-  a mid-range phone) is checked with this.
+  Times the game on a real phone, with no sign-in and nothing to install: a
+  live AI match between the two heaviest sculpts on a rendered stage, in
+  twelve setups that each switch one thing (3D or 2D, resolution, the stage
+  light, the stage's pictures, the hit effects), about a minute and a half in
+  all, and a block of results to copy. Rule 9's budget (the 3D fighters about
+  2 ms a frame on a mid-range phone) is checked with this, and so is the frame
+  rate itself: round seven (v3.21) found the 3D fighters cheap everywhere but
+  a budget Android at 21 fps whatever it drew, and an iPhone 12 Pro at 19 fps
+  in 2D against 58 in 3D. The time went to drawing the screen, which the
+  processor's milliseconds do not count; the breakdown says where.
 
   It reads the game's own files, so on the site it tests whatever version is
   live:  https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/lab/phone-test.html
@@ -93,10 +98,10 @@
 <div class="wrap">
   <header>
     <h1>UEC <span>3D</span> phone test</h1>
-    <p class="lede">The game as it ships in <span id="ver">this version</span>, with the two heaviest fighters, <b id="pair">Cathie and Carl</b>, fighting on the garage stage with every effect on. The 3D fighters should cost no more than about 2 ms a frame on a mid-range phone. An older or mid-range phone tells the most.</p>
+    <p class="lede">The game as it ships in <span id="ver">this version</span>, with the two heaviest fighters, <b id="pair">Cathie and Carl</b>, fighting on the garage stage, timed in twelve setups that each switch one thing off: the resolution, the stage light, the stage's pictures, the hit effects, and 3D against 2D. It finds what a phone spends its frame on. An older or mid-range phone tells the most.</p>
     <ol class="steps">
-      <li>Open this page in the phone's own browser (Chrome on Android, Safari on an iPhone), with nothing else running and the battery above 30%.</li>
-      <li>Tap <b>Run the test</b>, keep the screen on and leave the phone for about 45 seconds.</li>
+      <li>Open this page in the phone's own browser (Chrome on Android, Safari on an iPhone), with nothing else running, the battery above 30% and Low Power Mode or battery saver off.</li>
+      <li>Tap <b>Run the test</b>, keep the screen on and leave the phone for about a minute and a half.</li>
       <li>Tap <b>Copy results</b> and send them on: paste them into a message or an email. Chrome on Android names the phone's model in the results.</li>
     </ol>
   </header>
@@ -116,7 +121,7 @@
 
   <div class="table">
     <table>
-      <thead><tr><th>Setup</th><th>fps</th><th>mean ms</th><th>p95 ms</th><th>slow</th><th>3D cost</th></tr></thead>
+      <thead><tr><th>Setup</th><th>fps</th><th>CPU ms</th><th>p95 ms</th><th>slow</th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
   </div>
@@ -141,16 +146,34 @@ import { STAGES, stageFor } from '../src/engine/stage.js';
 import { FX_STYLE } from '../src/engine/fx.js';
 
 // The two heaviest sculpts (about 66,000 and 65,000 triangles), so this is
-// the worst case. 2D before and after, so a phone warming up over the run
-// shows as a difference between the two baselines.
+// the worst case.
 const cathie = getFighter('eleanor'), carl = getFighter('dex');
+const arena = getArena('garage');
+// The same arena under another name, so the stage loads a second time as one
+// picture (STAGE_ART.PARALLAX is read as a stage loads): the "one picture" run.
+const onePicture = { ...arena, id: `${arena.id}-one-picture` };
+
+// Each setup is the game as shipped with one thing changed, so the fps each
+// gains over "3D, as shipped" says what that thing costs. "Ceiling" draws
+// nothing but a fill: the most frames this phone shows. 3D as shipped comes
+// last again, to catch a phone slowing as it warms.
+const FULL = { three: true, dpr: 2, light: true, stage: 'layers', fx: true };
 const SETUPS = [
-  { id: 'base1', short: '2D', name: '2D fighters, rendered stage', three: false },
-  { id: 'three', short: '3D, as shipped', name: '3D fighters, as shipped', three: true },
-  { id: 'base2', short: '2D again', name: '2D fighters, rendered stage (again)', three: false },
+  { id: 'ceiling', name: 'Ceiling (a blank screen)', blank: true },
+  { id: 'd3', name: '3D, as shipped', ...FULL },
+  { id: 'd3-half', name: '3D, half resolution', ...FULL, dpr: 1, change: 'at half resolution' },
+  { id: 'd3-light', name: '3D, no stage light', ...FULL, light: false, change: 'without the stage light' },
+  { id: 'd3-one', name: '3D, stage as one picture', ...FULL, stage: 'one', change: "with the stage as one picture" },
+  { id: 'd3-flat', name: '3D, no stage pictures', ...FULL, stage: 'none', change: "without the stage's pictures" },
+  { id: 'd3-fx', name: '3D, no hit effects', ...FULL, fx: false, change: 'without the hit effects' },
+  { id: 'd3-bare', name: '3D, all four off', three: true, dpr: 1, light: false, stage: 'none', fx: false },
+  { id: 'd2', name: '2D, as shipped', ...FULL, three: false },
+  { id: 'd2-half', name: '2D, half resolution', ...FULL, three: false, dpr: 1, change: 'at half resolution' },
+  { id: 'd2-light', name: '2D, no stage light', ...FULL, three: false, light: false, change: 'without the stage light' },
+  { id: 'd3-again', name: '3D, as shipped (again)', ...FULL },
 ];
-const WARM = 2000, MEASURE = 10000;
-const BUDGET = 2;
+const WARM = 1500, MEASURE = 6000;
+const BUDGET = 2;                         // ms a frame the 3D fighters may add (rule 9)
 
 const $ = (id) => document.getElementById(id);
 // The roster's names are in capitals for the game's own type; a sentence
@@ -160,11 +183,14 @@ const pairName = `${title(cathie.name)} and ${title(carl.name)}`;
 $('pair').textContent = pairName;
 $('ver').textContent = VERSION;
 const canvas = $('c');
-const dpr = Math.min(2, window.devicePixelRatio || 1);
-canvas.width = STAGE.W * dpr;
-canvas.height = STAGE.H * dpr;
+const DPR = Math.min(2, window.devicePixelRatio || 1);   // as main.js sizes the game canvas
 const ctx = canvas.getContext('2d');
-ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+function setResolution(d) {
+  const w = Math.round(STAGE.W * d), h = Math.round(STAGE.H * d);
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+setResolution(DPR);
 // As main.js sets the game up in 3D: the roster in their sculpted models and
 // their own forms, fighters at screen resolution, rendered stages, hit effects.
 sculpts3D(true);
@@ -172,10 +198,9 @@ RENDER.sharpFighters = true;
 STAGE_ART.PARALLAX = true;
 STAGES.enabled = true;
 FX_STYLE.impact = true;
-const arena = getArena('garage');
 
 const HUD = new Proxy({}, { get: () => () => {} });
-let game = null;
+let game = null, setup = null;
 function newGame() {
   game = new Game({
     p1: { def: cathie, controller: new AIController('mogul', cathie) },
@@ -183,6 +208,7 @@ function newGame() {
     arena, mode: 'solo', difficulty: 'mogul',
     hud: HUD, onEnd: () => setTimeout(newGame, 0), seed: (Date.now() & 0xffff),
   });
+  if (setup?.stage === 'one') game.arena = onePicture;
 }
 newGame();
 
@@ -194,7 +220,12 @@ function loop(now) {
   last = now;
   game.update(dt);
   const t0 = performance.now();
-  renderGame(ctx, game);
+  if (setup?.blank) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, STAGE.W, STAGE.H);
+  } else {
+    renderGame(ctx, game);
+  }
   const t1 = performance.now();
   if (frames) frames.push({ render: t1 - t0, gap });
   requestAnimationFrame(loop);
@@ -211,7 +242,7 @@ try {
 } catch (e) { /* keep the default */ }
 const cores = navigator.hardwareConcurrency ? ` | ${navigator.hardwareConcurrency} cores` : '';
 const memory = navigator.deviceMemory ? ` | ${navigator.deviceMemory} GB` : '';
-let deviceLine = `${navigator.userAgent.replace(/^Mozilla\/5.0 /, '')} | GPU ${gpuName} | dpr ${dpr} | screen ${screen.width}x${screen.height}${cores}${memory}`;
+let deviceLine = `${navigator.userAgent.replace(/^Mozilla\/5.0 /, '')} | GPU ${gpuName} | dpr ${DPR} | screen ${screen.width}x${screen.height}${cores}${memory}`;
 $('device').textContent = deviceLine;
 // Chrome on Android writes the model as "K" in its user agent; it gives the
 // real one only when asked. Safari has no such call, and an iPhone is told
@@ -223,6 +254,7 @@ navigator.userAgentData?.getHighEntropyValues?.(['model', 'platformVersion']).th
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const modelsReady = () => !pending3D(cathie) && !pending3D(carl);
+const stageReady = (a) => { const st = stageFor(a); return !!(st && (st.ready || st.failed)); };
 
 // Builds the renderer and waits for both models.
 async function start3D() {
@@ -239,21 +271,57 @@ async function start3D() {
 
 const runBtn = $('run');
 runBtn.disabled = true;
+let three = { ok: false, why: 'not started' };
 (async () => {
-  const first = await start3D();
-  for (let i = 0; i < 100 && !stageFor(arena); i++) await sleep(100);
-  $('status').innerHTML = first.ok
+  three = await start3D();
+  // both stages loaded before the clock starts: in depth layers, and as one picture
+  for (let i = 0; i < 100 && !stageReady(arena); i++) await sleep(100);
+  STAGE_ART.PARALLAX = false;
+  stageFor(onePicture);
+  STAGE_ART.PARALLAX = true;
+  for (let i = 0; i < 100 && !stageReady(onePicture); i++) await sleep(100);
+  $('status').innerHTML = three.ok
     ? 'Ready. Tap <b>Run the test</b>.'
-    : `<b>3D could not start on this device</b> (${first.why}). Send on the line at the bottom of the page instead.`;
-  runBtn.disabled = !first.ok;
+    : `Ready, but <b>3D could not start on this device</b> (${three.why}): the 3D setups will be skipped. Tap <b>Run the test</b>.`;
+  runBtn.disabled = false;
 })();
+
+// Puts the game in a setup: everything as shipped but what the setup changes.
+function apply(s) {
+  setup = s;
+  if (s.blank) {
+    // the 3D layer's canvases are hidden by a frame drawn in 2D, then left blank
+    GL3D.LAYER = false;
+    disable3D();
+    setResolution(DPR);
+    renderGame(ctx, game);
+    return true;
+  }
+  if (s.three && !three.ok) return false;
+  setResolution(s.dpr === 1 ? 1 : DPR);
+  RENDER.light = s.light;
+  FX_STYLE.impact = s.fx;
+  STAGES.enabled = s.stage !== 'none';
+  game.arena = s.stage === 'one' ? onePicture : arena;
+  if (s.three) { GL3D.LAYER = true; enable3D({ ids: null }); } else { GL3D.LAYER = false; disable3D(); }
+  return true;
+}
+function restore() {
+  setup = null;
+  setResolution(DPR);
+  RENDER.light = true;
+  FX_STYLE.impact = true;
+  STAGES.enabled = true;
+  game.arena = arena;
+  if (three.ok) { GL3D.LAYER = true; enable3D({ ids: null }); }
+}
 
 // Frame times, and the share of frames that took more than one and a half
 // times the run's usual frame: a dropped frame at 60 or at 120 Hz alike.
 const summary = (list) => {
   const sorted = (key) => list.map((f) => f[key]).sort((a, b) => a - b);
   const r = sorted('render'), g = sorted('gap');
-  const mean = (s) => s.reduce((a, b) => a + b, 0) / s.length;
+  const mean = (x) => x.reduce((a, b) => a + b, 0) / x.length;
   const median = g[Math.floor(g.length / 2)];
   return {
     fps: 1000 / (mean(g) || 16.7), mean: mean(r), p95: r[Math.floor(r.length * 0.95)],
@@ -261,24 +329,20 @@ const summary = (list) => {
   };
 };
 const results = {};
-const baseline = () => {
-  const b = [results.base1, results.base2].filter((r) => r && !r.skipped);
-  return b.length ? b.reduce((a, r) => a + r.mean, 0) / b.length : null;
-};
-const baseFps = () => {
-  const b = [results.base1, results.base2].filter((r) => r && !r.skipped);
-  return b.length ? b.reduce((a, r) => a + r.fps, 0) / b.length : null;
+const ok = (id) => results[id] && !results[id].skipped;
+// 3D as shipped, the mean of its two runs (start and end), as the reference
+const shipped3D = () => {
+  const b = ['d3', 'd3-again'].filter(ok).map((id) => results[id]);
+  return b.length ? { fps: b.reduce((a, r) => a + r.fps, 0) / b.length, mean: b.reduce((a, r) => a + r.mean, 0) / b.length } : null;
 };
 
 function drawRows(active) {
-  const base = baseline();
   $('rows').innerHTML = SETUPS.map((s) => {
     const r = results[s.id];
     const cls = s.id === active ? ' class="now"' : '';
-    if (!r) return `<tr><td${cls}>${s.short}</td>${'<td>&ndash;</td>'.repeat(5)}</tr>`;
-    if (r.skipped) return `<tr><td>${s.short}</td><td colspan="5">skipped (${r.why})</td></tr>`;
-    const cost = s.three && base !== null ? (r.mean - base).toFixed(2) : '';
-    return `<tr><td>${s.short}</td><td>${r.fps.toFixed(1)}</td><td>${r.mean.toFixed(2)}</td><td>${r.p95.toFixed(2)}</td><td>${(r.slow * 100).toFixed(1)}%</td><td>${cost}</td></tr>`;
+    if (!r) return `<tr><td${cls}>${s.name}</td>${'<td>&ndash;</td>'.repeat(4)}</tr>`;
+    if (r.skipped) return `<tr><td>${s.name}</td><td colspan="4">skipped (${r.why})</td></tr>`;
+    return `<tr><td>${s.name}</td><td>${r.fps.toFixed(1)}</td><td>${r.mean.toFixed(2)}</td><td>${r.p95.toFixed(2)}</td><td>${(r.slow * 100).toFixed(1)}%</td></tr>`;
   }).join('');
 }
 drawRows(null);
@@ -305,25 +369,52 @@ async function measure(s, index) {
   }
 }
 
+// How a frame rate plays, for the verdict.
+const feel = (fps, ceiling) => {
+  // against 60, or the phone's own ceiling where that is lower (a screen held
+  // to 30 by battery saver); a ceiling under 30 is a phone too busy to measure it
+  const top = ceiling >= 30 ? Math.min(60, ceiling) : 60;
+  return fps >= top * 0.92 ? 'smooth' : fps >= top * 0.66 ? 'playable but not smooth' : 'choppy';
+};
+
 function report() {
-  const base = baseline(), fps0 = baseFps();
-  const lines = [`UEC 3D phone test (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
+  const lines = [`UEC 3D phone test, the breakdown (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
   for (const s of SETUPS) {
     const r = results[s.id];
-    if (!r || r.skipped) { lines.push(`${s.name.padEnd(36)} skipped${r ? ` (${r.why})` : ''}`); continue; }
-    const cost = s.three ? `  3D cost ${(r.mean - base).toFixed(2).padStart(5)} ms` : '';
-    const got = s.three && r.got !== 'layer' ? '  (no layer: ran as a copy)' : '';
-    lines.push(`${s.name.padEnd(36)} fps ${r.fps.toFixed(1).padStart(5)}  mean ${r.mean.toFixed(2).padStart(5)}  p95 ${r.p95.toFixed(2).padStart(5)}  slow ${(r.slow * 100).toFixed(1).padStart(4)}%${cost}${got}`);
+    if (!r || r.skipped) { lines.push(`${s.name.padEnd(30)} skipped${r ? ` (${r.why})` : ''}`); continue; }
+    lines.push(`${s.name.padEnd(30)} fps ${r.fps.toFixed(1).padStart(5)}  cpu ${r.mean.toFixed(2).padStart(5)}  p95 ${r.p95.toFixed(2).padStart(5)}  slow ${(r.slow * 100).toFixed(1).padStart(4)}%`);
   }
-  const r3 = results.three;
-  if (r3 && !r3.skipped && base !== null) {
-    const cost = r3.mean - base, ok = cost <= BUDGET;
-    const dropped = fps0 !== null && r3.fps < fps0 * 0.92;
-    lines.push('', `3D fighters: ${cost.toFixed(2)} ms a frame over 2D, budget about ${BUDGET} ms; ${r3.fps.toFixed(1)} fps against ${fps0.toFixed(1)} in 2D.`);
-    // Under a tenth of a millisecond is within the noise between the two 2D runs.
-    const said = cost < 0.1 ? 'too little to measure (under 0.1 ms a frame)' : `${cost.toFixed(2)} ms a frame`;
-    $('verdictBig').innerHTML = `${ok ? '<span class="ok">Within budget</span>' : '<span class="over">Over budget</span>'}: the 3D fighters cost ${said}.`;
-    $('verdictSmall').textContent = `${dropped ? `The frame rate fell, ${fps0.toFixed(0)} fps in 2D to ${r3.fps.toFixed(0)} in 3D, so the phone's graphics chip is also working hard. ` : `The frame rate held, ${r3.fps.toFixed(0)} fps in 3D against ${fps0.toFixed(0)} in 2D. `}Budget about ${BUDGET} ms. Averages, against the mean of the two 2D runs.`;
+  const ceiling = ok('ceiling') ? results.ceiling.fps : null;
+  const ref = shipped3D(), d2 = ok('d2') ? results.d2 : null;
+  lines.push('');
+  const big = [];
+  if (ref) {
+    lines.push(`3D as shipped: ${ref.fps.toFixed(1)} fps (${feel(ref.fps, ceiling)}), the phone's ceiling ${ceiling ? ceiling.toFixed(0) : '?'} fps.`);
+    if (d2) lines.push(`3D fighters: ${(ref.mean - d2.mean).toFixed(2)} ms of processor a frame over 2D, budget about ${BUDGET} ms.`);
+    // what each switch gains on its own, against the same mode as shipped
+    for (const s of SETUPS.filter((x) => x.change && ok(x.id))) {
+      const base = s.three ? ref.fps : d2?.fps;
+      if (!base) continue;
+      const gain = results[s.id].fps - base;
+      lines.push(`  ${s.three ? '3D' : '2D'} ${s.change}: ${gain >= 0 ? '+' : ''}${gain.toFixed(1)} fps`);
+      if (gain > base * 0.15) big.push(`${s.three ? '3D' : '2D'} ${s.change} gains ${gain.toFixed(0)} fps`);
+    }
+    if (ok('d3') && ok('d3-again')) {
+      const drift = results['d3-again'].fps - results.d3.fps;
+      if (Math.abs(drift) > results.d3.fps * 0.1) lines.push(`  3D as shipped moved ${drift.toFixed(1)} fps from the first run to the last: the phone ${drift < 0 ? 'slowed as it warmed' : 'sped up'}.`);
+    }
+  }
+  if (d2) lines.push(`2D as shipped: ${d2.fps.toFixed(1)} fps (${feel(d2.fps, ceiling)}).`);
+  if (ref) {
+    const f = feel(ref.fps, ceiling);
+    $('verdictBig').innerHTML = `${f === 'smooth' ? '<span class="ok">Smooth</span>' : `<span class="over">${f[0].toUpperCase() + f.slice(1)}</span>`}: ${ref.fps.toFixed(0)} fps in 3D${d2 ? `, ${d2.fps.toFixed(0)} in 2D` : ''}, of ${ceiling ? ceiling.toFixed(0) : '?'} this phone can show.`;
+    $('verdictSmall').textContent = big.length
+      ? `What helps most here: ${big.join('; ')}.`
+      : 'No one part costs much more than the rest.';
+    $('verdict').hidden = false;
+  } else if (d2) {
+    $('verdictBig').innerHTML = `<span class="over">No 3D</span>: ${d2.fps.toFixed(0)} fps in 2D.`;
+    $('verdictSmall').textContent = '';
     $('verdict').hidden = false;
   }
   return lines.join('\n');
@@ -339,26 +430,11 @@ runBtn.addEventListener('click', async () => {
   for (let i = 0; i < SETUPS.length; i++) {
     const s = SETUPS[i];
     drawRows(s.id);
-    let got = null;
-    if (s.three) {
-      $('status').innerHTML = `Setting up <b>${s.name}</b>`;
-      GL3D.LAYER = true;
-      if (!stats3D().renderer) {
-        const u = await start3D();
-        if (!u.ok) { results[s.id] = { skipped: true, why: u.why }; continue; }
-      } else {
-        enable3D({ ids: null });
-      }
-      got = stats3D().layer ? 'layer' : 'copy';
-    } else {
-      GL3D.LAYER = false;
-      disable3D();
-    }
-    results[s.id] = { ...(await measure(s, i)), got };
+    if (!apply(s)) { results[s.id] = { skipped: true, why: three.why }; continue; }
+    results[s.id] = await measure(s, i);
     drawRows(null);
   }
-  GL3D.LAYER = true;
-  enable3D({ ids: null });
+  restore();
   $('meter').style.width = '100%';
   $('out').value = report();
   $('out').hidden = false;

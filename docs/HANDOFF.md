@@ -888,6 +888,43 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
+## v3.21.1, built 2026-11-13: the phone test breaks the frame down
+
+**Round seven** (2026-11-13, v3.21, `lab/phone-test.html` on the site, the
+owner's phones in their own browsers):
+
+| Phone | GPU | 2D fps | 3D fps | 3D's processor cost |
+| --- | --- | --- | --- | --- |
+| Ahlo 1 (Android 14, 4 GB) | Adreno 613 | 21.1, 22.5 | 20.7 | 0.01 ms |
+| iPhone 12 Pro (Safari) | Apple A14 | 19.2, 19.1 | 57.7 | 0.11 ms |
+
+The 3D fighters pass rule 9 on both: they add almost nothing to the
+processor's time. But the frame rate is low where the test did not look: the
+Ahlo 1 shows about 21 frames a second whatever it draws, and the iPhone 12 Pro
+is smooth in 3D but 19 in 2D, which is also the fallback without WebGL2. The
+processor's part of a frame is a few milliseconds; the Ahlo's frame is about
+45, so the time goes to drawing the screen (the GPU, the browser's
+compositing), which `performance.now()` around `renderGame` does not count.
+Its "within budget" verdict was right about the 3D fighters and misleading
+about the game.
+
+So the page now breaks the frame down. Twelve setups of about seven seconds
+each, the game as shipped with one thing changed: a blank screen (the phone's
+ceiling); 3D as shipped, at half resolution, without the stage light (the key
+glow, a soft-light blend over the whole frame, and the vignette; `RENDER.light`,
+on by default, is the switch), with the stage as one picture instead of its
+depth layers, without the stage's pictures, without the hit effects, and with
+all four off; 2D as shipped, at half resolution, and without the stage light;
+and 3D as shipped again, to catch a phone slowing as it warms. The verdict
+judges the frame rate against 60 (or the phone's own ceiling) and names what
+gains the most. The guesses to test: fill rate on the Adreno (a 1920 by 1080
+game canvas, a 3D canvas and a top canvas, the stage's layers drawn over each
+other), and on the iPhone the 2D path's soft-light blend over the whole canvas,
+which the 3D path draws on a small canvas the page blends instead.
+
+The default game is unchanged: `lab/pixels.js` against v3.21, 30 frames
+identical with the flags off and with `--flags gl`.
+
 ## v3.21, released 2026-11-12: bodies, a throw and a coat
 
 The owner, on the three v3.20 calls (below, "For the owner"): "Let's fix
@@ -2609,9 +2646,11 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
 
 ## Known limits
 
-- Phone performance: measured only on the owner's iPhone, a recent and fast
-  model (see Next steps, step 1). A mid-range phone, which the 2 ms budget is set
-  for, is still unmeasured.
+- Phone performance: the 3D fighters are within the 2 ms budget on a budget
+  Android (Ahlo 1) and an iPhone 12 Pro, but the Ahlo shows about 21 frames a
+  second whatever it draws and the iPhone 12 Pro 19 in 2D (see "v3.21.1"):
+  the screen's drawing, not the processor, is the limit, and the breakdown
+  test is to say which part.
 - The 3D layer differs from the copy path in three small ways: an aura drawn by
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
