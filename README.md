@@ -73,7 +73,7 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 ## What's new in v3.22: smoother on slower phones
 
-- 📱 **The game adjusts to your phone.** If your phone can't keep a fight smooth, the game lowers its drawing resolution by itself after a couple of seconds, a little softer and up to half again as many frames. Phones that keep up are never touched.
+- 📱 **The game adjusts to your phone.** If your phone can't keep a fight smooth, the game lowers its drawing resolution by itself after a couple of seconds, a little softer and up to half again as many frames. If that doesn't help (Low Power Mode, say), it goes back to sharp. Phones that keep up are never touched.
 - 📊 **Performance reports.** After each match the game sends how it ran on your device (the frame rate, the screen, the browser and the graphics chip) with a random number for the device and nothing about you, so it can be made to run well on more phones. Turn it off in ⚙️ Settings; a browser set to Global Privacy Control sends none.
 
 ## What's new in v3.21: bodies, a throw and a coat

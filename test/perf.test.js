@@ -9,7 +9,9 @@ import { PerfMeter } from '../src/engine/perfmeter.js';
 import { PERF, SAVE_KEY, VERSION } from '../src/config.js';
 import {
   DEVICE_KEY, perfAllowed, savedSettings, deviceId, uaFamily, describeDevice, perfPayload,
+  sendPerf, reportPerf, thisDevice, PERF_URL, SETUPS_MAX_CHARS,
 } from '../src/net/perf.js';
+import { SUPABASE_KEY } from '../src/net/online.js';
 
 const src = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -28,7 +30,9 @@ function serverAccepts(p) {
     && ['3d', '2d'].includes(p.p_mode) && range(p.p_scale, 0, 4, true)
     && p.p_fps != null && range(p.p_fps, 0, 500) && range(p.p_slow, 0, 1)
     && range(p.p_draw_ms, 0, 1000) && range(p.p_seconds, 0, 3600)
-    && (p.p_setups == null || (Array.isArray(p.p_setups) && JSON.stringify(p.p_setups).length <= 8000));
+    // 4 KB as stored, about twice the text's length (the phone test's 832
+    // characters are 1,556 bytes stored)
+    && (p.p_setups == null || (Array.isArray(p.p_setups) && JSON.stringify(p.p_setups).length <= 2000));
 }
 
 const memStore = () => {
@@ -201,10 +205,76 @@ test('a report is inside what the server accepts, whatever the match measured', 
   assert.equal(perfPayload({ ...base, summary: { fps: NaN } }), null);
   assert.equal(perfPayload({ ...base, id: null, summary: { fps: 60 } }), null);
   assert.equal(perfPayload({ ...base, summary: { fps: 60 }, setups: [] }).p_setups, null);
+  // a list too long for the server goes without it, not without the report
+  const long = Array.from({ length: 60 }, (_, i) => ({ id: `setup-${i}`, fps: 59.9, draw: 1.23 }));
+  const trimmed = perfPayload({ ...base, summary: { fps: 60 }, setups: long });
+  assert.ok(JSON.stringify(long).length > SETUPS_MAX_CHARS);
+  assert.equal(trimmed.p_setups, null);
+  assert.ok(serverAccepts(trimmed));
+  // and the phone test's twelve fit
+  const twelve = Array.from({ length: 12 }, (_, i) => ({ id: `d3-nofighters${i}`, fps: 59.9, draw: 12.34, fight: 0.41, p95: 19.25, slow: 0.123 }));
+  assert.deepEqual(perfPayload({ ...base, summary: { fps: 60 }, setups: twelve }).p_setups, twelve);
   // the call is the whole of what is sent: no user agent, no account
   assert.deepEqual(Object.keys(good).sort(), ['p_browser', 'p_cores', 'p_device', 'p_dpr', 'p_draw_ms', 'p_fps', 'p_gpu',
     'p_memory_gb', 'p_mode', 'p_model', 'p_os', 'p_scale', 'p_screen_h', 'p_screen_w', 'p_seconds', 'p_setups', 'p_slow',
     'p_source', 'p_version']);
+});
+
+// ---- sending
+
+// A stand-in for fetch: what it was asked, and the answer it gives.
+const stub = (answer) => {
+  const calls = [];
+  const send = async (url, init) => {
+    calls.push({ url, init });
+    if (answer instanceof Error) throw answer;
+    return { ok: answer.ok ?? true, json: async () => answer.body };
+  };
+  return { send, calls };
+};
+
+test("a report goes with the game's public key alone, never the player's session", async () => {
+  const payload = { p_source: 'match', p_fps: 60 };
+  const { send, calls } = stub({ body: 'recorded' });
+  assert.equal(await sendPerf(payload, send), 'recorded');
+  const [{ url, init }] = calls;
+  assert.equal(url, PERF_URL);
+  assert.match(url, /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/v1\/rpc\/report_perf$/);
+  assert.equal(init.method, 'POST');
+  assert.deepEqual(init.headers, { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' });
+  assert.equal(init.credentials, 'omit');
+  assert.deepEqual(JSON.parse(init.body), payload);
+  assert.match(SUPABASE_KEY, /^sb_publishable_/, 'a secret key in the page');
+  // and the module never reaches for the client, which would add the session
+  assert.doesNotMatch(src('src/net/perf.js'), /getSupabase|\.rpc\(|Authorization/);
+  // the server's word, or 'error'
+  assert.equal(await sendPerf(payload, stub({ body: 'busy' }).send), 'busy');
+  assert.equal(await sendPerf(payload, stub({ ok: false, body: { message: 'no' } }).send), 'error');
+  assert.equal(await sendPerf(payload, stub({ body: { odd: 1 } }).send), 'error');
+  assert.equal(await sendPerf(payload, stub(new Error('offline')).send), 'error');
+  assert.equal(await sendPerf(null, stub({ body: 'recorded' }).send), 'skipped');
+});
+
+test("a device that could not be described is asked again, and a report never throws", async () => {
+  const summary = { fps: 58.2, slow: 0.01, draw_ms: 3.2, seconds: 40 };
+  const report = { source: 'match', version: VERSION, mode: '2d', scale: 1, summary, setups: [{ scale: 1, fps: 58.2, seconds: 40 }] };
+  // a browser whose screen cannot be read, once: that report fails quietly
+  Object.defineProperty(globalThis, 'screen', { get() { throw new Error('no screen'); }, configurable: true });
+  const failed = stub({ body: 'recorded' });
+  assert.equal(await reportPerf({ ...report, settings: null, send: failed.send }), 'error');
+  assert.equal(failed.calls.length, 0);
+  delete globalThis.screen;
+  const d = await thisDevice();
+  assert.ok(d && 'os' in d, 'the failure was kept, so no report is ever sent again');
+  // reportPerf: off, nothing measured, sent, and a send that fails
+  const off = stub({ body: 'recorded' });
+  assert.equal(await reportPerf({ ...report, settings: { perf: false }, send: off.send }), 'off');
+  assert.equal(off.calls.length, 0);
+  assert.equal(await reportPerf({ ...report, summary: null, settings: null, send: off.send }), 'skipped');
+  const on = stub({ body: 'recorded' });
+  assert.equal(await reportPerf({ ...report, settings: { perf: true }, send: on.send }), 'recorded');
+  assert.ok(serverAccepts(JSON.parse(on.calls[0].init.body)), on.calls[0].init.body);
+  assert.equal(await reportPerf({ ...report, settings: null, send: stub(new Error('offline')).send }), 'error');
 });
 
 // ---- the game sends it

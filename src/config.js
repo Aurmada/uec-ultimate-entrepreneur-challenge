@@ -44,15 +44,20 @@ export const STAGE_ART = {
 // at the device pixel ratio, up to 2; while a round is being fought, a WINDOW
 // ms stretch under MIN_FPS frames a second steps it down to the next of STEPS
 // (never above the device's own ratio), after SETTLE ms to let a change take
-// hold. It never steps back up in a session, so it cannot hunt. A frame gap
-// over STALL ms (a hitch the browser took, not the phone's pace) is left out;
-// a hidden page and a paused fight are not judged at all. A phone drawing 2
-// frames a second still steps down. Round seven of the phone test (v3.21.1)
-// found a budget Android at 21 fps at 2x and 31 at 1x, whatever else was
-// switched off.
+// hold. A step that does not raise the frame rate by MIN_GAIN (a share) is
+// taken back, and the governor stops for the session: the resolution was not
+// what held the phone back. Otherwise it never steps back up, so it cannot
+// hunt. A frame gap over STALL ms (a hitch the browser took, not the phone's
+// pace) is left out; a hidden page and a paused fight are not judged at all.
+// A phone drawing 2 frames a second still steps down. Round seven of the phone
+// test (v3.21.1) found a budget Android at 21 fps at 2x and 31 at 1x, whatever
+// else was switched off; round eight found an iPhone 12 Pro at 19 in 2D and
+// 20.6 at 1x, where a step only blurs, as it does on a phone that Low Power
+// Mode holds to 30.
 export const RESOLUTION = {
   STEPS: [2, 1.5, 1],
   MIN_FPS: 50,
+  MIN_GAIN: 0.15,
   WINDOW: 2000,
   SETTLE: 1000,
   STALL: 1000,

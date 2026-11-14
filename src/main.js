@@ -1059,7 +1059,8 @@ let gctx = null;
 // Steps the fight's resolution down on a phone that cannot hold the frame
 // rate at full (engine/resolution.js); `?res=<scale>` holds it at one scale,
 // for timing a phone by hand.
-const fixedRes = Number(new URLSearchParams(location.search).get('res')) || 0;
+// Held to (0, 2]: a negative scale would ask for a canvas billions wide.
+const fixedRes = Math.min(2, Math.max(0, Number(new URLSearchParams(location.search).get('res')) || 0));
 const resolution = new ResolutionGovernor(fixedRes || window.devicePixelRatio || 1);
 
 function setupGameCanvas() {

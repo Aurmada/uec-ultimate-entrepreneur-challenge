@@ -7,9 +7,12 @@
 //
 // The governor is fed the gap between frames while a round is being fought
 // (main.js loop) and answers with a new scale when it should step down:
-// RESOLUTION in config.js has the numbers. It only ever steps down, and keeps
-// its step for the rest of the session, so the next match starts where the
-// last one settled rather than finding it again.
+// RESOLUTION in config.js has the numbers. It keeps its step for the rest of
+// the session, so the next match starts where the last one settled rather
+// than finding it again. A step that does not pay (round eight's iPhone in 2D,
+// 19 fps at 2x and 20.6 at 1x; a phone that Low Power Mode holds to 30) is
+// taken back once, and the governor judges nothing more that session: the
+// fight drawn sharp at the same frame rate rather than soft.
 
 import { RESOLUTION } from '../config.js';
 
@@ -24,6 +27,8 @@ export class ResolutionGovernor {
   constructor(dpr) {
     this.steps = resolutionSteps(dpr);
     this.at = 0;
+    this.before = null;               // the frame rate before the step being proved
+    this.done = false;                // a step was taken back: nothing more this session
     this.restart();
   }
 
@@ -36,10 +41,10 @@ export class ResolutionGovernor {
     this.time = 0;
   }
 
-  // One frame's gap in ms. Returns the scale to draw at when it steps down,
+  // One frame's gap in ms. Returns the scale to draw at when it changes,
   // otherwise null.
   sample(gap) {
-    if (!(gap > 0) || gap > RESOLUTION.STALL) return null;
+    if (this.done || !(gap > 0) || gap > RESOLUTION.STALL) return null;
     if (this.settled < RESOLUTION.SETTLE) { this.settled += gap; return null; }
     this.frames++;
     this.time += gap;
@@ -47,7 +52,18 @@ export class ResolutionGovernor {
     const fps = (this.frames * 1000) / this.time;
     this.frames = 0;
     this.time = 0;
+    // the first window after a step says whether it paid
+    if (this.before !== null) {
+      const paid = fps >= this.before * (1 + RESOLUTION.MIN_GAIN);
+      this.before = null;
+      if (!paid) {
+        this.at--;
+        this.done = true;
+        return this.scale;
+      }
+    }
     if (fps >= RESOLUTION.MIN_FPS || this.at === this.steps.length - 1) return null;
+    this.before = fps;
     this.at++;
     this.restart();
     return this.scale;

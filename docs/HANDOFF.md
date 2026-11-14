@@ -923,14 +923,19 @@ on a phone that cannot hold the frame rate (`engine/resolution.js`,
 `RESOLUTION` in config, render-only). While a round is being fought, two
 seconds under 50 fps steps the game canvas from 2x the stage to 1.5x, then
 1x (never above the device's own ratio), after a second to let a change
-take hold; it never steps back up in a session, and the next match starts
-where the last settled. The 3D layer and its stack follow the canvas's size
-as they draw. `?res=<scale>` holds one scale, for timing by hand. A phone
-that holds 50 is never touched, but a laptop whose browser caps the frame
-rate at 30 on battery steps down too: softer, and a third of the drawing.
-Checked in the real game in a headless browser, whose frames take a second
-or two here: it stepped 1920 to 960 wide with the stack following and no
-error, and held at 1920 with `?res=2`.
+take hold, and the next match starts where the last settled. A step that
+does not raise the frame rate by 15% (`RESOLUTION.MIN_GAIN`) is taken back
+and the governor stops for the session: round eight's iPhone 12 Pro drew 2D
+at 19 fps at 2x and 20.6 at 1x, and a phone in Low Power Mode, or a laptop
+whose browser caps the frame rate at 30 on battery, is held to 30 whatever
+the resolution, so a step there only blurs the fight (found in the review of
+2026-11-14). Otherwise it never steps back up, so it cannot hunt. The 3D
+layer and its stack follow the canvas's size as they draw. `?res=<scale>`
+holds one scale, for timing by hand (held to 2 at most; a negative scale
+once asked for a canvas billions wide). A phone that holds 50 is never
+touched. Checked in the real game in a headless browser, whose frames take
+a second or two here: it stepped 1920 to 960 wide with the stack following
+and no error, and held at 1920 with `?res=2`.
 
 **Round nine** (the page, `lab/phone-test.html`): twelve setups to find the
 rest. 3D as shipped, at half resolution, with the fight frozen (the same
@@ -959,6 +964,14 @@ table and its function applied to the live project.
   `renderGame` took, on a round being fought with the page shown and the fight
   not paused (as the resolution is judged), and nothing in the fight reads it.
   A match fought for under 10 seconds is not sent, and none is sent twice.
+- A report goes by a plain `fetch` to `/rest/v1/rpc/report_perf` with the
+  publishable key alone (`apikey`, no session, no cookies), not through the
+  Supabase client, which would add a signed-in player's token and so let the
+  project's request logs tie a report to an account (found in the review of
+  2026-11-14). Checked from the live site's own origin in a real browser: the
+  call answered "recorded" and a bad one "invalid", and the one row was
+  deleted. A device that cannot be described is asked again next time, and a
+  report never throws.
 - What is sent: the system and browser by family and version (never the whole
   user agent; Chromium's real Android version and model come from
   `getHighEntropyValues`, since its user agent says "Android 10; K" on every
@@ -984,9 +997,17 @@ table and its function applied to the live project.
   of its tests fails with the part it covers broken. The default game is
   unchanged: `lab/pixels.js` against main, 30 frames identical with the flags
   off and with `--flags gl`.
-- **For the owner to decide:** how long to keep rows (none are deleted now; a
-  row is under 2 KB, so 100,000 matches are about 100 to 200 MB), and when the
-  game has players, a dashboard over the table.
+- **Keeping rows:** the owner's decision (2026-11-14) is to keep every row for
+  now. A row is under 2 KB, so 100,000 matches are about 100 to 200 MB.
+- **The dashboard** is a Claude artifact, "UEC Device Performance"
+  (`https://claude.ai/artifact/9iZakfA6tMeJTguhnmqYGV`, private to the owner
+  until shared): devices, matches, median frame rates, the share of smooth and
+  lowered matches, reports a day, matches by frame rate, and tables of devices
+  and graphics chips, phone tests, systems and browsers, and versions. Its
+  queries are read-only `execute_sql` calls on the owner's Supabase connector,
+  run each time it is opened, with the opener's own access, so only someone
+  with the project on their connector sees numbers. Until v3.22 is live it
+  says there are no reports yet.
 
 ## v3.21.1, released 2026-11-14: the phone test breaks the frame down
 
@@ -2803,11 +2824,15 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   `screen_h` (1 to 10,000), `dpr` (over 0, to 8), `cores` (1 to 256),
   `memory_gb` (over 0, to 1,024), `mode` (`3d` or `2d`), `scale` (over 0, to 4),
   `fps` (0 to 500, required), `slow` (0 to 1), `draw_ms` (0 to 1,000),
-  `seconds` (0 to 3,600) and `setups` (a JSON array of at most 8 KB). Nothing
+  `seconds` (0 to 3,600) and `setups` (a JSON array of at most 4 KB as
+  stored, about 2,000 characters of text; the client drops a longer list
+  rather than lose the report). Nothing
   about the player. RLS is on with no policies and no grants; the
   security-definer RPC `report_perf()` writes it for anyone, signed in or not,
   answers 'recorded', 'invalid' (a field outside the checks, or no device) or
-  'busy' (more than 600 rows a minute in all, or 60 an hour from one device).
+  'busy' (more than 120 rows a minute or 20,000 a day in all, or 60 an hour
+  from one device: anyone may call it, so these bound what the table can grow
+  by, about 40 MB a day at worst; raise them when real play nears them).
   `test/perf.test.js` mirrors these checks: change the two together. Only the
   owner reads it, for example:
   `select model, gpu, mode, count(distinct device) as devices, round(avg(fps)::numeric, 1) as fps from perf_reports where source = 'match' group by 1, 2, 3 order by devices desc;`

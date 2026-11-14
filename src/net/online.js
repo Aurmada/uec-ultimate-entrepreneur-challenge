@@ -17,8 +17,11 @@
 import { validateCharacter, SCHEMA_VERSION } from '../data/schema.js';
 import { hashValues } from '../engine/fighterState.js';
 
-const SUPABASE_URL = 'https://oqzxkzkyiiahxmppgrkn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_hA-O1-vWIa40YOlyy3d0mA_Mf0zCrkO';
+// The project's address and its publishable key (public by design: what a
+// caller may do is decided by the database's grants and policies). net/perf.js
+// sends with the key alone, outside the client.
+export const SUPABASE_URL = 'https://oqzxkzkyiiahxmppgrkn.supabase.co';
+export const SUPABASE_KEY = 'sb_publishable_hA-O1-vWIa40YOlyy3d0mA_Mf0zCrkO';
 
 export const STEP = 1 / 60;          // fixed simulation timestep
 // Input delay is felt directly as control lag, so it's kept as low as the

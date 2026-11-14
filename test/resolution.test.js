@@ -8,12 +8,24 @@ import { readFileSync } from 'node:fs';
 import { ResolutionGovernor, resolutionSteps } from '../src/engine/resolution.js';
 import { RESOLUTION } from '../src/config.js';
 
-// `frames` frames `gap` ms apart; the scales it stepped to, in order.
+// Frames for `ms` ms, `gap` ms apart, or as far apart as `gap(scale)` says at
+// the scale being drawn; the scales it changed to, in order.
 const feed = (g, gap, ms) => {
   const out = [];
-  for (let t = 0; t < ms; t += gap) { const s = g.sample(gap); if (s) out.push(s); }
+  const at = typeof gap === 'function' ? gap : () => gap;
+  for (let t = 0; t < ms;) {
+    const d = at(g.scale);
+    t += d;
+    const s = g.sample(d);
+    if (s) out.push(s);
+  }
   return out;
 };
+// A phone's frame rate at each scale, as the phone test measured it.
+const phone = (fps) => (scale) => 1000 / fps[scale];
+const AHLO_3D = phone({ 2: 21, 1.5: 26, 1: 31 });          // round eight, 1.5 between
+const IPHONE_2D = phone({ 2: 19.1, 1.5: 19.8, 1: 20.6 });  // round eight
+const CAPPED_30 = phone({ 2: 30, 1.5: 30, 1: 30 });        // Low Power Mode
 
 test('the steps start at the device ratio, capped at 2, and go down to 1', () => {
   assert.deepEqual(resolutionSteps(3), [2, 1.5, 1]);
@@ -33,11 +45,28 @@ test('a phone holding 60, or 50, is never touched', () => {
 
 test('a phone at 21 fps steps down to 1.5, then to 1, and stops there', () => {
   const g = new ResolutionGovernor(2);
-  assert.deepEqual(feed(g, 1000 / 21, 60000), [1.5, 1]);
+  assert.deepEqual(feed(g, AHLO_3D, 60000), [1.5, 1]);
   assert.equal(g.scale, 1);
   // and judges nothing in the first SETTLE ms of a match, or of a new scale
   const h = new ResolutionGovernor(2);
   assert.deepEqual(feed(h, 1000 / 21, RESOLUTION.SETTLE + RESOLUTION.WINDOW - 60), []);
+});
+
+// Round eight's iPhone 12 Pro drew 2D at 19 fps whatever the resolution, and
+// Low Power Mode holds a phone to 30: there a step blurs the fight for nothing.
+test('a step that does not raise the frame rate is taken back, and nothing more is judged', () => {
+  for (const [name, fps] of [['the iPhone in 2D', IPHONE_2D], ['a phone held to 30', CAPPED_30]]) {
+    const g = new ResolutionGovernor(2);
+    assert.deepEqual(feed(g, fps, 60000), [1.5, 2], name);
+    assert.equal(g.scale, 2, name);
+    g.restart();                           // the next match
+    assert.deepEqual(feed(g, fps, 60000), [], `${name}: judged again after a step was taken back`);
+  }
+  // a step that pays only a little is not worth the softness either
+  const g = new ResolutionGovernor(2);
+  assert.deepEqual(feed(g, phone({ 2: 40, 1.5: 40 * (1 + RESOLUTION.MIN_GAIN) - 1 }), 60000), [1.5, 2]);
+  const h = new ResolutionGovernor(2);
+  assert.deepEqual(feed(h, phone({ 2: 40, 1.5: 40 * (1 + RESOLUTION.MIN_GAIN) + 1, 1: 60 }), 60000), [1.5, 1]);
 });
 
 test('it never steps back up, and keeps its step into the next match', () => {

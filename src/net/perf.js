@@ -11,14 +11,18 @@
 // made on that device and kept in its own storage key: never in the save
 // (Save.data), never in the profile sync, never beside the account. The table
 // keeps no user id either (report_perf on the server, which checks every
-// field and limits how often a device may send). Only the owner reads it.
+// field and limits how often a device may send), and a report goes with the
+// game's public key alone, never a signed-in player's session: through the
+// Supabase client it would carry the player's token, and the project's request
+// logs would tie it to the account for as long as they are kept. Only the
+// owner reads the table.
 //
 // It is on unless the player turns it off in Settings (Save.settings.perf),
 // or the browser sends Global Privacy Control, the browser's own off switch.
 // A browser driven by a script (the lab's, the tests') is not a player and
 // sends nothing.
 
-import { getSupabase } from './online.js';
+import { SUPABASE_URL, SUPABASE_KEY } from './online.js';
 import { SAVE_KEY } from '../config.js';
 
 export const DEVICE_KEY = 'uec-device';
@@ -144,21 +148,25 @@ export function gpuName(doc = globalThis.document) {
 }
 
 // This device, asked once a session. The model waits at most half a second
-// for the browser's answer.
+// for the browser's answer. A failure is not kept: the next report asks again.
 let devicePromise = null;
 export function thisDevice() {
   if (!devicePromise) {
-    const nav = globalThis.navigator || {};
-    const asked = nav.userAgentData?.getHighEntropyValues
-      ? Promise.race([
-        nav.userAgentData.getHighEntropyValues(['model', 'platformVersion']).catch(() => null),
-        new Promise((r) => setTimeout(() => r(null), 500)),
-      ])
-      : Promise.resolve(null);
-    devicePromise = asked.then((hints) => describeDevice({
-      ua: nav.userAgent || '', hints, screen: globalThis.screen, dpr: globalThis.devicePixelRatio || 1,
-      cores: nav.hardwareConcurrency, memory: nav.deviceMemory, touchPoints: nav.maxTouchPoints || 0, gpu: gpuName(),
-    }));
+    devicePromise = (async () => {
+      const nav = globalThis.navigator || {};
+      let hints = null;
+      try {
+        hints = nav.userAgentData?.getHighEntropyValues ? await Promise.race([
+          nav.userAgentData.getHighEntropyValues(['model', 'platformVersion']),
+          new Promise((r) => setTimeout(() => r(null), 500)),
+        ]) : null;
+      } catch (e) { hints = null; }
+      return describeDevice({
+        ua: nav.userAgent || '', hints, screen: globalThis.screen, dpr: globalThis.devicePixelRatio || 1,
+        cores: nav.hardwareConcurrency, memory: nav.deviceMemory, touchPoints: nav.maxTouchPoints || 0, gpu: gpuName(),
+      });
+    })();
+    devicePromise.catch(() => { devicePromise = null; });
   }
   return devicePromise;
 }
@@ -166,6 +174,10 @@ export function thisDevice() {
 // ---- the report
 
 const clamp = (x, lo, hi) => (Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : null);
+// The server takes a setups list of up to 4 KB as it stores it, about twice
+// its length as text (the phone test's twelve are 832 characters, 1.6 KB
+// stored). A longer one is left out rather than losing the whole report.
+export const SETUPS_MAX_CHARS = 2000;
 
 // The call's arguments, every value inside what the server accepts; null when
 // there is nothing to send. `setups` is a list: a match's steps of resolution,
@@ -185,29 +197,42 @@ export function perfPayload({ source, device, id, version, mode, scale, summary,
     p_slow: clamp(summary.slow, 0, 1),
     p_draw_ms: clamp(summary.draw_ms, 0, 1000),
     p_seconds: clamp(summary.seconds, 0, 3600),
-    p_setups: Array.isArray(setups) && setups.length ? setups : null,
+    p_setups: Array.isArray(setups) && setups.length && JSON.stringify(setups).length <= SETUPS_MAX_CHARS ? setups : null,
   };
 }
 
-// Sends it. Fire and forget: a report that cannot be sent changes nothing for
+// Sends it, with the publishable key and nothing else: no session, no
+// cookies. Fire and forget: a report that cannot be sent changes nothing for
 // the player. Returns the server's word ('recorded', 'invalid', 'busy') or
 // 'error', for the console and the lab.
-export async function sendPerf(payload) {
+export const PERF_URL = `${SUPABASE_URL}/rest/v1/rpc/report_perf`;
+export async function sendPerf(payload, send = (...a) => globalThis.fetch(...a)) {
   if (!payload) return 'skipped';
   try {
-    const sb = await getSupabase();
-    const { data, error } = await sb.rpc('report_perf', payload);
-    return error ? 'error' : data;
+    const res = await send(PERF_URL, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'omit',
+    });
+    if (!res.ok) return 'error';
+    const said = await res.json();
+    return typeof said === 'string' ? said : 'error';
   } catch (e) {
     return 'error';
   }
 }
 
 // Gathers and sends one report, when this device may: what main.js and the
-// phone test call. Returns what sendPerf does, or 'off' and 'skipped'.
-export async function reportPerf({ settings, ...report }) {
-  if (!perfAllowed(settings)) return 'off';
-  if (!report.summary) return 'skipped';
-  const payload = perfPayload({ ...report, device: await thisDevice(), id: deviceId() });
-  return sendPerf(payload);
+// phone test call. Returns what sendPerf does, or 'off', 'skipped' and
+// 'error'; it never throws. `send` is fetch, or a stand-in for the tests.
+export async function reportPerf({ settings, send, ...report }) {
+  try {
+    if (!perfAllowed(settings)) return 'off';
+    if (!report.summary) return 'skipped';
+    const payload = perfPayload({ ...report, device: await thisDevice(), id: deviceId() });
+    return await sendPerf(payload, send);
+  } catch (e) {
+    return 'error';
+  }
 }
