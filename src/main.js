@@ -15,6 +15,7 @@ import { FX_STYLE } from './engine/fx.js';
 import { drawPortrait, enableSprites, spritesReady, STYLE } from './engine/drawFighter.js';
 import { enable3D, stats3D, startTiming, athletes3D, sculpts3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
+import { ResolutionGovernor } from './engine/resolution.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
   showShareCard, openInvite, openModal, closeModals, renderProfile,
@@ -177,6 +178,7 @@ function reallyStartMatch(cfg) {
   // the same fighter on both sides: the second in a colourway of its own
   const p2Def = mirrorDef(cfg.p1Def, cfg.p2Def);
 
+  resolution.restart();               // judged afresh each match, from the step it keeps
   currentGame = new Game({
     p1: { def: cfg.p1Def, controller: p1Controller },
     p2: { def: p2Def, controller: p2Controller },
@@ -671,6 +673,7 @@ function startOnlineMatch(cfg) {
   input.reset();
   currentSetup = { mode: 'online', arena: getArena(cfg.arena) };
   lastRanked = null;
+  resolution.restart();               // judged afresh each match, from the step it keeps
   currentGame = new Game({
     p1: { def: hostDef, controller: netCtl[0] },
     p2: { def: guestDef, controller: netCtl[1] },
@@ -1045,14 +1048,25 @@ function drawBg(t) {
 // ---------------------------------------------------------------- game canvas
 
 let gctx = null;
+// Steps the fight's resolution down on a phone that cannot hold the frame
+// rate at full (engine/resolution.js); `?res=<scale>` holds it at one scale,
+// for timing a phone by hand.
+const fixedRes = Number(new URLSearchParams(location.search).get('res')) || 0;
+const resolution = new ResolutionGovernor(fixedRes || window.devicePixelRatio || 1);
 
 function setupGameCanvas() {
-  const canvas = $('gameCanvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = STAGE.W * dpr;
-  canvas.height = STAGE.H * dpr;
-  gctx = canvas.getContext('2d');
-  gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  gctx = $('gameCanvas').getContext('2d');
+  setGameResolution(resolution.scale);
+}
+
+// The game canvas at `scale` times the stage's size. The 3D layer and the
+// canvases stacked over it follow its size as they draw (render.js sizeStack,
+// gl3d beginLayer3D).
+function setGameResolution(scale) {
+  const canvas = gctx.canvas;
+  canvas.width = Math.round(STAGE.W * scale);
+  canvas.height = Math.round(STAGE.H * scale);
+  gctx.setTransform(scale, 0, 0, scale, 0, 0);
 }
 
 // ---------------------------------------------------------------- loop
@@ -1060,9 +1074,15 @@ function setupGameCanvas() {
 let lastT = performance.now();
 
 function loop(now) {
-  const dt = Math.min(0.05, (now - lastT) / 1000);
+  const gap = now - lastT;
+  const dt = Math.min(0.05, gap / 1000);
   lastT = now;
   const fightActive = document.getElementById('scr-fight').classList.contains('active');
+  // judged only on a round being fought, the heaviest the drawing gets
+  if (fightActive && currentGame?.state === 'fighting' && !currentGame.paused && !document.hidden && !fixedRes) {
+    const scale = resolution.sample(gap);
+    if (scale) setGameResolution(scale);
+  }
   if (fightActive && currentGame) {
     if (netMatchActive()) {
       netStep(dt);

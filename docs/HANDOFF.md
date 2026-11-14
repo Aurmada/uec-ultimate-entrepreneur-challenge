@@ -889,6 +889,62 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
+## v3.22, built 2026-11-14: the resolution steps down on a slow phone
+
+**Round eight** (2026-11-14, v3.21.1's breakdown, fps):
+
+| Setup | Ahlo 1 | iPhone 12 Pro |
+| --- | --- | --- |
+| Ceiling (a blank screen) | 59.9 | 59.8 |
+| 3D as shipped (first, last) | 21.2, 21.8 | 55.2, 57.7 |
+| 3D at half resolution | 30.9 | 59.8 |
+| 3D without the stage light | 21.6 | 58.1 |
+| 3D, stage as one picture | 20.2 | 56.8 |
+| 3D without the stage's pictures | 19.6 | 58.7 |
+| 3D without the hit effects | 18.3 | 58.5 |
+| 3D, all four off | 29.3 | 59.8 |
+| 2D as shipped | 19.2 | 19.1 |
+| 2D at half resolution | 28.9 | 20.6 |
+| 2D without the stage light | 26.8 | 19.6 |
+
+Both phones can show 60. On the Ahlo 1 (Adreno 613) resolution is the one
+lever: half of it takes 3D from 21 to 31 fps, and the stage light, the
+stage's pictures and the hit effects make no difference beside it. With all
+four off it still stops near 30, so something none of these switch costs
+the rest. On the iPhone 12 Pro, 3D is near 60, and 2D is 19 whatever is
+switched off, resolution and the stage light included: the cost is the 2D
+fighters themselves. A 2D fighter is drawn on a canvas of its own, shaded
+through a second, and outlined through a third with six stamps of the first,
+about ten canvas-to-canvas copies a frame each, and WebKit makes each wait
+for the last. The processor's time does not show it (0.66 ms a frame).
+
+**The fix this round supports:** the fight's resolution steps down by itself
+on a phone that cannot hold the frame rate (`engine/resolution.js`,
+`RESOLUTION` in config, render-only). While a round is being fought, two
+seconds under 50 fps steps the game canvas from 2x the stage to 1.5x, then
+1x (never above the device's own ratio), after a second to let a change
+take hold; it never steps back up in a session, and the next match starts
+where the last settled. The 3D layer and its stack follow the canvas's size
+as they draw. `?res=<scale>` holds one scale, for timing by hand. A phone
+that holds 50 is never touched, but a laptop whose browser caps the frame
+rate at 30 on battery steps down too: softer, and a third of the drawing.
+Checked in the real game in a headless browser, whose frames take a second
+or two here: it stepped 1920 to 960 wide with the stack following and no
+error, and held at 1920 with `?res=2`.
+
+**Round nine** (the page, `lab/phone-test.html`): twelve setups to find the
+rest. 3D as shipped, at half resolution, with the fight frozen (the same
+moment drawn over and over, so what it gains is the fight's own update),
+without the fighters, without their contact shadows (a blur filter each),
+and the least it can draw; 2D as shipped, without the key line, without the
+shading, and without either; the ceiling, and 3D as shipped again. The
+processor's time is shown for the drawing and for the fight apart. Its
+switches (`RENDER.fighters`, `RENDER.shadows`, beside `RENDER.light`) are on
+in the game. The default game is unchanged: `lab/pixels.js` against
+v3.21.1, 30 frames identical with the flags off and with `--flags gl` (it
+draws through `renderGame`, not the game's loop, so the governor is not in
+it; `test/resolution.test.js` is).
+
 ## v3.21.1, released 2026-11-14: the phone test breaks the frame down
 
 **Round seven** (2026-11-13, v3.21, `lab/phone-test.html` on the site, the
@@ -2649,9 +2705,10 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
 
 - Phone performance: the 3D fighters are within the 2 ms budget on a budget
   Android (Ahlo 1) and an iPhone 12 Pro, but the Ahlo shows about 21 frames a
-  second whatever it draws and the iPhone 12 Pro 19 in 2D (see "v3.21.1"):
-  the screen's drawing, not the processor, is the limit, and the breakdown
-  test is to say which part.
+  second at full resolution and the iPhone 12 Pro 19 in 2D (see "v3.21.1"
+  and "v3.22"): the screen's drawing, not the processor, is the limit. The
+  game now steps its resolution down on such a phone (about 31 fps on the
+  Ahlo); round nine of the phone test is to find the rest.
 - The 3D layer differs from the copy path in three small ways: an aura drawn by
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).

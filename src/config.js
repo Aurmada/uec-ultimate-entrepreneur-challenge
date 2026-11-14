@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.21.1';
+export const VERSION = 'v3.22';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -37,6 +37,24 @@ export const STAGE_ART = {
   GLOW: { LOW: 0.35, HIGH: 0.75, RATE: 1.6 },
   KEEP: 2,
   PARALLAX: true,
+};
+
+// The fight's drawing resolution on a phone that cannot draw it at full:
+// RENDER-ONLY (engine/resolution.js, read by main.js). The game canvas is drawn
+// at the device pixel ratio, up to 2; while a round is being fought, a WINDOW
+// ms stretch under MIN_FPS frames a second steps it down to the next of STEPS
+// (never above the device's own ratio), after SETTLE ms to let a change take
+// hold. It never steps back up in a session, so it cannot hunt. A frame gap
+// over STALL ms (a hitch the browser took, not the phone's pace) is left out;
+// a hidden page and a paused fight are not judged at all. A phone drawing 2
+// frames a second still steps down. Round seven of the phone test (v3.21.1) found a budget Android at 21
+// fps at 2x and 31 at 1x, whatever else was switched off.
+export const RESOLUTION = {
+  STEPS: [2, 1.5, 1],
+  MIN_FPS: 50,
+  WINDOW: 2000,
+  SETTLE: 1000,
+  STALL: 1000,
 };
 
 // Fighting-game effects for the live 3D prototype (engine/vfx.js, ?gl).

@@ -147,7 +147,7 @@ test("the phone test page is the site's own: the game's files, nothing from outs
   assert.doesNotMatch(code, /\bfetch\(|localStorage|supabase/i);
 });
 
-test('the stage light is on unless the phone test turns it off, and off it is left out of both paths', async () => {
+test("the phone test's switches are all on in the game, and each leaves out what it says", async () => {
   const { RENDER } = await import('../src/engine/render.js');
   assert.equal(RENDER.light, true, 'the default game lost its stage light');
   const render = src('src/engine/render.js');
@@ -155,5 +155,12 @@ test('the stage light is on unless the phone test turns it off, and off it is le
   assert.match(render, /function lightStack\(L, base, shake\) \{\s*showLayer\(L, 'glow', RENDER\.light\);\s*showLayer\(L, 'vig', RENDER\.light\);\s*if \(!RENDER\.light\) return;/);
   // and the page times every switch it names
   const page = src('lab/phone-test.html');
-  for (const key of ["blank: true", "dpr: 1", "light: false", "stage: 'one'", "stage: 'none'", "fx: false", "three: false"]) assert.ok(page.includes(key), `the breakdown lost ${key}`);
+  for (const key of ["blank: true", "dpr: 1", "frozen: true", "fighters: false", "shadows: false", "keyline: false", "shaded: false", "three: false"]) assert.ok(page.includes(key), `the breakdown lost ${key}`);
+  // and every switch it turns is on in the game
+  const { RENDER: R } = await import('../src/engine/render.js');
+  const { STYLE } = await import('../src/engine/drawFighter.js');
+  assert.deepEqual({ light: R.light, shadows: R.shadows, fighters: R.fighters, shaded: STYLE.shaded }, { light: true, shadows: true, fighters: true, shaded: true });
+  assert.match(render, /function drawShadow\(ctx, f\) \{\s*if \(!RENDER\.shadows\) return;/);
+  assert.equal((render.match(/if \(RENDER\.fighters\) drawFighter\(ctx, f, t\);/g) || []).length, 2);
+  assert.match(render, /if \(!RENDER\.fighters\) \{/);
 });

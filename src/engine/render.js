@@ -190,6 +190,7 @@ function atDrawn(ctx, f, draw, lift = true) {
 
 // Contact shadow — softer, wider, layered so fighters feel planted on the floor.
 function drawShadow(ctx, f) {
+  if (!RENDER.shadows) return;
   const at = drawnAt(f);                  // under a thrown body, not where the fight set it down
   const airK = Math.max(0, Math.min(1, (FLOOR - Math.min(FLOOR, at.y)) / 260));
   const s = 1 - airK * 0.45;
@@ -516,10 +517,12 @@ function worldCanvas() {
 // cropped drawImage per layer; only the fighters are drawn under a scale, and a
 // fighter is a couple of image blits, not gradients. Off by default until the
 // cost is measured on phones.
-// `light` off leaves out the stage light (the key glow, a soft-light blend
-// over the whole frame, and the vignette): lab/phone-test.html times a frame
-// without it, to find what a slow phone spends its frame on.
-export const RENDER = { sharpFighters: false, light: true };
+// Switches lab/phone-test.html turns off one at a time, to find what a slow
+// phone spends its frame on; all on in the game. `light`: the stage light
+// (the key glow, a soft-light blend over the whole frame, and the vignette).
+// `shadows`: the fighters' blurred contact shadows. `fighters`: the fighters
+// themselves.
+export const RENDER = { sharpFighters: false, light: true, shadows: true, fighters: true };
 let front = null;
 function frontCanvas() {
   if (!front) {
@@ -752,7 +755,7 @@ function renderSharp(ctx, game, t, c) {
   setRoundStart(game.state === 'intro' ? game.stateT : null);   // and open the round their own way
   for (const f of order) {
     atDrawn(ctx, f, () => drawAura(ctx, f, t));
-    drawFighter(ctx, f, t);
+    if (RENDER.fighters) drawFighter(ctx, f, t);
     drawTrail(ctx, f, game.simT);
   }
   ctx.restore();
@@ -818,7 +821,9 @@ function renderLayered(ctx, L, game, t, c) {
   for (const f of order) {
     const in3D = drawing3D && has3D(f.def);
     atDrawn(ctx, f, () => drawAura(ctx, f, t));
-    if (in3D) {
+    if (!RENDER.fighters) {
+      // not drawn (the phone test's switch)
+    } else if (in3D) {
       drawFighter(ctx, f, t);              // onto the layer (drawFighter asks layerActive3D)
       over = true;
     } else {
@@ -874,7 +879,7 @@ function renderWorld(ctx, game, t, cam = null) {
   setRoundStart(game.state === 'intro' ? game.stateT : null);
   for (const f of fighterOrder(game)) {
     atDrawn(ctx, f, () => drawAura(ctx, f, t));
-    drawFighter(ctx, f, t);
+    if (RENDER.fighters) drawFighter(ctx, f, t);
     drawTrail(ctx, f, game.simT);
   }
   renderInFront(ctx, game, t);
