@@ -1,62 +1,128 @@
-# UEC handoff: where things stand (early November 2026)
+# UEC handoff: where things stand (mid-November 2026)
 
 Written so the work can continue from a fresh clone, in a cloud session or on a
-new machine, with nothing from the machine it was built on. Read `CLAUDE.md`
-first for the standing rules, then this, then `docs/ONBOARDING.md`.
+new machine, with nothing from the machine it was built on, by a person or an
+AI that has never seen it. Read `CLAUDE.md` first for the standing rules, then
+this file down to "History, newest first", then `docs/ONBOARDING.md` to run
+it, then `docs/ARCHITECTURE.md` for why it is built the way it is. Below
+"History" are the releases, newest first, kept for the reasons.
 
-## In one paragraph
+## Start here
 
-The game is live at v3.21.1 on GitHub Pages (v3.21's game, with the phone
-test's breakdown, see "v3.21.1")
-(`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
-on 2026-11-12 (see "v3.21"; v3.20, the launch build, went out on 2026-11-09): 3D by default, the nine founders the sculpted cast below, each
-in their own fighting form for everything they do (every move, special and
-reaction, how they move, start a round and go into their super) and each
-with a face of their own, and 2D a choice in Settings (see "v3.19" back to
-"v3.13"). v3.17 fixed the dash (`SIM_VERSION` 10); v3.18 changed nothing in
-the fight; v3.19 slowed the meter and shortened the wait after a knockout
-(`SIM_VERSION` 11); v3.20 changes nothing in the fight; v3.21 widens the
-broad fighters' bodies and holds a throw longer (`SIM_VERSION` 12). v3.12 was built on 2026-10-30 but never reached `main`; it went
-out with v3.13. The repository
-moved to the Aurmada organisation in October 2026; GitHub forwards the old
-repository address but not the old Pages site (`firdous-aurmada.github.io`), which
-now returns 404.
-Since v3.10, `main` also carries a working prototype that answers the
-owner's question "can the fighters look and move more like a modern fighting
-game, without copying one": every fighter rendered as a toon-shaded 3D model
-posed live from the existing 2D animation, arenas rendered in Blender, fighters
-lit by their stage, and fighting-game hit effects. It was behind URL flags
-(`?gl`) then and has been the default since v3.14, render-only throughout. On
-the owner's iPhone the 3D fighters cost 1.0 ms a frame with the two heaviest
-sculpts (budget 2 ms); a mid-range phone has not been measured.
+UEC (Ultimate Entrepreneur Challenge) is a two-player arcade fighting game in
+the browser: nine parody founders, played against the computer, a friend on
+the same keyboard, or a stranger online. It is vanilla JavaScript with no build
+step and no dependencies, and the repository is the website: GitHub Pages
+serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
+so a push to `main` is a release.
 
-A review session on 2026-10-18 built **v3.9**, released on 2026-10-25: step 3 of
-the move system, a deferred effect, as Jeff Bozo's own signature (SAME-DAY
-DELIVERY), plus two AI fixes and a gap in the live-match fingerprint. v3.9.1
-points the page and the docs at the new address. The same session built a
-branch, `claude/game-review-enhance-29bffb`: `live-3d` with v3.9 merged in and
-the prototype's leftovers done (parallax for the rendered stages, hair and coats
-that trail, rims that stay on the outline, and hit bursts that follow the blow).
+- **Live:** v3.22, released 2026-11-14 (`VERSION` in `src/config.js`;
+  `SIM_VERSION` 13 in `src/net/online.js`). 3D by default, 2D in Settings.
+- **What v3.22 added:** the resolution steps down on a slow phone (and back if
+  that does not help); every match and every phone test reports how it ran to
+  the backend, with a dashboard over it; a balance pass for Jeff and Elo; the
+  art notes from the v3.20 review (see "v3.22").
+- **Tests:** `npm test`, about 660, all passing; `node lab/pixels.js` for the
+  pictures (CLAUDE.md, "Before calling something done").
+- **The owner** sets the rules in `CLAUDE.md` (standing, all of them) and
+  makes the calls listed in "Decisions that belong to the owner".
 
-Sessions on 2026-10-25 built two more releases, v3.9.2 (a throw that goes
-behind the thrower from either side) and v3.9.3 (an AI that reads traps), and
-both shipped on 2026-10-26.
+## How the parts connect
 
-A cloud session on 2026-10-28 built **v3.9.4** from a fresh clone of `main`:
-the AI waits for an opening before it throws a grab or a slow strike, drops its
-guard to punish, and stops guarding swings that have already missed. It also
-kept the AI-versus-AI harness as `lab/balance.js`. Reviewed, fixed and released
-the same day. It then brought the 3D prototype up to v3.9.4, measured it on the
-owner's iPhone (too slow at first: the 3D image was copied into the 2D canvas),
-rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
-2026-10-29.
+One part at a time, then how they meet.
+
+1. **The page.** `index.html` holds every screen; `src/main.js` boots it,
+   routes between screens and runs the frame loop; `src/ui/` draws the menus
+   and the HUD; `src/state.js` keeps the player's save in `localStorage`.
+2. **The fight (the simulation).** `src/engine/game.js` runs a match: rounds,
+   hits, projectiles, the clock. `fighter.js` is one fighter's state machine,
+   `ai.js` the computer opponent, `moves.js` and `fighterState.js` the moves and
+   what a fighter remembers. Every number lives in `src/config.js` or the
+   character data (`src/data/fighters.js`, `schema.js`). It is deterministic at
+   60 Hz: the same inputs give the same match on every machine, which is what
+   online play is built on. Change what it computes and `SIM_VERSION` goes up.
+3. **The drawing.** Everything that only draws: `render.js` (the frame, in
+   layers), `drawFighter.js` and `figure.js` (the 2D fighters), `gl3d/` (the 3D
+   fighters: Blender-built models in `assets/models/`, posed live from the 2D
+   animation), `stage.js` (the Blender-rendered arenas in `assets/stages/`),
+   `vfx.js` and `fx.js` (effects), `resolution.js` (the step-down on a slow
+   phone). None of it may change the fight: ARCHITECTURE section 2, and
+   `test/determinism.test.js`.
+4. **Online play.** `src/net/online.js`: two browsers run the same simulation
+   in lockstep and swap only button presses, over a Supabase Realtime channel.
+   No game server.
+5. **Accounts and the backend.** `src/auth.js` signs in (Google, Microsoft or
+   email, through Supabase); `src/net/cloud.js` syncs the profile and reports
+   results. The database (project `uec-game`) has a world-readable `profiles`
+   table, and tables the page never writes directly: `match_reports`,
+   `solo_results` and `perf_reports`, each written only by its checked
+   function (`report_match()`, which moves the leaderboard, `report_solo()`
+   and `report_perf()`), and `user_emails`, filled by a trigger so emails
+   never reach `profiles`. "Backend (Supabase)" has the details.
+6. **The art pipeline (offline).** `lab/blender/` builds the 3D cast and the
+   stages with Blender 5.0 (or the `bpy` module) and writes the files the game
+   loads. The game never runs Blender; the built files are committed.
+7. **Measuring.** `lab/` holds the tools that answered every "is it better?":
+   `balance.js` (the roster AI against itself), `pixels.js` (does the game look
+   exactly as it did), `phone-test.html` (on the live site, what a phone spends
+   its frame on), `contrast.js`, `strip3d.js` and others (ARCHITECTURE
+   section 10). `test/` pins what was decided.
+8. **Watching it live.** Each match and phone test sends a report to
+   `perf_reports` (`src/net/perf.js`, on unless the player turns it off), and
+   the "UEC Device Performance" dashboard (a Claude artifact, private to the
+   owner) reads it live: devices, models, frame rates. Single-player results
+   go to `solo_results` for tuning the difficulty levels.
+
+How they meet, in one match: the player picks fighters (`ui/screens.js`),
+`main.js` builds a `Game` with a controller for each side (a person's keys, the
+`AIController`, or the online peer's presses), and each frame runs the fight
+forward, then draws it. The fight never reads the drawing. When it ends, the
+result goes to the save, to the backend if it counts, and the report of how it
+ran goes to `perf_reports`.
+
+## Where the reasons are
+
+Almost every choice here was measured before it was made, and the reasons are
+written down where the next person will look:
+
+- **Next to the code.** Comments say why, with the number that decided it
+  ("at 0.14 it lost the race to a jab", "measured: raising the surface took the
+  Garage from 32.1% to 36.8%"). Read the comment before changing the line.
+- **In the tests.** Each test's opening comment names the bug or the decision
+  it pins. A failing test usually explains itself.
+- **Here, by version.** Each release section says what changed, why, what was
+  measured, and what was tried and dropped. Newest first, under "History,
+  newest first".
+- **ARCHITECTURE.md** for the invariants (simulation against rendering, the
+  netcode, the character format) and the hazards (section 11).
+- **GAME-MATH.md** for the fight's arithmetic, **CHARACTER-ART-BRIEF.md** for
+  the art direction, **docs/superpowers/specs/** for the larger designs.
+- **Commit messages** for each step, with what was measured.
+
+## Next steps
+
+In the order they pay off:
+
+1. **Read the dashboard once players arrive.** The reports say which phones
+   and graphics chips run the game slowly, and how often the resolution had to
+   step down. The known levers are in "v3.22" and "Known limits": the 2D
+   fighters' canvas copies on iPhones, the stage light, the fighters' contact
+   shadows.
+2. **Run round nine of the phone test** on the owner's Android phones and the
+   iPhone 12 Pro (`/lab/phone-test.html` on the live site). The results now go
+   to the dashboard by themselves.
+3. **The next balance pass** (see "v3.22"): at Champion Steve still wins about
+   64% and Kim now sits lowest, near 37%. `lab/balance.js --def` and
+   `--special` try a change before it is made.
+4. **The owner's open decisions**, below: deleting the old branches, pinning
+   the Supabase client, the aura in front.
 
 ## Branches
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.21 (`SIM_VERSION` 12): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/v3.21` | The owner's three calls from v3.20: bodies as broad as their sculpts, a throw that holds, Cathie's coat, and the phone test on the site (see "v3.21") | Released in v3.21 on 2026-11-12, pushed straight to `main`; it was never a branch on GitHub. 634 tests pass. |
+| `main` | The live game, v3.22 (`SIM_VERSION` 13): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `claude/v3.22` | The resolution step-down, the performance reports and dashboard, the balance pass and the art notes (see "v3.22") | Released in v3.22 on 2026-11-14, merged into `main`. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
 | `claude/figure-pass` | `claude/guard-pass` plus the figure below (`?figure`) and the new 3D bodies (`?gl&athlete`) | Released in v3.13, both still behind their flags. |
@@ -64,832 +130,234 @@ rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
 | `claude/game-review-enhance-29bffb` | `live-3d` plus v3.9 and the prototype's leftovers, with `main` to v3.9.1 | Superseded: all of it is in `main`. |
 | `live-3d` | v3.8 plus the 3D prototype and one 2D bug fix | Superseded: all of it is in `main`. |
 
-`claude/gfx-v3.9.4` merged v3.9.2, v3.9.3 and v3.9.4 into the review branch; the
-only code conflict was the teleport in `game.js` (the prototype's warp effect,
-and v3.9.3's `TELEPORT.PAST` in place of 84), and both are kept. The three
-superseded branches can be deleted whenever the owner likes; nothing on them is
-missing from `main`.
-
-## The guard pass (2026-10-30, on `claude/guard-pass`, not released)
-
-The owner's priority after v3.12: the fighters' limbs looked awkwardly placed,
-and the genre (the big arcade fighters, as inspiration only) should be the
-model. The poses had been authored across several rig eras and were
-personality poses rather than fighting stances: arms hanging or folded or on
-the hips, a rear hand hidden inside the torso, Kim's fists over her face, feet
-that crossed on every step, and in 3D a two-fisted flex on every jump and punch.
-Render-only throughout: no simulation, hitbox or `SIM_VERSION` change.
-
-- **Everyone stands in a guard**, and keeps their personality inside it: a
-  fencer's guard (Lizbeth), a brawler's low fists (Adam), a presenting hand
-  (Steve), a peek-a-boo (Kim), a tai chi ready stance (Cathie), a wrestler's
-  reach (Carl), a shoulder roll (Elo), a karate chamber (Jeff), and the open
-  palm with a hand in the pocket (Scam). `REST` is a guard too, for the base
-  characters. The five style stances are one table, `STANCES` in
-  `drawFighter.js`.
-- **The guard goes everywhere**: walk (now a shuffle that never crosses the
-  feet), crouch, jump (knees tucked), dash and block carry the fighter's own
-  hands, so a held prop (Cathie's tablet, Jeff's parcel) stays where its owner
-  holds it instead of rising over the face.
-- **Attacks thrown from it**: the four basic tracks are rebuilt from the guard.
-  The punch cocks at the chest and turns out from the hips, the kick chambers
-  the knee, the uppercut rises from a crouch, and the rear fist stays at the
-  chin through every swing. A swing eases out of the fighter's own guard and
-  back into it. Keys now carry forward what earlier keys set (a hold used to
-  snap the squash and the guard hand home on the first frame of the recovery),
-  and reach scales about where the hitbox starts, so a zoner's jab still looks
-  longer than a grappler's with the hand at the chin.
-- **3D**: planted feet lie flat instead of tipping onto the toes when the knee
-  bends (crouched fighters looked mid-jump), and the legs scale with `stride`
-  and carry a little slack (`GL3D.LEG_SLACK`), so every fighter's knees bend
-  alike.
-- `test/guard.test.js` pins the intent (no fist or held prop over a face, the
-  guard carried into walk and crouch, feet never crossing, the rear fist home,
-  no pops between keys, flat feet, even knees); each test fails on `main`.
-
-With the flags off this deliberately changes how every fighter looks, so
-`lab/pixels.js` reports every frame different from v3.12. It needs the owner's
-eye, then a `VERSION` bump, before release. Next in the same direction, as the
-owner set it out: animations, then fighting styles, then controls.
-
-## The figure (2026-10-30, on `claude/figure-pass`, behind `?figure`, not released)
-
-The owner's next note, with the guard pass in hand: the characters still did
-not look fully formed next to the arcade fighters' character sheets. The poses
-were not the problem any more; the drawing was. The 2D rig drew a limb as two
-round strokes with no fixed length and a guessed elbow, a torso narrower than
-the head, no neck, a ball for a fist, a slab for a foot, and a front-on face
-painted on a ball over a body seen from the side.
-
-`src/engine/figure.js` draws the same pose as a body instead, with every
-number in `FIGURE` (`config.js`):
-
-- **A skeleton with bones.** Arms and legs have a length and bend at an elbow
-  and a knee solved by two-bone IK (elbows hang down, knees point at the
-  opponent). An arm reaching out locks straight, so a punch lands on a
-  straight arm whatever the fighter's shoulders and lean do to the distance,
-  and the guard keeps its bend.
-- **Proportions.** The hip rides 12% higher (`FIGURE.LEGS`), so the legs are
-  about half the fighter instead of 42%, and the head sits on a neck instead of
-  sinking into the collar. Head-anchored parts (Kim's ring light) follow it.
-- **Forms.** A 3/4 torso with chest, waist and hips; deltoids; muscle-shaped
-  arm and leg segments; trousers that hang straight below the knee; squared
-  fists with knuckles and a thumb, an open hand for the slap; shoes with a
-  heel, a sole and laces.
-- **A 3/4 head**: brow, nose, lips and chin standing proud of the skull, an ear,
-  the near eye full and the far one foreshortened. Every face knob each
-  fighter already has is used. Hair and hats are the tube rig's own, kept off
-  the face; glasses, shades, the visor and facial hair are redrawn for 3/4.
-  Photo founders keep the photo face.
-- **Light.** Every form has a lit side and a shadow side, cut hard and
-  multiplied so detail survives, violet on cloth and red on skin.
-- **Builds.** Each roster fighter has a render-only `figure` entry in
-  `fighters.js`: Jeff the gym rat, Carl's paunch and bull neck, Scam soft all
-  over, Kim narrow-waisted, Steve rake thin, and so on.
-
-It is 2D only (the 3D path draws its model as before) and off by default:
-`?figure` turns it on, and `lab/pixels.js` reports the flags-off game
-identical to `claude/guard-pass`. Lab sheets: `lab/figure-sheet.js` (`sheet`,
-`looks` for every profile look, `bench`). In headless Chromium, which draws in
-software, the figure's shapes cost about 2.2 ms a fighter against the tube's
-0.7 ms (2.8 before the shading stopped clipping each segment), and a whole
-frame, stage included, about 8% more. It needs a real phone before it could be
-the default: `?figure&perf` shows the 2D draw time in the game, and the review
-page shows each renderer's frame time on whatever device opens it. `test/figure.test.js` pins bone
-lengths, the straight punch and bent guard, legs at half the height, the neck,
-and builds that show; each fails without its part.
-
-Decided on 2026-10-30, after watching both side by side in a live match: the
-head stays the size it is (`FIGURE.HEAD` 0.94, "head A"). The smaller, more
-heroic head was tried (`sheet({ tweak: { HEAD: 0.8 } })` still shows it) and
-not taken. Still open for the owner: whether this becomes the default renderer.
-
-## The athlete bodies (2026-10-30, on `claude/figure-pass`, behind `?gl&athlete`)
-
-The owner asked why the bodies could not be more complicated and realistic,
-and picked the 3D route of three (push the 2D drawing further; better 3D
-bodies; sprites pre-rendered from 3D): a 3D body bends at its joints instead of
-being redrawn, so anatomy stays right in every pose, and the 3D layer is
-already cheap on his iPhone.
-
-`lab/blender/build_founder.py` now also builds `assets/models/athlete.glb`
-(`-- <out> athlete`) and `athlete-f.glb` (`-- <out> athlete-f`, the women's
-frame). Same skeleton, same head and face, same named meshes and palette roles
-as `founder.glb`, so every look, outfit and prop still fits (`test/athlete.test.js`
-holds that). What changes is the body: metaball muscles (pectorals, deltoids,
-traps, lats over a narrower waist, biceps, triceps and a forearm that swells
-below the elbow, glutes, quads and hamstrings), bigger fists with knuckles,
-and clothes built from the same muscles grown by a pad per outfit, so a tee
-shows the chest and arms, tailoring softens them and a puffer hides them.
-About 3.5 times the founder's triangles (a fighter in a tee: about 32,000
-against 9,000) and 3.3 MB a model against 1.3 MB.
-
-`?gl&athlete` puts every fighter without a model of their own in the athlete
-body for their frame (`athleteFor` in `models3d.js`: the women's frame for a
-fighter whose 2D figure uses it), and an athlete stands on the 2D figure's
-longer legs (`figureFrame`). Off by default; `lab/pixels.js` reports both the
-flags-off game and `--flags gl` identical to `claude/guard-pass`. Lab sheets:
-`lab/figure3d.js` (`sheet` and `cast`, through the match renderer at any size).
-
-Blender is not needed as an app: `pip install bpy` (5.1.2 was used) runs the
-script as `python lab/blender/build_founder.py -- <out.glb> [athlete]`, and it
-rebuilds `founder.glb` identically apart from the exporter's version string.
-
-**A body of their own** (same day). The owner liked the athlete body and
-asked for what the arcade fighters have: every character unique in many ways.
-The first of those ways is the silhouette, so each roster fighter now has
-their own model, `assets/models/cast/<id>.glb`, built by
-`lab/blender/build_cast.mjs` (it runs `build_founder.py` once per fighter):
-
-- their build from the same `figure` numbers the 2D figure draws (`muscle`,
-  `chest`, `waist`, `belly`, `hips`, `neck`, `frame`), pushed wide on purpose,
-  since a subtle difference is no difference at game size;
-- the cut of their clothes, `figure.costume`: how close the top and sleeves
-  sit (`tight`, `regular`, `oversized`), how far the top hangs past the hips,
-  and the trousers (`skinny`, `suit`, `baggy`, `flared`);
-- only the pieces they wear (`piecesFor` in `models3d.js`), about 1 MB each.
-
-Jeff is huge through the chest and arms with tight sleeves, Carl short and
-barrel-chested with a paunch and a bull neck, Adam big in an oversized hoodie
-and baggy trousers, Steve rake thin in fitted clothes, Scam soft with a belly
-in a baggy henley, Kim small with a narrow waist and flared trousers. With
-`?gl&athlete` a roster fighter wears their own model and a player's founder the
-athlete body for their frame; each is fetched the first time it is worn, so a
-fighter can show in 2D for a moment at the start of a match until theirs
-arrives. `test/athlete.test.js` checks each model carries exactly what its
-fighter wears and that no two share a build; both fail with one shared body.
-
-Next for uniqueness, as the owner set the direction: their own heads and faces
-(the face is still projected onto today's round head), signature costume
-pieces, then how each one moves.
-
-## Jeff, remodelled from scratch (2026-11-01, on `claude/jeff-model`, in progress)
-
-Two routes before this were turned down by the owner. Better 3D bodies built
-from metaballs read as "bulky, chunky": every form blended into its
-neighbours, so an arm was a sausage the same thickness from shoulder to wrist,
-and the live 3D also draws every limb 40% thicker (`GL3D.ARM_GIRTH` and
-friends). Pre-rendering those same bodies in Blender (`claude/blender-sprites`,
-2026-10-31) changed nothing, since the shapes were the problem. So the owner
-asked to start again, one character at a time, beginning with Jeff, to the
-heroic proportions of the modern arcade fighters.
-
-`lab/blender/sculpt.py` sculpts in a signed distance field: masses blended
-broadly for the silhouette, then definition carved in as shallow grooves that
-follow the surface (`Field.groove`), so muscles read without standing proud as
-bubbles, then meshed with surface nets. Jeff's body (7.5 heads, tapered
-limbs, fists) was `lab/blender/sculpt_jeff.py`, now the roster pipeline
-(below), and `lab/blender/clay.py` renders clay views. Stages, each shown to the owner
-before the next: the body; the face (an original design, not a likeness); the
-hands; the costume; then rigging and into the game on the same skeleton.
-
-Where it stands. The owner preferred him drawn by the game's own renderer to
-the Blender render, so he is rigged (`--rig`, `assets/models/sculpt/bozo.glb`)
-and registered as `sculpt:bozo` in `models3d.js`, used only by the lab sheets
-(`lab/figure3d.js`). Its `fit` lets a body built to its own size keep its own
-torso, neck and head, lean over bent knees, and nod at most `fit.nod`, all
-render only. Owner feedback so far: the neck and head were not humanly possible
-and the back not straight (fixed in `4d885c7`), then "his neck and shoulder
-looks off" (fixed next: the deltoids were balls sitting above the traps, the
-traps were weighted to the neck and arms so they lumped with every move, the
-jaw melted into the neck, and the head jutted on a punch).
-
-Then: "boxers guard their face", and a punch is thrown by turning the upper
-body into it; each character can have their own fighting form, and Jeff's is
-boxing. `src/data/forms.js` holds fighting forms, render only: a form brings
-its own guard, motion and attack tracks in place of the fighter's own
-(`computePose(f, t, form)`), and can turn the shoulders and hips through a
-move (`twist`, `hipTwist`, new pose channels only the 3D rig reads), bring the
-fists in to guard the face (`handDepth`) and keep the rear fist at the chin as
-the body turns (`guardTurn`). A form belongs to a model for now
-(`models3d.js` `form`, read through `gl3d` `form3D`), so the 2D Jeff keeps his
-karate stance and the parcel under his arm; moving `form` onto the fighter
-would give the 2D game the same boxing, and is the owner's call. Boxing so
-far: the guard (idle, walk, crouch, jump), a shell block, and a lead straight
-loaded and turned through the hips and shoulders, the rear fist home
-throughout. Kicks, the uppercut and the slap still use the shared tracks.
-`test/forms.test.js`.
-
-An independent review of the body (2026-11-01), worst first: the legs and
-forearms were too small for the upper body (thighs no wider than the head);
-the neck reads long from the side and the back was a smooth slab; the pec
-rounded into a hanging lobe when the arm moved, with a dark hollow under the
-armpit when the chest turned to the camera; the belly crumpled on a twist and
-the carved abs broke into chips through the toon bands. The body pass that
-followed: thighs about 1.2 heads wide with an outer sweep, fuller calves and
-forearms, the thighs parted below the crotch (fused to mid-thigh, they tore
-when the legs moved); the spine, shoulder blades and lat edges carved into the
-back; the pec running on into the arm as the front fold of the armpit; softer
-ab lines; and the skin under the shorts removed (`hide_under_shorts`), which
-was what showed through them as patches when the waist turned. Still to do:
-the neck from the side, and the arms stretching a little at full punch.
-
-The face (2026-11-01): an original design built to his character notes (hard
-flat brows, narrow eyes, a wide set jaw), never a likeness. The forms are
-sculpted (a heavy level brow, deep-set eyes under heavy lids, cheekbones, a
-broad straight nose, firm lips, a square chin and wide jaw). The eyes, brow
-hair and mouth are painted on in game, one cell per expression as the founder's
-face is, but by a painter drawn for sculpted heads (`src/engine/gl3d/faces3d.js`,
-to the model's `face.layout`): the 2D face's layout puts the mouth
-just under mid-head and cannot sit on a sculpted brow and mouth. Strokes are
-bold on purpose, so the face still reads on a 26 px head in a match. The
-owner: "the face is going in the right direction". Then a polish: a confident
-squint, a catchlight and a smirk at rest (he looked tired), the eye hollows
-moved up under the brow (they read as bags), a squarer chin (a ball in
-profile), and his rear guard fist lowered to the jaw so the game's camera
-sees his mouth.
-
-His shades (the owner: keep them, on all the time): a mesh of their own,
-`eyewear:shades` (worn because his accessory is shades), two wraparound
-lenses on a bar across the brow, a bridge and arms back to the ears, weighted
-wholly to the head and built in their own fine field (`shades()` in
-fighter3d.py, placed by `eyewear()` in `fighters/bozo.py`). The lenses are dark glass (`glass: { lens: 0.84 }`) his
-painted eyes show faintly through, as in 2D, and the bar sits under the
-painted brows, so his brows and mouth still carry his expression.
-
-His clothes (the owner: clothes, and bare fists): his outfit from the 2D game
-(`outfit: 'vest'`), a fitted white shirt with long sleeves tucked in, a teal
-quilted vest open down the front with a standing collar, suit trousers and
-shoes, replacing the fight shorts. Each is the body's own surface pushed out
-and cut to its edges (`shirt()`, `vest()`, `trousers()`, `shoes()` in
-fighter3d.py), in his palette's roles (`suit`, `pants`, `shoe`; the shirt
-white is the 2D outfit's own). The trouser legs fall straight from the thigh,
-each leg its own with a slot between them below the crotch: blended, they
-webbed together and tore into black spikes as the legs moved. The skin the
-clothes cover is removed (`hidden`), all of it below the waist, so none shows
-through. `test/sculpt3d.test.js`.
-`lab/figure3d.js` `faces()` draws every expression close up (`focus` on
-`renderFull3D` frames one part of a fighter). `test/faces3d.test.js`.
-
-### The roster pipeline (2026-11-01)
-
-The cast's names here are the ids in `data/fighters.js`; in the game they are
-Adam (`max`), Steve (`kai`), Carl (`dex`), Elo, Jeff (`bozo`), Scam, Lizbeth
-(`ava`), Kim (`zara`) and Cathie (`eleanor`).
-
-
-The owner: Jeff is the character "to build all the existing ones and improve
-them". So his build is now one pipeline for the whole cast, and Jeff is its
-first fighter, coming out of it byte for byte as he was (the same field, the
-same model file, the same painted face, call for call):
-
-- `lab/blender/fighter3d.py -- <id> --rig` builds `assets/models/sculpt/<id>.glb`
-  (`--views <dir>` for clay). The body is the pipeline's, scaled by the
-  fighter's own knobs read from the game (`Build`: `figure.muscle`, `chest`,
-  `waist`, `belly`, `neck`, `body.shoulders`). Jeff's knobs are the reference,
-  so his factors are all exactly 1; each knob moves only part of the way its
-  ratio says, since the 2D knobs are drawn exaggerated. A softer build is
-  carved shallower. Clothes come from the fighter's `outfit` (`OUTFITS`, so
-  far Jeff's `vest`, Adam's `hoodie` and Carl's `pinstripe`), in their
-  palette; rig, weights and export are shared.
-- `lab/blender/fighters/<id>.py` holds what is the fighter's alone: their head
-  (`head`), its carved lines (`head_definition`) and their eyewear, an
-  original face built to their character notes.
-- `models3d.js` registers each as `sculpt:<id>` from `SCULPTED`: what every
-  sculpted model shares, plus each one's leaf bones, joints' width, face
-  centre, face `layout` (where the eyes, brow ridge and lips are on that head,
-  in the painter's px) and form. Lab sheets name it `'sculpted'`.
-- The face painter is shared: the layout says where the features are, and the
-  fighter's own 2D face values (`LID_Y`, `PUPIL_R`, `BROW_W`, `BROW_TILT`,
-  `MOUTH_CURVE`) say how they are drawn, pinned on Jeff's (`FACE_REF`), so
-  another fighter's narrowed eyes, scowl or stare carry over from 2D.
-
-The men of the cast in clay through it, each from his own knobs
-(`fighter3d.py -- --cast <dir> max kai dex elo scam`; a fighter with no
-design yet gets a plain placeholder head): Jeff the gym rat, Max broad and
-athletic, Kai slim, Dex and Scam with a gut, Elo with a little one. The
-trunk is sized by a girth map over its height (`Build.girth`: the hips as
-Jeff's, the waist's factor over the belly, the chest's over the ribcage), so
-a narrower chest brings its pecs, armpits and lats in with it: sized one mass
-at a time, they stood off it in ridges. Less muscle thins the limbs' cores as
-well as the muscle on them, carves the definition shallower and tighter, and
-a belly hides the abs. All of it is exactly 1 for Jeff, whose field is checked
-bit for bit after every change.
-
-Each fighter is built to their own size (`Frame`), as the game draws them:
-legs as long as their `stride` makes them, the trunk by `height`, the head
-by `head` and their size together (as the 2D head is sized for the body under
-it), every width by their size and `build`, and the neck as long as the head
-makes it and as thick as the trunk (lengthened with the trunk, a tall
-fighter's neck became a stalk). The body is built in Jeff's space and the
-finished meshes and joints are warped to theirs, so no part of the build has
-to know. The game's rig draws a sculpt's own trunk and head but scales its
-legs by the stride, so a sculpt records how long its legs are built
-(`fit.legs`, against Jeff's) and the rig scales only the rest. `--rig` prints
-the numbers its `SCULPTED` entry needs.
-
-Fat (2026-11-02). The owner: heavier fighters only had a bigger stomach,
-when fat goes to the chest, the arms and everywhere else, and men and
-women carry it differently. So the 2D `belly` knob is now how much fat a
-fighter carries (`Build.fat`), laid on where a man carries it (`fat` in
-fighter3d.py): a layer over the whole body but the head, hands and feet
-(`Field.thicken`), then swells where it gathers (`FAT_M`: most round the
-middle, the flanks and the lower back, then the chest, under the arm, the
-upper back, the back of the neck, under the chin, the seat, the upper arms
-and thighs, a little on the forearms and calves), and last all of it
-softened (`Field.soften`, a blur made at a third of the resolution and
-blended in), so the muscles under it stop reading one by one. The owner's
-second look, "fat is not quite there yet": laid only as swells, a heavy man
-still read as a muscled one with a gut and two plates on his chest; softened
-last, the swells' edges go too. Fat also covers definition, and a groove
-under a fifth of Jeff's depth is left out. A woman's pattern (hips,
-buttocks, thighs, breasts, the backs of the upper arms, less round the
-middle) comes with the women's base.
-
-**Remodelling the next fighter, the recipe:**
-
-1. Read their entry in `data/fighters.js`: build knobs, face values, outfit,
-   look, palette and the character notes.
-2. Clay their body (`--cast <dir> <id>`) beside Jeff's. If it is wrong, fix
-   the knob's mapping for the whole cast (`Build`), never one fighter by hand.
-3. Design their head in `lab/blender/fighters/<id>.py`: an original face to
-   their notes, never a likeness, and eyewear if they wear it.
-4. Dress them: their outfit in `OUTFITS`, if it is not there yet.
-5. Register them in `SCULPTED` (`models3d.js`): leaf bones and joints' width
-   from their build, their face centre and `layout` measured on their head,
-   and their form.
-6. Build (`-- <id> --rig`), look at them in the game's renderer
-   (`lab/figure3d.js` with `models: ['sculpted']`, and `faces()`), and show
-   the owner before the next stage.
-
-**Adam** (`max`, the owner's pick, 2026-11-01). His body at his game size
-was the first stage: 1.26 times Jeff's height, legs 1.23 times, widths 1.18,
-his head about Jeff's, so he stands about 8.6 heads to Jeff's 7.4. The owner:
-"the model is good", with the note on fat above.
-
-His head (2026-11-02, `lab/blender/fighters/max.py`): an original face for
-"manic", open where Jeff's is shut. A high rounded forehead, a light brow
-ridge arched high, big eyes set shallow under thin lids, high cheekbones, a
-long nose with a bump, a wide full mouth, a long heavy jaw and a round chin
-with a cleft. Its first build showed black wedges from the eyes to the
-nostrils in the game's light (the ink outline through a tight crease beside
-a nose standing off the face); the nose now sits on broad side planes and a
-lower lid fills under each eye. His cap is backwards, as in 2D: a crown a
-little proud of the skull, a stiff brim over the nape, a button on top, in
-`suit2` and `accent`, over short dark hair, the skin under both removed
-(`headwear` in the design module: a `hair:cap` mesh, as his look's hair is
-`cap`). The shared painter paints his face from his 2D values: wide eyes
-that stare rather than squint (`smug` needs a narrowed lid), raised brows, a
-loose grin at rest (`leer`, for a mouth curve of 2 or more, only his), and
-stubble, a soft shade over the upper lip, round the mouth and down the jaw
-(up the cheeks, it read as a mask). Until his hoodie is made he wears the
-pipeline's base outfit, trousers and shoes (`OUTFITS.base`), so his head can
-be judged in the game first. Registered as `sculpt:max`.
-
-The owner on it: "facial expression, head size looks great. shoulder looks
-like it is a bit forward". His 2D stance already slouches, and the sculpts'
-usual lean (`fit.lean`, made for Jeff's boxer over bent knees) on top of it
-rounded his back and brought his shoulders forward; his `fit.lean` is now a
-little below zero, and he stands up straight with his chest up.
-
-His clothes (2026-11-03, the owner: "looks good, continue"): his oversized
-hoodie, baggy trousers and white sneakers, as in 2D (`OUTFITS.hoodie` in
-fighter3d.py). An oversized top does not follow the body, so the hoodie is
-made from the body as loose cloth lies over it (`_loose`): the forms blurred
-away a couple of centimetres out, and below the chest each column falling
-straight from the widest part above, as cloth hangs. The trunk and sleeves
-are made apart and met a hand's width down the arm, a dropped shoulder:
-blurred together, the cloth webbed from arm to side like a bat's wing and
-stretched into a fin of cloth whenever the arm came up, and split at the
-joint each sleeve was a puff on a vest. Under loose cloth the chest's weights
-also reach out under each arm (`loose` outfits, `skin_weights`). In its
-second colour (`suit2`) a ribbed band at the hem, ribbed cuffs, and the hood
-lying down: a layer over the upper back with a U-shaped edge and a soft roll
-round the back and sides of the neckline (a ring of beads read as a neck
-pillow; carried round to the front, it rose under his chin like a beard). A
-pouch pocket follows the front (a flat box on the curve stood out only at its
-ends), and two drawstrings in `accent` lie on the cloth (projected onto it;
-from too far out, where the field was never written, they landed anywhere).
-The neckline is cut close and the collar stops at the base of the neck: wider,
-the gap showed its inside as a black band under the jaw; kept up to the
-shirt's line, it stood round his neck like a turtleneck. Trousers now come in
-cuts (`LEG_CUTS`, from the 2D `costume.legs`): baggy legs widest at mid-thigh,
-wide enough to hang clear of the thigh, and allowed further out to the side
-(kept to the suit's limits, they were cut flat there in patches that read as
-pockets). One material a palette role, shared by every piece (`material`): a
-second of the same name came out as `suit2.001`, a role no palette has.
-`test/sculpt3d.test.js` checks his roles, his cap and his bare fists.
-
-His form (2026-11-04): brawling (`data/forms.js`), as his 2D style is a
-brawler's. His guard is his own from 2D (fists low at the belly and too far
-apart, the widest base in the cast), the fists out wider than his shoulders
-(`handDepth` above 1), and at rest he rolls his weight: the shoulders turn
-with the sway of his fists and the hips follow a beat behind (`roll`, a new
-form setting, read in `computePose`). His punch is a haymaker, all wind-up
-and no control: the fist back by his ear and the body turned away, the
-deepest coil in the cast so everyone sees it coming, then round and through,
-and on past the target off balance before he stumbles back. He covers up late
-and badly, both forearms thrown up across his face from the belly, turned
-away. Kicks, the slap and the launcher are still the shared tracks, blended
-to his guard. `test/forms.test.js`.
-
-**Carl** (`dex`, the owner's pick after Adam, 2026-11-04). His body came out
-of the pipeline as it is: about Jeff's height, short in the leg, the heaviest
-of the men (his `belly` 0.65), so the fat layer gives him his paunch, bull
-neck and second chin. His head (`lab/blender/fighters/dex.py`): an original
-face for "predator", an older man's heavy face, the lowest and heaviest brow
-in the cast over deep-set heavy-lidded eyes with bags, a big fleshy nose,
-deep folds to a thin pressed mouth, jowls at the jaw line and large ears. His
-silver hair is combed straight back off a receding hairline, laid on his own
-head's surface (sampled from the body's field) a few millimetres out, with
-the comb's lines through it: on a skull of its own with volume behind, it
-stood off his head like a helmet. He wears shades, made as Jeff's are; his
-painted brows sit just above their bar (on the ridge, under it, they were
-hidden). His 2D stance is a wrestler's, already hunched, so his sculpt adds
-no lean of its own. Registered as `sculpt:dex`.
-
-His suit (2026-11-04, `OUTFITS.pinstripe`): a dress shirt with a closed
-collar, the pink tie, a jacket buttoned over his paunch, suit trousers and
-shoes. The jacket is the body as cloth lies over it (`_drape`, the hoodie's
-`_loose` made general: with Adam's numbers it gives his hoodie byte for
-byte), a centimetre out with the sleeves set in near the shoulder, and never
-nearer the body than that: draped alone, it dipped where the sleeves meet the
-trunk and the shirt showed through at the shoulders. Only its front hangs
-straight (`hang_back`): hung from the shoulder blades as well, its back stood
-off the small of his back and folded into a corner there as he leant into his
-stance. It opens in a V from the
-button to the base of the neck, its collar stands round the back of the neck
-under the shirt's, and below the button its fronts part over the paunch, as
-the 2D jacket's do. The lapels widen from the button to a notch under the
-collarbone, the collar narrower above it, a few millimetres proud of the
-jacket and in the suit's colour in shade, as the 2D figure darkens it: a
-material role can now ask for a palette colour in shade (`suit*0.78`,
-`roleColour` in `gl3d/toon.js`), so the shade follows any palette. In
-`suit2`, nearly black on Carl, the lapels read as a black stand-up collar.
-The lapels are cut from the finished jacket: from its cloth uncut, the collar
-ran on up the neck to the jaw. The tie is swept down the shirt as one ribbon:
-a chain of flattened capsules, each turned to the shirt under it, stepped
-over the paunch and read as beads. The shirt shows in the V and at the cuffs,
-and its collar is kept to the neck: a band at the body's height, it ran out
-over the tops of the shoulders, too near the jacket there to be hidden under
-it, and showed through in flecks. Not yet: the pinstripes themselves (a
-pattern, which the toon renderer has no way to paint) and a waistcoat (the V
-shows only the shirt, as in 2D). `test/sculpt3d.test.js` checks his roles,
-the lapels' shade against figure.js's, and his bare fists.
-
-His briefcase (2026-11-04): props now come out of the pipeline as the
-founder's model has them (`PROPS`, `props()` in fighter3d.py), a
-`prop:<id>` mesh for each part the fighter carries, which the game shows in
-that part's states, riding a grip bone that follows the fist but faces the
-way the body faces. Carl's case hangs from his rear fist, and every sculpt
-now raises the block briefcase in its lead fist (Jeff and Adam rebuilt with
-it, nothing else in their models changed). Each is an original attache case
-(`briefcase`): a hard leather shell with rounded corners and the seam where
-its lid closes, a handle arched on two brass mounts, and brass latches,
-sized as the founder's and hung with the handle in the fist: at the
-founder's ten centimetres ahead of it, the fist floated beside the handle.
-`test/sculpt3d.test.js`.
-
-His form (2026-11-04): grappling (`data/forms.js`), as his 2D style is a
-grappler's, from the guard his 2D figure stands in: hunched well forward over
-a wide low base, chin down, the lead hand open and reaching at chest height,
-the rear one low with the case, and a slow, heavy shift of his weight at
-rest. His punch is a seizure: the weight sinks and the open hand draws in,
-shoots out at the chest with the body behind it, closes on what it finds and
-hauls it back in to his chest, the body turning away with the pull. He blocks
-hunched behind the block briefcase. `test/forms.test.js`.
-
-The open hand is new to the pipeline and serves every sculpt: the lead hand
-comes in two shapes, `hand:fist` (the body's own, parted from the arm under
-the sleeve, `_part_hands`) and `hand:open` (`open_hand`: the flat of the
-hand, the fingers out together and a little curled, the thumb off it, its
-wrist the body's own), and the renderer shows one by the pose (`P.hand`,
-`conditions.hand` in `wearing`). A form names the states it holds the hand
-open in (`open`), an attack track can open and close it on a key (`hand`,
-switched as `face` is), and a slap opens it in every form, as the 2D figure
-draws everyone's; anything else is a fist. Jeff and Adam were rebuilt with
-it, so their slaps are open-handed now; nothing else in their models
-changed. The first open hand was a skeleton's (thin fingers apart), and its
-thumb was cut flat by the edge of its own field.
-
-The owner on it: "It's good".
-
-**Steve** (`kai`, the owner's pick after Carl, 2026-11-04). His body came
-out of the pipeline as it is: 1.15 times Jeff's height and as long in the
-leg, the narrowest chest and shoulders so far, little muscle on him and
-carved shallow, his head about Jeff's. His head
-(`lab/blender/fighters/kai.py`): an original face for "the showman", a long
-lean face on a tall narrow skull, a high forehead, a light level brow over
-deep-set eyes under heavy lids, high cheekbones, a long straight nose, a
-small thin-lipped mouth and a narrow pointed chin. His grey hair is a quiff
-(`headwear`, sampled from the head as Carl's is): volume over the whole top,
-short at the sides, rolled up and forward off the front, the hairline curving
-down past the temples to the sideburns (kept narrower than the head, the
-quiff stood up as a crest; cut square, the hairline stepped down over the
-temples). His glasses are new to the pipeline (`glasses` in fighter3d.py):
-rounded-rectangle rims round clear lenses, as the 2D ones are drawn, the
-lenses faint glass (`clear`) the painted eyes show through and the rims wire
-drawn without the ink outline (`rim`, inkless for every sculpt): outlined,
-the ink filled each lens black, as the founder's wire would be. The nose's
-side planes are wide (narrower, the crease beside it went black, as Adam's
-did). His 2D stance stands tall with the chest open, so his sculpt adds no
-lean of its own. Registered as `sculpt:kai`. The owner: "Continue".
-
-His clothes (2026-11-04, `OUTFITS.turtleneck`): a fitted teal turtleneck,
-skinny trousers and his white sneakers, as in 2D. The knit is the body's own
-shell softened only enough not to show every muscle (the 2D figure says the
-chest and waist show through it) and never nearer the body than a few
-millimetres (softened, it sank under the skin over the shoulders and lats).
-The roll collar, in the second colour, is a tube round the neck sized to it,
-up to under the jaw and higher behind, sitting on the shoulders: the neck's
-own surface pushed out took the shoulders' slope with it and stood on them
-as a plate, and blurred after it was cut out, it was eaten down to a ring.
-The knit runs up under the collar and no further (open only round the neck,
-it ran on up over his head and hid the face). Skinny legs are a new cut
-(`LEG_CUTS.skinny`), under the leg's own shell so they hug it.
-
-His device (2026-11-04): a thin slab with rounded corners held up at his
-chest in the rear hand, the edge of its screen just drawn in, solid in his
-palette's `accent` as the 2D part is (`device`; `PROPS` now names a maker for
-each prop). The comb lines in his quiff were made shallow: deeper, the ink
-drew them as black scribbles at game size.
-
-His form (2026-11-04): showboating (`data/forms.js`), from his 2D guard: tall,
-the chest open, the lead hand open, out and high, presenting, the device at
-his chest. His punch is the big finish: a flourish, the open hand swept up
-and back over his shoulder with the body turned away, the hand closing at the
-top of it, the punch down at the chest, and the finish held a beat too long,
-chin up, before he goes back to presenting. He blocks behind the briefcase in
-the presenting hand. His keynote drift at rest is his own 2D idle.
-`test/forms.test.js`, `test/sculpt3d.test.js`.
-
-The owner: "Continue the work".
-
-**Elo** (`elo`, 2026-11-04, after Steve). His body came out of the pipeline
-as it is: the tallest, 1.28 times Jeff's height and as long in the leg, narrow
-in the shoulder and heavy-set rather than built, a little belly, a small head
-for his size. His head (`lab/blender/fighters/elo.py`): an original face for
-"thin-skinned", a soft oval face, a high forehead, a light brow ridge set high
-for brows up in grievance, big eyes set shallow and wide open, soft
-cheekbones over full cheeks, a straight nose with a rounded tip, a small mouth
-with a pouting lower lip and a broad rounded jaw; his brown hair a buzz cut
-(`headwear`, sampled from the head, barely two millimetres out). His 2D
-stance leans back, so his sculpt adds no lean of its own. Registered as
-`sculpt:elo`.
-
-His clothes (`OUTFITS.tee`): a black tee in a regular fit, stretched over the
-middle as in 2D, short sleeves halfway to the elbow (`_sleeve_cut`), worn out
-over baggy trousers and hanging a little looser toward the hem (as close as
-above, the trousers' waistband stood out over it and the hem was lost); a
-ribbed crew neck in the second colour, wide enough not to break into beads
-and kept to the neckline (higher, it took in the soft under the chin, and so
-did the tee itself until it stopped at the neckline); and the red diamond
-the 2D figure draws, high in the middle of the chest (lower, his crossed arm
-hid it but for a red spot at the elbow). His booster (`booster`, the first
-prop worn rather than held): a red rocket stood upright off his back, a
-pointed nose, a dark band, nozzle and fins, riding the chest bone.
-
-His form (`shoulderRoll`, `data/forms.js`), from his 2D guard: the lead arm
-low across the belly, the rear fist at the chin, chin up, weight back. His
-punch is the glass cannon's whip: the low fist drawn back past the hip and
-the body coiled away, the deepest wind-up after Adam's, then whipped up and
-out at the head, held only while it can hit and snapped straight home. He
-blocks by rolling the shot off the lead shoulder, turned well away.
-`test/forms.test.js`, `test/sculpt3d.test.js`.
-
-**Scam** (`scam`, 2026-11-04, after Elo, the last of the men). His body came
-out of the pipeline as it is: about Jeff's height, soft all over, round
-shoulders, a belly and nothing in the arms, his head a little bigger than
-Jeff's. His head (`lab/blender/fighters/scam.py`): an original face for
-"reasonable", the mildest in the cast, young, soft and rounded, a smooth
-forehead, a low soft brow, eyes at an even depth under plain lids, round
-cheeks, a short small nose, a small even mouth and a round chin. His brown
-hair is a curly mop (`headwear`): a cap of his head's surface and over it
-puffs laid evenly round the skull and brought down onto it, fullest on top,
-big and run together as the 2D puffs are (small and apart, they read as a
-bunch of grapes). His sculpt adds no lean of its own. Registered as
-`sculpt:scam`.
-
-His clothes (`OUTFITS.henley`): an oversized grey henley of the hoodie's
-loose cloth, long in the hem as his 2D costume has it, long sleeves, a ribbed
-neckline close round the neck and a placket down the front in the second
-colour, with three white buttons (`button`, a role of their own, white as the
-2D figure draws them); baggy trousers and white shoes. His paperclip
-(`paperclip`): one enormous bent wire, three legs and the bends between
-them, standing off his back face on to the camera's side, as the 2D one is
-drawn flat behind him (laid flat across his back, the camera saw it edge on,
-a white line), riding the chest.
-
-His form (`fence`, `data/forms.js`), from his 2D guard: one hand in his
-pocket, the other up open-palmed in front of his chest, placating and keeping
-you at arm's length. His punch is the slip: barely any wind-up, the hand
-closing only as it lands, lingering out after before it opens again; the
-pocket hand stays at his side, going only with his lean. He blocks with the
-briefcase in the fence hand. `test/forms.test.js`, `test/sculpt3d.test.js`.
-
-All six men are now remodelled. The owner on Elo and Scam: "good".
-
-**The women's base** (2026-11-04). The pipeline's body was a man's: pecs, a
-man's shoulder girdle, Jeff's hips, the male fat pattern. A woman's frame
-(`figure.frame` 'f', all three women) is now built into it, switched only by
-that knob, so every man is exactly as he was (Jeff rebuilt byte-identical):
-the shoulders narrower and the deltoids with them, as the 2D figure draws
-hers (0.86, figure.js), a lighter neck; the pelvis wider by her `hips` (now
-read, `Build.pelvis`) and wider again than a man's, through the trunk's girth
-map so the seat and the hip joints come out with it; a modest bust over the
-chest's muscle and none of a man's chest lines carved; and soft tissue a man
-of the same build does not carry (`Build.soft`), laid in a woman's pattern
-(`FAT_F`, `LIMB_FAT`: the hips and the seat most, then the thighs, the bust
-and the backs of the upper arms, least round the middle), which softens the
-muscle under it as fat does. Kept as modest as the 2D women are: in clay
-the curves barely show in profile, and the clothes will cover them. In clay
-beside Jeff and Steve, with plain placeholder heads
-(`fighter3d.py -- --cast <dir> ava zara eleanor`).
-
-The owner: "yes, looks good".
-
-**Lizbeth** (`ava`, 2026-11-04), the first woman. Her body is the women's
-base at her size: 1.13 times Jeff's height, slight. Her head
-(`lab/blender/fighters/ava.py`): an original face for "the stare", a slim,
-even face on a woman's narrower jaw, a light brow set high and level, big
-eyes set shallow under thin lids raised high (carved, as Adam's stare is),
-high cheekbones, a straight narrow nose, an even mouth and a narrow defined
-chin. Her pale blonde hair is pulled back tight into a ponytail, smooth (the
-comb's lines the men's hair has inked as black specks on hair this pale), a
-tie at the back of the crown and the tail tapering down the back of the neck,
-round and joined end to end without a blend (flattened, each length kinked
-against the next, and blended, each join bulged: either way a string of
-beads). Her visor is new to the pipeline (`visor`): a band of cyan glass
-across the eyes, a slice of an upright elliptical cylinder clear of the nose,
-ending in front of the ears (wider, it stood out past her temples like
-goggles), drawn as glass in game (`visor`, as the founder's). Registered as
-`sculpt:ava`.
-
-Her clothes (`OUTFITS.blazer`): the suit's jacket worn open (`jacket(open_front)`,
-`_vee(open_front)`: the fronts apart from the collar to the hem, no button,
-the lapels down to where the button would be), shorter, over the fitted
-white shirt, skinny trousers and white shoes. Her vial (`vial`): a big sample
-vial stood upright behind her lead hip, in her accent with a white cap,
-riding the hips bone (`JOINT_OF`: the bone is named apart from its joint).
-
-Her form (`fencing`, `data/forms.js`), from her 2D guard: narrow, upright and
-side on, both hands in on her centre line, the lead hand loose and open. Her
-punch is the thrust: the hand barely draws back, then goes straight out along
-its own line, fingers first, the lead foot stepping after it and nothing in
-the hips, and straight back; the hand never closes. She parries with the
-briefcase. `test/forms.test.js`, `test/sculpt3d.test.js` (her frame: narrower
-in the shoulder against the hip than any man).
-
-The owner: "good, continue".
-
-**Kim** (`zara`, 2026-11-04), the second woman: the women's base at her
-size, 0.98 times Jeff's height, curvy, her head oversized for her size. Her
-head (`lab/blender/fighters/zara.py`): an original face for "bored of you", a
-soft rounded face, a light flat brow, almond eyes under the heaviest lids in
-the cast (carved heavy, as Steve's are), full round cheeks, a small nose, a
-tiny mouth with full lips and a soft round chin. Her black hair is pulled up
-into two puffs set back and low on the crown and run into the hair (high and
-round on either side, they read from the front as a pair of cartoon ears),
-and she wears round earrings in her accent (`accessory:earrings`, shown when
-her look says so). Registered as `sculpt:zara`.
-
-Her clothes (`OUTFITS.bomber`): a bomber in her pink, roomy through the body
-and the sleeves (`_drape`, floored a centimetre off the body as the jacket's
-is) and gathered over its last hand's width into a ribbed band in her green
-accent at the waist (down at the top of the hips, the band was as wide as the
-hips and the jacket hung straight to it, a sweatshirt; the band is kept to the
-trunk, as the hands hang at its height in the rest pose and it took them in);
-ribbed cuffs and a ribbed collar in the second colour, the collar a short
-tube wide at its foot over the neckline (as close as the turtleneck's, the
-cloth rising round the neckline buried it); a zip up the front, a dark line
-of the second colour (`suit2*0.8`) in a fine field of its own. Flared
-trousers (`LEG_CUTS.flared`): hugging the thigh to the knee, then flaring to
-a wide hem that falls past the ankle (`low`) over the top of her green
-sneakers. Her ring light (`ringlight`): a flat ring a little wider than her
-head and hair, a hand's width behind it, in her accent, riding the head; built
-square to the body it turned with her head and was seen nearly edge on, so it
-is built pre-turned by the head's posed turn (`HEAD_TURN`, GL3D.YAW +
-GL3D.HEAD_YAW, as the founder's is; the test checks the two agree).
-
-Her form (`peekaboo`, `data/forms.js`), from her 2D guard: crouched in and
-leaning forward, both fists high and tight in front of the jaw, her face just
-above them, the shoulders weaving at rest over her own two bounces a breath.
-Her punch is the snap: she bobs under the line, the fists staying at the jaw,
-comes up with the jab already out, and has it home by 2.25 of the track, the
-fastest reset in the game, the head slipping off the line as it comes back.
-`test/forms.test.js`, `test/sculpt3d.test.js`.
-
-**Cathie** (`eleanor`, 2026-11-04), the third woman and the last of the cast:
-the women's base at her size, the tallest in the game at 1.3 times Jeff's
-height, slim and straight-backed, her head small for her height. Her head
-(`lab/blender/fighters/eleanor.py`): an original face for "serene", a calm
-oval face older and softer than the other women's, a soft brow set a little
-high, eyes open under plain lids, cheeks settled a little low, a straight nose
-of a good length, a level mouth with thin lips, the folds from the nose to the
-mouth just drawn in. Her cream bob: her head's surface pushed out and hung
-straight down from wherever it is widest, as hair falls, to a level cut at
-the jaw, fullest about the eyes and turned under at the ends, a fringe swept
-down across the forehead from a side parting, the face cut clear between the
-two sides, coming further forward toward the ends (hung straight and belled
-out under a level fringe, it was a helmet; cut square in front, each side was
-a flat plate down the cheek; thinner over the forehead, the ink broke the
-fringe's edge into specks). Registered as `sculpt:eleanor`.
-
-Her clothes (`OUTFITS.suit`): Carl's suit, the jacket buttoned over a shirt
-and tie, as the 2D figure draws the two alike but for the stripes. Her brooch
-is the first accessory worn on the clothes (`ACCESSORIES`): built on the
-clothes as last dressed (`DRESS`), a domed pin with a stone high on the near
-lapel where the 2D one is, its own mesh (`accessory:brooch`) riding the chest.
-Her tablet (`tablet`): a slab bigger than Steve's device, in her accent, its
-top leaning back as the 2D one is turned, gripped below its middle, with a
-dark line chart falling from top left to bottom right across the face the
-camera sees. Her coat (`coat`): the skirt of a long coat in her cream,
-hanging from under the jacket's hem round her back and sides to above the
-knee and flaring as it falls, open in front, riding the hips, as the 2D part
-is drawn behind her (softened, a blur as wide as the cloth is thick took all
-of it, and the test now catches a missing prop).
-
-Her form (`taiChi`, `data/forms.js`), from her 2D guard: upright and tall,
-the lead palm open and level in front of the chest, the tablet low at the
-waist, breathing slowly. Her punch is the push, placed rather than thrown:
-the palm drawn in as the weight settles back, then out level with the weight
-moving behind it, no turn of the hips and hardly any of the shoulders, and
-back the way it went; the hand never closes. She turns the block aside with
-the briefcase. `test/forms.test.js`, `test/sculpt3d.test.js`.
-
-All nine are remodelled.
-
-**The review** (2026-11-04), once the cast was built: every sculpt in game in
-every state (idle, walk, crouch, jump, block, slap, punch, kick, launch,
-hitstun, a KO and victory), and the remodel's code read through by a
-separate reviewer. Nothing reaches the simulation and nothing is shared
-between fighters or builds; what it found, all fixed:
-
-- Every form's punch jumped on its first frame and back on its last. The rear
-  hand follows the head through a strike, measured from the stock guard
-  (REST) even for a form's track, which starts in the fighter's own: it is
-  now measured from the track's first key (`drawFighter.js` `trackStart`).
-  The reach re-scale moved a form's guard keys with the strike (Cathie's palm
-  11 px out on the first frame); for a form's track it now comes in over the
-  wind-up and goes over the recovery. Jeff's straight was keyed at the stock
-  height and lead foot, not his guard's (`GUARD_SY`), and Scam's slip had its
-  head 2 px back (`F_HEADX`). A test now holds every sculpt's punch to its
-  idle guard on its first and last frame, at the reach the game gives it
-  (the old ones compared a punch with its own first frame, at the nominal
-  reach, so none of this showed).
-- A recoloured fighter took the first one's painted brows and lips: the
-  face texture's key (`drawnFaceKey`) now holds the hair and skin colours the
-  painters read.
-- What keeps a form out of the 2D game is now tested where it lives, `form3D`.
-
-The last two props are made. Jeff's parcel (`parcel`) is clamped against
-his near side under the elbow, the rear arm his guard holds at his chin: in
-his rear hand, as his 2D karate stance has it at the hip, it would cover his
-face. Adam's mat (`mat`) is rolled and slung across his back from over the
-far shoulder to past the near hip, white, two straps in his accent and the
-spiral of the roll in each end. Both ride the chest and are placed where a
-ray first meets the clothes (`_hit`): projected onto cloth that hangs, the
-mat stood a hand's width off his back, which a test now catches.
-
-Next: the owner's call on putting the sculpts in front of players.
-
-**The kicks** (2026-11-05, after v3.14). Each form kicks its own way, from
-its guard (each form's guard is now one constant, `<FORM>_AT`, where every
-one of its tracks starts and ends): Jeff a boxer's push kick, the hands never
-leaving the guard; Adam a door kick, wound up high and stumbling forward off
-it; Carl a heavy push at the thigh, the open hand reaching with it; Steve a
-crescent swept up high, arms wide, the finish held; Elo a roundhouse coiled
-well away and snapped home; Scam a push to keep you off, the hand still in his
-pocket; Lizbeth a line kick, straight out along its line; Kim a snap kick, the
-fists at her jaw; Cathie a heel kick, placed, the arms opening. Adam's and
-Elo's wind-ups first drew the leg back behind them, where the game's camera
-could not see it, and Adam's lead arm thrown forward read as a punch; both
-now lift the knee in front. The test that holds a punch to its guard now
-holds every move a form has (and its lead hand), and each kick must be out
-at the middle while it can hit.
-
-**Gaps, now the whole cast is built:**
-
-- `body.reach` is not read: the arms are as long as the fighter's height
-  makes them, and the rig reaches them to the 2D fists.
-- Outfits. Every roster outfit is made: Jeff's vest, Adam's hoodie, Carl's
-  pinstripe (Cathie's suit is the same cut), Steve's turtleneck, Elo's tee,
-  Scam's henley, Lizbeth's blazer and Kim's bomber. A player's founder can
-  pick any of them in 2D; the 2D `costume` (`fit` tight to oversized, `legs`
-  suit, skinny, baggy, flared) says how far each stands off the body and
-  how the trousers fall.
-- Hair and headwear. Adam's cap, Carl's slick, Steve's quiff, Elo's buzz,
-  Scam's curly mop, Lizbeth's ponytail, Kim's puffs and Cathie's bob are
-  made, each in its fighter's own module; a player's founder would need
-  them as makers of their own.
-- Accessories: shades, glasses, the visor, Kim's earrings and Cathie's
-  brooch are made.
-- Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
-- Props. Every 2D part is made: the block briefcase, Jeff's parcel, Adam's
-  mat, Carl's case, Steve's device, Elo's booster, Scam's paperclip,
-  Lizbeth's vial, Kim's ring light and Cathie's tablet and coat. They are
-  rigid on their bones: Cathie's coat drops with her hips in a crouch and
-  stands out stiffly in a kick, where the 2D one trails.
-- Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
-  (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth), the
-  peek-a-boo (Kim) and tai chi (Cathie). Every basic move has a track of
-  its own in each: punch, kick, slap and launcher (the command normals and
-  specials that borrow those tracks through `ATTACK_TRACK`, such as Kim's RUG
-  PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
-  Block is each form's own, and since the reactions and the walks below, so
-  are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
-
-## v3.22, built 2026-11-14: the resolution steps down on a slow phone, and the game reports how it runs
+Every branch on GitHub but `main` is wholly in `main`; deleting them loses
+nothing (Decisions, 0). v3.21 went to `main` straight from a local branch that
+was never pushed.
+
+## Decisions that belong to the owner
+
+**Open:**
+
+0. **Delete the superseded branches.** Asked for on 2026-11-09. Every branch
+   on GitHub but `main` is wholly in `main`, so deleting them loses nothing:
+   `live-3d`, `claude/jeff-model`, `claude/ai-levels`,
+   `claude/game-review-enhance-29bffb`, `claude/gfx-v3.9.4` and
+   `claude/gl3d-restore`. A cloud session cannot delete a branch on GitHub
+   (the push is cut off and the API call refused; tried again on 2026-11-14),
+   so the owner deletes them on the repository's Branches page.
+1. **The aura in front.** On the 3D layer an aura drawn by the fighter in front
+   (Unicorn Mode's glow, a stance ring) no longer washes over a 3D fighter
+   behind it, as it did when everything was painted onto one canvas. It reads
+   cleaner, and matching the old look would mean drawing auras in WebGL. Keep it,
+   or ask for the old look.
+2. **Pin the Supabase client.** `src/net/online.js` loads `supabase-js@2`, which
+   floats: on 2026-10-05 it resolved to 2.117.2. A bad 2.x release would reach
+   players without a deploy. Pinning means updating it by hand. (Performance
+   reports no longer need it: they are a plain `fetch`.)
+3. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
+   private copy, or let them go.
+4. **Art direction.** The model and stages are scripted, which has a ceiling. An
+   artist working in Blender to the same contract (ARCHITECTURE section 7, "The
+   model contract") is the step up, and the runtime would not need to change.
+5. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
+   sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
+   recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
+   Kim 60 px from Carl ends 51 px away, the minimum body gap. The other two
+   OBJECTIONs (on a strike and on a steal) push the victim away. It reads like a
+   slip of sign, but it may have been meant to let the victim punish a grabber
+   stuck in a long recovery. Flipping it is one sign, but it changes what a live
+   match computes, so it needs a `SIM_VERSION` bump (to 14 now); left as it is.
+6. **The next balance pass.** After v3.22, at Champion, Steve wins about 64%
+   and Kim is lowest near 37%; Jeff and Elo are about 39 and 40 (see "v3.22").
+   Whether to even out the top as well is a design call: each kit's character
+   is in its numbers.
+
+**Settled:**
+
+- **3D by default** (v3.14), on how it ran on the owner's iPhone. The 2D rig
+  stays: the fallback without WebGL2 or when the GPU context is lost, and the
+  Settings choice.
+- **Fighters overlap at close range** (v3.21): each fighter keeps a push half
+  of their own, measured from their sculpt, not by `build`.
+- **Balance for Jeff and Elo** (v3.22, asked for on 2026-11-14): Elo's
+  PLATFORM BURN faster and harder, Jeff's UNDERCUT harder; Rookie and
+  Contender re-eased so they still play alike. Earlier: Rookie and Contender
+  evened out in v3.11 (a 92 point spread at Rookie and 50 at Contender, now
+  about 30 and 25), Lizbeth closing to mid range at Rookie in v3.12. How hard
+  the levels are for a person, as opposed to how alike they are, is what
+  `solo_results` (v3.10.2) is for; `lab/balance.js` measures how well the AI
+  plays each kit as much as the kits themselves.
+- **Performance reports** (v3.22, 2026-11-14): on by default with an off
+  switch in Settings and a line in THE STORY; a random number per device,
+  never tied to the account; every row kept for now.
+- **A dashboard over them** (2026-11-14): "UEC Device Performance", a Claude
+  artifact private to the owner (see "v3.22").
+- **The prototype into `main`** (v3.10, 2026-10-29), dark, after the phone
+  check; Supabase's Site URL and Redirect URLs set to the new address
+  (2026-10-28).
+
+## Known limits
+
+- Phone performance: the 3D fighters are within the 2 ms budget on a budget
+  Android (Ahlo 1) and an iPhone 12 Pro, but the Ahlo shows about 21 frames a
+  second at full resolution and the iPhone 12 Pro 19 in 2D (see "v3.21.1"
+  and "v3.22"): the screen's drawing, not the processor, is the limit. The
+  game now steps its resolution down on such a phone (about 31 fps on the
+  Ahlo); round nine of the phone test is to find the rest.
+- The 3D layer differs from the copy path in three small ways: an aura drawn by
+  the fighter in front does not wash over a 3D fighter behind it, every trail
+  lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
+- Kim's ring light still sits off-square in a bust; body knobs still scale bones.
+- The sponsor boards' own colours are dark (a dim hue on a near-black panel):
+  v3.22 took the scrim off them on the rendered stages, and the Unicorn Club's
+  magenta board is still the hardest to read. The 2D game's boards are as they
+  were.
+- In 3D, at close range guards and lead feet still cross (trunks no longer
+  do, v3.21), and Cathie's coat bunches in a deep crouch rather than hanging.
+- A local `main` in a checkout can lag `origin/main` (this one sat at v3.12),
+  and `lab/pixels.js` compares against `main` by default: run
+  `git branch -f main origin/main`, or name the release commit.
+- The debug sign-in (`UEC.signInAs()`) uses the id `test-uid`, which is not a
+  UUID, so one profile fetch to Supabase returns a harmless 400 in the console.
+- Full-frame pixel hashes changed between September and October with no code
+  change: the browser updated. Hashes only compare within one browser version.
+
+## Backend (Supabase)
+
+- Project `uec-game`. Its URL and publishable key are in `src/net/online.js`;
+  dashboard links are in `docs/AUTH-SETUP.md`. It is on a paid plan so it never
+  pauses. Anything that creates or changes paid resources needs the owner's OK.
+- `profiles` is world-readable. Identity columns are user-writable through
+  column-level grants; ranked stats are writable only by the `report_match()`
+  RPC. A new user-writable column needs both INSERT and UPDATE column grants,
+  and the upsert needs UPDATE on `id`, or saves fail with "permission denied".
+- `report_match()` is a security-definer RPC: stats apply only once both
+  players have filed mirror-image reports for the same room, under an advisory
+  lock so a match is never counted twice. Its points formula mirrors `POINTS` in
+  `src/config.js`; change both together.
+- `leaderboard` is a view over signed-in players with at least one confirmed
+  live match.
+- Emails never go in `profiles`. A trigger on `auth.users` copies them into a
+  private `user_emails` table that only its owner can read.
+- `solo_results` (since v3.10.2) records how single-player matches against the
+  roster AI end: opponent, level, win or loss, rounds, KO rounds, game version
+  and whether 3D was on. No user id and nothing personal. RLS is on with no
+  policies and no grants, so no client can read or write it; the
+  security-definer RPC `report_solo()` writes it for a signed-in player, checks
+  every field (a best of three, a known level, an id-shaped opponent), and
+  refuses more than 120 rows a minute in all. Ghost challenges, two-player and
+  online matches are not sent (`soloReport` in `src/net/cloud.js`). Only the
+  owner reads it, from the dashboard's SQL editor, for example:
+  `select opponent, level, count(*) as n, round(avg(won::int) * 100) as player_win_pct from solo_results group by 1, 2 order by 2, 4;`
+  The security advisor flags its "RLS enabled, no policy" and the RPC being
+  callable when signed in; both are intended, as for `report_match()`.
+- `perf_reports` (since v3.22) records how the game runs on the devices it is
+  played on: one row a match (source `match`) or a finished phone test
+  (`test`). Columns: `created_at`, `source`, `device` (a random uuid made on
+  the device, not a user id), `version` (`v3.22` shaped), `os` (40 characters
+  at most), `browser` (40), `model` (64), `gpu` (120), `screen_w` and
+  `screen_h` (1 to 10,000), `dpr` (over 0, to 8), `cores` (1 to 256),
+  `memory_gb` (over 0, to 1,024), `mode` (`3d` or `2d`), `scale` (over 0, to 4),
+  `fps` (0 to 500, required), `slow` (0 to 1), `draw_ms` (0 to 1,000),
+  `seconds` (0 to 3,600) and `setups` (a JSON array of at most 4 KB as
+  stored, about 2,000 characters of text; the client drops a longer list
+  rather than lose the report). Nothing
+  about the player. RLS is on with no policies and no grants; the
+  security-definer RPC `report_perf()` writes it for anyone, signed in or not,
+  answers 'recorded', 'invalid' (a field outside the checks, or no device) or
+  'busy' (more than 120 rows a minute or 20,000 a day in all, or 60 an hour
+  from one device: anyone may call it, so these bound what the table can grow
+  by, about 40 MB a day at worst; raise them when real play nears them).
+  `test/perf.test.js` mirrors these checks: change the two together. Only the
+  owner reads it, for example:
+  `select model, gpu, mode, count(distinct device) as devices, round(avg(fps)::numeric, 1) as fps from perf_reports where source = 'match' group by 1, 2, 3 order by devices desc;`
+  The advisor flags it as for `solo_results`: intended.
+- Live matches use Realtime broadcast channels (one per room) and a presence
+  lobby. No tables. Protocol in ARCHITECTURE section 5.
+- `UEC.signInAs()` is local only: it creates no auth user and no profile row.
+
+## Deploying
+
+ONBOARDING section 7: `npm test`, bump `VERSION`, push `main`, then read the
+deployed `VERSION` back with `curl`. Pages builds `main` from the repo root with
+Jekyll (there is no `.nojekyll`), and Jekyll reads Liquid tags before anything
+else, so two opening curly braces in a row, or an opening curly brace followed
+by a percent sign, in any markdown file can fail the build. The remote is
+HTTPS; on the original machine the `gh` CLI was signed in as `firdous-aurmada`.
+The repository is now `https://github.com/Aurmada/uec-ultimate-entrepreneur-challenge`;
+a clone that still names the old one works through GitHub's redirect, and
+`git remote set-url origin https://github.com/Aurmada/uec-ultimate-entrepreneur-challenge.git`
+points it at the new one.
+
+## Lessons that cost real time
+
+These were in the original machine's private notes; they are here so they
+survive it. ARCHITECTURE section 11 has more.
+
+- **iCloud ate the repository.** The checkout lived in `~/Documents`, which
+  iCloud syncs. After three idle weeks iCloud had moved 127 files inside `.git`
+  (and 17 in the tree) to the cloud, and left duplicate copies of git's index
+  (`.git/index 2` and so on). `git diff` simply hung. Reading the files brings
+  them back (`find . -flags +dataless` lists what is missing); `git fsck` came
+  back clean. Keep checkouts somewhere iCloud does not sync, such as
+  `~/Developer`.
+- **Lab captures in the browser:** reload the page after editing an engine
+  file, or the capture renders the old module. A hidden browser pane throttles
+  timers hard, so lab scripts that wait on `setTimeout` crawl; keep the pane
+  visible or route the waits through a `fetch`. `dev-server.py` rejects large
+  uploads, so whole-frame sheets save as JPEG.
+- **Never click blindly on the title screen.** A stray click hit FIGHT A REAL
+  PLAYER and joined the live lobby as the signed-in test user. Drive the game
+  with `UEC.startMatch(...)` instead (ONBOARDING section 5).
+- **Measure, then believe.** `lab/contrast.js` finds the fighter by rendering
+  the frame with and without it; pin the cast, and wait for a rendered stage to
+  load or it measures the procedural fallback. Judge a 3D face change at the
+  match angle, not only in a portrait. Compare renders before and after in the
+  same browser.
+- **Building the model** (details in ARCHITECTURE section 7): weigh each part to
+  its bones before joining parts under one name; props in a hand ride the grip
+  joints, never the forearm; a prop fixed to the head is pre-turned by the
+  head's posed angle, and a test guards that; thin geometry swells into black
+  bars under the ink pass (mark it `inkless`); a ring of metaball balls
+  decimates into beads, so build rings from capsules.
+- **Blender 5 changed its API:** the compositor is `compositing_node_group`
+  (there is no `scene.node_tree`), WebP output works, `ShaderNodeMix` colour
+  inputs are sockets 6 and 7 with the result on output 2, `obj.is_holdout` cuts
+  objects out of a render, `obj.visible_shadow = False` stops an emitter
+  shadowing itself, and scripts loaded through `importlib` write `__pycache__`
+  unless `sys.dont_write_bytecode` is set.
+- **`getFighter(id)` never throws.** An unknown id silently returns the first
+  roster fighter, so a bad id renders as the wrong person. Fall back to
+  `DEFAULT_BASE_ID` (`'b-neo'`), never a literal.
+- **A field named like a method shadows it.** `FXSystem` once stored its cut-in
+  as `this.cutIn`, which replaced the `cutIn()` method on the instance.
+
+## Not in the repo
+
+Deliberately left out, and gone if the original folder is deleted:
+
+- `lab/assets/` (about 136 MB in 14 files, gitignored): the source models the
+  dormant `?sprites` baker (`lab/baker.html`) reads, a base model with its
+  texture and twelve animation clips. Where they came from is not recorded, so
+  they stay out of this public repo. The baked atlases they produced are
+  committed (`assets/sprites/founder/`). They are only needed to re-bake
+  sprites.
+- `lab/atlas/` (gitignored): the baker's output, byte for byte the committed
+  `assets/sprites/founder/`. Nothing is lost without it.
+- `lab/previews/` and `lab/*.png` (about 120 MB, gitignored): lab output, all
+  regenerable with the `lab/` tools. The useful pictures are copied into
+  `docs/images/live-3d/`.
+- `.superpowers/`: two mockups from an August brainstorm (the v3.3 silhouette
+  study). What they argued for shipped as v3.4.
+
+## History, newest first
+
+Everything below is how the game got here: each release with what changed,
+why, what was measured and what was tried and dropped, then the work on
+branches, the 3D prototype's story, October's plan and the opening of this
+file as it stood on 2026-11-12.
+
+## v3.22, released 2026-11-14: the resolution steps down on a slow phone, the game reports how it runs, Jeff and Elo, and the art notes
 
 **Round eight** (2026-11-14, v3.21.1's breakdown, fps):
 
@@ -1008,6 +476,68 @@ table and its function applied to the live project.
   run each time it is opened, with the opener's own access, so only someone
   with the project on their connector sees numbers. Until v3.22 is live it
   says there are no reports yet.
+
+**The balance pass for Jeff and Elo** (`SIM_VERSION` 13; the owner's next
+step, 2026-11-14). At Champion, AI against AI (`lab/balance.js`, 40 a
+pairing, seed 11), Elo won 28.4% and Jeff 34.4%, the roster's last two, with
+Steve on 64.4%. Champion plays every kit as authored (no `ai.ease`), so the
+levers were their own moves:
+
+- Elo's AI changes alone (aggression, range, jumping) moved him 2 points at
+  most; PLATFORM BURN is how he wins (six a match, three in four landing), and
+  at 0.14 s on 86 HP it lost the race to a jab. It now comes out in 0.12 s for
+  16 damage (was 14). Tried and dropped: less recovery (no gain), its
+  knockback (not read by an `aoe` normal).
+- Jeff's SAME-DAY DELIVERY is placed six times a match and lands about 0.2:
+  the Champion AI steps out of or blocks almost every parcel. A shorter delay,
+  a wider drop or more damage did not help, nor did throwing it only in the
+  corner or never. UNDERCUT, his most used move (twelve a match), hit for 11,
+  under the kick (12) it replaces on forward. It now hits for 13. A quicker
+  UNDERCUT made him worse (25%): the AI threw it into more trades.
+- After, at Champion: Elo about 40% and Jeff about 39% (seeds 11 and 23: Elo
+  39.2 and 40.5, Jeff 38.6 and 38.1); Kim is now lowest (39.1 and 35.6) and
+  Steve still top (61.6 and 66.9). The two moves are each character's own, so
+  no player build changes. `test/balance.test.js` keeps a seeded sample (Jeff
+  and Elo against the rest, 33% before, 39.5% after).
+- Rookie and Contender rise with the kits, so their `ai.ease` was measured
+  again: Elo `{ intern: 0.27, founder: 0.06 }` (was 0.19 at Rookie only), Jeff
+  `{ intern: 0.17, founder: -0.04 }` (was 0.11 and -0.11). Elo at Rookie 55%
+  (was 65), at Contender 54% (41); Jeff 49% (49) and 56% (56).
+- `lab/balance.js` gained `--def` and `--special`, which merge a change over
+  a fighter or a special for one run, so a kit is tried before it is written.
+
+**The art notes from the v3.20 review:**
+
+- **The Unicorn Club's neon unicorn and disco ball** hung above the arcs,
+  behind the HUD's timer and out of the frame whenever the camera closed in:
+  the world's top 150 px or so are under the HUD in a close fight. The sign
+  now hangs on the wall right of the arcs and the ball, on a cord, left of
+  them, both 165 to 237 world px down (`lab/blender/stages/unicorn.py`, the
+  spot turned to the ball). Rebuilt here with the `bpy` module, Blender 5.1.2
+  as Python (`python3 lab/blender/build_stage.py -- unicorn <dir>`, about
+  18 minutes on two cores, EEVEE through EGL): the rest of the stage came out
+  as it was, only the ball's layer taller for its cord.
+- **The sponsor boards** were hard to read under the scrim (0.42 to 0.62 of
+  black over the scenery). They are lit screens, so on a rendered stage the
+  scrim is taken off them down to `STAGE_ART.BOARD_SCRIM` (0.15): thinned over
+  each board where the stage is on a canvas below (the sharp and layered
+  paths), painted again over it where it is not (`stage.js liftBoards`, boards
+  marked by `sponsorBoard` in `arenas.js`). Measured on the Unicorn Club's
+  left board: the brightest 5% of its pixels 213 with the scrim, 290 now, 334
+  with none. The first build thinned it by a fraction only: an erase takes the
+  fill's own alpha, and the scrim had left the fill at 0.42; the test now
+  checks the erase is opaque. The 2D game is unchanged.
+- **Lizbeth and Cathie** read as one pair across a fight: pale hair and a blue
+  jacket each. Cathie now wears claret (suit, trousers and the 3D model's
+  coat follow her palette), in 2D and 3D; no one else in the cast wears red.
+  `test/roster.test.js` checks that no two pale-haired fighters wear jackets
+  within 40 degrees of hue (CIE LCh), as Lizbeth and Cathie were (5).
+
+**For a new developer** (the owner's question, 2026-11-14: could someone pick
+this up?): this file now opens with where things stand, how the parts connect
+and where the reasons are written down, then the open decisions and the
+current reference (limits, backend, deploying, lessons), and only then the
+history. The older branch notes moved below the releases.
 
 ## v3.21.1, released 2026-11-14: the phone test breaks the frame down
 
@@ -2554,6 +2084,831 @@ ONBOARDING section 7. Live play needs both players on v3.9 or later (`SIM_VERSIO
   on top, and shipped together; the README has a section for each (v3.9.3 above
   v3.9.2).
 
+## Work by branch, 2026-10-30 to 2026-11-09
+
+These four were written on their branches before they were released, in
+v3.13 and v3.20; the release sections above say what shipped. Kept for the
+measurements and the reasons.
+
+### The guard pass (2026-10-30, on `claude/guard-pass`, released in v3.13)
+
+The owner's priority after v3.12: the fighters' limbs looked awkwardly placed,
+and the genre (the big arcade fighters, as inspiration only) should be the
+model. The poses had been authored across several rig eras and were
+personality poses rather than fighting stances: arms hanging or folded or on
+the hips, a rear hand hidden inside the torso, Kim's fists over her face, feet
+that crossed on every step, and in 3D a two-fisted flex on every jump and punch.
+Render-only throughout: no simulation, hitbox or `SIM_VERSION` change.
+
+- **Everyone stands in a guard**, and keeps their personality inside it: a
+  fencer's guard (Lizbeth), a brawler's low fists (Adam), a presenting hand
+  (Steve), a peek-a-boo (Kim), a tai chi ready stance (Cathie), a wrestler's
+  reach (Carl), a shoulder roll (Elo), a karate chamber (Jeff), and the open
+  palm with a hand in the pocket (Scam). `REST` is a guard too, for the base
+  characters. The five style stances are one table, `STANCES` in
+  `drawFighter.js`.
+- **The guard goes everywhere**: walk (now a shuffle that never crosses the
+  feet), crouch, jump (knees tucked), dash and block carry the fighter's own
+  hands, so a held prop (Cathie's tablet, Jeff's parcel) stays where its owner
+  holds it instead of rising over the face.
+- **Attacks thrown from it**: the four basic tracks are rebuilt from the guard.
+  The punch cocks at the chest and turns out from the hips, the kick chambers
+  the knee, the uppercut rises from a crouch, and the rear fist stays at the
+  chin through every swing. A swing eases out of the fighter's own guard and
+  back into it. Keys now carry forward what earlier keys set (a hold used to
+  snap the squash and the guard hand home on the first frame of the recovery),
+  and reach scales about where the hitbox starts, so a zoner's jab still looks
+  longer than a grappler's with the hand at the chin.
+- **3D**: planted feet lie flat instead of tipping onto the toes when the knee
+  bends (crouched fighters looked mid-jump), and the legs scale with `stride`
+  and carry a little slack (`GL3D.LEG_SLACK`), so every fighter's knees bend
+  alike.
+- `test/guard.test.js` pins the intent (no fist or held prop over a face, the
+  guard carried into walk and crouch, feet never crossing, the rear fist home,
+  no pops between keys, flat feet, even knees); each test fails on `main`.
+
+With the flags off this deliberately changes how every fighter looks, so
+`lab/pixels.js` reports every frame different from v3.12. It needs the owner's
+eye, then a `VERSION` bump, before release. Next in the same direction, as the
+owner set it out: animations, then fighting styles, then controls.
+
+### The figure (2026-10-30, on `claude/figure-pass`, released in v3.13 behind `?figure`)
+
+The owner's next note, with the guard pass in hand: the characters still did
+not look fully formed next to the arcade fighters' character sheets. The poses
+were not the problem any more; the drawing was. The 2D rig drew a limb as two
+round strokes with no fixed length and a guessed elbow, a torso narrower than
+the head, no neck, a ball for a fist, a slab for a foot, and a front-on face
+painted on a ball over a body seen from the side.
+
+`src/engine/figure.js` draws the same pose as a body instead, with every
+number in `FIGURE` (`config.js`):
+
+- **A skeleton with bones.** Arms and legs have a length and bend at an elbow
+  and a knee solved by two-bone IK (elbows hang down, knees point at the
+  opponent). An arm reaching out locks straight, so a punch lands on a
+  straight arm whatever the fighter's shoulders and lean do to the distance,
+  and the guard keeps its bend.
+- **Proportions.** The hip rides 12% higher (`FIGURE.LEGS`), so the legs are
+  about half the fighter instead of 42%, and the head sits on a neck instead of
+  sinking into the collar. Head-anchored parts (Kim's ring light) follow it.
+- **Forms.** A 3/4 torso with chest, waist and hips; deltoids; muscle-shaped
+  arm and leg segments; trousers that hang straight below the knee; squared
+  fists with knuckles and a thumb, an open hand for the slap; shoes with a
+  heel, a sole and laces.
+- **A 3/4 head**: brow, nose, lips and chin standing proud of the skull, an ear,
+  the near eye full and the far one foreshortened. Every face knob each
+  fighter already has is used. Hair and hats are the tube rig's own, kept off
+  the face; glasses, shades, the visor and facial hair are redrawn for 3/4.
+  Photo founders keep the photo face.
+- **Light.** Every form has a lit side and a shadow side, cut hard and
+  multiplied so detail survives, violet on cloth and red on skin.
+- **Builds.** Each roster fighter has a render-only `figure` entry in
+  `fighters.js`: Jeff the gym rat, Carl's paunch and bull neck, Scam soft all
+  over, Kim narrow-waisted, Steve rake thin, and so on.
+
+It is 2D only (the 3D path draws its model as before) and off by default:
+`?figure` turns it on, and `lab/pixels.js` reports the flags-off game
+identical to `claude/guard-pass`. Lab sheets: `lab/figure-sheet.js` (`sheet`,
+`looks` for every profile look, `bench`). In headless Chromium, which draws in
+software, the figure's shapes cost about 2.2 ms a fighter against the tube's
+0.7 ms (2.8 before the shading stopped clipping each segment), and a whole
+frame, stage included, about 8% more. It needs a real phone before it could be
+the default: `?figure&perf` shows the 2D draw time in the game, and the review
+page shows each renderer's frame time on whatever device opens it. `test/figure.test.js` pins bone
+lengths, the straight punch and bent guard, legs at half the height, the neck,
+and builds that show; each fails without its part.
+
+Decided on 2026-10-30, after watching both side by side in a live match: the
+head stays the size it is (`FIGURE.HEAD` 0.94, "head A"). The smaller, more
+heroic head was tried (`sheet({ tweak: { HEAD: 0.8 } })` still shows it) and
+not taken. Still open for the owner: whether this becomes the default renderer.
+
+### The athlete bodies (2026-10-30, on `claude/figure-pass`, behind `?gl&athlete`)
+
+The owner asked why the bodies could not be more complicated and realistic,
+and picked the 3D route of three (push the 2D drawing further; better 3D
+bodies; sprites pre-rendered from 3D): a 3D body bends at its joints instead of
+being redrawn, so anatomy stays right in every pose, and the 3D layer is
+already cheap on his iPhone.
+
+`lab/blender/build_founder.py` now also builds `assets/models/athlete.glb`
+(`-- <out> athlete`) and `athlete-f.glb` (`-- <out> athlete-f`, the women's
+frame). Same skeleton, same head and face, same named meshes and palette roles
+as `founder.glb`, so every look, outfit and prop still fits (`test/athlete.test.js`
+holds that). What changes is the body: metaball muscles (pectorals, deltoids,
+traps, lats over a narrower waist, biceps, triceps and a forearm that swells
+below the elbow, glutes, quads and hamstrings), bigger fists with knuckles,
+and clothes built from the same muscles grown by a pad per outfit, so a tee
+shows the chest and arms, tailoring softens them and a puffer hides them.
+About 3.5 times the founder's triangles (a fighter in a tee: about 32,000
+against 9,000) and 3.3 MB a model against 1.3 MB.
+
+`?gl&athlete` puts every fighter without a model of their own in the athlete
+body for their frame (`athleteFor` in `models3d.js`: the women's frame for a
+fighter whose 2D figure uses it), and an athlete stands on the 2D figure's
+longer legs (`figureFrame`). Off by default; `lab/pixels.js` reports both the
+flags-off game and `--flags gl` identical to `claude/guard-pass`. Lab sheets:
+`lab/figure3d.js` (`sheet` and `cast`, through the match renderer at any size).
+
+Blender is not needed as an app: `pip install bpy` (5.1.2 was used) runs the
+script as `python lab/blender/build_founder.py -- <out.glb> [athlete]`, and it
+rebuilds `founder.glb` identically apart from the exporter's version string.
+
+**A body of their own** (same day). The owner liked the athlete body and
+asked for what the arcade fighters have: every character unique in many ways.
+The first of those ways is the silhouette, so each roster fighter now has
+their own model, `assets/models/cast/<id>.glb`, built by
+`lab/blender/build_cast.mjs` (it runs `build_founder.py` once per fighter):
+
+- their build from the same `figure` numbers the 2D figure draws (`muscle`,
+  `chest`, `waist`, `belly`, `hips`, `neck`, `frame`), pushed wide on purpose,
+  since a subtle difference is no difference at game size;
+- the cut of their clothes, `figure.costume`: how close the top and sleeves
+  sit (`tight`, `regular`, `oversized`), how far the top hangs past the hips,
+  and the trousers (`skinny`, `suit`, `baggy`, `flared`);
+- only the pieces they wear (`piecesFor` in `models3d.js`), about 1 MB each.
+
+Jeff is huge through the chest and arms with tight sleeves, Carl short and
+barrel-chested with a paunch and a bull neck, Adam big in an oversized hoodie
+and baggy trousers, Steve rake thin in fitted clothes, Scam soft with a belly
+in a baggy henley, Kim small with a narrow waist and flared trousers. With
+`?gl&athlete` a roster fighter wears their own model and a player's founder the
+athlete body for their frame; each is fetched the first time it is worn, so a
+fighter can show in 2D for a moment at the start of a match until theirs
+arrives. `test/athlete.test.js` checks each model carries exactly what its
+fighter wears and that no two share a build; both fail with one shared body.
+
+Next for uniqueness, as the owner set the direction: their own heads and faces
+(the face is still projected onto today's round head), signature costume
+pieces, then how each one moves.
+
+### Jeff, remodelled from scratch (2026-11-01, on `claude/jeff-model`, released in v3.20)
+
+Two routes before this were turned down by the owner. Better 3D bodies built
+from metaballs read as "bulky, chunky": every form blended into its
+neighbours, so an arm was a sausage the same thickness from shoulder to wrist,
+and the live 3D also draws every limb 40% thicker (`GL3D.ARM_GIRTH` and
+friends). Pre-rendering those same bodies in Blender (`claude/blender-sprites`,
+2026-10-31) changed nothing, since the shapes were the problem. So the owner
+asked to start again, one character at a time, beginning with Jeff, to the
+heroic proportions of the modern arcade fighters.
+
+`lab/blender/sculpt.py` sculpts in a signed distance field: masses blended
+broadly for the silhouette, then definition carved in as shallow grooves that
+follow the surface (`Field.groove`), so muscles read without standing proud as
+bubbles, then meshed with surface nets. Jeff's body (7.5 heads, tapered
+limbs, fists) was `lab/blender/sculpt_jeff.py`, now the roster pipeline
+(below), and `lab/blender/clay.py` renders clay views. Stages, each shown to the owner
+before the next: the body; the face (an original design, not a likeness); the
+hands; the costume; then rigging and into the game on the same skeleton.
+
+Where it stands. The owner preferred him drawn by the game's own renderer to
+the Blender render, so he is rigged (`--rig`, `assets/models/sculpt/bozo.glb`)
+and registered as `sculpt:bozo` in `models3d.js`, used only by the lab sheets
+(`lab/figure3d.js`). Its `fit` lets a body built to its own size keep its own
+torso, neck and head, lean over bent knees, and nod at most `fit.nod`, all
+render only. Owner feedback so far: the neck and head were not humanly possible
+and the back not straight (fixed in `4d885c7`), then "his neck and shoulder
+looks off" (fixed next: the deltoids were balls sitting above the traps, the
+traps were weighted to the neck and arms so they lumped with every move, the
+jaw melted into the neck, and the head jutted on a punch).
+
+Then: "boxers guard their face", and a punch is thrown by turning the upper
+body into it; each character can have their own fighting form, and Jeff's is
+boxing. `src/data/forms.js` holds fighting forms, render only: a form brings
+its own guard, motion and attack tracks in place of the fighter's own
+(`computePose(f, t, form)`), and can turn the shoulders and hips through a
+move (`twist`, `hipTwist`, new pose channels only the 3D rig reads), bring the
+fists in to guard the face (`handDepth`) and keep the rear fist at the chin as
+the body turns (`guardTurn`). A form belongs to a model for now
+(`models3d.js` `form`, read through `gl3d` `form3D`), so the 2D Jeff keeps his
+karate stance and the parcel under his arm; moving `form` onto the fighter
+would give the 2D game the same boxing, and is the owner's call. Boxing so
+far: the guard (idle, walk, crouch, jump), a shell block, and a lead straight
+loaded and turned through the hips and shoulders, the rear fist home
+throughout. Kicks, the uppercut and the slap still use the shared tracks.
+`test/forms.test.js`.
+
+An independent review of the body (2026-11-01), worst first: the legs and
+forearms were too small for the upper body (thighs no wider than the head);
+the neck reads long from the side and the back was a smooth slab; the pec
+rounded into a hanging lobe when the arm moved, with a dark hollow under the
+armpit when the chest turned to the camera; the belly crumpled on a twist and
+the carved abs broke into chips through the toon bands. The body pass that
+followed: thighs about 1.2 heads wide with an outer sweep, fuller calves and
+forearms, the thighs parted below the crotch (fused to mid-thigh, they tore
+when the legs moved); the spine, shoulder blades and lat edges carved into the
+back; the pec running on into the arm as the front fold of the armpit; softer
+ab lines; and the skin under the shorts removed (`hide_under_shorts`), which
+was what showed through them as patches when the waist turned. Still to do:
+the neck from the side, and the arms stretching a little at full punch.
+
+The face (2026-11-01): an original design built to his character notes (hard
+flat brows, narrow eyes, a wide set jaw), never a likeness. The forms are
+sculpted (a heavy level brow, deep-set eyes under heavy lids, cheekbones, a
+broad straight nose, firm lips, a square chin and wide jaw). The eyes, brow
+hair and mouth are painted on in game, one cell per expression as the founder's
+face is, but by a painter drawn for sculpted heads (`src/engine/gl3d/faces3d.js`,
+to the model's `face.layout`): the 2D face's layout puts the mouth
+just under mid-head and cannot sit on a sculpted brow and mouth. Strokes are
+bold on purpose, so the face still reads on a 26 px head in a match. The
+owner: "the face is going in the right direction". Then a polish: a confident
+squint, a catchlight and a smirk at rest (he looked tired), the eye hollows
+moved up under the brow (they read as bags), a squarer chin (a ball in
+profile), and his rear guard fist lowered to the jaw so the game's camera
+sees his mouth.
+
+His shades (the owner: keep them, on all the time): a mesh of their own,
+`eyewear:shades` (worn because his accessory is shades), two wraparound
+lenses on a bar across the brow, a bridge and arms back to the ears, weighted
+wholly to the head and built in their own fine field (`shades()` in
+fighter3d.py, placed by `eyewear()` in `fighters/bozo.py`). The lenses are dark glass (`glass: { lens: 0.84 }`) his
+painted eyes show faintly through, as in 2D, and the bar sits under the
+painted brows, so his brows and mouth still carry his expression.
+
+His clothes (the owner: clothes, and bare fists): his outfit from the 2D game
+(`outfit: 'vest'`), a fitted white shirt with long sleeves tucked in, a teal
+quilted vest open down the front with a standing collar, suit trousers and
+shoes, replacing the fight shorts. Each is the body's own surface pushed out
+and cut to its edges (`shirt()`, `vest()`, `trousers()`, `shoes()` in
+fighter3d.py), in his palette's roles (`suit`, `pants`, `shoe`; the shirt
+white is the 2D outfit's own). The trouser legs fall straight from the thigh,
+each leg its own with a slot between them below the crotch: blended, they
+webbed together and tore into black spikes as the legs moved. The skin the
+clothes cover is removed (`hidden`), all of it below the waist, so none shows
+through. `test/sculpt3d.test.js`.
+`lab/figure3d.js` `faces()` draws every expression close up (`focus` on
+`renderFull3D` frames one part of a fighter). `test/faces3d.test.js`.
+
+#### The roster pipeline (2026-11-01)
+
+The cast's names here are the ids in `data/fighters.js`; in the game they are
+Adam (`max`), Steve (`kai`), Carl (`dex`), Elo, Jeff (`bozo`), Scam, Lizbeth
+(`ava`), Kim (`zara`) and Cathie (`eleanor`).
+
+
+The owner: Jeff is the character "to build all the existing ones and improve
+them". So his build is now one pipeline for the whole cast, and Jeff is its
+first fighter, coming out of it byte for byte as he was (the same field, the
+same model file, the same painted face, call for call):
+
+- `lab/blender/fighter3d.py -- <id> --rig` builds `assets/models/sculpt/<id>.glb`
+  (`--views <dir>` for clay). The body is the pipeline's, scaled by the
+  fighter's own knobs read from the game (`Build`: `figure.muscle`, `chest`,
+  `waist`, `belly`, `neck`, `body.shoulders`). Jeff's knobs are the reference,
+  so his factors are all exactly 1; each knob moves only part of the way its
+  ratio says, since the 2D knobs are drawn exaggerated. A softer build is
+  carved shallower. Clothes come from the fighter's `outfit` (`OUTFITS`, so
+  far Jeff's `vest`, Adam's `hoodie` and Carl's `pinstripe`), in their
+  palette; rig, weights and export are shared.
+- `lab/blender/fighters/<id>.py` holds what is the fighter's alone: their head
+  (`head`), its carved lines (`head_definition`) and their eyewear, an
+  original face built to their character notes.
+- `models3d.js` registers each as `sculpt:<id>` from `SCULPTED`: what every
+  sculpted model shares, plus each one's leaf bones, joints' width, face
+  centre, face `layout` (where the eyes, brow ridge and lips are on that head,
+  in the painter's px) and form. Lab sheets name it `'sculpted'`.
+- The face painter is shared: the layout says where the features are, and the
+  fighter's own 2D face values (`LID_Y`, `PUPIL_R`, `BROW_W`, `BROW_TILT`,
+  `MOUTH_CURVE`) say how they are drawn, pinned on Jeff's (`FACE_REF`), so
+  another fighter's narrowed eyes, scowl or stare carry over from 2D.
+
+The men of the cast in clay through it, each from his own knobs
+(`fighter3d.py -- --cast <dir> max kai dex elo scam`; a fighter with no
+design yet gets a plain placeholder head): Jeff the gym rat, Max broad and
+athletic, Kai slim, Dex and Scam with a gut, Elo with a little one. The
+trunk is sized by a girth map over its height (`Build.girth`: the hips as
+Jeff's, the waist's factor over the belly, the chest's over the ribcage), so
+a narrower chest brings its pecs, armpits and lats in with it: sized one mass
+at a time, they stood off it in ridges. Less muscle thins the limbs' cores as
+well as the muscle on them, carves the definition shallower and tighter, and
+a belly hides the abs. All of it is exactly 1 for Jeff, whose field is checked
+bit for bit after every change.
+
+Each fighter is built to their own size (`Frame`), as the game draws them:
+legs as long as their `stride` makes them, the trunk by `height`, the head
+by `head` and their size together (as the 2D head is sized for the body under
+it), every width by their size and `build`, and the neck as long as the head
+makes it and as thick as the trunk (lengthened with the trunk, a tall
+fighter's neck became a stalk). The body is built in Jeff's space and the
+finished meshes and joints are warped to theirs, so no part of the build has
+to know. The game's rig draws a sculpt's own trunk and head but scales its
+legs by the stride, so a sculpt records how long its legs are built
+(`fit.legs`, against Jeff's) and the rig scales only the rest. `--rig` prints
+the numbers its `SCULPTED` entry needs.
+
+Fat (2026-11-02). The owner: heavier fighters only had a bigger stomach,
+when fat goes to the chest, the arms and everywhere else, and men and
+women carry it differently. So the 2D `belly` knob is now how much fat a
+fighter carries (`Build.fat`), laid on where a man carries it (`fat` in
+fighter3d.py): a layer over the whole body but the head, hands and feet
+(`Field.thicken`), then swells where it gathers (`FAT_M`: most round the
+middle, the flanks and the lower back, then the chest, under the arm, the
+upper back, the back of the neck, under the chin, the seat, the upper arms
+and thighs, a little on the forearms and calves), and last all of it
+softened (`Field.soften`, a blur made at a third of the resolution and
+blended in), so the muscles under it stop reading one by one. The owner's
+second look, "fat is not quite there yet": laid only as swells, a heavy man
+still read as a muscled one with a gut and two plates on his chest; softened
+last, the swells' edges go too. Fat also covers definition, and a groove
+under a fifth of Jeff's depth is left out. A woman's pattern (hips,
+buttocks, thighs, breasts, the backs of the upper arms, less round the
+middle) comes with the women's base.
+
+**Remodelling the next fighter, the recipe:**
+
+1. Read their entry in `data/fighters.js`: build knobs, face values, outfit,
+   look, palette and the character notes.
+2. Clay their body (`--cast <dir> <id>`) beside Jeff's. If it is wrong, fix
+   the knob's mapping for the whole cast (`Build`), never one fighter by hand.
+3. Design their head in `lab/blender/fighters/<id>.py`: an original face to
+   their notes, never a likeness, and eyewear if they wear it.
+4. Dress them: their outfit in `OUTFITS`, if it is not there yet.
+5. Register them in `SCULPTED` (`models3d.js`): leaf bones and joints' width
+   from their build, their face centre and `layout` measured on their head,
+   and their form.
+6. Build (`-- <id> --rig`), look at them in the game's renderer
+   (`lab/figure3d.js` with `models: ['sculpted']`, and `faces()`), and show
+   the owner before the next stage.
+
+**Adam** (`max`, the owner's pick, 2026-11-01). His body at his game size
+was the first stage: 1.26 times Jeff's height, legs 1.23 times, widths 1.18,
+his head about Jeff's, so he stands about 8.6 heads to Jeff's 7.4. The owner:
+"the model is good", with the note on fat above.
+
+His head (2026-11-02, `lab/blender/fighters/max.py`): an original face for
+"manic", open where Jeff's is shut. A high rounded forehead, a light brow
+ridge arched high, big eyes set shallow under thin lids, high cheekbones, a
+long nose with a bump, a wide full mouth, a long heavy jaw and a round chin
+with a cleft. Its first build showed black wedges from the eyes to the
+nostrils in the game's light (the ink outline through a tight crease beside
+a nose standing off the face); the nose now sits on broad side planes and a
+lower lid fills under each eye. His cap is backwards, as in 2D: a crown a
+little proud of the skull, a stiff brim over the nape, a button on top, in
+`suit2` and `accent`, over short dark hair, the skin under both removed
+(`headwear` in the design module: a `hair:cap` mesh, as his look's hair is
+`cap`). The shared painter paints his face from his 2D values: wide eyes
+that stare rather than squint (`smug` needs a narrowed lid), raised brows, a
+loose grin at rest (`leer`, for a mouth curve of 2 or more, only his), and
+stubble, a soft shade over the upper lip, round the mouth and down the jaw
+(up the cheeks, it read as a mask). Until his hoodie is made he wears the
+pipeline's base outfit, trousers and shoes (`OUTFITS.base`), so his head can
+be judged in the game first. Registered as `sculpt:max`.
+
+The owner on it: "facial expression, head size looks great. shoulder looks
+like it is a bit forward". His 2D stance already slouches, and the sculpts'
+usual lean (`fit.lean`, made for Jeff's boxer over bent knees) on top of it
+rounded his back and brought his shoulders forward; his `fit.lean` is now a
+little below zero, and he stands up straight with his chest up.
+
+His clothes (2026-11-03, the owner: "looks good, continue"): his oversized
+hoodie, baggy trousers and white sneakers, as in 2D (`OUTFITS.hoodie` in
+fighter3d.py). An oversized top does not follow the body, so the hoodie is
+made from the body as loose cloth lies over it (`_loose`): the forms blurred
+away a couple of centimetres out, and below the chest each column falling
+straight from the widest part above, as cloth hangs. The trunk and sleeves
+are made apart and met a hand's width down the arm, a dropped shoulder:
+blurred together, the cloth webbed from arm to side like a bat's wing and
+stretched into a fin of cloth whenever the arm came up, and split at the
+joint each sleeve was a puff on a vest. Under loose cloth the chest's weights
+also reach out under each arm (`loose` outfits, `skin_weights`). In its
+second colour (`suit2`) a ribbed band at the hem, ribbed cuffs, and the hood
+lying down: a layer over the upper back with a U-shaped edge and a soft roll
+round the back and sides of the neckline (a ring of beads read as a neck
+pillow; carried round to the front, it rose under his chin like a beard). A
+pouch pocket follows the front (a flat box on the curve stood out only at its
+ends), and two drawstrings in `accent` lie on the cloth (projected onto it;
+from too far out, where the field was never written, they landed anywhere).
+The neckline is cut close and the collar stops at the base of the neck: wider,
+the gap showed its inside as a black band under the jaw; kept up to the
+shirt's line, it stood round his neck like a turtleneck. Trousers now come in
+cuts (`LEG_CUTS`, from the 2D `costume.legs`): baggy legs widest at mid-thigh,
+wide enough to hang clear of the thigh, and allowed further out to the side
+(kept to the suit's limits, they were cut flat there in patches that read as
+pockets). One material a palette role, shared by every piece (`material`): a
+second of the same name came out as `suit2.001`, a role no palette has.
+`test/sculpt3d.test.js` checks his roles, his cap and his bare fists.
+
+His form (2026-11-04): brawling (`data/forms.js`), as his 2D style is a
+brawler's. His guard is his own from 2D (fists low at the belly and too far
+apart, the widest base in the cast), the fists out wider than his shoulders
+(`handDepth` above 1), and at rest he rolls his weight: the shoulders turn
+with the sway of his fists and the hips follow a beat behind (`roll`, a new
+form setting, read in `computePose`). His punch is a haymaker, all wind-up
+and no control: the fist back by his ear and the body turned away, the
+deepest coil in the cast so everyone sees it coming, then round and through,
+and on past the target off balance before he stumbles back. He covers up late
+and badly, both forearms thrown up across his face from the belly, turned
+away. Kicks, the slap and the launcher are still the shared tracks, blended
+to his guard. `test/forms.test.js`.
+
+**Carl** (`dex`, the owner's pick after Adam, 2026-11-04). His body came out
+of the pipeline as it is: about Jeff's height, short in the leg, the heaviest
+of the men (his `belly` 0.65), so the fat layer gives him his paunch, bull
+neck and second chin. His head (`lab/blender/fighters/dex.py`): an original
+face for "predator", an older man's heavy face, the lowest and heaviest brow
+in the cast over deep-set heavy-lidded eyes with bags, a big fleshy nose,
+deep folds to a thin pressed mouth, jowls at the jaw line and large ears. His
+silver hair is combed straight back off a receding hairline, laid on his own
+head's surface (sampled from the body's field) a few millimetres out, with
+the comb's lines through it: on a skull of its own with volume behind, it
+stood off his head like a helmet. He wears shades, made as Jeff's are; his
+painted brows sit just above their bar (on the ridge, under it, they were
+hidden). His 2D stance is a wrestler's, already hunched, so his sculpt adds
+no lean of its own. Registered as `sculpt:dex`.
+
+His suit (2026-11-04, `OUTFITS.pinstripe`): a dress shirt with a closed
+collar, the pink tie, a jacket buttoned over his paunch, suit trousers and
+shoes. The jacket is the body as cloth lies over it (`_drape`, the hoodie's
+`_loose` made general: with Adam's numbers it gives his hoodie byte for
+byte), a centimetre out with the sleeves set in near the shoulder, and never
+nearer the body than that: draped alone, it dipped where the sleeves meet the
+trunk and the shirt showed through at the shoulders. Only its front hangs
+straight (`hang_back`): hung from the shoulder blades as well, its back stood
+off the small of his back and folded into a corner there as he leant into his
+stance. It opens in a V from the
+button to the base of the neck, its collar stands round the back of the neck
+under the shirt's, and below the button its fronts part over the paunch, as
+the 2D jacket's do. The lapels widen from the button to a notch under the
+collarbone, the collar narrower above it, a few millimetres proud of the
+jacket and in the suit's colour in shade, as the 2D figure darkens it: a
+material role can now ask for a palette colour in shade (`suit*0.78`,
+`roleColour` in `gl3d/toon.js`), so the shade follows any palette. In
+`suit2`, nearly black on Carl, the lapels read as a black stand-up collar.
+The lapels are cut from the finished jacket: from its cloth uncut, the collar
+ran on up the neck to the jaw. The tie is swept down the shirt as one ribbon:
+a chain of flattened capsules, each turned to the shirt under it, stepped
+over the paunch and read as beads. The shirt shows in the V and at the cuffs,
+and its collar is kept to the neck: a band at the body's height, it ran out
+over the tops of the shoulders, too near the jacket there to be hidden under
+it, and showed through in flecks. Not yet: the pinstripes themselves (a
+pattern, which the toon renderer has no way to paint) and a waistcoat (the V
+shows only the shirt, as in 2D). `test/sculpt3d.test.js` checks his roles,
+the lapels' shade against figure.js's, and his bare fists.
+
+His briefcase (2026-11-04): props now come out of the pipeline as the
+founder's model has them (`PROPS`, `props()` in fighter3d.py), a
+`prop:<id>` mesh for each part the fighter carries, which the game shows in
+that part's states, riding a grip bone that follows the fist but faces the
+way the body faces. Carl's case hangs from his rear fist, and every sculpt
+now raises the block briefcase in its lead fist (Jeff and Adam rebuilt with
+it, nothing else in their models changed). Each is an original attache case
+(`briefcase`): a hard leather shell with rounded corners and the seam where
+its lid closes, a handle arched on two brass mounts, and brass latches,
+sized as the founder's and hung with the handle in the fist: at the
+founder's ten centimetres ahead of it, the fist floated beside the handle.
+`test/sculpt3d.test.js`.
+
+His form (2026-11-04): grappling (`data/forms.js`), as his 2D style is a
+grappler's, from the guard his 2D figure stands in: hunched well forward over
+a wide low base, chin down, the lead hand open and reaching at chest height,
+the rear one low with the case, and a slow, heavy shift of his weight at
+rest. His punch is a seizure: the weight sinks and the open hand draws in,
+shoots out at the chest with the body behind it, closes on what it finds and
+hauls it back in to his chest, the body turning away with the pull. He blocks
+hunched behind the block briefcase. `test/forms.test.js`.
+
+The open hand is new to the pipeline and serves every sculpt: the lead hand
+comes in two shapes, `hand:fist` (the body's own, parted from the arm under
+the sleeve, `_part_hands`) and `hand:open` (`open_hand`: the flat of the
+hand, the fingers out together and a little curled, the thumb off it, its
+wrist the body's own), and the renderer shows one by the pose (`P.hand`,
+`conditions.hand` in `wearing`). A form names the states it holds the hand
+open in (`open`), an attack track can open and close it on a key (`hand`,
+switched as `face` is), and a slap opens it in every form, as the 2D figure
+draws everyone's; anything else is a fist. Jeff and Adam were rebuilt with
+it, so their slaps are open-handed now; nothing else in their models
+changed. The first open hand was a skeleton's (thin fingers apart), and its
+thumb was cut flat by the edge of its own field.
+
+The owner on it: "It's good".
+
+**Steve** (`kai`, the owner's pick after Carl, 2026-11-04). His body came
+out of the pipeline as it is: 1.15 times Jeff's height and as long in the
+leg, the narrowest chest and shoulders so far, little muscle on him and
+carved shallow, his head about Jeff's. His head
+(`lab/blender/fighters/kai.py`): an original face for "the showman", a long
+lean face on a tall narrow skull, a high forehead, a light level brow over
+deep-set eyes under heavy lids, high cheekbones, a long straight nose, a
+small thin-lipped mouth and a narrow pointed chin. His grey hair is a quiff
+(`headwear`, sampled from the head as Carl's is): volume over the whole top,
+short at the sides, rolled up and forward off the front, the hairline curving
+down past the temples to the sideburns (kept narrower than the head, the
+quiff stood up as a crest; cut square, the hairline stepped down over the
+temples). His glasses are new to the pipeline (`glasses` in fighter3d.py):
+rounded-rectangle rims round clear lenses, as the 2D ones are drawn, the
+lenses faint glass (`clear`) the painted eyes show through and the rims wire
+drawn without the ink outline (`rim`, inkless for every sculpt): outlined,
+the ink filled each lens black, as the founder's wire would be. The nose's
+side planes are wide (narrower, the crease beside it went black, as Adam's
+did). His 2D stance stands tall with the chest open, so his sculpt adds no
+lean of its own. Registered as `sculpt:kai`. The owner: "Continue".
+
+His clothes (2026-11-04, `OUTFITS.turtleneck`): a fitted teal turtleneck,
+skinny trousers and his white sneakers, as in 2D. The knit is the body's own
+shell softened only enough not to show every muscle (the 2D figure says the
+chest and waist show through it) and never nearer the body than a few
+millimetres (softened, it sank under the skin over the shoulders and lats).
+The roll collar, in the second colour, is a tube round the neck sized to it,
+up to under the jaw and higher behind, sitting on the shoulders: the neck's
+own surface pushed out took the shoulders' slope with it and stood on them
+as a plate, and blurred after it was cut out, it was eaten down to a ring.
+The knit runs up under the collar and no further (open only round the neck,
+it ran on up over his head and hid the face). Skinny legs are a new cut
+(`LEG_CUTS.skinny`), under the leg's own shell so they hug it.
+
+His device (2026-11-04): a thin slab with rounded corners held up at his
+chest in the rear hand, the edge of its screen just drawn in, solid in his
+palette's `accent` as the 2D part is (`device`; `PROPS` now names a maker for
+each prop). The comb lines in his quiff were made shallow: deeper, the ink
+drew them as black scribbles at game size.
+
+His form (2026-11-04): showboating (`data/forms.js`), from his 2D guard: tall,
+the chest open, the lead hand open, out and high, presenting, the device at
+his chest. His punch is the big finish: a flourish, the open hand swept up
+and back over his shoulder with the body turned away, the hand closing at the
+top of it, the punch down at the chest, and the finish held a beat too long,
+chin up, before he goes back to presenting. He blocks behind the briefcase in
+the presenting hand. His keynote drift at rest is his own 2D idle.
+`test/forms.test.js`, `test/sculpt3d.test.js`.
+
+The owner: "Continue the work".
+
+**Elo** (`elo`, 2026-11-04, after Steve). His body came out of the pipeline
+as it is: the tallest, 1.28 times Jeff's height and as long in the leg, narrow
+in the shoulder and heavy-set rather than built, a little belly, a small head
+for his size. His head (`lab/blender/fighters/elo.py`): an original face for
+"thin-skinned", a soft oval face, a high forehead, a light brow ridge set high
+for brows up in grievance, big eyes set shallow and wide open, soft
+cheekbones over full cheeks, a straight nose with a rounded tip, a small mouth
+with a pouting lower lip and a broad rounded jaw; his brown hair a buzz cut
+(`headwear`, sampled from the head, barely two millimetres out). His 2D
+stance leans back, so his sculpt adds no lean of its own. Registered as
+`sculpt:elo`.
+
+His clothes (`OUTFITS.tee`): a black tee in a regular fit, stretched over the
+middle as in 2D, short sleeves halfway to the elbow (`_sleeve_cut`), worn out
+over baggy trousers and hanging a little looser toward the hem (as close as
+above, the trousers' waistband stood out over it and the hem was lost); a
+ribbed crew neck in the second colour, wide enough not to break into beads
+and kept to the neckline (higher, it took in the soft under the chin, and so
+did the tee itself until it stopped at the neckline); and the red diamond
+the 2D figure draws, high in the middle of the chest (lower, his crossed arm
+hid it but for a red spot at the elbow). His booster (`booster`, the first
+prop worn rather than held): a red rocket stood upright off his back, a
+pointed nose, a dark band, nozzle and fins, riding the chest bone.
+
+His form (`shoulderRoll`, `data/forms.js`), from his 2D guard: the lead arm
+low across the belly, the rear fist at the chin, chin up, weight back. His
+punch is the glass cannon's whip: the low fist drawn back past the hip and
+the body coiled away, the deepest wind-up after Adam's, then whipped up and
+out at the head, held only while it can hit and snapped straight home. He
+blocks by rolling the shot off the lead shoulder, turned well away.
+`test/forms.test.js`, `test/sculpt3d.test.js`.
+
+**Scam** (`scam`, 2026-11-04, after Elo, the last of the men). His body came
+out of the pipeline as it is: about Jeff's height, soft all over, round
+shoulders, a belly and nothing in the arms, his head a little bigger than
+Jeff's. His head (`lab/blender/fighters/scam.py`): an original face for
+"reasonable", the mildest in the cast, young, soft and rounded, a smooth
+forehead, a low soft brow, eyes at an even depth under plain lids, round
+cheeks, a short small nose, a small even mouth and a round chin. His brown
+hair is a curly mop (`headwear`): a cap of his head's surface and over it
+puffs laid evenly round the skull and brought down onto it, fullest on top,
+big and run together as the 2D puffs are (small and apart, they read as a
+bunch of grapes). His sculpt adds no lean of its own. Registered as
+`sculpt:scam`.
+
+His clothes (`OUTFITS.henley`): an oversized grey henley of the hoodie's
+loose cloth, long in the hem as his 2D costume has it, long sleeves, a ribbed
+neckline close round the neck and a placket down the front in the second
+colour, with three white buttons (`button`, a role of their own, white as the
+2D figure draws them); baggy trousers and white shoes. His paperclip
+(`paperclip`): one enormous bent wire, three legs and the bends between
+them, standing off his back face on to the camera's side, as the 2D one is
+drawn flat behind him (laid flat across his back, the camera saw it edge on,
+a white line), riding the chest.
+
+His form (`fence`, `data/forms.js`), from his 2D guard: one hand in his
+pocket, the other up open-palmed in front of his chest, placating and keeping
+you at arm's length. His punch is the slip: barely any wind-up, the hand
+closing only as it lands, lingering out after before it opens again; the
+pocket hand stays at his side, going only with his lean. He blocks with the
+briefcase in the fence hand. `test/forms.test.js`, `test/sculpt3d.test.js`.
+
+All six men are now remodelled. The owner on Elo and Scam: "good".
+
+**The women's base** (2026-11-04). The pipeline's body was a man's: pecs, a
+man's shoulder girdle, Jeff's hips, the male fat pattern. A woman's frame
+(`figure.frame` 'f', all three women) is now built into it, switched only by
+that knob, so every man is exactly as he was (Jeff rebuilt byte-identical):
+the shoulders narrower and the deltoids with them, as the 2D figure draws
+hers (0.86, figure.js), a lighter neck; the pelvis wider by her `hips` (now
+read, `Build.pelvis`) and wider again than a man's, through the trunk's girth
+map so the seat and the hip joints come out with it; a modest bust over the
+chest's muscle and none of a man's chest lines carved; and soft tissue a man
+of the same build does not carry (`Build.soft`), laid in a woman's pattern
+(`FAT_F`, `LIMB_FAT`: the hips and the seat most, then the thighs, the bust
+and the backs of the upper arms, least round the middle), which softens the
+muscle under it as fat does. Kept as modest as the 2D women are: in clay
+the curves barely show in profile, and the clothes will cover them. In clay
+beside Jeff and Steve, with plain placeholder heads
+(`fighter3d.py -- --cast <dir> ava zara eleanor`).
+
+The owner: "yes, looks good".
+
+**Lizbeth** (`ava`, 2026-11-04), the first woman. Her body is the women's
+base at her size: 1.13 times Jeff's height, slight. Her head
+(`lab/blender/fighters/ava.py`): an original face for "the stare", a slim,
+even face on a woman's narrower jaw, a light brow set high and level, big
+eyes set shallow under thin lids raised high (carved, as Adam's stare is),
+high cheekbones, a straight narrow nose, an even mouth and a narrow defined
+chin. Her pale blonde hair is pulled back tight into a ponytail, smooth (the
+comb's lines the men's hair has inked as black specks on hair this pale), a
+tie at the back of the crown and the tail tapering down the back of the neck,
+round and joined end to end without a blend (flattened, each length kinked
+against the next, and blended, each join bulged: either way a string of
+beads). Her visor is new to the pipeline (`visor`): a band of cyan glass
+across the eyes, a slice of an upright elliptical cylinder clear of the nose,
+ending in front of the ears (wider, it stood out past her temples like
+goggles), drawn as glass in game (`visor`, as the founder's). Registered as
+`sculpt:ava`.
+
+Her clothes (`OUTFITS.blazer`): the suit's jacket worn open (`jacket(open_front)`,
+`_vee(open_front)`: the fronts apart from the collar to the hem, no button,
+the lapels down to where the button would be), shorter, over the fitted
+white shirt, skinny trousers and white shoes. Her vial (`vial`): a big sample
+vial stood upright behind her lead hip, in her accent with a white cap,
+riding the hips bone (`JOINT_OF`: the bone is named apart from its joint).
+
+Her form (`fencing`, `data/forms.js`), from her 2D guard: narrow, upright and
+side on, both hands in on her centre line, the lead hand loose and open. Her
+punch is the thrust: the hand barely draws back, then goes straight out along
+its own line, fingers first, the lead foot stepping after it and nothing in
+the hips, and straight back; the hand never closes. She parries with the
+briefcase. `test/forms.test.js`, `test/sculpt3d.test.js` (her frame: narrower
+in the shoulder against the hip than any man).
+
+The owner: "good, continue".
+
+**Kim** (`zara`, 2026-11-04), the second woman: the women's base at her
+size, 0.98 times Jeff's height, curvy, her head oversized for her size. Her
+head (`lab/blender/fighters/zara.py`): an original face for "bored of you", a
+soft rounded face, a light flat brow, almond eyes under the heaviest lids in
+the cast (carved heavy, as Steve's are), full round cheeks, a small nose, a
+tiny mouth with full lips and a soft round chin. Her black hair is pulled up
+into two puffs set back and low on the crown and run into the hair (high and
+round on either side, they read from the front as a pair of cartoon ears),
+and she wears round earrings in her accent (`accessory:earrings`, shown when
+her look says so). Registered as `sculpt:zara`.
+
+Her clothes (`OUTFITS.bomber`): a bomber in her pink, roomy through the body
+and the sleeves (`_drape`, floored a centimetre off the body as the jacket's
+is) and gathered over its last hand's width into a ribbed band in her green
+accent at the waist (down at the top of the hips, the band was as wide as the
+hips and the jacket hung straight to it, a sweatshirt; the band is kept to the
+trunk, as the hands hang at its height in the rest pose and it took them in);
+ribbed cuffs and a ribbed collar in the second colour, the collar a short
+tube wide at its foot over the neckline (as close as the turtleneck's, the
+cloth rising round the neckline buried it); a zip up the front, a dark line
+of the second colour (`suit2*0.8`) in a fine field of its own. Flared
+trousers (`LEG_CUTS.flared`): hugging the thigh to the knee, then flaring to
+a wide hem that falls past the ankle (`low`) over the top of her green
+sneakers. Her ring light (`ringlight`): a flat ring a little wider than her
+head and hair, a hand's width behind it, in her accent, riding the head; built
+square to the body it turned with her head and was seen nearly edge on, so it
+is built pre-turned by the head's posed turn (`HEAD_TURN`, GL3D.YAW +
+GL3D.HEAD_YAW, as the founder's is; the test checks the two agree).
+
+Her form (`peekaboo`, `data/forms.js`), from her 2D guard: crouched in and
+leaning forward, both fists high and tight in front of the jaw, her face just
+above them, the shoulders weaving at rest over her own two bounces a breath.
+Her punch is the snap: she bobs under the line, the fists staying at the jaw,
+comes up with the jab already out, and has it home by 2.25 of the track, the
+fastest reset in the game, the head slipping off the line as it comes back.
+`test/forms.test.js`, `test/sculpt3d.test.js`.
+
+**Cathie** (`eleanor`, 2026-11-04), the third woman and the last of the cast:
+the women's base at her size, the tallest in the game at 1.3 times Jeff's
+height, slim and straight-backed, her head small for her height. Her head
+(`lab/blender/fighters/eleanor.py`): an original face for "serene", a calm
+oval face older and softer than the other women's, a soft brow set a little
+high, eyes open under plain lids, cheeks settled a little low, a straight nose
+of a good length, a level mouth with thin lips, the folds from the nose to the
+mouth just drawn in. Her cream bob: her head's surface pushed out and hung
+straight down from wherever it is widest, as hair falls, to a level cut at
+the jaw, fullest about the eyes and turned under at the ends, a fringe swept
+down across the forehead from a side parting, the face cut clear between the
+two sides, coming further forward toward the ends (hung straight and belled
+out under a level fringe, it was a helmet; cut square in front, each side was
+a flat plate down the cheek; thinner over the forehead, the ink broke the
+fringe's edge into specks). Registered as `sculpt:eleanor`.
+
+Her clothes (`OUTFITS.suit`): Carl's suit, the jacket buttoned over a shirt
+and tie, as the 2D figure draws the two alike but for the stripes. Her brooch
+is the first accessory worn on the clothes (`ACCESSORIES`): built on the
+clothes as last dressed (`DRESS`), a domed pin with a stone high on the near
+lapel where the 2D one is, its own mesh (`accessory:brooch`) riding the chest.
+Her tablet (`tablet`): a slab bigger than Steve's device, in her accent, its
+top leaning back as the 2D one is turned, gripped below its middle, with a
+dark line chart falling from top left to bottom right across the face the
+camera sees. Her coat (`coat`): the skirt of a long coat in her cream,
+hanging from under the jacket's hem round her back and sides to above the
+knee and flaring as it falls, open in front, riding the hips, as the 2D part
+is drawn behind her (softened, a blur as wide as the cloth is thick took all
+of it, and the test now catches a missing prop).
+
+Her form (`taiChi`, `data/forms.js`), from her 2D guard: upright and tall,
+the lead palm open and level in front of the chest, the tablet low at the
+waist, breathing slowly. Her punch is the push, placed rather than thrown:
+the palm drawn in as the weight settles back, then out level with the weight
+moving behind it, no turn of the hips and hardly any of the shoulders, and
+back the way it went; the hand never closes. She turns the block aside with
+the briefcase. `test/forms.test.js`, `test/sculpt3d.test.js`.
+
+All nine are remodelled.
+
+**The review** (2026-11-04), once the cast was built: every sculpt in game in
+every state (idle, walk, crouch, jump, block, slap, punch, kick, launch,
+hitstun, a KO and victory), and the remodel's code read through by a
+separate reviewer. Nothing reaches the simulation and nothing is shared
+between fighters or builds; what it found, all fixed:
+
+- Every form's punch jumped on its first frame and back on its last. The rear
+  hand follows the head through a strike, measured from the stock guard
+  (REST) even for a form's track, which starts in the fighter's own: it is
+  now measured from the track's first key (`drawFighter.js` `trackStart`).
+  The reach re-scale moved a form's guard keys with the strike (Cathie's palm
+  11 px out on the first frame); for a form's track it now comes in over the
+  wind-up and goes over the recovery. Jeff's straight was keyed at the stock
+  height and lead foot, not his guard's (`GUARD_SY`), and Scam's slip had its
+  head 2 px back (`F_HEADX`). A test now holds every sculpt's punch to its
+  idle guard on its first and last frame, at the reach the game gives it
+  (the old ones compared a punch with its own first frame, at the nominal
+  reach, so none of this showed).
+- A recoloured fighter took the first one's painted brows and lips: the
+  face texture's key (`drawnFaceKey`) now holds the hair and skin colours the
+  painters read.
+- What keeps a form out of the 2D game is now tested where it lives, `form3D`.
+
+The last two props are made. Jeff's parcel (`parcel`) is clamped against
+his near side under the elbow, the rear arm his guard holds at his chin: in
+his rear hand, as his 2D karate stance has it at the hip, it would cover his
+face. Adam's mat (`mat`) is rolled and slung across his back from over the
+far shoulder to past the near hip, white, two straps in his accent and the
+spiral of the roll in each end. Both ride the chest and are placed where a
+ray first meets the clothes (`_hit`): projected onto cloth that hangs, the
+mat stood a hand's width off his back, which a test now catches.
+
+Next: the owner's call on putting the sculpts in front of players.
+
+**The kicks** (2026-11-05, after v3.14). Each form kicks its own way, from
+its guard (each form's guard is now one constant, `<FORM>_AT`, where every
+one of its tracks starts and ends): Jeff a boxer's push kick, the hands never
+leaving the guard; Adam a door kick, wound up high and stumbling forward off
+it; Carl a heavy push at the thigh, the open hand reaching with it; Steve a
+crescent swept up high, arms wide, the finish held; Elo a roundhouse coiled
+well away and snapped home; Scam a push to keep you off, the hand still in his
+pocket; Lizbeth a line kick, straight out along its line; Kim a snap kick, the
+fists at her jaw; Cathie a heel kick, placed, the arms opening. Adam's and
+Elo's wind-ups first drew the leg back behind them, where the game's camera
+could not see it, and Adam's lead arm thrown forward read as a punch; both
+now lift the knee in front. The test that holds a punch to its guard now
+holds every move a form has (and its lead hand), and each kick must be out
+at the middle while it can hit.
+
+**Gaps, now the whole cast is built:**
+
+- `body.reach` is not read: the arms are as long as the fighter's height
+  makes them, and the rig reaches them to the 2D fists.
+- Outfits. Every roster outfit is made: Jeff's vest, Adam's hoodie, Carl's
+  pinstripe (Cathie's suit is the same cut), Steve's turtleneck, Elo's tee,
+  Scam's henley, Lizbeth's blazer and Kim's bomber. A player's founder can
+  pick any of them in 2D; the 2D `costume` (`fit` tight to oversized, `legs`
+  suit, skinny, baggy, flared) says how far each stands off the body and
+  how the trousers fall.
+- Hair and headwear. Adam's cap, Carl's slick, Steve's quiff, Elo's buzz,
+  Scam's curly mop, Lizbeth's ponytail, Kim's puffs and Cathie's bob are
+  made, each in its fighter's own module; a player's founder would need
+  them as makers of their own.
+- Accessories: shades, glasses, the visor, Kim's earrings and Cathie's
+  brooch are made.
+- Patterns, such as Carl's pinstripes: the toon renderer paints flat colour.
+- Props. Every 2D part is made: the block briefcase, Jeff's parcel, Adam's
+  mat, Carl's case, Steve's device, Elo's booster, Scam's paperclip,
+  Lizbeth's vial, Kim's ring light and Cathie's tablet and coat. They are
+  rigid on their bones: Cathie's coat drops with her hips in a crouch and
+  stands out stiffly in a kick, where the 2D one trails.
+- Forms: boxing (Jeff), brawling (Adam), grappling (Carl), showboating
+  (Steve), the shoulder roll (Elo), the fence (Scam), fencing (Lizbeth), the
+  peek-a-boo (Kim) and tai chi (Cathie). Every basic move has a track of
+  its own in each: punch, kick, slap and launcher (the command normals and
+  specials that borrow those tracks through `ATTACK_TRACK`, such as Kim's RUG
+  PULL on the kick or Cathie's CONVICTION BUY on the slap, take them too).
+  Block is each form's own, and since the reactions and the walks below, so
+  are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
+
 ## The 3D prototype (in `main` since v3.10)
 
 All of it is described properly in section 7 of `docs/ARCHITECTURE.md` on that
@@ -2627,60 +2982,10 @@ Merged as v3.10. `SIM_VERSION` did not change: nothing the simulation computes
 is different (`game.simT` is new, but it is not hashed and the simulation does
 not read it), which the determinism and effects tests check.
 
-## Decisions that belong to the owner
+## The October plan, as it was (history)
 
-0. **Delete the superseded branches.** Asked for on 2026-11-09. Every branch
-   on GitHub but `main` is wholly in `main`, so deleting them loses nothing:
-   `live-3d`, `claude/jeff-model`, `claude/ai-levels`,
-   `claude/game-review-enhance-29bffb`, `claude/gfx-v3.9.4` and
-   `claude/gl3d-restore`. A cloud session cannot delete a branch on GitHub
-   (the push is cut off and the API call refused), so the owner deletes them
-   on the repository's Branches page. Settled on 2026-10-29: the prototype merged into `main` as v3.10,
-   dark, after the phone check. (Also settled on 2026-10-28: the owner set
-   Supabase's Site URL and Redirect URLs to the new address.)
-1. **Whether 3D becomes the default.** Settled: the owner made it the default
-   in v3.14, on how it ran on his iPhone. A mid-range phone is still unmeasured
-   (Next steps, step 1). The 2D rig stays either way: it is the fallback without
-   WebGL2 and when the GPU context is lost, and the Settings choice.
-2. **The aura in front.** On the 3D layer an aura drawn by the fighter in front
-   (Unicorn Mode's glow, a stance ring) no longer washes over a 3D fighter
-   behind it, as it did when everything was painted onto one canvas. It reads
-   cleaner, and matching the old look would mean drawing auras in WebGL. Keep it,
-   or ask for the old look.
-3. **Pin the Supabase client.** `src/net/online.js` loads `supabase-js@2`, which
-   floats: on 2026-10-05 it resolved to 2.117.2. A bad 2.x release would reach
-   players without a deploy. Pinning means updating it by hand.
-4. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
-   private copy, or let them go.
-5. **Art direction.** The model and stages are scripted, which has a ceiling. An
-   artist working in Blender to the same contract (ARCHITECTURE section 7, "The
-   model contract") is the step up, and the runtime would not need to change.
-6. **Fighters overlap at close range.** Settled in v3.21 at the owner's word:
-   each fighter keeps a push half of their own, measured from their sculpt
-   (see "v3.21"), not by `build`, which does not follow the sculpts' trunks.
-7. **Balance as the AI plays it.** Champion: Jeff (29%) and Elo (28%) are the
-   bottom, Lizbeth, Steve, Scam and Cathie (62 to 65%) the top, a 37 point
-   spread; untouched by v3.11. Rookie and Contender were evened out in v3.11
-   (its section): a 92 point spread at Rookie and 50 at Contender, now about 30
-   and 25. Lizbeth, the weakest at Rookie (about 30%, at the floor of the
-   mechanism), now closes to mid range there (`ai.rangeAt`, v3.12): about 40%,
-   and the Rookie spread 20 to 23. How hard the levels are for a person, as opposed to how alike
-   they are, is what `solo_results` (v3.10.2) is for: the AI stand-in for a
-   player (`--against b-neo:<level>`) still loses to almost the whole roster,
-   but a base founder has no signature move, so it says little about people.
-   `lab/balance.js` measures it all; it measures how well the AI plays each kit
-   as much as the kits themselves.
-8. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
-   sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
-   recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
-   Kim 60 px from Carl ends 51 px away, the minimum body gap. The other two
-   OBJECTIONs (on a strike and on a steal) push the victim away. It reads like a
-   slip of sign, but it may have been meant to let the victim punish a grabber
-   stuck in a long recovery. Flipping it is one sign, but it changes what a live
-   match computes, so it needs a `SIM_VERSION` bump (to 11: v3.17's dash fix
-   took 10); left as it is.
-
-## Next steps, in the order they pay off
+The current list is "Next steps" at the top. This was the plan from October,
+kept for the phone benchmark's history in step 1.
 
 Done in the 2026-10-18 session (on `claude/game-review-enhance-29bffb`): depth for
 the stages (step 3 below), secondary motion (step 4), the back-light streak and
@@ -2765,157 +3070,54 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
    For the everyday check, that the classic game is unchanged, `lab/pixels.js`
    (2026-10-30) compares two commits in one browser and needs no baseline.
 
-## Known limits
+## The story so far, as written on 2026-11-12
 
-- Phone performance: the 3D fighters are within the 2 ms budget on a budget
-  Android (Ahlo 1) and an iPhone 12 Pro, but the Ahlo shows about 21 frames a
-  second at full resolution and the iPhone 12 Pro 19 in 2D (see "v3.21.1"
-  and "v3.22"): the screen's drawing, not the processor, is the limit. The
-  game now steps its resolution down on such a phone (about 31 fps on the
-  Ahlo); round nine of the phone test is to find the rest.
-- The 3D layer differs from the copy path in three small ways: an aura drawn by
-  the fighter in front does not wash over a 3D fighter behind it, every trail
-  lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
-- Kim's ring light still sits off-square in a bust; body knobs still scale bones.
-- In 3D, at close range guards and lead feet still cross (trunks no longer
-  do, v3.21), and Cathie's coat bunches in a deep crouch rather than hanging.
-- A local `main` in a checkout can lag `origin/main` (this one sat at v3.12),
-  and `lab/pixels.js` compares against `main` by default: run
-  `git branch -f main origin/main`, or name the release commit.
-- The debug sign-in (`UEC.signInAs()`) uses the id `test-uid`, which is not a
-  UUID, so one profile fetch to Supabase returns a harmless 400 in the console.
-- Full-frame pixel hashes changed between September and October with no code
-  change: the browser updated. Hashes only compare within one browser version.
+The game is live at v3.21.1 on GitHub Pages (v3.21's game, with the phone
+test's breakdown, see "v3.21.1")
+(`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
+on 2026-11-12 (see "v3.21"; v3.20, the launch build, went out on 2026-11-09): 3D by default, the nine founders the sculpted cast below, each
+in their own fighting form for everything they do (every move, special and
+reaction, how they move, start a round and go into their super) and each
+with a face of their own, and 2D a choice in Settings (see "v3.19" back to
+"v3.13"). v3.17 fixed the dash (`SIM_VERSION` 10); v3.18 changed nothing in
+the fight; v3.19 slowed the meter and shortened the wait after a knockout
+(`SIM_VERSION` 11); v3.20 changes nothing in the fight; v3.21 widens the
+broad fighters' bodies and holds a throw longer (`SIM_VERSION` 12). v3.12 was built on 2026-10-30 but never reached `main`; it went
+out with v3.13. The repository
+moved to the Aurmada organisation in October 2026; GitHub forwards the old
+repository address but not the old Pages site (`firdous-aurmada.github.io`), which
+now returns 404.
+Since v3.10, `main` also carries a working prototype that answers the
+owner's question "can the fighters look and move more like a modern fighting
+game, without copying one": every fighter rendered as a toon-shaded 3D model
+posed live from the existing 2D animation, arenas rendered in Blender, fighters
+lit by their stage, and fighting-game hit effects. It was behind URL flags
+(`?gl`) then and has been the default since v3.14, render-only throughout. On
+the owner's iPhone the 3D fighters cost 1.0 ms a frame with the two heaviest
+sculpts (budget 2 ms); a mid-range phone has not been measured.
 
-## Backend (Supabase)
+A review session on 2026-10-18 built **v3.9**, released on 2026-10-25: step 3 of
+the move system, a deferred effect, as Jeff Bozo's own signature (SAME-DAY
+DELIVERY), plus two AI fixes and a gap in the live-match fingerprint. v3.9.1
+points the page and the docs at the new address. The same session built a
+branch, `claude/game-review-enhance-29bffb`: `live-3d` with v3.9 merged in and
+the prototype's leftovers done (parallax for the rendered stages, hair and coats
+that trail, rims that stay on the outline, and hit bursts that follow the blow).
 
-- Project `uec-game`. Its URL and publishable key are in `src/net/online.js`;
-  dashboard links are in `docs/AUTH-SETUP.md`. It is on a paid plan so it never
-  pauses. Anything that creates or changes paid resources needs the owner's OK.
-- `profiles` is world-readable. Identity columns are user-writable through
-  column-level grants; ranked stats are writable only by the `report_match()`
-  RPC. A new user-writable column needs both INSERT and UPDATE column grants,
-  and the upsert needs UPDATE on `id`, or saves fail with "permission denied".
-- `report_match()` is a security-definer RPC: stats apply only once both
-  players have filed mirror-image reports for the same room, under an advisory
-  lock so a match is never counted twice. Its points formula mirrors `POINTS` in
-  `src/config.js`; change both together.
-- `leaderboard` is a view over signed-in players with at least one confirmed
-  live match.
-- Emails never go in `profiles`. A trigger on `auth.users` copies them into a
-  private `user_emails` table that only its owner can read.
-- `solo_results` (since v3.10.2) records how single-player matches against the
-  roster AI end: opponent, level, win or loss, rounds, KO rounds, game version
-  and whether 3D was on. No user id and nothing personal. RLS is on with no
-  policies and no grants, so no client can read or write it; the
-  security-definer RPC `report_solo()` writes it for a signed-in player, checks
-  every field (a best of three, a known level, an id-shaped opponent), and
-  refuses more than 120 rows a minute in all. Ghost challenges, two-player and
-  online matches are not sent (`soloReport` in `src/net/cloud.js`). Only the
-  owner reads it, from the dashboard's SQL editor, for example:
-  `select opponent, level, count(*) as n, round(avg(won::int) * 100) as player_win_pct from solo_results group by 1, 2 order by 2, 4;`
-  The security advisor flags its "RLS enabled, no policy" and the RPC being
-  callable when signed in; both are intended, as for `report_match()`.
-- `perf_reports` (since v3.22) records how the game runs on the devices it is
-  played on: one row a match (source `match`) or a finished phone test
-  (`test`). Columns: `created_at`, `source`, `device` (a random uuid made on
-  the device, not a user id), `version` (`v3.22` shaped), `os` (40 characters
-  at most), `browser` (40), `model` (64), `gpu` (120), `screen_w` and
-  `screen_h` (1 to 10,000), `dpr` (over 0, to 8), `cores` (1 to 256),
-  `memory_gb` (over 0, to 1,024), `mode` (`3d` or `2d`), `scale` (over 0, to 4),
-  `fps` (0 to 500, required), `slow` (0 to 1), `draw_ms` (0 to 1,000),
-  `seconds` (0 to 3,600) and `setups` (a JSON array of at most 4 KB as
-  stored, about 2,000 characters of text; the client drops a longer list
-  rather than lose the report). Nothing
-  about the player. RLS is on with no policies and no grants; the
-  security-definer RPC `report_perf()` writes it for anyone, signed in or not,
-  answers 'recorded', 'invalid' (a field outside the checks, or no device) or
-  'busy' (more than 120 rows a minute or 20,000 a day in all, or 60 an hour
-  from one device: anyone may call it, so these bound what the table can grow
-  by, about 40 MB a day at worst; raise them when real play nears them).
-  `test/perf.test.js` mirrors these checks: change the two together. Only the
-  owner reads it, for example:
-  `select model, gpu, mode, count(distinct device) as devices, round(avg(fps)::numeric, 1) as fps from perf_reports where source = 'match' group by 1, 2, 3 order by devices desc;`
-  The advisor flags it as for `solo_results`: intended.
-- Live matches use Realtime broadcast channels (one per room) and a presence
-  lobby. No tables. Protocol in ARCHITECTURE section 5.
-- `UEC.signInAs()` is local only: it creates no auth user and no profile row.
+Sessions on 2026-10-25 built two more releases, v3.9.2 (a throw that goes
+behind the thrower from either side) and v3.9.3 (an AI that reads traps), and
+both shipped on 2026-10-26.
 
-## Deploying
+A cloud session on 2026-10-28 built **v3.9.4** from a fresh clone of `main`:
+the AI waits for an opening before it throws a grab or a slow strike, drops its
+guard to punish, and stops guarding swings that have already missed. It also
+kept the AI-versus-AI harness as `lab/balance.js`. Reviewed, fixed and released
+the same day. It then brought the 3D prototype up to v3.9.4, measured it on the
+owner's iPhone (too slow at first: the 3D image was copied into the 2D canvas),
+rebuilt how the fighters reach the screen, and released it dark as **v3.10** on
+2026-10-29.
 
-ONBOARDING section 7: `npm test`, bump `VERSION`, push `main`, then read the
-deployed `VERSION` back with `curl`. Pages builds `main` from the repo root with
-Jekyll (there is no `.nojekyll`), and Jekyll reads Liquid tags before anything
-else, so two opening curly braces in a row, or an opening curly brace followed
-by a percent sign, in any markdown file can fail the build. The remote is
-HTTPS; on the original machine the `gh` CLI was signed in as `firdous-aurmada`.
-The repository is now `https://github.com/Aurmada/uec-ultimate-entrepreneur-challenge`;
-a clone that still names the old one works through GitHub's redirect, and
-`git remote set-url origin https://github.com/Aurmada/uec-ultimate-entrepreneur-challenge.git`
-points it at the new one.
-
-## Lessons that cost real time
-
-These were in the original machine's private notes; they are here so they
-survive it. ARCHITECTURE section 11 has more.
-
-- **iCloud ate the repository.** The checkout lived in `~/Documents`, which
-  iCloud syncs. After three idle weeks iCloud had moved 127 files inside `.git`
-  (and 17 in the tree) to the cloud, and left duplicate copies of git's index
-  (`.git/index 2` and so on). `git diff` simply hung. Reading the files brings
-  them back (`find . -flags +dataless` lists what is missing); `git fsck` came
-  back clean. Keep checkouts somewhere iCloud does not sync, such as
-  `~/Developer`.
-- **Lab captures in the browser:** reload the page after editing an engine
-  file, or the capture renders the old module. A hidden browser pane throttles
-  timers hard, so lab scripts that wait on `setTimeout` crawl; keep the pane
-  visible or route the waits through a `fetch`. `dev-server.py` rejects large
-  uploads, so whole-frame sheets save as JPEG.
-- **Never click blindly on the title screen.** A stray click hit FIGHT A REAL
-  PLAYER and joined the live lobby as the signed-in test user. Drive the game
-  with `UEC.startMatch(...)` instead (ONBOARDING section 5).
-- **Measure, then believe.** `lab/contrast.js` finds the fighter by rendering
-  the frame with and without it; pin the cast, and wait for a rendered stage to
-  load or it measures the procedural fallback. Judge a 3D face change at the
-  match angle, not only in a portrait. Compare renders before and after in the
-  same browser.
-- **Building the model** (details in ARCHITECTURE section 7): weigh each part to
-  its bones before joining parts under one name; props in a hand ride the grip
-  joints, never the forearm; a prop fixed to the head is pre-turned by the
-  head's posed angle, and a test guards that; thin geometry swells into black
-  bars under the ink pass (mark it `inkless`); a ring of metaball balls
-  decimates into beads, so build rings from capsules.
-- **Blender 5 changed its API:** the compositor is `compositing_node_group`
-  (there is no `scene.node_tree`), WebP output works, `ShaderNodeMix` colour
-  inputs are sockets 6 and 7 with the result on output 2, `obj.is_holdout` cuts
-  objects out of a render, `obj.visible_shadow = False` stops an emitter
-  shadowing itself, and scripts loaded through `importlib` write `__pycache__`
-  unless `sys.dont_write_bytecode` is set.
-- **`getFighter(id)` never throws.** An unknown id silently returns the first
-  roster fighter, so a bad id renders as the wrong person. Fall back to
-  `DEFAULT_BASE_ID` (`'b-neo'`), never a literal.
-- **A field named like a method shadows it.** `FXSystem` once stored its cut-in
-  as `this.cutIn`, which replaced the `cutIn()` method on the instance.
-
-## Not in the repo
-
-Deliberately left out, and gone if the original folder is deleted:
-
-- `lab/assets/` (about 136 MB in 14 files, gitignored): the source models the
-  dormant `?sprites` baker (`lab/baker.html`) reads, a base model with its
-  texture and twelve animation clips. Where they came from is not recorded, so
-  they stay out of this public repo. The baked atlases they produced are
-  committed (`assets/sprites/founder/`). They are only needed to re-bake
-  sprites.
-- `lab/atlas/` (gitignored): the baker's output, byte for byte the committed
-  `assets/sprites/founder/`. Nothing is lost without it.
-- `lab/previews/` and `lab/*.png` (about 120 MB, gitignored): lab output, all
-  regenerable with the `lab/` tools. The useful pictures are copied into
-  `docs/images/live-3d/`.
-- `.superpowers/`: two mockups from an August brainstorm (the v3.3 silhouette
-  study). What they argued for shipped as v3.4.
-
-## History
+## Where else the history is
 
 Release notes, newest first, are the "What's new" sections of `README.md`.
 Design specs and implementation plans are in `docs/superpowers/`. The commit

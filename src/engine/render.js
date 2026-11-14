@@ -3,7 +3,7 @@
 
 import { STAGE, GL3D } from '../config.js';
 import { drawFighter, setRoundStart, setThrows, drawnAt } from './drawFighter.js';
-import { stageFor, drawStage } from './stage.js';
+import { stageFor, drawStage, liftBoards } from './stage.js';
 import { drawBursts, drawTrail, drawAura, drawProjectileGlow, drawStageDim, drawCutIn } from './vfx.js';
 import { setLight3D, setClock3D, has3D, layerCanvas3D, beginLayer3D, endLayer3D } from './gl3d/index.js';
 import { FX_STYLE, drawParcel } from './fx.js';
@@ -102,6 +102,7 @@ function drawStageGrade(ctx, t, arena, stage) {
     ctx.fillRect(0, 0, W, H);
   }
   ctx.restore();
+  return scrim;
 }
 
 // Foreground depth layer, drawn in FRONT of the fighters so the action sits
@@ -725,7 +726,7 @@ function renderSharp(ctx, game, t, c) {
   const wc = worldCanvas(), wx = wc.getContext('2d');
   wx.setTransform(1, 0, 0, 1, 0, 0);
   wx.clearRect(0, 0, W, H);
-  renderBehind(wx, game, t, true);
+  renderBehind(wx, game, t, true, c);
   const order = fighterOrder(game);
   const fc = frontCanvas(), fx = fc.getContext('2d');
   fx.setTransform(1, 0, 0, 1, 0, 0);
@@ -779,7 +780,7 @@ function renderLayered(ctx, L, game, t, c) {
   const wc = worldCanvas(), wx = wc.getContext('2d');
   wx.setTransform(1, 0, 0, 1, 0, 0);
   wx.clearRect(0, 0, W, H);
-  renderBehind(wx, game, t, true);
+  renderBehind(wx, game, t, true, c);
   const order = fighterOrder(game);
   const fc = frontCanvas(), fx = fc.getContext('2d');
   fx.setTransform(1, 0, 0, 1, 0, 0);
@@ -889,9 +890,11 @@ function renderWorld(ctx, game, t, cam = null) {
 // the screen, so this layer leaves the arena out.
 function renderBehind(ctx, game, t, stageOnScreen = false, cam = null) {
   const stage = stageFor(game.arena);
+  const pan = cam ? cam.x - W / 2 : 0;
   if (!stage) game.arena.draw(ctx, t);
-  else if (!stageOnScreen) drawStage(ctx, stage, t, cam ? cam.x - W / 2 : 0);
-  drawStageGrade(ctx, t, game.arena, stage);   // push the backdrop back + haze
+  else if (!stageOnScreen) drawStage(ctx, stage, t, pan);
+  const scrim = drawStageGrade(ctx, t, game.arena, stage);   // push the backdrop back + haze
+  if (stage) liftBoards(ctx, stage, t, pan, scrim, stageOnScreen);   // but not the lit sponsor boards
   if (!stage) drawPerspectiveFloor(ctx, t);   // receding grid; a rendered stage has a floor of its own
 
   // Traps sit on the floor, under everything, so they read as ground you must

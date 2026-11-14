@@ -10,9 +10,9 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { ARENAS } from '../src/data/arenas.js';
 import { STAGE } from '../src/config.js';
-import { STAGES, stageFor, layerShift, floorSkew } from '../src/engine/stage.js';
+import { STAGES, stageFor, layerShift, floorSkew, liftBoards } from '../src/engine/stage.js';
 import { lighting } from '../src/engine/gl3d/toon.js';
-import { GL3D } from '../src/config.js';
+import { GL3D, STAGE_ART } from '../src/config.js';
 
 const STAGED = ARENAS.filter((a) => a.stage);
 const file = (arena, name) => new URL(`../${arena.stage.dir}/${name}`, import.meta.url);
@@ -257,4 +257,77 @@ test("Demo Day's LIVE dot sits before the word, in any font", async () => {
     assert.ok(dot, 'no dot beside LIVE');
     assert.ok(dot.x + dot.r <= live.x - wide / 2 - 2, `the dot (${dot.x.toFixed(0)}) is on the words, which start at ${(live.x - wide / 2).toFixed(0)}`);
   }
+});
+
+// The v3.20 graphics review: under the scrim (0.42 to 0.62 of black over the
+// scenery) the sponsor boards were hard to read. They are lit screens, so the
+// scrim is taken off them down to STAGE_ART.BOARD_SCRIM, and off nothing else.
+test("every rendered stage's sponsor boards read through the scrim, and nothing else does", () => {
+  // a context that records what each fill and paint does, with the
+  // compositing and strength it was done with
+  const recorder = () => {
+    const ops = [];
+    let alpha = 1, op = 'source-over', pathPts = [], fill = 'rgba(6,9,22,0.42)';   // as the scrim left it
+    const ctx = new Proxy({}, {
+      get: (_, k) => {
+        if (k === 'globalAlpha') return alpha;
+        if (k === 'globalCompositeOperation') return op;
+        if (k === 'beginPath') return () => { pathPts = []; };
+        if (k === 'moveTo' || k === 'lineTo') return (x, y) => pathPts.push([x, y]);
+        if (k === 'fillStyle') return fill;
+        if (k === 'fill') return () => ops.push({ kind: 'erase', op, alpha, pts: pathPts, fill });
+        if (k === 'fillText') return (text) => ops.push({ kind: 'paint', op, alpha, text });
+        if (k === 'measureText') return () => ({ width: 10 });
+        return () => {};
+      },
+      set: (_, k, v) => { if (k === 'globalAlpha') alpha = v; if (k === 'globalCompositeOperation') op = v; if (k === 'fillStyle') fill = v; return true; },
+    });
+    return { ctx, ops };
+  };
+  let boards = 0;
+  for (const arena of STAGED) {
+    const stage = { arena, spec: spec(arena), layers: null };
+    const marked = Object.entries(arena.stage.screens || {}).filter(([, p]) => p.board).map(([id]) => id);
+    // a board is a painter that cycles the sponsors; every one is marked
+    for (const [id, paint] of Object.entries(arena.stage.screens || {})) {
+      const named = String(paint).includes('billboard') || /sponsor|left|right/.test(id) && !marked.includes(id);
+      if (named) assert.ok(paint.board, `${arena.id}/${id} draws sponsors but is not marked a board`);
+    }
+    boards += marked.length;
+    const scrim = arena.scrim ?? STAGE.SCRIM;
+    const keep = (a) => scrim * (1 - a);           // what an erase at strength a leaves of the scrim
+    // the stage on a canvas below (the sharp and layered paths): the scrim is
+    // thinned over each board's quad, and only there
+    const under = recorder();
+    liftBoards(under.ctx, stage, 1, 0, scrim, true);
+    assert.equal(under.ops.length, marked.length, `${arena.id}: ${under.ops.length} lifts for ${marked.length} boards`);
+    for (const o of under.ops) {
+      assert.equal(o.op, 'destination-out');
+      // the erase takes its strength from globalAlpha only: a fill left
+      // translucent by the scrim would thin the scrim by a fraction of it
+      assert.equal(o.fill, '#000', `${arena.id}: erased with ${o.fill}`);
+      assert.ok(Math.abs(keep(o.alpha) - STAGE_ART.BOARD_SCRIM) < 1e-9, `${arena.id}: ${keep(o.alpha).toFixed(3)} of the scrim left on a board`);
+      assert.equal(o.pts.length, 4);
+    }
+    const quads = marked.map((id) => JSON.stringify(spec(arena).screens[id]));
+    for (const o of under.ops) assert.ok(quads.includes(JSON.stringify(o.pts)), `${arena.id}: thinned somewhere that is not a board`);
+    // the stage in the same canvas (the plain path): the board painted again
+    // over the scrim at the strength that comes to the same
+    const same = recorder();
+    liftBoards(same.ctx, stage, 1, 0, scrim, false);
+    const painted = same.ops.filter((o) => o.kind === 'paint');
+    assert.equal(painted.length, marked.length, `${arena.id}: ${painted.length} boards painted again for ${marked.length}`);
+    for (const o of painted) {
+      assert.equal(o.op, 'source-over');
+      assert.ok(Math.abs(keep(o.alpha) - STAGE_ART.BOARD_SCRIM) < 1e-9);
+    }
+    // and a scrim already thinner than a board keeps is left alone
+    const thin = recorder();
+    liftBoards(thin.ctx, stage, 1, 0, STAGE_ART.BOARD_SCRIM, true);
+    assert.equal(thin.ops.length, 0);
+  }
+  assert.ok(boards >= STAGED.length, `only ${boards} sponsor boards across ${STAGED.length} stages`);
+  // the 2D game is untouched: the lift is called only for a rendered stage
+  const render = readFileSync(new URL('../src/engine/render.js', import.meta.url), 'utf8');
+  assert.match(render, /const scrim = drawStageGrade\(ctx, t, game\.arena, stage\);[^\n]*\n\s*if \(stage\) liftBoards\(ctx, stage, t, pan, scrim, stageOnScreen\);/);
 });

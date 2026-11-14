@@ -194,7 +194,8 @@ test('the simulation version was bumped for the behaviour change', () => {
   // 10: a dash pressed with a direction held runs.
   // 11: a slower meter and a shorter wait after a knockout.
   // 12: bodies as broad as their sculpts, and a throw that holds.
-  assert.equal(SIM_VERSION, 12);
+  // 13: the balance pass, PLATFORM BURN and UNDERCUT.
+  assert.equal(SIM_VERSION, 13);
 });
 
 // initState() now assigns every registry field in the constructor, so the

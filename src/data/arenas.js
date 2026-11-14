@@ -93,6 +93,13 @@ function drawBoardroom(ctx, t) {
   floor(ctx, '#232a4d', '#12162c', '#39406e');
 }
 
+// For rendered stages: a sponsor board. Marked `board`, so the stage lets it
+// read through the scrim, a lit screen in a dimmed room (stage.js liftBoards).
+// `dt` puts boards that face each other out of step.
+function sponsorBoard(hue, dt = 0) {
+  return Object.assign((ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + dt, hue), { board: true });
+}
+
 // For rendered stages: a painter that runs a drawing made in world px inside a
 // screen, by mapping the world rect (x, y, w, h) onto the screen's own box.
 function inScreen(x, y, w, h, draw) {
@@ -409,7 +416,7 @@ export const ARENAS = [
       light: { lit: [0.94, 0.97, 1.05], shadow: [0.8, 0.86, 1.06], rim: [0.16, 0.21, 0.34], back: [0.2, 0.4, -1], backColor: [0.37, 0.51, 0.85] },
       screens: {
         chart: tvChart,
-        sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 220),
+        sponsor: sponsorBoard(220),
       },
     } },
   { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype',
@@ -419,8 +426,8 @@ export const ARENAS = [
       light: { lit: [1.01, 0.97, 1.02], shadow: [0.86, 0.8, 1.02], rim: [0.13, 0.31, 0.39], back: [-0.3, 0.3, -1], backColor: [0.61, 0.17, 0.54] },
       screens: {
         main: inScreen(200, 55, 560, 240, demoScreen),
-        left: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 290),
-        right: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + 2, 180),
+        left: sponsorBoard(290),
+        right: sponsorBoard(180, 2),
       },
       overlay(ctx, t) { spotlights(ctx, t); demoCrowd(ctx, t); confetti(ctx, t); },
     } },
@@ -434,7 +441,7 @@ export const ARENAS = [
       dir: 'assets/stages/garage',
       // the work lamp's warmth in front, moonlight through the door behind
       light: { lit: [1.04, 0.98, 0.9], shadow: [0.84, 0.81, 0.92], rim: [0.34, 0.25, 0.13], back: [0, 0.5, -1], backColor: [0.17, 0.27, 0.51] },
-      screens: { sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 40) },
+      screens: { sponsor: sponsorBoard(40) },
     } },
   { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense',
     stage: {
@@ -444,7 +451,7 @@ export const ARENAS = [
       screens: {
         board: inScreen(190, 80, 580, 240, marketBoard),
         ticker: (ctx, w, h, t) => tickerBand(ctx, 0, 0, w, h, t),
-        sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 150),
+        sponsor: sponsorBoard(150),
       },
     } },
   { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party',
@@ -453,8 +460,8 @@ export const ARENAS = [
       // neon: pink from the rainbow behind, violet at the edges
       light: { lit: [1.02, 0.95, 1.04], shadow: [0.87, 0.78, 1.05], rim: [0.34, 0.16, 0.44], back: [0, 0.2, -1], backColor: [0.71, 0.2, 0.61] },
       screens: {
-        left: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 320),
-        right: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + 3, 260),
+        left: sponsorBoard(320),
+        right: sponsorBoard(260, 3),
       },
       overlay: sparkles,
       overlayP: 0.65,          // they glitter on the back wall, so they move with it
@@ -474,7 +481,7 @@ export const ARENAS = [
       light: { lit: [1.05, 0.96, 0.9], shadow: [0.84, 0.8, 1], rim: [0.39, 0.26, 0.16], back: [0, 0.15, -1], backColor: [1.02, 0.51, 0.17] },
       screens: {
         banner: inScreen(120, 105, 720, 45, bannerCloth),
-        sponsor: (ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t, 20),
+        sponsor: sponsorBoard(20),
       },
       overlay: clouds,
       // the clouds drift in the sky, so they move with it when the camera

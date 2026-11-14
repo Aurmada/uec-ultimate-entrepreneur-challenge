@@ -443,7 +443,10 @@ export const FIGHTERS = [
         { t: 1,   joints: { hipY: -66, armF: { x: 30, y: -98 } }, ease: 'inOutCubic' },
       ],
     },
-    c: { skin: '#f2cdb2', suit: '#1c2a5e', suit2: '#111a3d', accent: '#ffd23f', hair: '#f2ece0', pants: '#141d42', shoe: '#1a1a24' },
+    // v3.22: a claret suit, from navy. With pale hair and a blue jacket she
+    // and Lizbeth read as one pair across a fight (the v3.20 graphics review);
+    // no one else in the cast wears red.
+    c: { skin: '#f2cdb2', suit: '#8c2235', suit2: '#5e1424', accent: '#ffd23f', hair: '#f2ece0', pants: '#2b1620', shoe: '#1a1a24' },
     hairStyle: 'bob', outfit: 'suit', accessory: 'brooch',
     // Buying the dip, forever, on the way down. Two rounds of conviction
     // landing on your head — and like her special, it pays her back a little.
@@ -570,16 +573,22 @@ export const FIGHTERS = [
       costume: { fit: 'regular', legs: 'baggy' } },
     body: { height: 1.18, build: 0.96, reach: 1.00, stride: 1.18, shoulders: 0.86, head: 0.90 },
     stats: { speed: 1.05, power: 1.15, hp: 100 },
-    ai: { aggr: 0.82, jump: 0.4, prefRange: 'close', ease: { intern: 0.19 } },
+    // ease: re-measured with v3.22's PLATFORM BURN, so the easier levels
+    // still play alike (Rookie 55%, Contender 54% of AI matches; were 65, 41)
+    ai: { aggr: 0.82, jump: 0.4, prefRange: 'close', ease: { intern: 0.27, founder: 0.06 } },
     c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#5a3a22', pants: '#1a1c24', shoe: '#c9ced9' },
     hairStyle: 'buzz', outfit: 'tee', accessory: null, cameo: true,
     // The rocket that does not make it to orbit. A point-blank blast from a
     // glass cannon: it hurts, and standing there to throw it is the price.
+    // v3.22: 0.12 s to come out and 16 damage, from 0.14 and 14. It is how he
+    // wins (six a match, three in four landing), and at 0.14 it lost the race
+    // to a jab too often for a fighter on 86 HP: Elo won 28% of Champion AI
+    // matches, the roster's last, and wins about 40% now (lab/balance.js).
     commandNormals: [
       {
         slot: 'fwd+kick', archetype: 'aoe', displayName: 'PLATFORM BURN',
         tags: ['punish'],
-        frameData: { startup: 0.14, active: 0.09, recovery: 0.24, dmg: 14, reach: 118 },
+        frameData: { startup: 0.12, active: 0.09, recovery: 0.24, dmg: 16, reach: 118 },
         params: { reach: 118, kb: 300, kbUp: -140 },
       },
     ],
@@ -621,16 +630,22 @@ export const FIGHTERS = [
     // in front of his centre in a guard, the ink line and a hair beyond (test/push.test.js).
     pushHalf: 32,
     stats: { speed: 0.9, power: 1.2, hp: 108 },
-    ai: { aggr: 0.75, jump: 0.2, prefRange: 'close', ease: { intern: 0.11, founder: -0.11 } },
+    // ease: re-measured with v3.22's UNDERCUT (Rookie 49%, Contender 56%)
+    ai: { aggr: 0.75, jump: 0.2, prefRange: 'close', ease: { intern: 0.17, founder: -0.04 } },
     c: { skin: '#e2ab84', suit: '#1f4a56', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
     hairStyle: 'bald', outfit: 'vest', accessory: 'shades', cameo: true,
     // Undercutting, in both senses: a low sweep from the man whose whole
     // strategy is going under everyone else's price.
+    // v3.22: 13 damage, from 11. It replaces his kick (12) on forward, with a
+    // shorter reach and a longer recovery, so it hit for less than the move it
+    // takes the place of. It is his most used move (twelve a match), and Jeff
+    // won 34% of Champion AI matches, next to last; about 39% now. Making it
+    // quicker made him worse: the AI throws it into more trades.
     commandNormals: [
       {
         slot: 'fwd+kick', archetype: 'strike', displayName: 'UNDERCUT',
         tags: ['low'],
-        frameData: { startup: 0.095, active: 0.08, recovery: 0.19, dmg: 11, reach: 100, hitY: -46, kb: 240 },
+        frameData: { startup: 0.095, active: 0.08, recovery: 0.19, dmg: 13, reach: 100, hitY: -46, kb: 240 },
       },
     ],
     // The block guard, formerly a hardcoded draw call. Universal: every founder

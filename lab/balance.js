@@ -20,6 +20,10 @@
 //                                                # AI_LEVELS overridden, to try values
 //   node lab/balance.js --level intern --ease '{"max":0.3,"ava":-0.2}'
 //                                                # roster ai.ease at --level, to try values
+//   node lab/balance.js --def '{"elo":{"stats":{"hp":108}}}'
+//                                                # roster definitions merged over, to try a kit
+//   node lab/balance.js --special '{"sameday":{"radius":70}}'
+//                                                # specials merged over, the same way
 //
 // --against is the closer measure of what a player feels at a difficulty: every
 // roster fighter, at --level, plays the same opponent (a base founder, on the
@@ -182,7 +186,7 @@ export async function runMatch(p1id, p2id, level, seed, mods = {}) {
 // --------------------------------------------------------------- reporting
 
 function parseArgs(argv) {
-  const o = { level: 'mogul', n: 20, seed: 1, focus: [], only: [], json: null, against: null, patch: null, ease: null, workers: availableParallelism() };
+  const o = { level: 'mogul', n: 20, seed: 1, focus: [], only: [], json: null, against: null, patch: null, ease: null, def: null, special: null, workers: availableParallelism() };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === '--level') { o.level = v; i++; }
@@ -194,6 +198,8 @@ function parseArgs(argv) {
     else if (k === '--workers') { o.workers = +v; i++; }
     else if (k === '--patch') { o.patch = JSON.parse(v); i++; }
     else if (k === '--ease') { o.ease = JSON.parse(v); i++; }
+    else if (k === '--def') { o.def = JSON.parse(v); i++; }
+    else if (k === '--special') { o.special = JSON.parse(v); i++; }
     else if (k === '--against') {
       const [id, level] = v.split(':');
       o.against = { id, level: level || o.level };
@@ -329,7 +335,7 @@ async function main() {
   const chunks = Array.from({ length: nw }, (_, i) => all.filter((_, j) => j % nw === i));
   const t0 = Date.now();
   const parts = await Promise.all(chunks.map(chunk => new Promise((resolve, reject) => {
-    const w = new Worker(fileURLToPath(import.meta.url), { workerData: { chunk, level: o.level, patch: o.patch, ease: o.ease } });
+    const w = new Worker(fileURLToPath(import.meta.url), { workerData: { chunk, level: o.level, patch: o.patch, ease: o.ease, def: o.def, special: o.special } });
     w.on('message', resolve);
     w.on('error', reject);
   })));
@@ -342,7 +348,31 @@ async function main() {
 if (isMainThread) {
   if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();
 } else {
-  const { chunk, level, patch, ease } = workerData;
+  const { chunk, level, patch, ease, def, special } = workerData;
+  // Objects merged at every depth; anything else, arrays included, replaced.
+  const merge = (to, from) => {
+    for (const [k, v] of Object.entries(from)) {
+      if (v && typeof v === 'object' && !Array.isArray(v) && to[k] && typeof to[k] === 'object') merge(to[k], v);
+      else to[k] = v;
+    }
+  };
+  if (def) {
+    // Roster definitions, to try a kit before it goes in fighters.js. Only
+    // this run's copy of the module changes.
+    const { FIGHTERS } = await import('../src/data/fighters.js');
+    for (const [id, v] of Object.entries(def)) {
+      const f = FIGHTERS.find((x) => x.id === id);
+      if (!f) throw new Error(`--def: no roster fighter ${id}`);
+      merge(f, v);
+    }
+  }
+  if (special) {
+    const { SPECIALS } = await import('../src/data/fighters.js');
+    for (const [id, v] of Object.entries(special)) {
+      if (!SPECIALS[id]) throw new Error(`--special: no special ${id}`);
+      merge(SPECIALS[id], v);
+    }
+  }
   if (ease) {
     // Each named roster character's ai.ease at this level, replaced.
     const { FIGHTERS } = await import('../src/data/fighters.js');

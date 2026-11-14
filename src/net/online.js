@@ -161,7 +161,12 @@ export const CHARACTER_WIRE_VERSION = 1;
 // round parts the two itself, and that round is called after the hold. A v11
 // peer parts the bodies elsewhere, so the two disagree on x from the first
 // time the fighters meet. v11 shipped in v3.19 and v3.20.
-export const SIM_VERSION = 12;
+//
+// v13: the balance pass for the two weakest at Champion. Elo's PLATFORM BURN
+// comes out in 0.12 s for 16 damage (was 0.14 and 14), Jeff's UNDERCUT hits
+// for 13 (was 11). A v12 peer deals other damage from the first one that
+// lands. v12 shipped in v3.21 and v3.21.1.
+export const SIM_VERSION = 13;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

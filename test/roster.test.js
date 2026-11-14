@@ -88,3 +88,33 @@ test('authored characters do not collide with the shipped roster', async () => {
     assert.equal(shipped.has(def.id), false, `${def.id} already exists in the roster`);
   }
 });
+
+// The v3.20 graphics review: Lizbeth and Cathie read as one pair across a
+// fight, pale hair over a blue jacket each (Lizbeth's violet-blue, Cathie's
+// navy). Two fighters with pale hair must not wear jackets of one colour
+// family: hue in CIE LCh within HUE_NEAR degrees, both jackets coloured enough
+// for hue to mean anything. Cathie has worn claret since v3.22.
+test('no two pale-haired fighters wear jackets of one colour family', () => {
+  const HUE_NEAR = 40, PALE = 75, CHROMATIC = 20;
+  const lch = (hex) => {
+    const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    const [X, Y, Z] = [
+      (0.4124 * v[0] + 0.3576 * v[1] + 0.1805 * v[2]) / 0.95047,
+      0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2],
+      (0.0193 * v[0] + 0.1192 * v[1] + 0.9505 * v[2]) / 1.08883,
+    ];
+    const f = (t) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+    const L = 116 * f(Y) - 16, a = 500 * (f(X) - f(Y)), b = 200 * (f(Y) - f(Z));
+    return { L, C: Math.hypot(a, b), h: (Math.atan2(b, a) * 180 / Math.PI + 360) % 360 };
+  };
+  const pale = FIGHTERS.filter((d) => lch(d.c.hair).L > PALE);
+  assert.ok(pale.some((d) => d.id === 'ava') && pale.some((d) => d.id === 'eleanor'), 'the pair the review named are no longer both pale-haired');
+  for (const a of pale) for (const b of pale) {
+    if (a.id >= b.id) continue;
+    const ja = lch(a.c.suit), jb = lch(b.c.suit);
+    if (ja.C < CHROMATIC || jb.C < CHROMATIC) continue;
+    const apart = Math.min(Math.abs(ja.h - jb.h), 360 - Math.abs(ja.h - jb.h));
+    assert.ok(apart >= HUE_NEAR, `${a.name} and ${b.name}: pale hair and jackets ${apart.toFixed(0)} degrees of hue apart`);
+  }
+});

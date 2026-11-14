@@ -1,7 +1,12 @@
 # THE UNICORN CLUB: a members-only nightclub, laid out like drawUnicornClub in
 # src/data/arenas.js (neon rainbow arcs behind the fighters, the neon unicorn
-# sign above them, sponsor screens at either side, a lit dance floor). The
-# sponsor screens are painted live by the game and the sparkles stay procedural.
+# sign, sponsor screens at either side, a lit dance floor). The sponsor screens
+# are painted live by the game and the sparkles stay procedural.
+#
+# The sign and the disco ball hang lower than the 2D arena has them, either
+# side of the arcs: above the arcs, as first built, they sat behind the HUD's
+# timer and out of the frame whenever the camera closed in (the v3.20 graphics
+# review). The world's top 150 px or so are under the HUD in a close fight.
 # Built by lab/blender/build_stage.py; units and axes are described there.
 import math
 
@@ -41,7 +46,9 @@ def build(kit):
         + q((20, -16), (46, -6), (44, 26))[1:]
     k = 1 / 65.75
     PINK = m('#ff78f0', 0.3, emit='#ff78f0', strength=6.0)
-    kit.tube([(x * k, 5.05, 5.62 - y * k) for x, y in path], 0.035, PINK)   # above the arcs
+    # on the wall to the right of the arcs, above the right sponsor screen:
+    # 165 to 237 world px down, clear of the HUD and of the outer arc
+    kit.tube([(5.2 + x * k, 5.05, 3.33 - y * k) for x, y in path], 0.035, PINK)
     kit.text('THE UNICORN CLUB', (0, 5.05, 2.35), 0.3, PINK, align='CENTER')     # inside them
 
     # ---- the DJ booth, the disco ball
@@ -49,8 +56,10 @@ def build(kit):
     kit.box((0, 3.74, 0.6), (2.2, 0.02, 0.5), m('#0a3a4a', 0.3, emit='#29d9ff', strength=0.35))
     for x in (-0.6, 0.6):
         kit.cylinder((x, 4.2, 1.12), 0.3, 0.04, m('#222230', 0.3, 0.6))
-    kit.box((-3.3, 3.2, 6.0), (0.02, 0.02, 1.4), BLACK)
-    ball = kit.sphere((-3.3, 3.2, 5.1), 0.42, m('#dfe3ff', 0.08, 1.0))
+    # the ball to the left of the arcs, 165 to 225 world px down, on a cord
+    # that runs up out of the frame
+    kit.box((-3.3, 3.2, 5.21), (0.02, 0.02, 3.0), BLACK)
+    ball = kit.sphere((-3.3, 3.2, 3.3), 0.42, m('#dfe3ff', 0.08, 1.0))
     ball.data.polygons.foreach_set('use_smooth', [False] * len(ball.data.polygons))
 
     # ---- sponsor screens on the side walls (live)
@@ -62,6 +71,6 @@ def build(kit):
     # ---- light: pink and violet washes, a spot on the ball, cyan from the booth
     kit.light('AREA', (-6.0, 2.5, 5.5), 1300, '#ff3d9a', 5.0, rot=(math.radians(-55), math.radians(-30), 0))
     kit.light('AREA', (6.0, 2.5, 5.5), 1300, '#7b5cff', 5.0, rot=(math.radians(-55), math.radians(30), 0))
-    spot = kit.light('SPOT', (-3.3, 0.0, 7.5), 2500, '#ffffff', 0.1, rot=(math.radians(40), 0, 0))
+    spot = kit.light('SPOT', (-3.3, 0.0, 7.5), 2500, '#ffffff', 0.1, rot=(math.radians(37), 0, 0))   # at the ball
     spot.data.spot_size = math.radians(12)
     kit.light('AREA', (0, -6, 5.5), 500, '#ffd0f0', 12.0, rot=(math.radians(50), 0, 0))

@@ -110,7 +110,7 @@ src/
   engine/             the simulation and the renderer
   data/               characters, arenas, moves, the schema and budget
   ui/                 HUD, screens, result card, tutorial, face detection
-  net/                live multiplayer and cloud persistence
+  net/                live multiplayer, cloud persistence, performance reports
   vendor/pico.js      vendored face detection (the Supabase client loads from a CDN)
 incubator/            character authoring tool (admin surface, unlisted)
 lab/                  measurement harnesses. Not shipped logic, but load bearing.
@@ -118,7 +118,7 @@ test/                 node --test, no framework
 docs/                 this file and friends
 ```
 
-### `src/engine` (about 5100 lines, the core)
+### `src/engine` (about 9300 lines, the core)
 
 | Module | Responsibility |
 | --- | --- |
@@ -135,6 +135,8 @@ docs/                 this file and friends
 | `stage.js` | Rendered stages for the 3D prototype: loads an arena's Blender render and draws it with its glow, live screens and overlay. See section 7. |
 | `vfx.js` | Fighting-game effects for the 3D prototype: impact bursts, guard flashes, strike trails, projectile wakes, special cut-ins. Draws the state `fx.js` keeps. See section 7. |
 | `ai.js` | AI opponent. Decision ticks plus a per frame reflex layer. |
+| `resolution.js` | Render only: the game canvas's resolution, stepped down while a round is fought below `RESOLUTION.MIN_FPS`, and back once if a step does not pay (v3.22). |
+| `perfmeter.js` | Render only: how a match ran (frame rate, slow frames, drawing time), for the report `net/perf.js` sends when it ends (v3.22). |
 | `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesized audio, particles and juice, and a dormant sprite-atlas path behind `?sprites`. |
 
 Hit resolution living in `game.js` while fighters own their state is deliberate.
@@ -857,7 +859,9 @@ one stage in about five seconds. What it writes:
   exchange board its candles. What cannot be a panel (confetti, drifting
   clouds, sweeping spotlights, sparkles) is the arena's `stage.overlay`, drawn
   over the stage in world px. Both reuse the procedural arena's own drawing,
-  split out of it without changing a pixel.
+  split out of it without changing a pixel. A sponsor board is lit, so the
+  scrim that pushes the scenery back is taken off it down to
+  `STAGE_ART.BOARD_SCRIM` (`liftBoards`, v3.22).
 
 **Depth: the stage in layers.** A picture moves as one piece when the camera
 pans, so nothing in it read as nearer or further. The build therefore also
@@ -1076,6 +1080,25 @@ by intuition.
   it and 20 per pair moves a fighter by several points on noise alone: use 60
   per pair and two seeds before believing a shift of less than about five
   points. And it measures how well the AI plays a kit as much as the kit.
+  `--def '{"elo":{"stats":...}}'` and `--special '{"sameday":{...}}'` merge a
+  change over a roster fighter or a special for one run, so a kit can be tried
+  before it is written (v3.22). Note that a roster fighter's `stats` are not
+  read: style is the only stat variation (`fighter.js`).
+* `lab/phone-test.html` (on the live site at `/lab/phone-test.html`) times
+  the game as it ships on a phone in twelve setups that each switch one thing
+  off, and since v3.22 sends its results to `perf_reports` when it finishes.
+* `lab/pixels.js` (Node, Playwright) renders 30 seeded match frames from
+  `main` and from the working tree in one browser and compares them: the check
+  that the default game looks exactly as it did.
+
+**Performance reports (v3.22).** Not a lab tool but the same idea in
+production: when a match ends, `engine/perfmeter.js` (render only, fed by the
+frame loop in `main.js`) gives its frame rate, share of slow frames and
+drawing time, and `net/perf.js` sends them with the device's kind (system,
+browser, model, GPU, screen) and a random device number to `report_perf()`,
+by a plain `fetch` with the publishable key and no session. The owner reads
+them on a dashboard. HANDOFF, "v3.22" and "Backend", has what is sent and the
+server's limits.
 
 **Harnesses have been wrong more often than the code.** A short catalogue, since
 the same shapes recur:

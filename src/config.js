@@ -32,11 +32,16 @@ export const STAGE = {
 // lab/blender/build_stage.py) instead of the one picture, each moved by its
 // own depth as the camera pans, so the room has depth when the fight moves.
 // Off, or for a stage built before layers, the picture draws as it always did.
+// BOARD_SCRIM is the scrim a rendered stage's sponsor boards keep: they are
+// lit screens, so the scrim that pushes the scenery back (STAGE.SCRIM, an
+// arena's own) is taken off them down to this. Under 0.42 to 0.62 of it they
+// were hard to read (the v3.20 graphics review).
 export const STAGE_ART = {
   GLOW_BLUR: 7,
   GLOW: { LOW: 0.35, HIGH: 0.75, RATE: 1.6 },
   KEEP: 2,
   PARALLAX: true,
+  BOARD_SCRIM: 0.15,
 };
 
 // The fight's drawing resolution on a phone that cannot draw it at full:

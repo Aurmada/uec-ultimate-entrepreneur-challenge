@@ -120,6 +120,55 @@ function drawGlow(ctx, glow, alpha, dx = 0) {
   ctx.restore();
 }
 
+// Each live screen the arena paints: its quad, in world px, how far its layer
+// has moved with the camera, and its painter.
+function eachScreen(stage, pan, fn) {
+  const painters = stage.arena.stage.screens || {};
+  for (const [id, quad] of Object.entries(stage.spec.screens)) {
+    const paint = painters[id];
+    if (!paint) continue;
+    fn(quad, stage.layers ? layerShift(stage.spec.screenP?.[id] ?? 1, pan) : 0, paint);
+  }
+}
+
+// A screen faces the camera, so its quad is a rectangle, possibly scaled: map
+// a w x h box onto it from three corners. It moves with the layer it hangs in.
+function paintScreen(ctx, quad, dx, paint, t) {
+  const [tl, tr, , bl] = quad;
+  const w = Math.hypot(tr[0] - tl[0], tr[1] - tl[1]);
+  const h = Math.hypot(bl[0] - tl[0], bl[1] - tl[1]);
+  ctx.save();
+  ctx.transform((tr[0] - tl[0]) / w, (tr[1] - tl[1]) / w, (bl[0] - tl[0]) / h, (bl[1] - tl[1]) / h, tl[0] + dx, tl[1]);
+  paint(ctx, w, h, t);
+  ctx.restore();
+}
+
+// The sponsor boards (a painter marked `board`) lit through the scrim, down to
+// STAGE_ART.BOARD_SCRIM of it: called right after the scrim, with the scrim it
+// drew. Where the stage is on another canvas under this one (`onScreen`, the
+// sharp and layered paths), the scrim is thinned over each board, so the board
+// below shows at its own resolution; where the stage is in this canvas, the
+// board is painted again over the scrim at the strength that comes to the
+// same. Either way the scrim left on it is BOARD_SCRIM.
+export function liftBoards(ctx, stage, t, pan, scrim, onScreen) {
+  if (!(scrim > STAGE_ART.BOARD_SCRIM)) return;
+  ctx.save();
+  ctx.globalAlpha = 1 - STAGE_ART.BOARD_SCRIM / scrim;
+  if (onScreen) {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000';               // opaque: the erase is globalAlpha's strength, not the last fill's
+  }
+  eachScreen(stage, pan, (quad, dx, paint) => {
+    if (!paint.board) return;
+    if (!onScreen) { paintScreen(ctx, quad, dx, paint, t); return; }
+    ctx.beginPath();
+    quad.forEach(([x, y], i) => (i ? ctx.lineTo(x + dx, y) : ctx.moveTo(x + dx, y)));
+    ctx.closePath();
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
 // Draws the stage over the world rect (0, 0, W, H) in world px, under whatever
 // transform ctx already carries: the native world canvas, or the screen under
 // the camera for sharp fighters. `pan` is how far the camera has moved from
@@ -145,22 +194,7 @@ export function drawStage(ctx, stage, t, pan = 0) {
     ctx.drawImage(stage.back, 0, 0, W, H);
     drawGlow(ctx, stage.glow, glow);
   }
-  const painters = stage.arena.stage.screens || {};
-  for (const [id, quad] of Object.entries(stage.spec.screens)) {
-    const paint = painters[id];
-    if (!paint) continue;
-    // A screen faces the camera, so its quad is a rectangle, possibly scaled:
-    // map a w x h box onto it from three corners. It moves with the layer it
-    // hangs in.
-    const [tl, tr, , bl] = quad;
-    const w = Math.hypot(tr[0] - tl[0], tr[1] - tl[1]);
-    const h = Math.hypot(bl[0] - tl[0], bl[1] - tl[1]);
-    const dx = stage.layers ? layerShift(stage.spec.screenP?.[id] ?? 1, pan) : 0;
-    ctx.save();
-    ctx.transform((tr[0] - tl[0]) / w, (tr[1] - tl[1]) / w, (bl[0] - tl[0]) / h, (bl[1] - tl[1]) / h, tl[0] + dx, tl[1]);
-    paint(ctx, w, h, t);
-    ctx.restore();
-  }
+  eachScreen(stage, pan, (quad, dx, paint) => paintScreen(ctx, quad, dx, paint, t));
   // What a still picture cannot hold (confetti, drifting clouds), in world px,
   // at the depth the arena gives it (`overlayP`, the fight lane by default).
   const overlay = stage.arena.stage.overlay;

@@ -321,7 +321,7 @@ simply unused before you build a new one. It usually does.
 
 | Document | Contents |
 | --- | --- |
-| `docs/HANDOFF.md` | Where the project stands, what is next, open decisions, and what lives only outside the repo. Start here. |
+| `docs/HANDOFF.md` | Where the project stands, how the parts connect, where the reasons are written down, what is next, open decisions, and what lives only outside the repo. Start here. |
 | `docs/ARCHITECTURE.md` | System design, the simulation and rendering boundary, netcode protocol, the budget, rendering pipeline, known hazards. Section 7 also covers the 3D prototype. |
 | `docs/GAME-MATH.md` | Damage, combos, stats, progression. The balance maths. |
 | `docs/CHARACTER-ART-BRIEF.md` | The art direction problem, written for an outside reviewer. |

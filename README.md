@@ -71,9 +71,12 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
-## What's new in v3.22: smoother on slower phones
+## What's new in v3.22: smoother on slower phones, and a fairer Champion
 
 - 📱 **The game adjusts to your phone.** If your phone can't keep a fight smooth, the game lowers its drawing resolution by itself after a couple of seconds, a little softer and up to half again as many frames. If that doesn't help (Low Power Mode, say), it goes back to sharp. Phones that keep up are never touched.
+- 🥊 **Jeff and Elo fight back.** Elo's PLATFORM BURN comes out faster and hits harder, and Jeff's UNDERCUT hits harder, so the two are no longer the easiest opponents at Champion.
+- 🎨 **Easier to tell apart.** Cathie now wears claret, so she and Lizbeth no longer look like a pair; the Unicorn Club's neon unicorn and disco ball hang where you can see them; and the sponsor boards on the 3D stages are easier to read.
+- 🌐 Online, v3.22 plays v3.22 only: the balance changes change the fight.
 - 📊 **Performance reports.** After each match the game sends how it ran on your device (the frame rate, the screen, the browser and the graphics chip) with a random number for the device and nothing about you, so it can be made to run well on more phones. Turn it off in ⚙️ Settings; a browser set to Global Privacy Control sends none.
 
 ## What's new in v3.21: bodies, a throw and a coat
