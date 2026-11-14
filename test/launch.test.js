@@ -142,9 +142,13 @@ test("the phone test page is the site's own: the game's files, nothing from outs
   for (const from of imports) assert.match(from, /^\.\.\/src\//, `${from} is not the game's own file`);
   assert.match(code, /import \{[^}]*\bVERSION\b[^}]*\} from '\.\.\/src\/config\.js';/);
   assert.match(code, /\$\('ver'\)\.textContent = VERSION;/, 'the page does not say which version it timed');
-  // rule 1: no outside script, stylesheet or font, and no fetch of its own
+  // rule 1: no outside script, stylesheet or font, and no fetch of its own:
+  // its results go to the server the game's own way (net/perf.js, v3.22)
   assert.doesNotMatch(page.replace(/<!--[\s\S]*?-->/g, ''), /https?:\/\//, 'the page loads something from outside the site');
   assert.doesNotMatch(code, /\bfetch\(|localStorage|supabase/i);
+  assert.match(code, /import \{ reportPerf, savedSettings \} from '\.\.\/src\/net\/perf\.js';/);
+  assert.match(code, /await reportPerf\(\{\s*settings: savedSettings\(\), source: 'test', version: VERSION,/, "the page does not send its results, or not past the game's off switch");
+  assert.match(code, /\$\('status'\)\.innerHTML = await send\(\);/, 'the tester is not told whether the results were sent');
 });
 
 test("the phone test's switches are all on in the game, and each leaves out what it says", async () => {

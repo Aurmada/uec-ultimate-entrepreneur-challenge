@@ -107,7 +107,7 @@
     <ol class="steps">
       <li>Open this page in the phone's own browser (Chrome on Android, Safari on an iPhone), with nothing else running, the battery above 30% and Low Power Mode or battery saver off.</li>
       <li>Tap <b>Run the test</b>, keep the screen on and leave the phone for about a minute and a half.</li>
-      <li>Tap <b>Copy results</b> and send them on: paste them into a message or an email. Chrome on Android names the phone's model in the results.</li>
+      <li>That is all: when it finishes, the results go to the game's server on their own, with a random number for the phone and nothing about you. Chrome on Android names the phone's model in them. <b>Copy results</b> is there too, to send them yourself.</li>
     </ol>
   </header>
 
@@ -150,6 +150,7 @@ import { enable3D, disable3D, reset3D, stats3D, pending3D, sculpts3D } from '../
 import { STAGES, stageFor } from '../src/engine/stage.js';
 import { FX_STYLE } from '../src/engine/fx.js';
 import { STYLE } from '../src/engine/drawFighter.js';
+import { reportPerf, savedSettings } from '../src/net/perf.js';
 
 // The two heaviest sculpts (about 66,000 and 65,000 triangles), so this is
 // the worst case.
@@ -336,7 +337,7 @@ const summary = (list) => {
   const median = g[Math.floor(g.length / 2)];
   return {
     fps: 1000 / (mean(g) || 16.7), mean: mean(r), p95: r[Math.floor(r.length * 0.95)], fight: mean(list.map((f) => f.fight)),
-    slow: g.filter((x) => x > median * 1.5).length / g.length, n: list.length,
+    slow: g.filter((x) => x > median * 1.5).length / g.length, n: list.length, seconds: g.reduce((a, b) => a + b, 0) / 1000,
   };
 };
 const results = {};
@@ -431,6 +432,33 @@ function report() {
   return lines.join('\n');
 }
 
+// The results to the game's server (net/perf.js, report_perf): 3D as shipped
+// as the headline, or 2D where 3D could not start, and every setup in the
+// list. Sent unless performance reports are off in the game's Settings on
+// this phone. Returns what to tell the tester.
+const r2 = (x, places = 2) => Math.round(x * 10 ** places) / 10 ** places;
+async function send() {
+  const ref = shipped3D(), d2 = ok('d2') ? results.d2 : null;
+  const head = ref ? ['d3', 'd3-again'].filter(ok).map((id) => results[id]) : d2 ? [d2] : [];
+  if (!head.length) return 'Nothing was timed, so nothing was sent.';
+  const avg = (key) => head.reduce((a, r) => a + r[key], 0) / head.length;
+  const setups = SETUPS.map((s) => {
+    const r = results[s.id];
+    if (!r || r.skipped) return { id: s.id, skipped: true };
+    return { id: s.id, fps: r2(r.fps, 1), draw: r2(r.mean), fight: r2(r.fight), p95: r2(r.p95), slow: r2(r.slow, 3) };
+  });
+  const said = await reportPerf({
+    settings: savedSettings(), source: 'test', version: VERSION, mode: ref ? '3d' : '2d', scale: DPR, setups,
+    summary: {
+      fps: r2(ref ? ref.fps : d2.fps, 1), slow: r2(avg('slow'), 3), draw_ms: r2(ref ? ref.mean : d2.mean),
+      seconds: r2(Object.values(results).reduce((a, r) => a + (r.seconds || 0), 0), 1),
+    },
+  });
+  return said === 'recorded' ? '<b>Done, and sent</b> to the game\'s server: there is nothing more to do.'
+    : said === 'off' ? '<b>Done.</b> Performance reports are off on this phone, so nothing was sent: copy the results and send them on.'
+      : '<b>Done</b>, but the results could not be sent: copy them and send them on.';
+}
+
 let wake = null;
 runBtn.addEventListener('click', async () => {
   runBtn.disabled = true;
@@ -449,8 +477,9 @@ runBtn.addEventListener('click', async () => {
   $('meter').style.width = '100%';
   $('out').value = report();
   $('out').hidden = false;
-  $('status').innerHTML = '<b>Done.</b> Copy the results and send them on.';
   $('copy').disabled = false;
+  $('status').innerHTML = 'Sending the results&hellip;';
+  $('status').innerHTML = await send();
   runBtn.disabled = false;
   runBtn.textContent = 'Run it again';
   try { await wake?.release(); } catch (e) { /* already released */ }

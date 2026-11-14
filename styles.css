@@ -815,6 +815,8 @@ label.btn { display: inline-block; }
   background: linear-gradient(0deg, rgba(11,14,26,.96) 70%, rgba(11,14,26,0));
 }
 .about-cta .btn { width: 100%; max-width: 400px; }
+/* What the game sends, under the way on: fine print, there to be found. */
+.hint.center.about-fine { max-width: 560px; margin: 0 auto; padding: 0 8px 8px; font-size: 11px; }
 
 /* Look customiser: reuses .pick-row / .arena-strip / .a-tile from the select screen */
 .look-panel { display: flex; flex-direction: column; gap: 10px; }

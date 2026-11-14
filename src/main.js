@@ -16,6 +16,8 @@ import { drawPortrait, enableSprites, spritesReady, STYLE } from './engine/drawF
 import { enable3D, stats3D, startTiming, athletes3D, sculpts3D } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
 import { ResolutionGovernor } from './engine/resolution.js';
+import { PerfMeter } from './engine/perfmeter.js';
+import { reportPerf } from './net/perf.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
   showShareCard, openInvite, openModal, closeModals, renderProfile,
@@ -178,6 +180,7 @@ function reallyStartMatch(cfg) {
   // the same fighter on both sides: the second in a colourway of its own
   const p2Def = mirrorDef(cfg.p1Def, cfg.p2Def);
 
+  openPerf();                         // timed afresh each match, for its report
   resolution.restart();               // judged afresh each match, from the step it keeps
   currentGame = new Game({
     p1: { def: cfg.p1Def, controller: p1Controller },
@@ -229,6 +232,7 @@ function reallyStartMatch(cfg) {
 }
 
 function onMatchEnd(result) {
+  finishPerf();
   lastResult = result;
   // A guest's one fight does not count: the ladder is for signed-in founders.
   const ranked = result.mode === 'solo' && !currentSetup?.guest;
@@ -350,6 +354,7 @@ function nextFight() {
 }
 
 function quitMatch() {
+  finishPerf();                       // a match left because it ran badly is the one to hear about
   closeModals();
   currentGame = null;
   showScreen('scr-title');
@@ -673,6 +678,7 @@ function startOnlineMatch(cfg) {
   input.reset();
   currentSetup = { mode: 'online', arena: getArena(cfg.arena) };
   lastRanked = null;
+  openPerf();                         // timed afresh each match, for its report
   resolution.restart();               // judged afresh each match, from the step it keeps
   currentGame = new Game({
     p1: { def: hostDef, controller: netCtl[0] },
@@ -713,6 +719,7 @@ function startOnlineMatch(cfg) {
 }
 
 function onOnlineMatchEnd(result) {
+  finishPerf();
   netPhase = 'results';
   $('netStatus').classList.add('hidden');
   result.localIdx = netLocalIdx;
@@ -768,6 +775,7 @@ function tryOnlineRematch() {
 
 function abortOnline(msg) {
   clearTimeout(splashTimer);
+  finishPerf();
   currentGame = null;
   endNetSession();
   closeModals();
@@ -836,7 +844,7 @@ function netStep(rawDt) {
   el.classList.toggle('warn', stalled);
   $('netStatusText').textContent = stalled ? 'SYNCING…' : 'LIVE';
   if (net.stalledMs > 20000) { abortOnline('Connection lost.'); return; }
-  if (!document.hidden) renderGame(gctx, currentGame);
+  if (!document.hidden) drawFight();
 }
 
 // ---------------------------------------------------------------- pause
@@ -1079,21 +1087,54 @@ function loop(now) {
   lastT = now;
   const fightActive = document.getElementById('scr-fight').classList.contains('active');
   // judged only on a round being fought, the heaviest the drawing gets
-  if (fightActive && currentGame?.state === 'fighting' && !currentGame.paused && !document.hidden && !fixedRes) {
+  const judged = fightActive && currentGame?.state === 'fighting' && !currentGame.paused && !document.hidden;
+  if (judged && !fixedRes) {
     const scale = resolution.sample(gap);
     if (scale) setGameResolution(scale);
   }
+  drawMs = 0;
   if (fightActive && currentGame) {
     if (netMatchActive()) {
       netStep(dt);
     } else {
       currentGame.update(dt);
-      renderGame(gctx, currentGame);
+      drawFight();
     }
   } else {
     drawBg(now / 1000);
   }
+  if (judged) matchPerf.sample(gap, drawMs, resolution.scale);
   requestAnimationFrame(loop);
+}
+
+// The fight drawn, and how long the drawing took, for the match's report.
+let drawMs = 0;
+function drawFight() {
+  const t0 = performance.now();
+  renderGame(gctx, currentGame);
+  drawMs = performance.now() - t0;
+}
+
+// How each match runs on this device (engine/perfmeter.js), sent when it ends,
+// is quit or is cut off (net/perf.js; Settings turns it off). RENDER-ONLY:
+// nothing in the fight reads it. A match too short to say anything is not
+// sent, and one is never sent twice.
+const matchPerf = new PerfMeter();
+let perfOpen = false;
+function openPerf() {
+  finishPerf();
+  matchPerf.restart();
+  perfOpen = true;
+}
+function finishPerf() {
+  if (!perfOpen) return;
+  perfOpen = false;
+  const summary = matchPerf.summary();
+  if (!summary) return;
+  reportPerf({
+    settings: Save.settings, source: 'match', version: VERSION,
+    mode: stats3D().enabled ? '3d' : '2d', scale: resolution.scale, summary, setups: summary.steps,
+  }).then((said) => { if (DEBUG) window.__perfSaid = said; });
 }
 
 // ---------------------------------------------------------------- boot
@@ -1340,6 +1381,7 @@ function boot() {
       spritesReady,
       enable3D,
       stats3D,
+      matchPerf,
       Save,
       input,
       startMatch,

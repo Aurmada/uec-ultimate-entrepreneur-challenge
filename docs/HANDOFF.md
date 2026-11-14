@@ -889,7 +889,7 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## v3.22, built 2026-11-14: the resolution steps down on a slow phone
+## v3.22, built 2026-11-14: the resolution steps down on a slow phone, and the game reports how it runs
 
 **Round eight** (2026-11-14, v3.21.1's breakdown, fps):
 
@@ -944,6 +944,49 @@ in the game. The default game is unchanged: `lab/pixels.js` against
 v3.21.1, 30 frames identical with the flags off and with `--flags gl` (it
 draws through `renderGame`, not the game's loop, so the governor is not in
 it; `test/resolution.test.js` is).
+
+**Performance reports** (the owner's idea, 2026-11-14: "collect this data
+when the test is conducted and saved on our backend so it doesn't need to be
+copied and pasted", and from players once the game launches, to learn how
+many devices play it, which ones, and how it runs on them). The owner chose:
+on by default with an off switch in Settings and a line in THE STORY saying
+what is sent; a random number per device, never tied to the account; the
+table and its function applied to the live project.
+
+- When a match ends, is quit or is cut off, the game sends how it ran
+  (`engine/perfmeter.js` measures, `net/perf.js` sends, `main.js` wires them,
+  `PERF` in config). RENDER-ONLY: the meter is fed frame gaps and the time
+  `renderGame` took, on a round being fought with the page shown and the fight
+  not paused (as the resolution is judged), and nothing in the fight reads it.
+  A match fought for under 10 seconds is not sent, and none is sent twice.
+- What is sent: the system and browser by family and version (never the whole
+  user agent; Chromium's real Android version and model come from
+  `getHighEntropyValues`, since its user agent says "Android 10; K" on every
+  phone), the GPU's name, the screen, the pixel ratio, cores and memory, 2D or
+  3D, the scale it ended at, the frame rate, the share of slow frames (over 1.5
+  times the match's median frame, as the phone test counts them), the drawing
+  time a frame, the seconds timed, and each scale it was drawn at with its frame
+  rate. The device's random number lives in its own storage key,
+  `uec-device`: never in the save, the profile sync or beside the account.
+- It is off when Settings says so (`Save.settings.perf`, on for a new player
+  and for a save from before v3.22), when the browser sends Global Privacy
+  Control, and in a browser driven by a script (`navigator.webdriver`: the
+  lab's and the tests' runs send nothing).
+- The phone test sends its results the same way when it finishes (source
+  `test`: 3D as shipped as the headline and all twelve setups in `setups`),
+  says on screen whether they went, and keeps **Copy results** for when they
+  could not. It honours the game's switch on the same phone.
+- Checked: in the real game in a headless browser, a match fought 11 seconds
+  and quit built its report, in 2D and in 3D, and sent nothing (a scripted
+  browser); that report and a phone test's, run through `report_perf()` as an
+  anonymous caller in a transaction rolled back, were both recorded, and the
+  table was left empty. `test/perf.test.js` mirrors the server's checks; each
+  of its tests fails with the part it covers broken. The default game is
+  unchanged: `lab/pixels.js` against main, 30 frames identical with the flags
+  off and with `--flags gl`.
+- **For the owner to decide:** how long to keep rows (none are deleted now; a
+  row is under 2 KB, so 100,000 matches are about 100 to 200 MB), and when the
+  game has players, a dashboard over the table.
 
 ## v3.21.1, released 2026-11-14: the phone test breaks the frame down
 
@@ -2752,6 +2795,23 @@ per-move impact variations (step 5). Their notes are kept so the history reads.
   `select opponent, level, count(*) as n, round(avg(won::int) * 100) as player_win_pct from solo_results group by 1, 2 order by 2, 4;`
   The security advisor flags its "RLS enabled, no policy" and the RPC being
   callable when signed in; both are intended, as for `report_match()`.
+- `perf_reports` (since v3.22) records how the game runs on the devices it is
+  played on: one row a match (source `match`) or a finished phone test
+  (`test`). Columns: `created_at`, `source`, `device` (a random uuid made on
+  the device, not a user id), `version` (`v3.22` shaped), `os` (40 characters
+  at most), `browser` (40), `model` (64), `gpu` (120), `screen_w` and
+  `screen_h` (1 to 10,000), `dpr` (over 0, to 8), `cores` (1 to 256),
+  `memory_gb` (over 0, to 1,024), `mode` (`3d` or `2d`), `scale` (over 0, to 4),
+  `fps` (0 to 500, required), `slow` (0 to 1), `draw_ms` (0 to 1,000),
+  `seconds` (0 to 3,600) and `setups` (a JSON array of at most 8 KB). Nothing
+  about the player. RLS is on with no policies and no grants; the
+  security-definer RPC `report_perf()` writes it for anyone, signed in or not,
+  answers 'recorded', 'invalid' (a field outside the checks, or no device) or
+  'busy' (more than 600 rows a minute in all, or 60 an hour from one device).
+  `test/perf.test.js` mirrors these checks: change the two together. Only the
+  owner reads it, for example:
+  `select model, gpu, mode, count(distinct device) as devices, round(avg(fps)::numeric, 1) as fps from perf_reports where source = 'match' group by 1, 2, 3 order by devices desc;`
+  The advisor flags it as for `solo_results`: intended.
 - Live matches use Realtime broadcast channels (one per room) and a presence
   lobby. No tables. Protocol in ARCHITECTURE section 5.
 - `UEC.signInAs()` is local only: it creates no auth user and no profile row.

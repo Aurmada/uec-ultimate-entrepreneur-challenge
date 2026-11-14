@@ -15,8 +15,10 @@ const DEFAULTS = () => ({
   stats: { wins: 0, losses: 0, kos: 0, streak: 0, bestStreak: 0, points: 0, matches: 0 },
   // graphics: '3d' or '2d' as the player chose, or null, not chosen: 3D
   // wherever it can be drawn (graphics.js). v3.13 saved 'classic' as everyone's
-  // default, so it reads as not chosen too.
-  settings: { volume: 80, music: true, sfx: true, graphics: null },
+  // default, so it reads as not chosen too. perf: whether a match's report of
+  // how it ran is sent (net/perf.js); a save from before v3.22 has none, which
+  // reads as on, as it does for a new player.
+  settings: { volume: 80, music: true, sfx: true, graphics: null, perf: true },
   tutorialSeen: false,
   storySeen: false,        // the intro plays once, then lives under THE STORY
   lastSelf: 'custom',      // who you play AS (your founder, or a roster character)

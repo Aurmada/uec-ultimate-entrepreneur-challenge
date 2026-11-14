@@ -61,6 +61,6 @@ test('the game sizes its canvas from the governor and feeds it only a round bein
   const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
   assert.match(main, /setGameResolution\(resolution\.scale\);/);
   assert.match(main, /canvas\.width = Math\.round\(STAGE\.W \* scale\);\s*canvas\.height = Math\.round\(STAGE\.H \* scale\);\s*gctx\.setTransform\(scale, 0, 0, scale, 0, 0\);/);
-  assert.match(main, /if \(fightActive && currentGame\?\.state === 'fighting' && !currentGame\.paused && !document\.hidden && !fixedRes\) \{\s*const scale = resolution\.sample\(gap\);\s*if \(scale\) setGameResolution\(scale\);/);
+  assert.match(main, /const judged = fightActive && currentGame\?\.state === 'fighting' && !currentGame\.paused && !document\.hidden;\s*if \(judged && !fixedRes\) \{\s*const scale = resolution\.sample\(gap\);\s*if \(scale\) setGameResolution\(scale\);/);
   assert.equal((main.match(/resolution\.restart\(\);[^\n]*\n\s*currentGame = new Game\(\{/g) || []).length, 2, 'a match, solo or online, is not judged afresh');
 });

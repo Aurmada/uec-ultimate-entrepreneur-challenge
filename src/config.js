@@ -47,13 +47,28 @@ export const STAGE_ART = {
 // hold. It never steps back up in a session, so it cannot hunt. A frame gap
 // over STALL ms (a hitch the browser took, not the phone's pace) is left out;
 // a hidden page and a paused fight are not judged at all. A phone drawing 2
-// frames a second still steps down. Round seven of the phone test (v3.21.1) found a budget Android at 21
-// fps at 2x and 31 at 1x, whatever else was switched off.
+// frames a second still steps down. Round seven of the phone test (v3.21.1)
+// found a budget Android at 21 fps at 2x and 31 at 1x, whatever else was
+// switched off.
 export const RESOLUTION = {
   STEPS: [2, 1.5, 1],
   MIN_FPS: 50,
   WINDOW: 2000,
   SETTLE: 1000,
+  STALL: 1000,
+};
+
+// How a match ran, sent when it ends (engine/perfmeter.js, net/perf.js), so
+// the game can be made to run better on the devices it is played on.
+// RENDER-ONLY: the meter is fed frame gaps and drawing times, and nothing in
+// the fight reads it. Timed as the resolution is, on a round being fought; a
+// gap over STALL ms is left out. A frame counts as slow at SLOW times the
+// match's usual frame (its median), a dropped frame at 60 or at 120 Hz alike,
+// as the phone test counts it. A match fought for under MIN_SECONDS is not
+// sent: too short to say anything.
+export const PERF = {
+  MIN_SECONDS: 10,
+  SLOW: 1.5,
   STALL: 1000,
 };
 

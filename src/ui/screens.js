@@ -1164,8 +1164,32 @@ function wireSound() {
     syncSoundUI();
     audio.sfx('click');
   };
-  $('btn-settings').onclick = () => { audio.sfx('click'); syncGraphicsUI(); openModal('modal-settings'); };
+  $('btn-settings').onclick = () => { audio.sfx('click'); syncGraphicsUI(); syncPerfUI(); openModal('modal-settings'); };
   wireGraphics();
+  wirePerf();
+}
+
+// ---------------------------------------------------------------- performance reports
+
+// Whether a match's report of how it ran is sent (net/perf.js): on unless
+// turned off here, or by the browser's own Global Privacy Control.
+function syncPerfUI() {
+  const gpc = navigator.globalPrivacyControl === true;
+  const on = !gpc && Save.settings.perf !== false;
+  $('setPerf').textContent = `PERFORMANCE REPORTS: ${on ? 'ON' : 'OFF'}`;
+  $('setPerf').disabled = gpc;
+  $('setPerfHint').textContent = gpc
+    ? 'Your browser asks sites not to share what they learn (Global Privacy Control), so none are sent.'
+    : on ? 'After each match: the frame rate, screen, browser and graphics chip, with a random number for this device and nothing about you. It helps the game run well on more phones.'
+      : 'Off: nothing about how the game runs is sent from this device.';
+}
+
+function wirePerf() {
+  $('setPerf').onclick = () => {
+    audio.sfx('click');
+    Save.setSetting('perf', Save.settings.perf === false);
+    syncPerfUI();
+  };
 }
 
 // ---------------------------------------------------------------- graphics
