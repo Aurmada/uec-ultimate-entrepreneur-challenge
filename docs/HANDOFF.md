@@ -6,7 +6,8 @@ first for the standing rules, then this, then `docs/ONBOARDING.md`.
 
 ## In one paragraph
 
-The game is live at v3.21 on GitHub Pages
+The game is live at v3.21.1 on GitHub Pages (v3.21's game, with the phone
+test's breakdown, see "v3.21.1")
 (`https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`), released
 on 2026-11-12 (see "v3.21"; v3.20, the launch build, went out on 2026-11-09): 3D by default, the nine founders the sculpted cast below, each
 in their own fighting form for everything they do (every move, special and
@@ -888,7 +889,7 @@ at the middle while it can hit.
   Block is each form's own, and since the reactions and the walks below, so
   are hit stun, the KO, victory, the walk, the jump, the crouch and the dash.
 
-## v3.21.1, built 2026-11-13: the phone test breaks the frame down
+## v3.21.1, released 2026-11-14: the phone test breaks the frame down
 
 **Round seven** (2026-11-13, v3.21, `lab/phone-test.html` on the site, the
 owner's phones in their own browsers):
