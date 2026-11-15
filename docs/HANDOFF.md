@@ -17,10 +17,13 @@ serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/
 so a push to `main` is a release.
 
 - **Live:** v3.22.2, released 2026-11-14 (`VERSION` in `src/config.js`;
-  `SIM_VERSION` 13 in `src/net/online.js`). 3D by default, 2D in Settings.
-- **What v3.22.2 changed:** the 2D fighters' shading draws one way between
-  its canvases, the fix for the iPhone 12 Pro's 19 fps in 2D (see
-  "v3.22.2"); the same pixels.
+  `SIM_VERSION` 13 in `src/net/online.js`). One version, 3D; 2D only as
+  the fallback.
+- **What v3.22.2 changed:** one version, 3D: the 2D or 3D choice is out of
+  Settings, and the 2D game is only the fallback where 3D cannot be drawn.
+  And the 2D fighters' shading draws one way between its canvases, the fix
+  for the iPhone 12 Pro's 19 fps in 2D, with the same pixels (see
+  "v3.22.2").
 - **What v3.22.1 added:** round ten of the phone test, which switches off the
   pieces of the two parts round nine found slow (see "v3.22.1"). The game
   plays as v3.22 did.
@@ -132,8 +135,8 @@ In the order they pay off:
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.22.2 (`SIM_VERSION` 13): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
-| `claude/v3.22.2` | The 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-14, merged into `main`. |
+| `main` | The live game, v3.22.2 (`SIM_VERSION` 13): one version, 3D, with the sculpted cast; 2D only as the fallback | Deployed. A push here is a release. |
+| `claude/v3.22.2` | One version, 3D (no 2D choice in Settings), the 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-14, merged into `main`. |
 | `claude/v3.22.1` | Round ten of the phone test, and the stack's old canvases leaving the page with a dropped 3D layer (see "v3.22.1") | Released in v3.22.1 on 2026-11-14, merged into `main`. |
 | `claude/v3.22` | The resolution step-down, the performance reports and dashboard, the balance pass and the art notes (see "v3.22") | Released in v3.22 on 2026-11-14, merged into `main`. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
@@ -188,8 +191,11 @@ was never pushed.
 **Settled:**
 
 - **3D by default** (v3.14), on how it ran on the owner's iPhone. The 2D rig
-  stays: the fallback without WebGL2 or when the GPU context is lost, and the
-  Settings choice.
+  stays: the fallback without WebGL2 or when the GPU context is lost.
+- **One version, 3D** (v3.22.2, asked for on 2026-11-15, "keep one version
+  3D"): no 2D or 3D choice in Settings; a 2D choice saved before is not read.
+  The 2D rig stays as the fallback, so its speed still matters (the shading
+  fix in the same release).
 - **Fighters overlap at close range** (v3.21): each fighter keeps a push half
   of their own, measured from their sculpt, not by `build`.
 - **Balance for Jeff and Elo** (v3.22, asked for on 2026-11-14): Elo's
@@ -372,7 +378,21 @@ why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
 
-## v3.22.2, released 2026-11-14: the 2D shading draws one way
+## v3.22.2, released 2026-11-15: one version, 3D, and the 2D shading draws one way
+
+**One version, 3D** (the owner, 2026-11-15: "keep one version 3D"). Settings
+had a GRAPHICS button for 2D or 3D since v3.13; it is gone, and
+`graphicsFlags` in `src/graphics.js` no longer takes the settings, so a 2D
+choice a player saved is not read (it stays in old saves, unread). The game
+is 3D wherever WebGL2 is there to draw it and the 2D game otherwise, as for a
+new player before. Where 3D cannot be drawn (no WebGL2, or it would not
+start), Settings says so in one line instead of the button; `?gl=0` still
+shows the 2D game for the lab and says nothing. `test/graphics.test.js` pins
+it (the old code fails it), and a headless browser loaded with a save that
+chose 2D plays in 3D, opens Settings without the button, and, with WebGL
+turned off, shows the line.
+
+**The 2D shading draws one way.**
 
 Round ten (see "v3.22.1") found the iPhone 12 Pro's 2D game held to 19 fps
 by two of the shading's passes, the key light and the rim (40 without
@@ -393,7 +413,7 @@ identical with the flags off (the 2D fighters, through this shading) and with
 and checks that no canvas is drawn on after it was drawn from, between one
 fighter reaching the frame and the next; on v3.22.1's shading it finds the
 round trips. The 3D path does not use this shading, so the default game is
-untouched; 2D is the Settings choice and the fallback without WebGL2.
+untouched; 2D is the fallback without WebGL2.
 
 The phone test is unchanged but for its name (round eleven), so its rows
 read against round ten's: on the iPhone, 2D as shipped was 19.1.

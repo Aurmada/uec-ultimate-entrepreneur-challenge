@@ -1353,14 +1353,14 @@ function boot() {
   // figure.js), opt-in via ?figure while it is reviewed. Render-only.
   if (new URLSearchParams(location.search).has('figure')) STYLE.figure = true;
 
-  // The 3D preview, from the address (?gl and its pieces) or the player's
-  // choice in Settings (graphics.js has which flag does what). Live 3D
+  // The 3D game wherever it can be drawn, its pieces switchable from the
+  // address (?gl and the rest; graphics.js has which flag does what). Live 3D
   // fighters in their own look (?gl=max,dex for only those, &perf for a
   // timing readout); fighters drawn at screen resolution (RENDER in
   // render.js), so the 3D is judged at its real sharpness; the arenas rendered
   // in Blender (engine/stage.js); and the fighting-game hit effects
   // (engine/vfx.js). Each defaults to off, which is the classic game.
-  const gfx = graphicsFlags(location.search, Save.settings, { webgl2: hasWebGL2() });
+  const gfx = graphicsFlags(location.search, { webgl2: hasWebGL2() });
   // In 3D the roster wear their sculpted models and fight in their own forms;
   // ?gl&athlete puts them in the athlete bodies instead, on test (models3d.js).
   if (gfx.sculpts) sculpts3D(true);
@@ -1369,7 +1369,7 @@ function boot() {
   if (!gfx.gl && gfx.perf && STYLE.figure) startTiming();   // ?figure&perf: what the figure costs here
   // The fighters open the round with a gesture only in their own forms, so
   // only then does ROUND and FIGHT! go up out of its way (styles.css): the 2D
-  // game keeps it where it always was. A change in Settings reloads the page.
+  // game keeps it where it always was.
   document.body.classList.toggle('gl3d', !!(on3D && gfx.sculpts));
   RENDER.sharpFighters = gfx.sharp;
   STAGES.enabled = gfx.stages;

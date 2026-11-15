@@ -71,6 +71,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.22.2: one game, in 3D
+
+- 🎮 **3D for everyone, with nothing to choose.** The 2D or 3D button is gone from Settings: everyone plays the founders as 3D fighters on rendered stages. If you chose 2D before, you are in 3D now. A browser that cannot draw 3D still gets the 2D game, and Settings says why.
+- ⚡ **A lighter 2D game where 3D cannot run.** The 2D fighters' shading draws the same picture without copying each fighter back and forth between two images, which held an iPhone 12 Pro's 2D game to 19 frames a second in the phone test.
+
 ## What's new in v3.22: smoother on slower phones, and a fairer Champion
 
 - 📱 **The game adjusts to your phone.** If your phone can't keep a fight smooth, the game lowers its drawing resolution by itself after a couple of seconds, a little softer and up to half again as many frames. If that doesn't help (Low Power Mode, say), it goes back to sharp. Phones that keep up are never touched.

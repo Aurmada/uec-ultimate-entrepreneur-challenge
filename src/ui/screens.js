@@ -4,7 +4,7 @@
 import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, PLAYER_SPECIALS, playerSpecialId, UNICORN_META, LOOKS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
-import { graphicsFlags, withoutGraphicsParams, hasWebGL2 } from '../graphics.js';
+import { graphicsFlags, hasWebGL2 } from '../graphics.js';
 import { stats3D } from '../engine/gl3d/index.js';
 import { STYLES, rankFor, AI_LEVELS, BODY } from '../config.js';
 import { SLOT_GLYPH, commandCost } from '../data/schema.js';
@@ -1165,7 +1165,6 @@ function wireSound() {
     audio.sfx('click');
   };
   $('btn-settings').onclick = () => { audio.sfx('click'); syncGraphicsUI(); syncPerfUI(); openModal('modal-settings'); };
-  wireGraphics();
   wirePerf();
 }
 
@@ -1194,35 +1193,17 @@ function wirePerf() {
 
 // ---------------------------------------------------------------- graphics
 
-// 2D or 3D, the player's choice (graphics.js); 3D unless they choose 2D or
-// the browser cannot draw it. A change reloads the page: the renderers are
-// set up once, at load, and a reload is the one way to be sure 2D is the
-// classic game with nothing of the 3D path left running. Any graphics flags
-// in the address go too, or they would outvote it. What is on screen, which
-// an address can change whatever was chosen: the button shows that, and
-// pressing it changes that.
+// One version, 3D (graphics.js): nothing to choose since v3.22.2. Where the
+// 3D cannot be drawn (no WebGL2, or it would not start), the game is the 2D
+// one, and Settings says why the fighters look flat. A ?gl=0 in the address
+// asks for 2D, so that says nothing.
 let webgl2 = null;
-const showing3D = () => graphicsFlags(location.search, Save.settings, { webgl2: webgl2 ??= hasWebGL2() }).gl;
 
 function syncGraphicsUI() {
-  const on = showing3D();
-  $('setGfx').textContent = `GRAPHICS: ${on ? '3D' : '2D'}`;
   const s3 = stats3D();
-  $('setGfxHint').textContent = on && s3.enabled === false && !s3.renderer
-    ? '3D needs WebGL2, which this browser does not have, so you are seeing 2D.'
-    : on ? 'The founders in 3D, each in their own fighting style. Switch to 2D any time.'
-      : 'Switch to 3D: the founders as 3D fighters, each in their own fighting style, on rendered stages.';
-}
-
-function wireGraphics() {
-  $('setGfx').onclick = () => {
-    audio.sfx('click');
-    Save.setSetting('graphics', showing3D() ? '2d' : '3d');
-    // replaceState then reload: assigning a URL that differs only by its hash
-    // would not reload at all.
-    history.replaceState(null, '', location.pathname + withoutGraphicsParams(location.search) + location.hash);
-    location.reload();
-  };
+  const flat = graphicsFlags(location.search).gl && (!(webgl2 ??= hasWebGL2()) || (s3.enabled === false && !s3.renderer));
+  $('setGfxHint').textContent = flat ? 'This browser cannot draw the 3D fighters, so the game is in 2D.' : '';
+  $('setGfxHint').classList.toggle('hidden', !flat);
 }
 
 // ---------------------------------------------------------------- misc

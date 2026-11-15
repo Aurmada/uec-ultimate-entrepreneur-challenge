@@ -550,18 +550,16 @@ restoring every context mid-match: the frame after matches the frame before.
 | `?gl=max,dex` | Only the fighters with those ids do, for comparisons and benchmarks. |
 | `&perf` | On-screen timing, with `gl.finish()` per 3D fighter, so GPU time is included (worst case). |
 | `&stages=0`, `&fx=0` | Turn off the rendered stages or the fighting-game effects, which `?gl` includes. `?gl=0&stages` or `?gl=0&fx` tries either with 2D fighters. |
-| `?gl=0` | The classic 2D game, whatever the player chose. |
+| `?gl=0` | The classic 2D game, the fallback, for the lab. |
 | `&sculpts=0` | The roster in the founder model instead of their sculpted ones. |
 
-Since v3.14 the game is 3D unless the player chooses 2D in Settings
-("Graphics: 2D / 3D", `Save.settings.graphics`, `'2d'` or `'3d'`; v3.13's
-saved `'classic'` was everyone's default and reads as no choice) or the
-browser has no WebGL2, which is then the classic 2D game. In 3D the roster
-wear their sculpted models and fight in their own forms. `src/graphics.js`
-decides each flag from the address and that choice (the address wins where
-it names a piece), and a change reloads the page, since the renderers are set
-up once at load and a reload is the sure way to leave 3D with nothing of it
-running. `test/graphics.test.js`.
+Since v3.22.2 the game is one version, 3D, unless the browser has no WebGL2,
+which is then the classic 2D game (the owner's call; from v3.13 to v3.22.1
+Settings had a 2D or 3D choice, `Save.settings.graphics`, which old saves
+still hold and nothing reads). In 3D the roster wear their sculpted models and
+fight in their own forms. `src/graphics.js` decides each flag from the
+address alone, and the renderers are set up once, at load.
+`test/graphics.test.js`.
 
 The pipeline, end to end:
 
