@@ -311,13 +311,17 @@ was never pushed.
 
 ONBOARDING section 7: `npm test`, bump `VERSION`, push `main`, read the
 deployed `VERSION` back with `curl`, then tag the release (`git tag -a`,
-`git push origin <tag>`). Every release from v1.7 has a tag, set on
+`git push origin <tag>`). Tags for every release from v1.7 were worked out on
 2026-11-15 from the site's own deploy history (GitHub's "pages build and
 deployment" runs): each at the last deploy of that version, so the tag is
 the version as it was live. v3.9.2 and v3.12 were never deployed on their
 own (the next version went out with them) and are tagged at the last commit
 of that version. The deploys before v1.7 had no `VERSION` and are not
-tagged. Pages builds `main` from the repo root with
+tagged. The session that worked them out could push branches but not tags
+(its connection refuses both, and GitHub's API through it), so
+`lab/tag-releases.sh` makes them: run once from a checkout,
+`git pull && sh lab/tag-releases.sh && git push origin --tags`. It leaves a
+tag that already exists alone. Pages builds `main` from the repo root with
 Jekyll (there is no `.nojekyll`), and Jekyll reads Liquid tags before anything
 else, so two opening curly braces in a row, or an opening curly brace followed
 by a percent sign, in any markdown file can fail the build. The remote is

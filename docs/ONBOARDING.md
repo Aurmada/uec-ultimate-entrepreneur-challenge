@@ -232,7 +232,7 @@ curl -s "https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/src/confi
 ```
 
 Then tag the release, so each version is one click away on GitHub (every
-release from v1.7 is tagged, since 2026-11-15):
+release from v1.7 has one, made by `lab/tag-releases.sh`):
 
 ```bash
 git tag -a v3.22.5 -m "UEC v3.22.5: what changed, in a line"
