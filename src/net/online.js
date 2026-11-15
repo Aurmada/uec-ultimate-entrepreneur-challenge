@@ -213,10 +213,18 @@ export function hashGameState(game) {
 
 let sbPromise = null;
 let sbTries = 0;
+// The supabase-js release the game loads, pinned (the owner's call,
+// 2026-11-15). It was `@2`, which floats: whatever 2.x was newest reached
+// every player without a deploy, so a bad release could break sign-in and
+// online play with nothing changed here. 2.119.0 (2026-11-04) is what `@2`
+// had been serving players since. To move it: pick a release that has been
+// out a couple of weeks, change this, and sign in and play an online match
+// on the dev server before releasing.
+export const SUPABASE_JS = '2.119.0';
 // The client's address on a try: after a failure, with a query of its own,
 // since Chromium answers a second import of an address that failed with the
 // same failure, without fetching it again.
-export const clientUrl = (tries) => `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm${tries ? `?retry=${tries}` : ''}`;
+export const clientUrl = (tries) => `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@${SUPABASE_JS}/+esm${tries ? `?retry=${tries}` : ''}`;
 function loadClient() {
   if (!sbPromise) {
     sbPromise = import(clientUrl(sbTries++))

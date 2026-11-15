@@ -47,7 +47,9 @@ test('a sign-in service that failed to load is tried again, and the error is pla
   const { clientUrl } = await import('../src/net/online.js');
   assert.notEqual(clientUrl(1), clientUrl(0));
   assert.notEqual(clientUrl(2), clientUrl(1));
-  assert.match(clientUrl(0), /^https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\/\+esm$/);
+  // pinned to one release (online.js SUPABASE_JS): a floating `@2` let any
+  // new 2.x reach players without a deploy
+  assert.match(clientUrl(0), /^https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@\d+\.\d+\.\d+\/\+esm$/);
   assert.match(online, /sbPromise = import\(clientUrl\(sbTries\+\+\)\)/);
   assert.match(src('src/main.js'), /'Sign-in could not connect\. Check your connection and try again\.'/);
 });
