@@ -456,6 +456,13 @@ Cathie); screenshots up close of four pairs, standing and crouching, and of
 Cathie crouching, walking, standing and knocked out, each with the change
 off and on.
 
+**The phone test on v3.22.3 as released** (2026-11-15, the same three
+phones): nothing slower. The newer iPhone 60 in every setup; the iPhone 12
+Pro 57.5 and 58.9 in 3D, 59.8 in 2D; the Ahlo 1 20.5 and 20.4 in 3D, 29.8
+at half resolution, 22.6 in 2D, as before. The shader's two new per-part
+switches (the portrait turn and the coat's hang) and the guard tuck cost
+nothing these phones can measure.
+
 ## v3.22.2, released 2026-11-15: one version, 3D, and the 2D shading draws one way
 
 **One version, 3D** (the owner, 2026-11-15: "keep one version 3D"). Settings
