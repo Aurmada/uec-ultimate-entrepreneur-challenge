@@ -21,8 +21,11 @@
   switches the pieces of each: the 3D fighters' key line, silhouette mask,
   ink outline and antialiasing (gl3d/toon.js TOON), and the 2D shading's key
   light, its blend, its form and its rim, all of them with the buffer kept,
-  and the buffer itself (drawFighter.js SHADE_PASSES). The processor's time
-  is shown for the drawing and for the fight apart.
+  and the buffer itself (drawFighter.js SHADE_PASSES). It found the iPhone's
+  cost in the key light and the rim, each of which drew the fighter's buffer
+  into a scratch canvas and back; v3.22.2 draws them one way, and round
+  eleven is the same sixteen setups again, to read row for row against round
+  ten. The processor's time is shown for the drawing and for the fight apart.
 
   It reads the game's own files, so on the site it tests whatever version is
   live:  https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/lab/phone-test.html
@@ -420,7 +423,7 @@ const feel = (fps, ceiling) => {
 };
 
 function report() {
-  const lines = [`UEC 3D phone test, round ten (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
+  const lines = [`UEC 3D phone test, round eleven (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
   for (const s of SETUPS) {
     const r = results[s.id];
     if (!r || r.skipped) { lines.push(`${s.name.padEnd(30)} skipped${r ? ` (${r.why})` : ''}`); continue; }

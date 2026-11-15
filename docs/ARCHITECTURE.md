@@ -428,16 +428,24 @@ trackedAttackPose(f, atk)            when attacking, replaces the above
   ├─ applyMotion(pose, def, t)       the character's own swing shaping
   └─ the rear fist follows the chin  as the strike drives the head forward
 proportions post pass                height, build, reach, stride, shoulders, head
-draw into an offscreen buffer
-shadeBuffer()
-  ├─ key light      overlay, then destination-in to re-clip
-  ├─ mid and floor  source-atop
+draw into an offscreen buffer (buf)
+shadeBuffer()                        each pass onto a fresh canvas, one way
+  ├─ key light      buf -> lit: overlay, then destination-in to re-clip
+  ├─ rim            lit -> tmp: the silhouette less itself, shifted
+  ├─ mid and floor  lit -> shade: source-atop
   ├─ side gradients
-  └─ rim light      lighter
-key line                             6 offset stamps, then source-in
+  └─ rim light      tmp -> shade: lighter
+key line                             6 offset stamps of shade, then source-in
 ```
 
-Two hazards here have bitten before.
+Three hazards here have bitten before.
+
+**Draw one way.** No canvas of the chain is drawn on after it has been drawn
+from in the same fighter. Until v3.22.2 the key light and the rim each copied
+the buffer into a scratch canvas and drew it back, and on an iPhone 12 Pro
+those two round trips held the 2D game to 19 fps (60 without them; HANDOFF
+"v3.22.1", round ten). Each pass now draws onto a fresh copy, with the same
+pixels; `test/shadechain.test.js` holds the chain to one way.
 
 **Blend mode clipping.** `source-atop` clips itself to existing pixels.
 `overlay`, `screen` and `lighter` do not; they fill the whole rectangle. The key

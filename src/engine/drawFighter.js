@@ -1693,12 +1693,15 @@ function fighterBuffer(m) {
   const key = `${m.w}x${m.h}@${m.ox},${m.oy}`;
   let rec = _buffers.get(key);
   if (!rec) {
-    const buf = document.createElement('canvas');
-    const tmp = document.createElement('canvas');
-    const out = document.createElement('canvas');   // key-line scratch
-    buf.width = tmp.width = out.width = m.w * SS;
-    buf.height = tmp.height = out.height = m.h * SS;
-    rec = { buf, tmp, out, ox: m.ox, oy: m.oy, w: m.w, h: m.h };
+    // The body, then the shading's chain (shadeBuffer: the key-lit body, the
+    // rim, the shaded result), then the key line's scratch.
+    const made = () => {
+      const el = document.createElement('canvas');
+      el.width = m.w * SS;
+      el.height = m.h * SS;
+      return el;
+    };
+    rec = { buf: made(), lit: made(), tmp: made(), shade: made(), out: made(), ox: m.ox, oy: m.oy, w: m.w, h: m.h };
     _buffers.set(key, rec);
   }
   return rec;
@@ -1708,7 +1711,7 @@ function fighterBuffer(m) {
 // the finished fighter around a small ring and keeping the union — six taps is
 // enough for a 2px line to close without corner gaps, and it is six drawImages
 // of an already-rasterised buffer rather than any per-pixel work.
-function keyLine(ctx, B) {
+function keyLine(ctx, B, src = B.buf) {
   const r = STYLIZE.KEYLINE_PX * SS;
   const o = B.out, oc = o.getContext('2d');
   oc.setTransform(1, 0, 0, 1, 0, 0);
@@ -1716,7 +1719,7 @@ function keyLine(ctx, B) {
   oc.clearRect(0, 0, o.width, o.height);
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
-    oc.drawImage(B.buf, Math.cos(a) * r, Math.sin(a) * r);
+    oc.drawImage(src, Math.cos(a) * r, Math.sin(a) * r);
   }
   oc.globalCompositeOperation = 'source-in';       // recolour the union flat
   oc.fillStyle = STYLIZE.KEYLINE_COL;
@@ -1729,14 +1732,33 @@ function keyLine(ctx, B) {
   ctx.restore();
 }
 
-function shadeBuffer(b, B) {
+// The shading, drawn so that pictures only ever flow one way between the
+// buffer's canvases: the body (buf) into the key-lit body (lit), that into
+// the rim (tmp) and into the shaded result (shade), the rim into the result.
+// No canvas is drawn on after it has been drawn from. Until v3.22.2 the key
+// light and the rim each copied the buffer into tmp and drew tmp back into
+// the buffer, twice a fighter, and round ten of the phone test found those
+// two passes alone held the iPhone 12 Pro's 2D game to 19 fps (40 without
+// either, 60 without both and the form). The pixels are the same: each pass
+// does the same thing to the same picture, on a fresh copy instead of in
+// place. Returns the canvas the finished fighter is on.
+function shadeBuffer(B) {
   const _buf = B.buf, _tmp = B.tmp;
   const W = _buf.width, H = _buf.height, oy = B.oy * SS, ox = B.ox * SS;
-
-  const tc = _tmp.getContext('2d');
+  // A canvas of the chain, cleared, holding a copy of `from`.
+  const fresh = (el, from) => {
+    const c = el.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = 'source-over';
+    c.clearRect(0, 0, W, H);
+    c.drawImage(from, 0, 0);
+    return c;
+  };
+  let cur = _buf;
 
   // ---- key light ----
-  // Runs FIRST, and borrows _tmp as a silhouette mask before the rim needs it.
+  // Runs FIRST, on a copy of the body, with the body itself as the mask.
   //
   // This used to be one stop of the shading gradient below, filled with
   // source-atop. source-atop is a flat lerp toward the fill colour, and a flat
@@ -1753,39 +1775,36 @@ function shadeBuffer(b, B) {
   // and quietly poisonous, because lab/contrast.js then measures the slab
   // instead of the fighter and reports a contrast WIN. Hence destination-in.
   if (SHADE_PASSES.key) {
-    tc.setTransform(1, 0, 0, 1, 0, 0);
-    tc.clearRect(0, 0, W, H);
-    tc.globalCompositeOperation = 'source-over';
-    tc.drawImage(_buf, 0, 0);                            // mask: the raw silhouette
-
-    b.save();
-    b.globalCompositeOperation = STYLIZE.SHADE_KEY_MODE;
-    const gk = b.createLinearGradient(0, oy - 178 * SS, 0, oy - 40 * SS);
+    const kc = fresh(B.lit, cur);
+    kc.globalCompositeOperation = STYLIZE.SHADE_KEY_MODE;
+    const gk = kc.createLinearGradient(0, oy - 178 * SS, 0, oy - 40 * SS);
     gk.addColorStop(0, `rgba(255,246,224,${STYLIZE.SHADE_KEY})`);
     gk.addColorStop(1, 'rgba(255,246,224,0)');
-    b.fillStyle = gk; b.fillRect(0, 0, W, H);
-    b.globalCompositeOperation = 'destination-in';       // ...and back inside the lines
-    b.drawImage(_tmp, 0, 0);
-    b.restore();
+    kc.fillStyle = gk; kc.fillRect(0, 0, W, H);
+    kc.globalCompositeOperation = 'destination-in';     // ...and back inside the lines
+    kc.drawImage(cur, 0, 0);
+    kc.globalCompositeOperation = 'source-over';
+    cur = B.lit;
   }
 
   // ---- rim light: a warm crescent on the upper-key edge of the silhouette ----
   // built as (white silhouette) minus (white silhouette shifted toward shadow),
-  // which leaves just the lit contour.
+  // which leaves just the lit contour. Built from the key-lit body, before the
+  // form, and added on top last.
   if (SHADE_PASSES.rim) {
-    tc.setTransform(1, 0, 0, 1, 0, 0);
-    tc.clearRect(0, 0, W, H);
-    tc.globalCompositeOperation = 'source-over';
-    tc.drawImage(_buf, 0, 0);
+    const tc = fresh(_tmp, cur);
     tc.globalCompositeOperation = 'source-in';
     tc.fillStyle = '#fff5df'; tc.fillRect(0, 0, W, H);   // warm-white silhouette
     tc.globalCompositeOperation = 'destination-out';
-    tc.drawImage(_buf, -5 * SS, 6 * SS);                 // carve → rim on upper-right
+    tc.drawImage(cur, -5 * SS, 6 * SS);                  // carve → rim on upper-right
+    tc.globalCompositeOperation = 'source-over';
   }
+  if (!SHADE_PASSES.form && !SHADE_PASSES.rim) return cur;
 
   // ---- form + directional shading, clipped to the fighter ----
-  b.save();
-  b.globalCompositeOperation = 'source-atop';
+  const sc = fresh(B.shade, cur);
+  sc.save();
+  sc.globalCompositeOperation = 'source-atop';
   // Key light up, floor crush down, so the character is the brightest thing on
   // screen. The old pair was +0.32 / -0.52.
   //
@@ -1802,27 +1821,28 @@ function shadeBuffer(b, B) {
   // and the floor crush, which genuinely do want to converge toward a colour,
   // and which were tuned against measurement. Left alone.
   if (SHADE_PASSES.form) {
-    const g = b.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
+    const g = sc.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
     g.addColorStop(0, 'rgba(255,255,255,0)');
     g.addColorStop(0.44, `rgba(255,255,255,${STYLIZE.SHADE_MID})`);
     g.addColorStop(1, `rgba(5,5,16,${STYLIZE.SHADE_FLOOR})`);
-    b.fillStyle = g; b.fillRect(0, 0, W, H);
-    const g2 = b.createLinearGradient(ox - 84 * SS, 0, ox + 84 * SS, 0);
+    sc.fillStyle = g; sc.fillRect(0, 0, W, H);
+    const g2 = sc.createLinearGradient(ox - 84 * SS, 0, ox + 84 * SS, 0);
     g2.addColorStop(0, 'rgba(26,42,104,0.30)');
     g2.addColorStop(0.5, 'rgba(0,0,0,0)');
     g2.addColorStop(1, 'rgba(255,166,72,0.17)');
-    b.fillStyle = g2; b.fillRect(0, 0, W, H);
+    sc.fillStyle = g2; sc.fillRect(0, 0, W, H);
   }
-  b.restore();
+  sc.restore();
 
   // ---- add the rim on top, additively (kept restrained so heads don't halo) ----
   if (SHADE_PASSES.rim) {
-    b.save();
-    b.globalCompositeOperation = 'lighter';
-    b.globalAlpha = 0.55;
-    b.drawImage(_tmp, 0, 0);
-    b.restore();
+    sc.save();
+    sc.globalCompositeOperation = 'lighter';
+    sc.globalAlpha = 0.55;
+    sc.drawImage(_tmp, 0, 0);
+    sc.restore();
   }
+  return B.shade;
 }
 
 // Motion smear behind the striking limb: the arc it swept through, drawn as
@@ -2173,11 +2193,11 @@ export function drawFighter(ctx, f, t) {
   if (B) {
     INK = 1;                   // reset before shading/blit
     g.restore();               // undo scale/translate
-    shadeBuffer(g, B);         // cel-shade the whole silhouette at once
-    if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);   // separation, under the body
+    const shaded = shadeBuffer(B);      // cel-shade the whole silhouette at once
+    if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B, shaded);   // separation, under the body
     ctx.save();
     if (flashing && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
-    ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
+    ctx.drawImage(shaded, 0, 0, shaded.width, shaded.height, -B.ox, -B.oy, B.w, B.h);
     ctx.restore();
   }
 

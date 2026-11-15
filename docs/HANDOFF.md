@@ -16,8 +16,11 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
-- **Live:** v3.22.1, released 2026-11-14 (`VERSION` in `src/config.js`;
+- **Live:** v3.22.2, released 2026-11-14 (`VERSION` in `src/config.js`;
   `SIM_VERSION` 13 in `src/net/online.js`). 3D by default, 2D in Settings.
+- **What v3.22.2 changed:** the 2D fighters' shading draws one way between
+  its canvases, the fix for the iPhone 12 Pro's 19 fps in 2D (see
+  "v3.22.2"); the same pixels.
 - **What v3.22.1 added:** round ten of the phone test, which switches off the
   pieces of the two parts round nine found slow (see "v3.22.1"). The game
   plays as v3.22 did.
@@ -111,13 +114,14 @@ In the order they pay off:
    step down. The known levers are in "v3.22" and "Known limits": the 2D
    fighters' canvas copies on iPhones, the stage light, the fighters' contact
    shadows.
-2. **Act on round ten** (see "v3.22.1"): on the iPhone 12 Pro, the 2D
-   shading's key light and rim each halve the frame rate, and both copy the
-   fighter to a scratch canvas and back; a one-way chain that draws the same
-   pixels is the fix to try. On the Ahlo 1, the 3D fighters cost through
-   their passes and triangles together (no one switch), so a lighter fighter
-   for weak chips is an owner decision (Decisions). The second Android has
-   still not reported.
+2. **Round eleven of the phone test** (see "v3.22.2"): the owner runs it on
+   the iPhone 12 Pro, where 2D as shipped should go from 19 fps toward 60
+   with the one-way shading. On the Ahlo 1 the 3D fighters cost through
+   their passes and triangles together (round ten, no one switch); the
+   options put to the owner on 2026-11-14 are to leave it at about 30, to
+   drop the mask and key line on weak phones, or lower-detail models on weak
+   phones, measured first on the test pair. The second Android has still
+   not reported.
 3. **The next balance pass** (see "v3.22"): at Champion Steve still wins about
    64% and Kim now sits lowest, near 37%. `lab/balance.js --def` and
    `--special` try a change before it is made.
@@ -128,7 +132,8 @@ In the order they pay off:
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.22.1 (`SIM_VERSION` 13): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `main` | The live game, v3.22.2 (`SIM_VERSION` 13): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `claude/v3.22.2` | The 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-14, merged into `main`. |
 | `claude/v3.22.1` | Round ten of the phone test, and the stack's old canvases leaving the page with a dropped 3D layer (see "v3.22.1") | Released in v3.22.1 on 2026-11-14, merged into `main`. |
 | `claude/v3.22` | The resolution step-down, the performance reports and dashboard, the balance pass and the art notes (see "v3.22") | Released in v3.22 on 2026-11-14, merged into `main`. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
@@ -366,6 +371,32 @@ Everything below is how the game got here: each release with what changed,
 why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
+
+## v3.22.2, released 2026-11-14: the 2D shading draws one way
+
+Round ten (see "v3.22.1") found the iPhone 12 Pro's 2D game held to 19 fps
+by two of the shading's passes, the key light and the rim (40 without
+either, 60 without both and the form), and not by the `overlay` blend. Both
+copied the fighter's buffer into the scratch canvas and drew the scratch
+back into the buffer: two round trips between two canvases a fighter, every
+frame. `shadeBuffer` in `drawFighter.js` now draws each pass onto a fresh
+canvas, so pictures flow one way only: the body (`buf`) into the key-lit body
+(`lit`), that into the rim (`tmp`) and the shaded result (`shade`), the rim
+into the result, and the key line and the frame read the result. Two more
+canvases a buffer size (about 1.3 MB each); one more copy a fighter, which
+round ten showed costs nothing ("the buffer alone", 60).
+
+The pixels are the same: each pass does the same thing to the same picture,
+on a copy instead of in place. `lab/pixels.js` against v3.22.1, 30 frames
+identical with the flags off (the 2D fighters, through this shading) and with
+`--flags gl`. `test/shadechain.test.js` draws a frame onto recording canvases
+and checks that no canvas is drawn on after it was drawn from, between one
+fighter reaching the frame and the next; on v3.22.1's shading it finds the
+round trips. The 3D path does not use this shading, so the default game is
+untouched; 2D is the Settings choice and the fallback without WebGL2.
+
+The phone test is unchanged but for its name (round eleven), so its rows
+read against round ten's: on the iPhone, 2D as shipped was 19.1.
 
 ## v3.22.1, released 2026-11-14: round ten of the phone test
 
