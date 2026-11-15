@@ -51,7 +51,7 @@ const GAP = 60;      // inside both grabs' reach (rosterMoves tests command norm
 
 // Carl in `slot`, standing at `at`, throws Kim, who starts `side` (-1 left,
 // +1 right) of him.
-function throwKim(slot, side, keys, at = AT) {
+function throwKim(slot, side, keys, at = AT, prep = () => {}) {
   const game = new Game({
     p1: { def: slot === 0 ? CARL : KIM, controller: idler() },
     p2: { def: slot === 0 ? KIM : CARL, controller: idler() },
@@ -64,6 +64,7 @@ function throwKim(slot, side, keys, at = AT) {
   const kim = game.fighters[1 - slot];
   carl.x = at; kim.x = at + side * GAP;
   carl.energy = METER.MAX;
+  prep(carl, kim);
   game.update(1 / 60);               // one free frame so both face the new layout
   carl.controller = presser(keys);
   const hp0 = kim.hp;
@@ -266,3 +267,25 @@ test("a thrown fighter's aura, floor sheen and buff icons go with the body, not 
   assert.match(src, /atDrawn\(ctx, f, \(\) => drawBuffIcons\(ctx, f\)\)/);
   assert.match(src, /const at = drawnAt\(f\);\s+\/\/ under a thrown body/, 'the shadow stays where the fight has them');
 });
+
+// LEGAL SHIELD absorbs a grab, and the two come apart, as they do when it
+// absorbs a strike or a steal. Until SIM_VERSION 14 the victim was sent
+// TOWARD the grabber while the grabber recoiled, so both slid the same way and
+// ended touching: Kim 60 px from Carl ended 51 px away, the least the bodies
+// allow. The owner's call (2026-11-15) was apart.
+for (const [name, keys] of MOVES) {
+  test(`${name} into LEGAL SHIELD pushes the two apart, from either side and slot`, () => {
+    for (const slot of [0, 1]) {
+      for (const side of [-1, 1]) {
+        const where = `Carl as p${slot + 1}, Kim shielded on his ${side < 0 ? 'left' : 'right'}`;
+        const r = throwKim(slot, side, keys, AT, (carl, kim) => { kim.shieldT = 8; });
+        assert.equal(r.landed, 0, `${where}: the shield let the throw through`);
+        assert.equal(r.kim.shieldT, 0, `${where}: the shield was never spent`);
+        assert.equal(r.kimSide, side, `${where}: Kim ended on Carl's other side`);
+        const gap = Math.abs(r.kim.x - r.carl.x);
+        assert.ok(gap > GAP + 40, `${where}: they ended ${gap.toFixed(0)} px apart, from ${GAP}`);
+        assert.ok(r.carlMoved * side <= 0, `${where}: Carl was pulled toward Kim, not pushed back`);
+      }
+    }
+  });
+}

@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT, FX_ART } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, SHIELD, COMBO, STEAL, PARRY, RUNWAY, THROW, TELEPORT, FX_ART } from '../config.js';
 import { Fighter, pushGap, throwParted } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -292,7 +292,7 @@ export class Game {
     // Legal Shield: one free "objection" absorbs the hit entirely
     if (def.shieldT > 0) {
       def.shieldT = 0;
-      def.vx = dir * 180;
+      def.vx = dir * SHIELD.STRIKE_PUSH;
       this.audio.sfx('block');
       this.fx.ring(cx, cy, '#8fd8ff', 620, 6, 0.35);
       this.fx.guard(cx, cy, dir);
@@ -404,7 +404,7 @@ export class Game {
     const dir = Math.sign(def.x - att.x) || att.facing;
     if (def.shieldT > 0) {
       def.shieldT = 0;
-      def.vx = dir * 160;
+      def.vx = dir * SHIELD.STEAL_PUSH;
       this.audio.sfx('block');
       this.fx.ring(def.x, def.y - 100, '#8fd8ff', 620, 6, 0.35);
       this.fx.popup(def.x, def.y - 140, 'OBJECTION!', '#8fd8ff');
@@ -448,9 +448,11 @@ export class Game {
   doGrab(att, def, a) {
     const dir = Math.sign(def.x - att.x) || att.facing;
     if (def.shieldT > 0) {
+      // Apart, like the other two OBJECTIONs: the victim away from the
+      // grabber, the grabber recoiling (SHIELD has why).
       def.shieldT = 0;
-      def.vx = -dir * 220;
-      att.vx = dir * -160;
+      def.vx = dir * SHIELD.GRAB_PUSH;
+      att.vx = -dir * SHIELD.GRAB_RECOIL;
       this.audio.sfx('block');
       this.fx.ring(def.x, def.y - 100, '#8fd8ff', 620, 6, 0.35);
       this.fx.popup(def.x, def.y - 140, 'OBJECTION!', '#8fd8ff');

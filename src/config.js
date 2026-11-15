@@ -214,6 +214,19 @@ export const DROPS = {
   SHIELD_TIME: 8,
 };
 
+// LEGAL SHIELD's OBJECTION!: how hard an absorbed attack parts the two, in
+// px/s. The one who holds the shield is pushed away from the attacker every
+// time, and a grabber also recoils. Until SIM_VERSION 14 an absorbed grab sent
+// the victim TOWARD the grabber (a slipped sign), so both slid the same way
+// and ended touching, unlike the other two: the owner's call, 2026-11-15, was
+// to push them apart.
+export const SHIELD = {
+  STRIKE_PUSH: 180,
+  STEAL_PUSH: 160,
+  GRAB_PUSH: 220,
+  GRAB_RECOIL: 160,
+};
+
 export const UNICORN = {
   DURATION: 6,
   DMG_MULT: 1.35,

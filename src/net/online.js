@@ -166,7 +166,12 @@ export const CHARACTER_WIRE_VERSION = 1;
 // comes out in 0.12 s for 16 damage (was 0.14 and 14), Jeff's UNDERCUT hits
 // for 13 (was 11). A v12 peer deals other damage from the first one that
 // lands. v12 shipped in v3.21 and v3.21.1.
-export const SIM_VERSION = 13;
+//
+// v14: LEGAL SHIELD absorbing a grab pushes the two apart (config.js SHIELD),
+// where it sent the victim toward the grabber and both slid the same way. A
+// v13 peer puts the victim elsewhere from the first shielded grab. v13
+// shipped in v3.22 to v3.22.2.
+export const SIM_VERSION = 14;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {
