@@ -231,6 +231,18 @@ value back:
 curl -s "https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/src/config.js?c=$RANDOM" | grep VERSION
 ```
 
+Then tag the release, so each version is one click away on GitHub (every
+release from v1.7 is tagged, since 2026-11-15):
+
+```bash
+git tag -a v3.22.5 -m "UEC v3.22.5: what changed, in a line"
+git push origin v3.22.5
+```
+
+A tag marks a version as it was live: if more goes to `main` under the same
+`VERSION` (a note in the docs, say), move the tag to it (`git tag -fa`, then
+`git push -f origin <tag>`).
+
 ---
 
 ## 8. The one rule that will bite you

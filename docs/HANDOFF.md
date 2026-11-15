@@ -181,11 +181,9 @@ was never pushed.
   photo is the face) are kept for the lab and their own tests (`RIG2D`,
   `--flags 2d` in `lab/pixels.js`). If it ever grows too costly to keep, it
   goes in a release of its own, and the older versions on GitHub keep it:
-  v3.22.3 (`e539fd4`) is the last release that played in 2D (as the
-  fallback), and v3.22.4 (`f5559a4`) the first 3D only. The repository has
-  no tags yet; tagging the releases would make each easy to find. The pose
-  code (`computePose`, `applyProportions`) poses the 3D fighters and stays
-  either way.
+  the tag `v3.22.3` is the last release that played in 2D (as the
+  fallback), and `v3.22.4` the first 3D only. The pose code (`computePose`,
+  `applyProportions`) poses the 3D fighters and stays either way.
 
 - **The owner's calls of 2026-11-15** (after round eleven): the Ahlo 1 left
   at about 30 fps (no lighter fighters for weak phones, for now); the
@@ -311,8 +309,15 @@ was never pushed.
 
 ## Deploying
 
-ONBOARDING section 7: `npm test`, bump `VERSION`, push `main`, then read the
-deployed `VERSION` back with `curl`. Pages builds `main` from the repo root with
+ONBOARDING section 7: `npm test`, bump `VERSION`, push `main`, read the
+deployed `VERSION` back with `curl`, then tag the release (`git tag -a`,
+`git push origin <tag>`). Every release from v1.7 has a tag, set on
+2026-11-15 from the site's own deploy history (GitHub's "pages build and
+deployment" runs): each at the last deploy of that version, so the tag is
+the version as it was live. v3.9.2 and v3.12 were never deployed on their
+own (the next version went out with them) and are tagged at the last commit
+of that version. The deploys before v1.7 had no `VERSION` and are not
+tagged. Pages builds `main` from the repo root with
 Jekyll (there is no `.nojekyll`), and Jekyll reads Liquid tags before anything
 else, so two opening curly braces in a row, or an opening curly brace followed
 by a percent sign, in any markdown file can fail the build. The remote is
