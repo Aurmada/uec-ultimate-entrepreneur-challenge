@@ -826,6 +826,10 @@ export const GL3D = {
     // by as much, or its crown was cut off.
     CLOSE: { SPAN: 48, HEAD_AT: [0.5, 0.46], GLASS: { visor: 0.25 }, HEAD_MOST: 0.3 },
     TURN: { yaw: 0.9, hipYaw: 0.6, headYaw: 0.35 },
+    // Parts built pre-turned to face the camera at the match's head turn (YAW
+    // plus HEAD_YAW): Kim's ring light. A portrait turns the head further
+    // (TURN), which left the ring off-square; it is turned back by as much.
+    FACING: ['prop:ringlight'],
     HAND_F: [14, 16],
     HAND_B: [-8, 16],
   },

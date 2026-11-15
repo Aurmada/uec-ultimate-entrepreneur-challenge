@@ -331,3 +331,46 @@ test("every rendered stage's sponsor boards read through the scrim, and nothing 
   const render = readFileSync(new URL('../src/engine/render.js', import.meta.url), 'utf8');
   assert.match(render, /const scrim = drawStageGrade\(ctx, t, game\.arena, stage\);[^\n]*\n\s*if \(stage\) liftBoards\(ctx, stage, t, pan, scrim, stageOnScreen\);/);
 });
+
+// A rendered stage's sponsor board names its sponsor near white in its hue,
+// steady, on a deeper panel of that hue (arenas.js billboard, `lit`). Drawn
+// as the 2D game draws it, a saturated name pulsing on a panel of the same
+// hue, a board's name fell to between 2 and 3 to 1 at its dimmest (the
+// Boardroom's 2.3), and on the stage, under the scrim and the vignette at the
+// screen's edge, the Unicorn Club's magenta board was the hardest thing on any
+// stage to read. Every board's name now reads at 7 to 1 or better against its
+// panel at its dimmest (7.3 to 11.2).
+test("every rendered stage's sponsor board names its sponsor at 7 to 1 or better", () => {
+  const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const hsl = (s) => {
+    const m = s.match(/hsla?\(\s*([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%(?:,\s*([\d.]+))?\)/);
+    const [h, S, L, A = 1] = [+m[1], +m[2] / 100, +m[3] / 100, m[4] === undefined ? 1 : +m[4]];
+    const k = (n) => (n + h / 30) % 12, a = S * Math.min(L, 1 - L);
+    const f = (n) => L - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+    return { rgb: [f(0), f(8), f(4)], alpha: A };
+  };
+  const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  let seen = 0;
+  for (const arena of ARENAS) {
+    for (const [id, paint] of Object.entries(arena.stage?.screens || {})) {
+      if (!paint.board) continue;
+      let worst = Infinity;
+      for (let t = 0; t < 4; t += 0.05) {            // through a whole pulse
+        const fills = [];
+        const ctx = new Proxy({ fillStyle: '' }, {
+          get: (o, k) => (k in o ? o[k] : k === 'fillRect' || k === 'fillText' ? () => fills.push(o.fillStyle) : () => {}),
+          set: (o, k, v) => { o[k] = v; return true; },
+        });
+        paint(ctx, 200, 70, t);
+        const panel = hsl(fills[1]), name = hsl(fills[2]);
+        // the name over its panel, at its alpha
+        const shown = name.rgb.map((c, i) => c * name.alpha + panel.rgb[i] * (1 - name.alpha));
+        const [hi, lo] = [lum(shown), lum(panel.rgb)].sort((a, b) => b - a);
+        worst = Math.min(worst, (hi + 0.05) / (lo + 0.05));
+      }
+      assert.ok(worst >= 7, `${arena.id}/${id}: the sponsor's name reads at ${worst.toFixed(1)} to 1 at its dimmest`);
+      seen++;
+    }
+  }
+  assert.ok(seen >= 8, `only ${seen} boards`);
+});

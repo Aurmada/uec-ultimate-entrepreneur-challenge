@@ -118,8 +118,12 @@ function recordingGL(log) {
       if (k === 'getUniformLocation') return (_p, name) => ({ name });
       if (k === 'getExtension') return () => null;
       if (k === 'uniform1f') return (loc, v) => { if (loc?.name) now[loc.name] = v; };
+      if (k === 'uniform4fv') return (loc, v) => { if (loc?.name === 'uTurn') now.uTurn = [...v]; };
       if (k === 'bindFramebuffer') return (_t, fb) => log.targets.push(fb ? 'mask' : 'screen');
-      if (k === 'drawElements') return () => log.draws.push(now.uMaskPass > 0.5 ? 'mask' : now.uInk > 0.5 ? 'ink' : 'body');
+      if (k === 'drawElements') return () => {
+        log.draws.push(now.uMaskPass > 0.5 ? 'mask' : now.uInk > 0.5 ? 'ink' : 'body');
+        log.turns.push(now.uTurn);
+      };
       if (k === 'drawArrays') return () => log.draws.push('key line');
       return () => {};
     },
@@ -133,9 +137,9 @@ const MODEL = {
   }],
 };
 
-async function frame3D() {
+async function frame3D(turn = null) {
   const { createToon } = await import('../src/engine/gl3d/toon.js');
-  const log = { draws: [], targets: [], attrs: null };
+  const log = { draws: [], targets: [], attrs: null, turns: [] };
   const canvas = {
     width: 1920, height: 1080, addEventListener() {},
     getContext: (k, attrs) => { log.attrs = attrs; return k === 'webgl2' ? recordingGL(log) : null; },
@@ -147,9 +151,10 @@ async function frame3D() {
   const draw = () => r.render(gpu, matrices, {
     colours: () => [1, 1, 1], box: { ox: 100, oy: 280, w: 250, h: 300 },
     screen: { m: [2, 0, 0, 2, 800, 900], flash: false, keyline: { px: 2, color: '#ffffff', alpha: 0.5 } },
+    turn,
   });
   draw();             // the first frame also sizes the mask, which binds it to do so
-  log.draws.length = log.targets.length = 0;
+  log.draws.length = log.targets.length = log.turns.length = 0;
   draw();
   return log;
 }
@@ -179,4 +184,20 @@ test("the 3D fighters' antialiasing, ink and mask are on in the game, and each s
   } finally {
     TOON.antialias = TOON.ink = TOON.mask = true;
   }
+});
+
+// A part a portrait turns (Kim's ring light, gl3d/index.js bustTurn) is
+// turned in every pass that draws it, and every other part, and every part
+// in a match, is drawn with no turn at all: the shader skips the turn when its
+// sine is 0, so the game's pixels stay as they were.
+test('a turned part is turned in every pass, and nothing else is', async () => {
+  const none = await frame3D();
+  assert.ok(none.turns.length > 0 && none.turns.every((t) => t && t[3] === 0 && t[2] === 1), 'a part was turned with no turn asked for');
+  const turned = await frame3D((p) => (p.name === 'body' ? [0.1, -0.2, 0.33] : null));
+  assert.equal(turned.turns.length, none.turns.length);
+  for (const t of turned.turns) {
+    assert.deepEqual(t.map((v) => +v.toFixed(6)), [0.1, -0.2, +Math.cos(0.33).toFixed(6), +Math.sin(0.33).toFixed(6)]);
+  }
+  const elsewhere = await frame3D((p) => (p.name === 'prop:ringlight' ? [0, 0, 0.33] : null));
+  assert.ok(elsewhere.turns.every((t) => t[3] === 0), 'a part not named was turned');
 });

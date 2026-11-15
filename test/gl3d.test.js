@@ -532,3 +532,45 @@ test('every sculpted fighter wears a horn in UNICORN MODE, and only then', async
   const f = readFileSync(new URL('../assets/models/founder.glb', import.meta.url));
   assert.equal(hornFor(extractModel(parseGLB(f.buffer.slice(f.byteOffset, f.byteOffset + f.byteLength))), MODELS3D.founder), null, 'the founder has two horns');
 });
+
+// Kim's ring light is built pre-turned to face the camera at the match's head
+// turn, and a portrait turns the head further (GL3D.BUST.TURN), so in every
+// portrait it stood about 19 degrees off-square, an oval. A portrait turns it
+// back by as much (GL3D.BUST.FACING, index.js bustTurn, the shader's uTurn).
+// Here the turn is done as the shader does it, and the ring's skinned extent
+// read off: square to the camera it is as wide as it is tall.
+test("Kim's ring light faces the camera in a portrait as it does in a match", async () => {
+  const { bustTurn } = await import('../src/engine/gl3d/index.js');
+  const model = loadModel('zara');
+  const rig = buildRig(model, MODELS3D.zara);
+  const ring = model.primitives.find((p) => p.name === 'prop:ringlight');
+  assert.ok(ring, "Kim's sculpt has no ring light");
+  assert.ok(GL3D.BUST.FACING.includes(ring.name));
+  const entry = { restHead: model.restHeads[model.jointNames.indexOf('head')] };
+  const turnOf = bustTurn(entry);
+  assert.equal(turnOf({ name: 'body' }), null, 'a portrait turns more than the ring');
+  const shape = (turn, r) => {
+    const m = solvePose(rig, { ...restPose(), bodyLean: 0 }, {}, turn);
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (let v = 0; v < ring.positions.length / 3; v++) {
+      let [x, y, z] = [ring.positions[v * 3], ring.positions[v * 3 + 1], ring.positions[v * 3 + 2]];
+      if (r) {
+        const c = Math.cos(r[2]), s = Math.sin(r[2]), dx = x - r[0], dz = z - r[1];
+        [x, z] = [r[0] + dx * c - dz * s, r[1] + dx * s + dz * c];
+      }
+      const out = [0, 0, 0];
+      for (let k = 0; k < 4; k++) {
+        const w = ring.weights[v * 4 + k];
+        if (!w) continue;
+        const p = transformPoint(m, ring.joints[v * 4 + k], [x, y, z]);
+        for (let i = 0; i < 3; i++) out[i] += w * p[i];
+      }
+      for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], out[i]); hi[i] = Math.max(hi[i], out[i]); }
+    }
+    return (hi[0] - lo[0]) / (hi[1] - lo[1]);          // across the screen against its height
+  };
+  const match = shape(null, null), bustBefore = shape(GL3D.BUST.TURN, null), bust = shape(GL3D.BUST.TURN, turnOf(ring));
+  assert.ok(match > 0.97, `in a match the ring is ${match.toFixed(3)} as wide as tall`);
+  assert.ok(bustBefore < 0.96, `unturned, a portrait's ring was already square (${bustBefore.toFixed(3)})`);
+  assert.ok(Math.abs(bust - match) < 0.01, `in a portrait the ring is ${bust.toFixed(3)} as wide as tall, in a match ${match.toFixed(3)}`);
+});

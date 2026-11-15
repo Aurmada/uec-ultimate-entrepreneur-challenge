@@ -174,6 +174,7 @@ function load(id) {
       entry.head = model.jointNames.indexOf('head');
       entry.headLen = spec.leaf?.head ?? null;
       entry.skull = model.restHeads[entry.head].map((v, i) => v + (i === 1 ? spec.skull : 0));
+      entry.restHead = model.restHeads[entry.head];
       if (spec.face) entry.face = faceSlot(id, spec.face);
       entry.ready = true;
       for (const fn of waiting.splice(0)) fn();
@@ -369,7 +370,7 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
   const w = SPAN, h = (SPAN * rect.h) / rect.w;
   const box = { ox: w * HEAD_AT[0] - hx * U, oy: h * HEAD_AT[1] + hy * U, w, h };
   const glass = close ? closeGlass(entry) : undefined;
-  const { vw, vh } = drawModel(entry, def, 'idle', unicorn, expression, face, { box, ss: rect.w / w, glass });
+  const { vw, vh } = drawModel(entry, def, 'idle', unicorn, expression, face, { box, ss: rect.w / w, glass, turn: bustTurn(entry) });
   ctx.save();
   if (mirror) {
     ctx.translate(2 * rect.x + rect.w, 0);
@@ -380,6 +381,17 @@ export function renderBust3D(ctx, rect, def, P, { expression = 'idle', face = nu
   img.done();
   ctx.restore();
   return true;
+}
+
+// What a portrait turns back to face the camera (GL3D.BUST.FACING): by as
+// much as the bust turns the head past the match's turn, about the head.
+export function bustTurn(entry) {
+  if (!entry.bustTurn) {
+    const BUST = GL3D.BUST, [hx, , hz] = entry.restHead || [0, 0, 0];
+    const turn = [hx, hz, GL3D.YAW + GL3D.HEAD_YAW - (BUST.TURN.yaw + BUST.TURN.headYaw)];
+    entry.bustTurn = (p) => (BUST.FACING.includes(p.name) ? turn : null);
+  }
+  return entry.bustTurn;
 }
 
 // A model's glass in a close portrait: its own opacities, with those

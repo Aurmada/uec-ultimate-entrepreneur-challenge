@@ -34,13 +34,21 @@ function floor(ctx, top, bottom, lineColor) {
   }
 }
 
-function billboard(ctx, x, y, w, h, t, hue) {
+// `lit` is a rendered stage's board (sponsorBoard): its name burns near white
+// in its hue, steady, on a deeper panel. As the 2D game draws it, a saturated
+// name pulsing on a panel of the same hue, a board's name fell to between 2
+// and 3 to 1 at its dimmest, and on the stage, under the scrim and the
+// vignette at the screen's edge, the Unicorn Club's magenta board was the
+// hardest thing on any stage to read. Lit, every board's name reads at 7 to 1
+// or better (test/stages.test.js). The 2D game's boards are as they were.
+function billboard(ctx, x, y, w, h, t, hue, lit = false) {
   ctx.fillStyle = '#05070f';
   ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
-  ctx.fillStyle = `hsl(${hue}, 70%, 12%)`;
+  ctx.fillStyle = lit ? `hsl(${hue}, 60%, 9%)` : `hsl(${hue}, 70%, 12%)`;
   ctx.fillRect(x, y, w, h);
   const name = SPONSORS[Math.floor(t / 4) % SPONSORS.length];
-  ctx.fillStyle = `hsla(${hue}, 90%, 65%, ${0.75 + 0.25 * Math.sin(t * 3)})`;
+  ctx.fillStyle = lit ? `hsla(${hue}, 100%, 82%, ${0.94 + 0.06 * Math.sin(t * 3)})`
+    : `hsla(${hue}, 90%, 65%, ${0.75 + 0.25 * Math.sin(t * 3)})`;
   ctx.font = `900 italic ${Math.floor(h * 0.44)}px system-ui`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(name, x + w / 2, y + h / 2 + 1);
@@ -97,7 +105,7 @@ function drawBoardroom(ctx, t) {
 // read through the scrim, a lit screen in a dimmed room (stage.js liftBoards).
 // `dt` puts boards that face each other out of step.
 function sponsorBoard(hue, dt = 0) {
-  return Object.assign((ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + dt, hue), { board: true });
+  return Object.assign((ctx, w, h, t) => billboard(ctx, 0, 0, w, h, t + dt, hue, true), { board: true });
 }
 
 // For rendered stages: a painter that runs a drawing made in world px inside a

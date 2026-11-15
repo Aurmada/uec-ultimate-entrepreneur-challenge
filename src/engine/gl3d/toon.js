@@ -45,14 +45,25 @@ uniform vec2 uFaceFade;   // facing at full strength, facing at none
 uniform vec2 uSway;       // the anchor's lag, model units; zero for what does not hang
 uniform vec3 uSwayHang;   // pivot x, y and reach, in bind space
 uniform vec2 uSwayDir;    // the way the mesh hangs from the pivot
+uniform vec4 uTurn;       // a part turned about the bind-space vertical: pivot x, z, then cos and sin; sin 0 for none
 out vec3 vNrm;
 out vec2 vFaceUV;
 out float vFaceMask;
 void main() {
   mat4 skin = aWeight.x * uBones[int(aJoint.x)] + aWeight.y * uBones[int(aJoint.y)]
             + aWeight.z * uBones[int(aJoint.z)] + aWeight.w * uBones[int(aJoint.w)];
-  vec3 n = normalize(mat3(skin) * aNrm);
-  vec4 p = skin * vec4(aPos, 1.0);
+  // A part built to face the camera at the match's turn (Kim's ring light),
+  // turned back to face it where the model is turned otherwise (a portrait).
+  // Skipped, not turned by nothing, for every other part: (x - px) + px is not
+  // always x in floats, and the game's pixels stay the same.
+  vec3 pos = aPos, nrm = aNrm;
+  if (uTurn.w != 0.0) {
+    vec2 d = pos.xz - uTurn.xy;
+    pos.xz = uTurn.xy + vec2(d.x * uTurn.z - d.y * uTurn.w, d.x * uTurn.w + d.y * uTurn.z);
+    nrm.xz = vec2(nrm.x * uTurn.z - nrm.z * uTurn.w, nrm.x * uTurn.w + nrm.z * uTurn.z);
+  }
+  vec3 n = normalize(mat3(skin) * nrm);
+  vec4 p = skin * vec4(pos, 1.0);
   // Secondary motion: the further a vertex hangs from its pivot, the more of
   // the anchor's lag it takes, so a ponytail bends from the tie, not the scalp.
   float hang = clamp(dot(aPos.xy - uSwayHang.xy, uSwayDir) / max(uSwayHang.z, 1e-4), 0.0, 1.0);
@@ -251,7 +262,7 @@ export function createToon({ onScreen = null } = {}) {
     for (const n of ['uBones', 'uView', 'uInflate', 'uInkBias', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
       'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
       'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
-      'uSway', 'uSwayHang', 'uSwayDir', 'uRimDir', 'uFlash']) {
+      'uSway', 'uSwayHang', 'uSwayDir', 'uTurn', 'uRimDir', 'uFlash']) {
       loc[n] = gl.getUniformLocation(prog, n);
     }
     gl.useProgram(prog);
@@ -306,6 +317,7 @@ export function createToon({ onScreen = null } = {}) {
   };
   const NO_FACE = [0, 0, 0, 0];
   const NO_SWAY = [0, 0];
+  const NO_TURN = [0, 0, 1, 0];
   const NONE = new Set(), NO_GLASS = new Map();
 
   const renderer = {
@@ -413,7 +425,9 @@ export function createToon({ onScreen = null } = {}) {
     // a Map of see-through roles to their opacity. `light` is a stage's
     // lighting (see GL3D.LIGHT); null lights the fighter as with no stage.
     // `sway(p)`, when given, is a primitive's hang ({ lag, pivot, dir, reach })
-    // or null for one that rides its bones rigidly.
+    // or null for one that rides its bones rigidly. `turn(p)`, when given, is
+    // a primitive's turn about the bind-space vertical, [pivot x, pivot z,
+    // radians], or null for none (a portrait's ring light, index.js).
     //
     // `screen`, on a renderer made with `onScreen`, draws onto that canvas
     // instead, over what is already there: { m, flash, keyline }, where m is
@@ -424,7 +438,7 @@ export function createToon({ onScreen = null } = {}) {
     // fighter facing left is drawn mirrored just as the 2D buffer is.
     render(gpu, matrices, {
       colours, box, squash = { x: 1, y: 1 }, jitter = 0, ss = GL3D.SS, visible = () => true, face = null,
-      inkless = NONE, glass = NO_GLASS, light = null, sway = null, screen = null,
+      inkless = NONE, glass = NO_GLASS, light = null, sway = null, turn = null, screen = null,
     }) {
       let vw, vh, view, flip = false, rimDir = IDENTITY2, reach = GL3D.RIM_REACH, keyRect = null, keyRadius = 0;
       if (screen) {
@@ -481,6 +495,8 @@ export function createToon({ onScreen = null } = {}) {
       // wears, then back to the canvas with the mask bound for the body pass.
       sizeMask(canvas.width, canvas.height);
       const swayOf = (p) => {
+        const r = turn && turn(p);
+        gl.uniform4fv(loc.uTurn, r ? [r[0], r[1], Math.cos(r[2]), Math.sin(r[2])] : NO_TURN);
         const h = sway && sway(p);
         gl.uniform2fv(loc.uSway, h ? h.lag : NO_SWAY);
         if (h) {
