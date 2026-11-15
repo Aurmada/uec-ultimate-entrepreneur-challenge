@@ -136,7 +136,7 @@ In the order they pay off:
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.22.2 (`SIM_VERSION` 13): one version, 3D, with the sculpted cast; 2D only as the fallback | Deployed. A push here is a release. |
-| `claude/v3.22.2` | One version, 3D (no 2D choice in Settings), the 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-14, merged into `main`. |
+| `claude/v3.22.2` | One version, 3D (no 2D choice in Settings), the 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.1` | Round ten of the phone test, and the stack's old canvases leaving the page with a dropped 3D layer (see "v3.22.1") | Released in v3.22.1 on 2026-11-14, merged into `main`. |
 | `claude/v3.22` | The resolution step-down, the performance reports and dashboard, the balance pass and the art notes (see "v3.22") | Released in v3.22 on 2026-11-14, merged into `main`. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
@@ -219,12 +219,13 @@ was never pushed.
 
 - Phone performance: the 3D fighters are within the 2 ms budget on a budget
   Android (Ahlo 1) and an iPhone 12 Pro, but the Ahlo shows about 21 frames a
-  second at full resolution and the iPhone 12 Pro 19 in 2D (see "v3.21.1"
-  and "v3.22"): the screen's drawing, not the processor, is the limit. The
-  game now steps its resolution down on such a phone (about 31 fps on the
-  Ahlo). Round nine of the phone test found the part on each (the 3D fighters
-  on the Ahlo, the 2D shading on the iPhone), and round ten (v3.22.1) is to
-  name the piece.
+  second at full resolution (see "v3.21.1" and "v3.22"): the screen's
+  drawing, not the processor, is the limit. The game steps its resolution
+  down on such a phone (about 31 fps on the Ahlo). Round ten (v3.22.1) found
+  no one piece of the 3D fighters to blame there, and the options are with
+  the owner (Next steps, 2). The iPhone 12 Pro's 19 fps in 2D was the
+  shading's round trips, drawn one way in v3.22.2, where 2D is only the
+  fallback; round eleven is to confirm it.
 - The 3D layer differs from the copy path in three small ways: an aura drawn by
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
