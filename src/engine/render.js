@@ -654,11 +654,19 @@ function placeStack(canvas, s) {
   if (Math.abs(dx) > 1e-3 || Math.abs(dy) > 1e-3) put(dx, dy);
 }
 
-function stackFor(canvas) {
+// `layer` makes the 3D layer's canvas; a test passes its own.
+function stackFor(canvas, layer = layerCanvas3D) {
   let s = stacks.get(canvas);
-  if (s && !s.gl.isConnected) s = undefined;   // its canvas was dropped (reset3D)
+  if (s && !s.gl.isConnected) {
+    // Its 3D canvas was dropped (reset3D, dropLayer3D), and the rest of it
+    // goes too: left in the page, its 2D canvases went on showing their last
+    // frame over the new stack's (found by round ten of the phone test, which
+    // remakes the layer without antialiasing and back).
+    for (const el of s.els) el.remove();
+    s = undefined;
+  }
   if (s === undefined) {
-    s = canvas.parentNode ? makeStack(canvas, layerCanvas3D()) : null;
+    s = canvas.parentNode ? makeStack(canvas, layer()) : null;
     stacks.set(canvas, s);
   }
   if (!s) return null;
@@ -868,7 +876,7 @@ function renderLayered(ctx, L, game, t, c) {
 
 // For test/layer3d.test.js, which drives the stack on fake canvases: WebGL and
 // a page are not there to make a real one.
-export const LAYER_STACK = { makeStack, sizeStack, renderLayered };
+export const LAYER_STACK = { makeStack, sizeStack, stackFor, renderLayered };
 
 // renderWorld reads game.fighters in a fixed order (camera, then shadows, then
 // bodies, then icons) that lab/contrast.js and lab/roster.js count on, so the

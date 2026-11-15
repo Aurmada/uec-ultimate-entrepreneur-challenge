@@ -195,6 +195,19 @@ export const roleColour = (palette, role, own) => {
   return hexToRGB(hex).map((v) => v * k);
 };
 
+// Three parts of a 3D fighter, each on in the game: the antialiased drawing
+// buffer (read when a context is made, so a change needs a new one:
+// gl3d/index.js dropLayer3D), the ink outline (the inflated hull drawn behind
+// the body) and the silhouette mask. The mask is drawn into a texture of its
+// own for each fighter, so the frame changes target twice a fighter, which a
+// phone's graphics chip can pay for by saving the screen out and reading it
+// back; the rim and the key line read it, so without it the rim reads a stale
+// mask and the key line is not drawn. Round nine of the phone test found the
+// 3D fighters cost the budget Android half its frames (21 fps with them, 42
+// without); lab/phone-test.html turns these off one at a time, with the key
+// line, to find the part. Render only.
+export const TOON = { antialias: true, ink: true, mask: true };
+
 // Returns null where WebGL2 is unavailable, so the caller falls back cleanly.
 // `onScreen`: a canvas that is itself on the page, to draw fighters straight
 // onto (render's `screen`). It is never read back, so its buffer is not kept.
@@ -205,7 +218,7 @@ export function createToon({ onScreen = null } = {}) {
   // two do not need to. An OffscreenCanvas hands over an ImageBitmap instead.
   const mode = onScreen ? 'screen' : GL3D.COMPOSITE;
   const attrs = {
-    alpha: true, premultipliedAlpha: true, antialias: true, depth: true,
+    alpha: true, premultipliedAlpha: true, antialias: TOON.antialias, depth: true,
     preserveDrawingBuffer: mode === 'canvas',
   };
   let canvas = onScreen, gl = onScreen ? onScreen.getContext('webgl2', attrs) : null, bitmap = false;
@@ -467,17 +480,6 @@ export function createToon({ onScreen = null } = {}) {
       // 0. The silhouette mask, from every opaque primitive this fighter
       // wears, then back to the canvas with the mask bound for the body pass.
       sizeMask(canvas.width, canvas.height);
-      // Unbound while it is the target: a texture attached to the framebuffer
-      // being drawn and also bound to a sampler is a feedback loop, and WebGL
-      // refuses the draw even in a branch that never reads it.
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, mask.fbo);
-      gl.viewport(...viewport);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.cullFace(gl.BACK);
-      gl.uniform1f(loc.uMaskPass, 1);
       const swayOf = (p) => {
         const h = sway && sway(p);
         gl.uniform2fv(loc.uSway, h ? h.lag : NO_SWAY);
@@ -486,14 +488,27 @@ export function createToon({ onScreen = null } = {}) {
           gl.uniform2fv(loc.uSwayDir, h.dir);
         }
       };
-      for (const p of gpu) {
-        if (!visible(p) || glass.has(p.role)) continue;
-        swayOf(p);
-        gl.bindVertexArray(p.vao);
-        gl.drawElements(gl.TRIANGLES, p.count, p.indexType, 0);
+      if (TOON.mask) {
+        // Unbound while it is the target: a texture attached to the framebuffer
+        // being drawn and also bound to a sampler is a feedback loop, and WebGL
+        // refuses the draw even in a branch that never reads it.
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, mask.fbo);
+        gl.viewport(...viewport);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.cullFace(gl.BACK);
+        gl.uniform1f(loc.uMaskPass, 1);
+        for (const p of gpu) {
+          if (!visible(p) || glass.has(p.role)) continue;
+          swayOf(p);
+          gl.bindVertexArray(p.vao);
+          gl.drawElements(gl.TRIANGLES, p.count, p.indexType, 0);
+        }
+        gl.uniform1f(loc.uMaskPass, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       }
-      gl.uniform1f(loc.uMaskPass, 0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, mask.tex);
       gl.activeTexture(gl.TEXTURE0);
@@ -501,7 +516,7 @@ export function createToon({ onScreen = null } = {}) {
       gl.uniform1f(loc.uRimReach, reach);
 
       // The key line, under everything else this fighter draws.
-      if (keyRect) {
+      if (keyRect && TOON.mask) {
         const k = screen.keyline, col = hexToRGB(k.color);
         gl.useProgram(key.prog);
         gl.disable(gl.DEPTH_TEST);
@@ -522,7 +537,7 @@ export function createToon({ onScreen = null } = {}) {
         gl.useProgram(prog);
       }
 
-      for (const pass of ['ink', 'body', 'glass']) {
+      for (const pass of TOON.ink ? ['ink', 'body', 'glass'] : ['body', 'glass']) {
         const ink = pass === 'ink';
         if (pass === 'glass') {
           gl.enable(gl.BLEND);

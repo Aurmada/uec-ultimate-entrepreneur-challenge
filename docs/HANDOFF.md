@@ -16,8 +16,11 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
-- **Live:** v3.22, released 2026-11-14 (`VERSION` in `src/config.js`;
+- **Live:** v3.22.1, released 2026-11-14 (`VERSION` in `src/config.js`;
   `SIM_VERSION` 13 in `src/net/online.js`). 3D by default, 2D in Settings.
+- **What v3.22.1 added:** round ten of the phone test, which switches off the
+  pieces of the two parts round nine found slow (see "v3.22.1"). The game
+  plays as v3.22 did.
 - **What v3.22 added:** the resolution steps down on a slow phone (and back if
   that does not help); every match and every phone test reports how it ran to
   the backend, with a dashboard over it; a balance pass for Jeff and Elo; the
@@ -108,10 +111,13 @@ In the order they pay off:
    step down. The known levers are in "v3.22" and "Known limits": the 2D
    fighters' canvas copies on iPhones, the stage light, the fighters' contact
    shadows.
-2. **Round ten of the phone test**, to name the one part that costs: round
-   nine (see "v3.22") found the iPhone 12 Pro's 2D game held to 19 fps by the
-   fighters' shading pass, and the budget Android's 3D game held to 21 by the
-   3D fighters. Round ten would switch the parts of each off one at a time.
+2. **Round ten of the phone test is live** (see "v3.22.1"): the owner runs
+   `/lab/phone-test.html` again on the Ahlo 1 and the iPhone 12 Pro (and the
+   second Android, whose round nine never arrived), and the results land on
+   the dashboard. It names the piece that costs: on the iPhone, which of the
+   2D shading's passes (or the buffer itself); on the Ahlo, which part of the
+   3D fighters. Then the fix for each, made so it changes nothing on a phone
+   that already holds 60.
 3. **The next balance pass** (see "v3.22"): at Champion Steve still wins about
    64% and Kim now sits lowest, near 37%. `lab/balance.js --def` and
    `--special` try a change before it is made.
@@ -122,7 +128,8 @@ In the order they pay off:
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.22 (`SIM_VERSION` 13): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `main` | The live game, v3.22.1 (`SIM_VERSION` 13): 3D by default with the sculpted cast, 2D in Settings | Deployed. A push here is a release. |
+| `claude/v3.22.1` | Round ten of the phone test, and the stack's old canvases leaving the page with a dropped 3D layer (see "v3.22.1") | Released in v3.22.1 on 2026-11-14, merged into `main`. |
 | `claude/v3.22` | The resolution step-down, the performance reports and dashboard, the balance pass and the art notes (see "v3.22") | Released in v3.22 on 2026-11-14, merged into `main`. |
 | `claude/jeff-model` | The remodel of the cast and everything after it, up to the v3.20 launch build | Released in v3.20; on GitHub until the owner deletes it (Decisions, 0). |
 | `claude/guard-pass` | v3.12 plus the guard pass below: every fighter in a fighting stance, 2D and 3D | Released in v3.13. |
@@ -204,7 +211,9 @@ was never pushed.
   second at full resolution and the iPhone 12 Pro 19 in 2D (see "v3.21.1"
   and "v3.22"): the screen's drawing, not the processor, is the limit. The
   game now steps its resolution down on such a phone (about 31 fps on the
-  Ahlo); round nine of the phone test is to find the rest.
+  Ahlo). Round nine of the phone test found the part on each (the 3D fighters
+  on the Ahlo, the 2D shading on the iPhone), and round ten (v3.22.1) is to
+  name the piece.
 - The 3D layer differs from the copy path in three small ways: an aura drawn by
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
@@ -357,6 +366,56 @@ Everything below is how the game got here: each release with what changed,
 why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
+
+## v3.22.1, released 2026-11-14: round ten of the phone test
+
+Round nine (see "v3.22") found the part each slow phone spends its frame on:
+the 3D fighters on the Ahlo 1 (21 fps with them, 42 without) and the 2D
+shading on the iPhone 12 Pro (19 fps with it, 60 without). Round ten switches
+off the pieces of each, one at a time, so the fix can go to the one that
+costs. Sixteen setups, about two minutes:
+
+- **The 3D fighters' pieces**, against 3D as shipped: the key line (the 12 by
+  2 tap shader around each fighter, `STYLIZE.KEYLINE_A` at 0), the silhouette
+  mask with it (`TOON.mask`), the ink outline (`TOON.ink`, the inflated hull
+  drawn behind the body) and antialiasing (`TOON.antialias`). The mask is
+  drawn into a texture of its own for each fighter, so the frame changes
+  target twice a fighter; on a phone's tiled graphics chip that can mean
+  saving the whole (antialiased) screen out and reading it back each time,
+  which is the guess for the Ahlo. The rim and the key line read the mask, so
+  without it the rim reads a stale mask and the key line is not drawn (the
+  setup is "no mask or key line", and "no key line" alone tells them apart).
+  A context is antialiased or not from when it is made, so that setup drops
+  the 3D layer (`dropLayer3D`) and the game makes it again.
+- **The 2D shading's pieces**, against 2D as shipped, all with the fighter's
+  buffer kept (`SHADE_PASSES` in `drawFighter.js`): the key light, the key
+  light blended with `source-atop` instead of `overlay`
+  (`STYLIZE.SHADE_KEY_MODE`, the guess for the iPhone), the form gradients,
+  the rim, and none of the three, which leaves the buffer and its copies
+  alone. "No shading" (`STYLE.shaded` off) stays as the whole: it also drops
+  the buffer and draws each fighter path by path, which is why it is slower
+  on the Ahlo.
+- Kept from round nine: the ceiling, 3D as shipped (first and last), half
+  resolution, no fighters drawn, 2D as shipped. The report gives each piece's
+  share of its whole (of what "no fighters drawn" or "no shading" gains).
+
+Every switch is on in the game, and the default game is unchanged:
+`lab/pixels.js` against v3.22, 30 frames identical with the flags off and
+with `--flags gl`. `test/passes.test.js` draws a frame on recording contexts
+and checks each switch leaves out its own piece and nothing else (each check
+fails with its switch broken).
+
+**Found on the way:** a stack whose 3D canvas was dropped (`dropLayer3D`,
+`reset3D`) left its five 2D canvases in the page, showing their last frame
+over the new stack's: twelve canvases where there should be seven, after the
+no-antialiasing setup remade the layer. `stackFor` in `render.js` now removes
+the whole stack (`test/layer3d.test.js`). The game never drops its layer, so
+only the lab pages saw it.
+
+Run headless to the end (SwiftShader, so its frame rates mean nothing for a
+phone): every setup timed, the layer remade without antialiasing for its
+setup and with it after, one stack throughout, nothing sent (the browser is
+automated, so `perfAllowed` says no).
 
 ## v3.22, released 2026-11-14: the resolution steps down on a slow phone, the game reports how it runs, Jeff and Elo, and the art notes
 

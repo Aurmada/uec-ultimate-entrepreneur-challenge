@@ -8,19 +8,21 @@
 <!--
   Times the game on a real phone, with no sign-in and nothing to install: a
   live AI match between the two heaviest sculpts on a rendered stage, in
-  twelve setups that each switch one thing, about a minute and a half in all,
-  and a block of results to copy. Rule 9's budget (the 3D fighters about 2 ms
-  a frame on a mid-range phone) is checked with this, and so is the frame
-  rate itself. Round seven (v3.21) found the 3D fighters cheap everywhere but
-  a budget Android at 21 fps whatever it drew and an iPhone 12 Pro at 19 in
-  2D. Round eight (v3.21.1) found the Android's lever is resolution (31 fps
-  drawn at 1x, so the game now steps down by itself, engine/resolution.js)
-  with a floor near 30 that none of its switches moved, and the iPhone's 2D
-  unmoved by resolution or the stage light: the 2D fighters themselves, each
-  drawn on canvases of its own and copied about ten times a frame. Round nine
-  switches those: the fight's own update, the fighters, their shadows, and
-  the 2D fighters' key line and shading. The processor's time is shown for
-  the drawing and for the fight apart.
+  sixteen setups that each switch one thing, about two minutes in all, and a
+  block of results to copy. Rule 9's budget (the 3D fighters about 2 ms a
+  frame on a mid-range phone) is checked with this, and so is the frame rate
+  itself. Round seven (v3.21) found the 3D fighters cheap everywhere but a
+  budget Android at 21 fps whatever it drew and an iPhone 12 Pro at 19 in 2D.
+  Round eight (v3.21.1) found the Android's lever is resolution (31 fps drawn
+  at 1x, so the game now steps down by itself, engine/resolution.js). Round
+  nine (v3.22) found the part on each: the Android's 3D fighters (21 fps with
+  them, 42 without) and the iPhone's 2D shading (19 fps with it, 60 without,
+  the key line and the fight's own update costing nothing). Round ten
+  switches the pieces of each: the 3D fighters' key line, silhouette mask,
+  ink outline and antialiasing (gl3d/toon.js TOON), and the 2D shading's key
+  light, its blend, its form and its rim, all of them with the buffer kept,
+  and the buffer itself (drawFighter.js SHADE_PASSES). The processor's time
+  is shown for the drawing and for the fight apart.
 
   It reads the game's own files, so on the site it tests whatever version is
   live:  https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/lab/phone-test.html
@@ -103,10 +105,10 @@
 <div class="wrap">
   <header>
     <h1>UEC <span>3D</span> phone test</h1>
-    <p class="lede">The game as it ships in <span id="ver">this version</span>, with the two heaviest fighters, <b id="pair">Cathie and Carl</b>, fighting on the garage stage, timed in twelve setups that each switch one thing off: the resolution, the fight itself, the fighters, their shadows, the 2D fighters' outline and shading, and 3D against 2D. It finds what a phone spends its frame on. An older or mid-range phone tells the most.</p>
+    <p class="lede">The game as it ships in <span id="ver">this version</span>, with the two heaviest fighters, <b id="pair">Cathie and Carl</b>, fighting on the garage stage, timed in sixteen setups that each switch one thing off: the resolution, the pieces of the 3D fighters (their outline, mask, ink and smoothing), the pieces of the 2D fighters' shading, and 3D against 2D. It finds what a phone spends its frame on. An older or mid-range phone tells the most.</p>
     <ol class="steps">
       <li>Open this page in the phone's own browser (Chrome on Android, Safari on an iPhone), with nothing else running, the battery above 30% and Low Power Mode or battery saver off.</li>
-      <li>Tap <b>Run the test</b>, keep the screen on and leave the phone for about a minute and a half.</li>
+      <li>Tap <b>Run the test</b>, keep the screen on and leave the phone for about two minutes.</li>
       <li>That is all: when it finishes, the results go to the game's server on their own, with a random number for the phone and nothing about you. Chrome on Android names the phone's model in them. <b>Copy results</b> is there too, to send them yourself.</li>
     </ol>
   </header>
@@ -146,10 +148,11 @@ import { renderGame, RENDER } from '../src/engine/render.js';
 import { getFighter } from '../src/data/fighters.js';
 import { getArena } from '../src/data/arenas.js';
 import { AIController } from '../src/engine/ai.js';
-import { enable3D, disable3D, reset3D, stats3D, pending3D, sculpts3D } from '../src/engine/gl3d/index.js';
+import { enable3D, disable3D, reset3D, dropLayer3D, stats3D, pending3D, sculpts3D } from '../src/engine/gl3d/index.js';
+import { TOON } from '../src/engine/gl3d/toon.js';
 import { STAGES, stageFor } from '../src/engine/stage.js';
 import { FX_STYLE } from '../src/engine/fx.js';
-import { STYLE } from '../src/engine/drawFighter.js';
+import { STYLE, SHADE_PASSES } from '../src/engine/drawFighter.js';
 import { reportPerf, savedSettings } from '../src/net/perf.js';
 
 // The two heaviest sculpts (about 66,000 and 65,000 triangles), so this is
@@ -158,30 +161,38 @@ const cathie = getFighter('eleanor'), carl = getFighter('dex');
 const arena = getArena('garage');
 
 // Each setup is the game as shipped with one thing changed, so the fps each
-// gains over "3D, as shipped" says what that thing costs. "Ceiling" draws
-// nothing but a fill: the most frames this phone shows. "Frozen" draws the
-// same moment over and over without running the fight, so what it gains is
-// the fight's own update (the AI, the moves). 3D as shipped comes last again,
-// to catch a phone slowing as it warms.
-const FULL = { three: true, dpr: 2, light: true, stage: 'layers', fx: true, fighters: true, shadows: true, frozen: false, keyline: true, shaded: true };
+// gains over the same mode as shipped says what that thing costs. "Ceiling"
+// draws nothing but a fill: the most frames this phone shows. 3D as shipped
+// comes last again, to catch a phone slowing as it warms. A setup with `of`
+// is a piece of a larger part, and the report says what share of that part's
+// cost it is: of the 3D fighters (as "no fighters drawn" gains) or of the 2D
+// shading (as "no shading" gains, which also draws each fighter path by path
+// instead of through its buffer).
+const KEYLINE = STYLIZE.KEYLINE_A;          // the 2D fighters' key line, as shipped
+const KEY_MODE = STYLIZE.SHADE_KEY_MODE;    // and how the shading's key light blends
+const FULL = {
+  three: true, dpr: 2, light: true, stage: 'layers', fx: true, fighters: true, shadows: true, frozen: false,
+  keyline: true, shaded: true, aa: true, ink: true, mask: true, keylight: true, keyMode: KEY_MODE, form: true, rim: true,
+};
 const SETUPS = [
   { id: 'ceiling', name: 'Ceiling (a blank screen)', blank: true },
   { id: 'd3', name: '3D, as shipped', ...FULL },
   { id: 'd3-half', name: '3D, half resolution', ...FULL, dpr: 1, change: 'at half resolution' },
-  { id: 'd3-frozen', name: '3D, the fight frozen', ...FULL, frozen: true, change: 'with the fight frozen' },
+  { id: 'd3-nokey', name: '3D, no key line', ...FULL, keyline: false, change: 'without the key line', of: 'd3-nofighters' },
+  // the key line reads the mask, so it goes too
+  { id: 'd3-nomask', name: '3D, no mask or key line', ...FULL, keyline: false, mask: false, change: 'without the mask or the key line', of: 'd3-nofighters' },
+  { id: 'd3-noink', name: '3D, no ink outline', ...FULL, ink: false, change: 'without the ink outline', of: 'd3-nofighters' },
+  { id: 'd3-noaa', name: '3D, no antialiasing', ...FULL, aa: false, change: 'without antialiasing', of: 'd3-nofighters' },
   { id: 'd3-nofighters', name: '3D, no fighters drawn', ...FULL, fighters: false, change: 'without the fighters' },
-  { id: 'd3-noshadow', name: '3D, no contact shadows', ...FULL, shadows: false, change: 'without the contact shadows' },
-  // half resolution and everything else off but the stage's pictures, which
-  // cost nothing in round eight (with none, the painted stage drawn in their
-  // place costs more)
-  { id: 'd3-least', name: '3D, the least it can draw', three: true, dpr: 1, light: false, stage: 'layers', fx: false, fighters: false, shadows: false, frozen: true, keyline: true, shaded: true },
   { id: 'd2', name: '2D, as shipped', ...FULL, three: false },
-  { id: 'd2-nokey', name: '2D, no key line', ...FULL, three: false, keyline: false, change: 'without the key line' },
-  { id: 'd2-flat', name: '2D, no shading', ...FULL, three: false, shaded: false, change: 'without the shading' },
-  { id: 'd2-plain', name: '2D, neither', ...FULL, three: false, keyline: false, shaded: false, change: 'without the key line or the shading' },
+  { id: 'd2-nokeylight', name: '2D, no key light', ...FULL, three: false, keylight: false, change: 'without the key light', of: 'd2-flat' },
+  { id: 'd2-keyatop', name: '2D, key light blended plainly', ...FULL, three: false, keyMode: 'source-atop', change: 'with the key light blended plainly', of: 'd2-flat' },
+  { id: 'd2-noform', name: '2D, no form shading', ...FULL, three: false, form: false, change: 'without the form shading', of: 'd2-flat' },
+  { id: 'd2-norim', name: '2D, no rim', ...FULL, three: false, rim: false, change: 'without the rim', of: 'd2-flat' },
+  { id: 'd2-nopasses', name: '2D, the buffer alone', ...FULL, three: false, keylight: false, form: false, rim: false, change: 'with the buffer but none of its passes', of: 'd2-flat' },
+  { id: 'd2-flat', name: '2D, no shading', ...FULL, three: false, shaded: false, change: 'without the shading or its buffer' },
   { id: 'd3-again', name: '3D, as shipped (again)', ...FULL },
 ];
-const KEYLINE = STYLIZE.KEYLINE_A;          // the 2D fighters' key line, as shipped
 const WARM = 1500, MEASURE = 6000;
 const BUDGET = 2;                         // ms a frame the 3D fighters may add (rule 9)
 
@@ -310,10 +321,25 @@ function apply(s) {
   RENDER.shadows = s.shadows;
   STYLIZE.KEYLINE_A = s.keyline ? KEYLINE : 0;
   STYLE.shaded = s.shaded;
+  SHADE_PASSES.key = s.keylight;
+  SHADE_PASSES.form = s.form;
+  SHADE_PASSES.rim = s.rim;
+  STYLIZE.SHADE_KEY_MODE = s.keyMode;
+  TOON.ink = s.ink;
+  TOON.mask = s.mask;
+  antialias(s.aa);
   FX_STYLE.impact = s.fx;
   STAGES.enabled = s.stage !== 'none';
   if (s.three) { GL3D.LAYER = true; enable3D({ ids: null }); } else { GL3D.LAYER = false; disable3D(); }
   return true;
+}
+// A context is antialiased or not from when it is made, so a change drops the
+// 3D layer, and the game makes it again on its next frame (the models upload
+// to it then, inside the warm-up).
+function antialias(on) {
+  if (TOON.antialias === on) return;
+  TOON.antialias = on;
+  dropLayer3D();
 }
 function restore() {
   setup = null;
@@ -323,6 +349,10 @@ function restore() {
   RENDER.shadows = true;
   STYLIZE.KEYLINE_A = KEYLINE;
   STYLE.shaded = true;
+  SHADE_PASSES.key = SHADE_PASSES.form = SHADE_PASSES.rim = true;
+  STYLIZE.SHADE_KEY_MODE = KEY_MODE;
+  TOON.ink = TOON.mask = true;
+  antialias(true);
   FX_STYLE.impact = true;
   STAGES.enabled = true;
   if (three.ok) { GL3D.LAYER = true; enable3D({ ids: null }); }
@@ -390,7 +420,7 @@ const feel = (fps, ceiling) => {
 };
 
 function report() {
-  const lines = [`UEC 3D phone test, round nine (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
+  const lines = [`UEC 3D phone test, round ten (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
   for (const s of SETUPS) {
     const r = results[s.id];
     if (!r || r.skipped) { lines.push(`${s.name.padEnd(30)} skipped${r ? ` (${r.why})` : ''}`); continue; }
@@ -408,7 +438,10 @@ function report() {
       const base = s.three ? ref.fps : d2?.fps;
       if (!base) continue;
       const gain = results[s.id].fps - base;
-      lines.push(`  ${s.three ? '3D' : '2D'} ${s.change}: ${gain >= 0 ? '+' : ''}${gain.toFixed(1)} fps`);
+      // a piece's share of its part, where the part costs something to share
+      const whole = s.of && ok(s.of) ? results[s.of].fps - base : 0;
+      const share = whole > 1 ? `, ${Math.round((100 * gain) / whole)}% of what ${s.of === 'd2-flat' ? 'the shading' : 'the fighters'} cost` : '';
+      lines.push(`  ${s.three ? '3D' : '2D'} ${s.change}: ${gain >= 0 ? '+' : ''}${gain.toFixed(1)} fps${share}`);
       if (gain > base * 0.15) big.push(`${s.three ? '3D' : '2D'} ${s.change} gains ${gain.toFixed(0)} fps`);
     }
     if (ok('d3') && ok('d3-again')) {

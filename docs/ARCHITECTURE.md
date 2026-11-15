@@ -1085,8 +1085,11 @@ by intuition.
   before it is written (v3.22). Note that a roster fighter's `stats` are not
   read: style is the only stat variation (`fighter.js`).
 * `lab/phone-test.html` (on the live site at `/lab/phone-test.html`) times
-  the game as it ships on a phone in twelve setups that each switch one thing
-  off, and since v3.22 sends its results to `perf_reports` when it finishes.
+  the game as it ships on a phone in setups that each switch one thing off
+  (sixteen in round ten, v3.22.1: the pieces of the 3D fighters and of the 2D
+  shading, through `TOON` in `gl3d/toon.js` and `SHADE_PASSES` in
+  `drawFighter.js`, all on in the game), and since v3.22 sends its results to
+  `perf_reports` when it finishes.
 * `lab/pixels.js` (Node, Playwright) renders 30 seeded match frames from
   `main` and from the working tree in one browser and compares them: the check
   that the default game looks exactly as it did.

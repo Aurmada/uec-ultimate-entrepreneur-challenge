@@ -157,9 +157,16 @@ test("the phone test's switches are all on in the game, and each leaves out what
   const render = src('src/engine/render.js');
   assert.match(render, /function drawStageLight\(ctx\) \{\s*if \(!RENDER\.light\) return;/);
   assert.match(render, /function lightStack\(L, base, shake\) \{\s*showLayer\(L, 'glow', RENDER\.light\);\s*showLayer\(L, 'vig', RENDER\.light\);\s*if \(!RENDER\.light\) return;/);
-  // and the page times every switch it names
+  // and the page times every switch it names (round ten's; the pieces' own
+  // switches are held to what they leave out in passes.test.js)
   const page = src('lab/phone-test.html');
-  for (const key of ["blank: true", "dpr: 1", "frozen: true", "fighters: false", "shadows: false", "keyline: false", "shaded: false", "three: false"]) assert.ok(page.includes(key), `the breakdown lost ${key}`);
+  for (const key of ["blank: true", "dpr: 1", "fighters: false", "keyline: false", "mask: false", "ink: false", "aa: false",
+    "keylight: false", "keyMode: 'source-atop'", "form: false", "rim: false", "shaded: false", "three: false"]) assert.ok(page.includes(key), `the breakdown lost ${key}`);
+  // and turns each of them, and back
+  for (const set of ['SHADE_PASSES.key = s.keylight', 'SHADE_PASSES.form = s.form', 'SHADE_PASSES.rim = s.rim',
+    'STYLIZE.SHADE_KEY_MODE = s.keyMode', 'TOON.ink = s.ink', 'TOON.mask = s.mask', 'antialias(s.aa)',
+    'SHADE_PASSES.key = SHADE_PASSES.form = SHADE_PASSES.rim = true', 'STYLIZE.SHADE_KEY_MODE = KEY_MODE',
+    'TOON.ink = TOON.mask = true', 'antialias(true)']) assert.ok(page.includes(set), `the page no longer does ${set}`);
   // and every switch it turns is on in the game
   const { RENDER: R } = await import('../src/engine/render.js');
   const { STYLE } = await import('../src/engine/drawFighter.js');

@@ -1653,6 +1653,14 @@ function drawTorso(ctx, def, P) {
 // rig: ?figure, off by default while it is reviewed.
 export const STYLE = { shaded: true, sprites: false, figure: false };
 
+// The shading's three passes, each on in the game: the key light (blended in
+// STYLIZE.SHADE_KEY_MODE), the form (the mid and floor gradients) and the rim.
+// Round nine of the phone test found the shading costs the iPhone 12 Pro's 2D
+// game two thirds of its frames (19 fps with it, 60 without) for 0.6 ms of the
+// processor; lab/phone-test.html turns these off one at a time to find the
+// pass. Render only.
+export const SHADE_PASSES = { key: true, form: true, rim: true };
+
 // Baked sprite atlases. Opt-in: the procedural renderer stays the default and
 // the fallback, because a player's own founder is drawn from their photo and
 // look choices, which no pre-baked sheet can represent.
@@ -1744,32 +1752,36 @@ function shadeBuffer(b, B) {
   // unclipped it fills the buffer with a grey slab, which is both visibly wrong
   // and quietly poisonous, because lab/contrast.js then measures the slab
   // instead of the fighter and reports a contrast WIN. Hence destination-in.
-  tc.setTransform(1, 0, 0, 1, 0, 0);
-  tc.clearRect(0, 0, W, H);
-  tc.globalCompositeOperation = 'source-over';
-  tc.drawImage(_buf, 0, 0);                            // mask: the raw silhouette
+  if (SHADE_PASSES.key) {
+    tc.setTransform(1, 0, 0, 1, 0, 0);
+    tc.clearRect(0, 0, W, H);
+    tc.globalCompositeOperation = 'source-over';
+    tc.drawImage(_buf, 0, 0);                            // mask: the raw silhouette
 
-  b.save();
-  b.globalCompositeOperation = STYLIZE.SHADE_KEY_MODE;
-  const gk = b.createLinearGradient(0, oy - 178 * SS, 0, oy - 40 * SS);
-  gk.addColorStop(0, `rgba(255,246,224,${STYLIZE.SHADE_KEY})`);
-  gk.addColorStop(1, 'rgba(255,246,224,0)');
-  b.fillStyle = gk; b.fillRect(0, 0, W, H);
-  b.globalCompositeOperation = 'destination-in';       // ...and back inside the lines
-  b.drawImage(_tmp, 0, 0);
-  b.restore();
+    b.save();
+    b.globalCompositeOperation = STYLIZE.SHADE_KEY_MODE;
+    const gk = b.createLinearGradient(0, oy - 178 * SS, 0, oy - 40 * SS);
+    gk.addColorStop(0, `rgba(255,246,224,${STYLIZE.SHADE_KEY})`);
+    gk.addColorStop(1, 'rgba(255,246,224,0)');
+    b.fillStyle = gk; b.fillRect(0, 0, W, H);
+    b.globalCompositeOperation = 'destination-in';       // ...and back inside the lines
+    b.drawImage(_tmp, 0, 0);
+    b.restore();
+  }
 
   // ---- rim light: a warm crescent on the upper-key edge of the silhouette ----
   // built as (white silhouette) minus (white silhouette shifted toward shadow),
   // which leaves just the lit contour.
-  tc.setTransform(1, 0, 0, 1, 0, 0);
-  tc.clearRect(0, 0, W, H);
-  tc.globalCompositeOperation = 'source-over';
-  tc.drawImage(_buf, 0, 0);
-  tc.globalCompositeOperation = 'source-in';
-  tc.fillStyle = '#fff5df'; tc.fillRect(0, 0, W, H);   // warm-white silhouette
-  tc.globalCompositeOperation = 'destination-out';
-  tc.drawImage(_buf, -5 * SS, 6 * SS);                 // carve → rim on upper-right
+  if (SHADE_PASSES.rim) {
+    tc.setTransform(1, 0, 0, 1, 0, 0);
+    tc.clearRect(0, 0, W, H);
+    tc.globalCompositeOperation = 'source-over';
+    tc.drawImage(_buf, 0, 0);
+    tc.globalCompositeOperation = 'source-in';
+    tc.fillStyle = '#fff5df'; tc.fillRect(0, 0, W, H);   // warm-white silhouette
+    tc.globalCompositeOperation = 'destination-out';
+    tc.drawImage(_buf, -5 * SS, 6 * SS);                 // carve → rim on upper-right
+  }
 
   // ---- form + directional shading, clipped to the fighter ----
   b.save();
@@ -1789,24 +1801,28 @@ function shadeBuffer(b, B) {
   // flat lerp was flattening the whole palette. What is left here is the mid
   // and the floor crush, which genuinely do want to converge toward a colour,
   // and which were tuned against measurement. Left alone.
-  const g = b.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
-  g.addColorStop(0, 'rgba(255,255,255,0)');
-  g.addColorStop(0.44, `rgba(255,255,255,${STYLIZE.SHADE_MID})`);
-  g.addColorStop(1, `rgba(5,5,16,${STYLIZE.SHADE_FLOOR})`);
-  b.fillStyle = g; b.fillRect(0, 0, W, H);
-  const g2 = b.createLinearGradient(ox - 84 * SS, 0, ox + 84 * SS, 0);
-  g2.addColorStop(0, 'rgba(26,42,104,0.30)');
-  g2.addColorStop(0.5, 'rgba(0,0,0,0)');
-  g2.addColorStop(1, 'rgba(255,166,72,0.17)');
-  b.fillStyle = g2; b.fillRect(0, 0, W, H);
+  if (SHADE_PASSES.form) {
+    const g = b.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.44, `rgba(255,255,255,${STYLIZE.SHADE_MID})`);
+    g.addColorStop(1, `rgba(5,5,16,${STYLIZE.SHADE_FLOOR})`);
+    b.fillStyle = g; b.fillRect(0, 0, W, H);
+    const g2 = b.createLinearGradient(ox - 84 * SS, 0, ox + 84 * SS, 0);
+    g2.addColorStop(0, 'rgba(26,42,104,0.30)');
+    g2.addColorStop(0.5, 'rgba(0,0,0,0)');
+    g2.addColorStop(1, 'rgba(255,166,72,0.17)');
+    b.fillStyle = g2; b.fillRect(0, 0, W, H);
+  }
   b.restore();
 
   // ---- add the rim on top, additively (kept restrained so heads don't halo) ----
-  b.save();
-  b.globalCompositeOperation = 'lighter';
-  b.globalAlpha = 0.55;
-  b.drawImage(_tmp, 0, 0);
-  b.restore();
+  if (SHADE_PASSES.rim) {
+    b.save();
+    b.globalCompositeOperation = 'lighter';
+    b.globalAlpha = 0.55;
+    b.drawImage(_tmp, 0, 0);
+    b.restore();
+  }
 }
 
 // Motion smear behind the striking limb: the arc it swept through, drawn as

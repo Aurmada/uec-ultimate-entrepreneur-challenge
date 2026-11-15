@@ -259,3 +259,36 @@ test('hair and coats sway on the match clock, which a hitstop stops', async () =
     assert.equal(swayClock3D(), game.simT, `the ${sharp ? 'sharp' : 'default'} path left the sway on another clock`);
   }
 });
+
+test('a stack whose 3D canvas was dropped leaves the page whole, not just that canvas', async () => {
+  // dropLayer3D (and reset3D) remove the 3D canvas, and the next frame builds
+  // a new stack. The old stack's 2D canvases stayed in the page with their
+  // last frame on them, over the new ones: round ten of the phone test, which
+  // remakes the layer without antialiasing, found twelve canvases where there
+  // should be seven.
+  const log = [];
+  const inPage = new Set();
+  const placed = (el) => {
+    el.remove = () => inPage.delete(el);
+    el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 960, height: 540 });
+    Object.defineProperty(el, 'isConnected', { get: () => inPage.has(el) });
+    return el;
+  };
+  globalThis.document = { createElement: () => placed(fakeCanvas(log)) };
+  globalThis.getComputedStyle = () => ({ width: '960px', height: '540px', borderRadius: '0px' });
+  const { LAYER_STACK } = await import('../src/engine/render.js');
+  const canvas = placed(fakeCanvas(log));
+  canvas.width = CW; canvas.height = CH;
+  inPage.add(canvas);
+  canvas.after = (...els) => { for (const el of els) inPage.add(el); };
+  const gl = () => placed(fakeCanvas(log));
+  const first = LAYER_STACK.stackFor(canvas, gl);
+  assert.ok(first, 'no stack was made');
+  assert.equal(LAYER_STACK.stackFor(canvas, gl), first, 'a stack in use was made again');
+  const count = inPage.size;
+  first.gl.remove();                       // as dropLayer3D does
+  const second = LAYER_STACK.stackFor(canvas, gl);
+  assert.notEqual(second, first, 'the dropped stack was kept');
+  for (const el of first.els) assert.ok(!inPage.has(el), 'a canvas of the dropped stack is still in the page');
+  assert.equal(inPage.size, count, 'the page holds more canvases than one stack needs');
+});
