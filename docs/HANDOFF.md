@@ -167,19 +167,25 @@ was never pushed.
    `claude/gl3d-restore`. A cloud session cannot delete a branch on GitHub
    (the push is cut off and the API call refused; tried again on 2026-11-14),
    so the owner deletes them on the repository's Branches page.
-1. **Delete the 2D rig?** Since v3.22.4 the game never draws it: the
-   procedural 2D fighters (most of `drawFighter.js`), their shading, the
-   baked-sprite and `?figure` paths and the 2D portrait bust (kept for photo
-   founders, whose photo is the face) stay for the lab and their own tests
-   (`RIG2D`, `--flags 2d` in `lab/pixels.js`). Deleting them is a large,
-   careful job; the pose code (`computePose`, `applyProportions`) poses the
-   3D fighters and stays either way.
-2. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
+1. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
    private copy, or let them go.
-3. **Art direction.** The model and stages are scripted, which has a ceiling. An
+2. **Art direction.** The model and stages are scripted, which has a ceiling. An
    artist working in Blender to the same contract (ARCHITECTURE section 7, "The
    model contract") is the step up, and the runtime would not need to change.
 **Settled:**
+
+- **The 2D rig stays in the code** (the owner, 2026-11-15: "let's leave the
+  2D"). Since v3.22.4 the game never draws it; the procedural 2D fighters
+  (most of `drawFighter.js`), their shading, the baked-sprite and `?figure`
+  paths and the 2D portrait bust (still drawn for photo founders, whose
+  photo is the face) are kept for the lab and their own tests (`RIG2D`,
+  `--flags 2d` in `lab/pixels.js`). If it ever grows too costly to keep, it
+  goes in a release of its own, and the older versions on GitHub keep it:
+  v3.22.3 (`e539fd4`) is the last release that played in 2D (as the
+  fallback), and v3.22.4 (`f5559a4`) the first 3D only. The repository has
+  no tags yet; tagging the releases would make each easy to find. The pose
+  code (`computePose`, `applyProportions`) poses the 3D fighters and stays
+  either way.
 
 - **The owner's calls of 2026-11-15** (after round eleven): the Ahlo 1 left
   at about 30 fps (no lighter fighters for weak phones, for now); the
@@ -196,7 +202,7 @@ was never pushed.
   3D"): no 2D or 3D choice in Settings; a 2D choice saved before is not read.
 - **3D only** (v3.22.4, asked for on 2026-11-15, "let's only have 3d"): no
   2D fallback either. Where 3D cannot be drawn the page says so; the 2D rig
-  is the lab's alone (`RIG2D`), and whether to delete it is open (Decisions).
+  is the lab's alone (`RIG2D`), and kept (Decisions, Settled).
 - **Fighters overlap at close range** (v3.21): each fighter keeps a push half
   of their own, measured from their sculpt, not by `build`.
 - **Balance for Jeff and Elo** (v3.22, asked for on 2026-11-14): Elo's
@@ -422,7 +428,8 @@ fighter's model loaded, with the GPU context lost, and with `?gl=0`.
   wait, structurally), the 2D rig's own tests turning `RIG2D` on, and
   `test/launch.test.js` (the phone test holds no 2D setup).
 
-Not done, and open (Decisions, 1): deleting the 2D rig's code itself.
+Not done: deleting the 2D rig's code itself, which the owner chose to keep
+(Decisions, Settled).
 
 ## v3.22.3, released 2026-11-15: the owner's calls, the boards, the ring light
 
