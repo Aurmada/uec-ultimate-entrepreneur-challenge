@@ -108,9 +108,10 @@ In the order they pay off:
    step down. The known levers are in "v3.22" and "Known limits": the 2D
    fighters' canvas copies on iPhones, the stage light, the fighters' contact
    shadows.
-2. **Run round nine of the phone test** on the owner's Android phones and the
-   iPhone 12 Pro (`/lab/phone-test.html` on the live site). The results now go
-   to the dashboard by themselves.
+2. **Round ten of the phone test**, to name the one part that costs: round
+   nine (see "v3.22") found the iPhone 12 Pro's 2D game held to 19 fps by the
+   fighters' shading pass, and the budget Android's 3D game held to 21 by the
+   3D fighters. Round ten would switch the parts of each off one at a time.
 3. **The next balance pass** (see "v3.22"): at Champion Steve still wins about
    64% and Kim now sits lowest, near 37%. `lab/balance.js --def` and
    `--special` try a change before it is made.
@@ -532,6 +533,42 @@ levers were their own moves:
   coat follow her palette), in 2D and 3D; no one else in the cast wears red.
   `test/roster.test.js` checks that no two pale-haired fighters wear jackets
   within 40 degrees of hue (CIE LCh), as Lizbeth and Cathie were (5).
+
+**Round nine of the phone test** (2026-11-14, on v3.22 as released, the
+first results sent by the page itself; the dashboard has them). Frames a
+second, each setup timed 6 s after 1.5 s to settle:
+
+| Setup | Ahlo 1 (Adreno 613) | iPhone 12 Pro | iPhone, 402x874 |
+| --- | --- | --- | --- |
+| Ceiling (a blank screen) | 59.4 | 59.8 | 60 |
+| 3D, as shipped (and again) | 20.6 (21.4) | 57.2 (58.7) | 60 (59.8) |
+| 3D, half resolution | 30.3 | 59.8 | 60 |
+| 3D, the fight frozen | 20.1 | 59.2 | 60 |
+| 3D, no fighters drawn | 41.9 | 59.8 | 60 |
+| 3D, no contact shadows | 23.8 | 58 | 60 |
+| 3D, the least it can draw | 59.9 | 59.8 | 60 |
+| 2D, as shipped | 22.7 | 19.2 | 60 |
+| 2D, no key line | 25.5 | 19.3 | 60 |
+| 2D, no shading | 8.7 | 59.8 | 60 |
+| 2D, neither | 4.5 | 59.8 | 60 |
+
+- **The iPhone 12 Pro's 2D game is the shading pass**: 19 fps with it, 60
+  without, the key line costing nothing. Its drawing takes 0.6 ms of the
+  processor either way, so the cost is in the blending the graphics side does.
+  The likely part is the key light, the one pass that blends in `overlay`
+  (`STYLIZE.SHADE_KEY_MODE`) where the rest only composite; round ten would
+  show it. Its 3D game, the default, runs at 57 to 59.
+- **The budget Android's 3D game is the 3D fighters**: 21 fps with them, 42
+  without, 30 at half resolution, 24 without contact shadows; the stage alone
+  at half resolution holds 60. The step-down takes it to 1x (about 30). What
+  in the fighters costs (the antialiased layer, the ink line, the light) is
+  round ten's other question.
+- **Turning the 2D shading off is no fix on that Android**: 9 and 4.5 fps,
+  the opposite of the iPhone. Unshaded fighters are drawn path by path at the
+  screen's resolution instead of once into a small buffer, which this GPU
+  handles badly.
+- The newer iPhone (402x874 points, 3x) holds 60 in everything. The fight
+  itself costs nothing anywhere (0.03 to 0.35 ms).
 
 **For a new developer** (the owner's question, 2026-11-14: could someone pick
 this up?): this file now opens with where things stand, how the parts connect
