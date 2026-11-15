@@ -16,9 +16,14 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
-- **Live:** v3.22.2, released 2026-11-14 (`VERSION` in `src/config.js`;
-  `SIM_VERSION` 13 in `src/net/online.js`). One version, 3D; 2D only as
+- **Live:** v3.22.3, released 2026-11-15 (`VERSION` in `src/config.js`;
+  `SIM_VERSION` 14 in `src/net/online.js`). One version, 3D; 2D only as
   the fallback.
+- **What v3.22.3 changed:** the owner's calls of 2026-11-15 (see "v3.22.3"):
+  LEGAL SHIELD absorbing a grab pushes the two apart (`SIM_VERSION` 14), the
+  Supabase client pinned, the sponsor boards readable on every rendered
+  stage, Kim's ring light square in a portrait. The Ahlo 1 stays at about
+  30 fps and the balance as it is, by the owner's call.
 - **What v3.22.2 changed:** one version, 3D: the 2D or 3D choice is out of
   Settings, and the 2D game is only the fallback where 3D cannot be drawn.
   And the 2D fighters' shading draws one way between its canvases, the fix
@@ -31,7 +36,7 @@ so a push to `main` is a release.
   that does not help); every match and every phone test reports how it ran to
   the backend, with a dashboard over it; a balance pass for Jeff and Elo; the
   art notes from the v3.20 review (see "v3.22").
-- **Tests:** `npm test`, about 660, all passing; `node lab/pixels.js` for the
+- **Tests:** `npm test`, about 670, all passing; `node lab/pixels.js` for the
   pictures (CLAUDE.md, "Before calling something done").
 - **The owner** sets the rules in `CLAUDE.md` (standing, all of them) and
   makes the calls listed in "Decisions that belong to the owner".
@@ -117,25 +122,20 @@ In the order they pay off:
    step down. The known levers are in "v3.22" and "Known limits": the 2D
    fighters' canvas copies on iPhones, the stage light, the fighters' contact
    shadows.
-2. **Round eleven of the phone test** (see "v3.22.2"): the owner runs it on
-   the iPhone 12 Pro, where 2D as shipped should go from 19 fps toward 60
-   with the one-way shading. On the Ahlo 1 the 3D fighters cost through
-   their passes and triangles together (round ten, no one switch); the
-   options put to the owner on 2026-11-14 are to leave it at about 30, to
-   drop the mask and key line on weak phones, or lower-detail models on weak
-   phones, measured first on the test pair. The second Android has still
-   not reported.
-3. **The next balance pass** (see "v3.22"): at Champion Steve still wins about
-   64% and Kim now sits lowest, near 37%. `lab/balance.js --def` and
-   `--special` try a change before it is made.
-4. **The owner's open decisions**, below: deleting the old branches, pinning
-   the Supabase client, the aura in front.
+2. **The second Android**, which has never reported a phone test. Every phone
+   measured holds 60 but the Ahlo 1, which the owner left at about 30 fps
+   (2026-11-15). If players' reports show many such phones, the options
+   put to him then are in "v3.22.3": the mask and key line off on weak
+   phones, or lower-detail models, measured first on the test pair.
+3. **The owner's open decisions**, below: deleting the old branches, the
+   sprite sources, art direction.
 
 ## Branches
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.22.2 (`SIM_VERSION` 13): one version, 3D, with the sculpted cast; 2D only as the fallback | Deployed. A push here is a release. |
+| `main` | The live game, v3.22.3 (`SIM_VERSION` 14): one version, 3D, with the sculpted cast; 2D only as the fallback | Deployed. A push here is a release. |
+| `claude/v3.22.3` | The owner's calls of 2026-11-15: the shield against a grab, the pinned client, the boards, the ring light (see "v3.22.3") | Released in v3.22.3 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.2` | One version, 3D (no 2D choice in Settings), the 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.1` | Round ten of the phone test, and the stack's old canvases leaving the page with a dropped 3D layer (see "v3.22.1") | Released in v3.22.1 on 2026-11-14, merged into `main`. |
 | `claude/v3.22` | The resolution step-down, the performance reports and dashboard, the balance pass and the art notes (see "v3.22") | Released in v3.22 on 2026-11-14, merged into `main`. |
@@ -161,34 +161,21 @@ was never pushed.
    `claude/gl3d-restore`. A cloud session cannot delete a branch on GitHub
    (the push is cut off and the API call refused; tried again on 2026-11-14),
    so the owner deletes them on the repository's Branches page.
-1. **The aura in front.** On the 3D layer an aura drawn by the fighter in front
-   (Unicorn Mode's glow, a stance ring) no longer washes over a 3D fighter
-   behind it, as it did when everything was painted onto one canvas. It reads
-   cleaner, and matching the old look would mean drawing auras in WebGL. Keep it,
-   or ask for the old look.
-2. **Pin the Supabase client.** `src/net/online.js` loads `supabase-js@2`, which
-   floats: on 2026-10-05 it resolved to 2.117.2. A bad 2.x release would reach
-   players without a deploy. Pinning means updating it by hand. (Performance
-   reports no longer need it: they are a plain `fetch`.)
-3. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
+1. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
    private copy, or let them go.
-4. **Art direction.** The model and stages are scripted, which has a ceiling. An
+2. **Art direction.** The model and stages are scripted, which has a ceiling. An
    artist working in Blender to the same contract (ARCHITECTURE section 7, "The
    model contract") is the step up, and the runtime would not need to change.
-5. **What a shield does to a throw.** When LEGAL SHIELD absorbs a grab, `doGrab`
-   sends the victim toward the grabber (`def.vx = -dir * 220`) while the grabber
-   recoils (`att.vx = -dir * 160`), so both slide the same way and end touching:
-   Kim 60 px from Carl ends 51 px away, the minimum body gap. The other two
-   OBJECTIONs (on a strike and on a steal) push the victim away. It reads like a
-   slip of sign, but it may have been meant to let the victim punish a grabber
-   stuck in a long recovery. Flipping it is one sign, but it changes what a live
-   match computes, so it needs a `SIM_VERSION` bump (to 14 now); left as it is.
-6. **The next balance pass.** After v3.22, at Champion, Steve wins about 64%
-   and Kim is lowest near 37%; Jeff and Elo are about 39 and 40 (see "v3.22").
-   Whether to even out the top as well is a design call: each kit's character
-   is in its numbers.
-
 **Settled:**
+
+- **The owner's calls of 2026-11-15** (after round eleven): the Ahlo 1 left
+  at about 30 fps (no lighter fighters for weak phones, for now); the
+  balance left as it is (Steve about 64% at Champion, Kim about 37%); LEGAL
+  SHIELD absorbing a grab pushes the two apart, like its other two blocks
+  (`SIM_VERSION` 14); the aura in front kept as the 3D layer draws it (it no
+  longer washes over a 3D fighter behind, which reads cleaner); the Supabase
+  client pinned (`online.js` `SUPABASE_JS`, 2.119.0, which says how to move
+  it).
 
 - **3D by default** (v3.14), on how it ran on the owner's iPhone. The 2D rig
   stays: the fallback without WebGL2 or when the GPU context is lost.
@@ -217,25 +204,22 @@ was never pushed.
 
 ## Known limits
 
-- Phone performance: the 3D fighters are within the 2 ms budget on a budget
-  Android (Ahlo 1) and an iPhone 12 Pro, but the Ahlo shows about 21 frames a
-  second at full resolution (see "v3.21.1" and "v3.22"): the screen's
-  drawing, not the processor, is the limit. The game steps its resolution
-  down on such a phone (about 31 fps on the Ahlo). Round ten (v3.22.1) found
-  no one piece of the 3D fighters to blame there, and the options are with
-  the owner (Next steps, 2). The iPhone 12 Pro's 19 fps in 2D was the
-  shading's round trips, drawn one way in v3.22.2, where 2D is only the
-  fallback; round eleven is to confirm it.
+- Phone performance: every phone measured holds 60 fps in 3D and in 2D but a
+  budget Android (Ahlo 1, Adreno 613), about 21 at full resolution and 30
+  once the game steps its resolution down: the graphics chip, not the
+  processor, is the limit, and round ten found no one piece of the 3D
+  fighters to blame. Left there by the owner's call (2026-11-15). The iPhone
+  12 Pro's 19 fps in 2D was the shading's round trips, 60 since v3.22.2
+  (round eleven).
 - The 3D layer differs from the copy path in three small ways: an aura drawn by
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
-- Kim's ring light still sits off-square in a bust; body knobs still scale bones.
-- The sponsor boards' own colours are dark (a dim hue on a near-black panel):
-  v3.22 took the scrim off them on the rendered stages, and the Unicorn Club's
-  magenta board is still the hardest to read. The 2D game's boards are as they
-  were.
+- Body knobs still scale bones rather than using shape keys.
 - In 3D, at close range guards and lead feet still cross (trunks no longer
-  do, v3.21), and Cathie's coat bunches in a deep crouch rather than hanging.
+  do, v3.21), as in any fighting game; and Cathie's coat bunches behind her
+  rear knee in a deep crouch rather than hanging to the floor, which would
+  take cloth with gravity (it reads as a coat folded behind her; looked at
+  again for v3.22.3 and left).
 - A local `main` in a checkout can lag `origin/main` (this one sat at v3.12),
   and `lab/pixels.js` compares against `main` by default: run
   `git branch -f main origin/main`, or name the release commit.
@@ -379,6 +363,60 @@ why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
 
+## v3.22.3, released 2026-11-15: the owner's calls, the boards, the ring light
+
+After round eleven (below, in "v3.22.2") the owner was asked four questions
+and answered: leave the Ahlo 1 at about 30 fps, leave the balance, push a
+shielded grab apart, keep the aura as the 3D layer draws it (Decisions,
+Settled). Then "get everything done".
+
+**LEGAL SHIELD against a grab** (`SIM_VERSION` 14). `doGrab` sent the
+shielded victim toward the grabber while the grabber recoiled, so both slid
+the same way and ended touching (Kim 60 px from Carl ended 58 px away),
+where a shielded strike or steal pushes the victim away. Now the victim goes
+away and the grabber recoils: 116 px apart. The shield's pushes are in
+`config.js` `SHIELD`. `test/throw.test.js`, both grabs into a shield from
+either side and slot, fails on the old sign.
+
+**The Supabase client pinned.** `online.js` loaded `supabase-js@2`, so any
+new 2.x reached every player without a deploy. `SUPABASE_JS` pins it to
+2.119.0, the release `@2` was serving (checked on jsDelivr, whose pinned
+`+esm` build exports `createClient`), so players load what they loaded
+before. The comment there says how to move it: a release out a couple of
+weeks, then sign in and play an online match on the dev server first.
+`test/launch.test.js` wants an exact release in the address.
+
+**The sponsor boards** on the rendered stages name their sponsor near white
+in their hue, steady, on a deeper panel (`arenas.js` `billboard`, `lit`,
+through `sponsorBoard`). Drawn as the 2D game draws them, a name pulsing on
+a panel of its own hue fell to between 2 and 3 to 1 at its dimmest, and the
+Unicorn Club's magenta board, under the scrim and the vignette at the
+screen's edge, was the hardest thing on any stage to read. Every board now
+reads at 7.3 to 11.2 to 1 (`test/stages.test.js`); on the Unicorn Club as
+rendered, its name's contrast with its panel doubled. The 2D game's boards
+are as they were. The vignette still dims them at the screen's edge; sparing
+the boards from it, as `liftBoards` spares them from the scrim, is the next
+step if they need more.
+
+**Kim's ring light in a portrait.** It is built pre-turned to face the
+camera at the match's head turn (`YAW` plus `HEAD_YAW`, 0.92), and a
+portrait turns the head to 1.25, so it stood about 19 degrees off-square, an
+oval. `GL3D.BUST.FACING` names it, and `bustTurn` (`gl3d/index.js`) turns it
+back about the head in a portrait, through a per-part turn in the shader
+(`uTurn`), which every other part skips, so the game's pixels stay.
+`test/gl3d.test.js` poses the sculpt and reads the ring's width against its
+height: 0.996 in a match, 0.94 unturned in a portrait, the match's figure
+turned. `test/passes.test.js` checks only the named part is turned.
+
+**Looked at and left:** guards and lead feet crossing at close range (as in
+any fighting game; the trunks no longer do), and Cathie's coat in a deep
+crouch (it bunches behind the rear knee, and reads as a coat folded behind
+her; hanging it to the floor would take cloth with gravity).
+
+**Checked:** `npm test`; each new test fails without its change;
+`lab/pixels.js` against v3.22.2, 30 2D frames identical, and with `--flags
+gl` the 3D frames differ only inside the sponsor boards' rectangles.
+
 ## v3.22.2, released 2026-11-15: one version, 3D, and the 2D shading draws one way
 
 **One version, 3D** (the owner, 2026-11-15: "keep one version 3D"). Settings
@@ -418,6 +456,13 @@ untouched; 2D is the fallback without WebGL2.
 
 The phone test is unchanged but for its name (round eleven), so its rows
 read against round ten's: on the iPhone, 2D as shipped was 19.1.
+
+**Round eleven** (2026-11-15, on v3.22.2 as released): the iPhone 12 Pro's
+2D as shipped 59.8 fps (19.1 in round ten), and 59.2 to 59.8 in every
+setup; the newer iPhone 60 in every setup; the Ahlo 1 as before (3D 19.9
+and 20.7, half resolution 30.2, no fighters 44; 2D 22, the buffer alone
+31.2). The one-way shading is the iPhone's whole fix. The second Android did
+not report.
 
 ## v3.22.1, released 2026-11-14: round ten of the phone test
 

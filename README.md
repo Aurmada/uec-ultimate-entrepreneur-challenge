@@ -71,6 +71,13 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.22.3: a fairer shield, and easier to read
+
+- 🛡 **LEGAL SHIELD pushes a grabber away.** When the shield stops a grab, the two of you now come apart, as they do when it stops a strike or a steal. It used to leave you standing right next to the grabber. Online, both players need this version to play each other.
+- 📺 **Sponsor boards you can read.** On every stage the boards behind the fight now show their sponsor in bright lettering. The Unicorn Club's pink board was the hardest to make out.
+- 💍 **Kim's ring light faces you in her portrait.** It looked like an oval, because her head turns further in a portrait than in a fight; now it is round, as it is in the fight.
+- 🔒 **Steadier sign-in and online play.** The game now loads one fixed version of the library behind sign-in and online play, so an update elsewhere cannot break it without warning.
+
 ## What's new in v3.22.2: one game, in 3D
 
 - 🎮 **3D for everyone, with nothing to choose.** The 2D or 3D button is gone from Settings: everyone plays the founders as 3D fighters on rendered stages. If you chose 2D before, you are in 3D now. A browser that cannot draw 3D still gets the 2D game, and Settings says why.
