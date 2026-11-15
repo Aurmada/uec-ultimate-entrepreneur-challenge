@@ -111,13 +111,13 @@ In the order they pay off:
    step down. The known levers are in "v3.22" and "Known limits": the 2D
    fighters' canvas copies on iPhones, the stage light, the fighters' contact
    shadows.
-2. **Round ten of the phone test is live** (see "v3.22.1"): the owner runs
-   `/lab/phone-test.html` again on the Ahlo 1 and the iPhone 12 Pro (and the
-   second Android, whose round nine never arrived), and the results land on
-   the dashboard. It names the piece that costs: on the iPhone, which of the
-   2D shading's passes (or the buffer itself); on the Ahlo, which part of the
-   3D fighters. Then the fix for each, made so it changes nothing on a phone
-   that already holds 60.
+2. **Act on round ten** (see "v3.22.1"): on the iPhone 12 Pro, the 2D
+   shading's key light and rim each halve the frame rate, and both copy the
+   fighter to a scratch canvas and back; a one-way chain that draws the same
+   pixels is the fix to try. On the Ahlo 1, the 3D fighters cost through
+   their passes and triangles together (no one switch), so a lighter fighter
+   for weak chips is an owner decision (Decisions). The second Android has
+   still not reported.
 3. **The next balance pass** (see "v3.22"): at Champion Steve still wins about
    64% and Kim now sits lowest, near 37%. `lab/balance.js --def` and
    `--special` try a change before it is made.
@@ -416,6 +416,50 @@ Run headless to the end (SwiftShader, so its frame rates mean nothing for a
 phone): every setup timed, the layer remade without antialiasing for its
 setup and with it after, one stack throughout, nothing sent (the browser is
 automated, so `perfAllowed` says no).
+
+**Round ten of the phone test** (2026-11-14, on v3.22.1 as released, sent by
+the page; the dashboard has them). Frames a second:
+
+| Setup | Ahlo 1 (Adreno 613) | iPhone 12 Pro | iPhone, 402x874 |
+| --- | --- | --- | --- |
+| Ceiling (a blank screen) | 59.9 | 59.8 | 59.6 |
+| 3D, as shipped (and again) | 20.3 (20.9) | 58.1 (58.4) | 59.6 (60) |
+| 3D, half resolution | 30.3 | 59.8 | 60 |
+| 3D, no key line | 23.3 | 59.6 | 60 |
+| 3D, no mask or key line | 27.8 | 59.8 | 60 |
+| 3D, no ink outline | 23.6 | 57.7 | 60 |
+| 3D, no antialiasing | 23.6 | 59.8 | 60 |
+| 3D, no fighters drawn | 44.3 | 59.8 | 60 |
+| 2D, as shipped | 22.2 | 19.1 | 60 |
+| 2D, no key light | 20.4 | 39.8 | 60 |
+| 2D, key light blended plainly | 22.2 | 19.2 | 60 |
+| 2D, no form shading | 24.1 | 26 | 60 |
+| 2D, no rim | 23.3 | 40.2 | 60 |
+| 2D, the buffer alone | 28 | 59.8 | 60 |
+| 2D, no shading | 17.1 | 59.8 | 60 |
+
+- **The iPhone 12 Pro's 2D: the key light and the rim, not the `overlay`
+  blend.** Blended plainly, the key light costs the same (19.2); without it,
+  40; without the rim, 40; without all three passes, 60, as without the
+  shading at all, so the buffer and its copies cost nothing. What the two
+  costly passes share: each copies the fighter into the scratch canvas
+  (`_tmp`) and then draws that scratch back into the fighter's buffer, a
+  round trip between two canvases inside one frame, twice a fighter. The form
+  gradients draw on the buffer alone and cost less (26 without them). The
+  guess to test: Safari's canvas pays for a picture drawn back into the
+  canvas it came from, and a chain where pictures only flow one way (the
+  fighter, then a scratch for the rim, then the shaded result) would draw the
+  same pixels without the round trips.
+- **The Ahlo 1's 3D: no single piece.** The key line 2.7 fps of the 23.7
+  the fighters cost, the mask with it 7.2, the ink 3.0, antialiasing 3.0,
+  together about half. The mask and the ink are each a whole extra drawing of
+  both sculpts (about 65,000 triangles each): a frame draws every fighter
+  three times (mask, ink, body), so this chip shapes about 400,000 skinned
+  triangles a frame, and half resolution (30.3) shows the filling costs as
+  much again. The levers are fewer passes or fewer triangles on a weak chip,
+  not one switch.
+- The newer iPhone holds 60 in everything again. The second Android has not
+  reported.
 
 ## v3.22, released 2026-11-14: the resolution steps down on a slow phone, the game reports how it runs, Jeff and Elo, and the art notes
 
