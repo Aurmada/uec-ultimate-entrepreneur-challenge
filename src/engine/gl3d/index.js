@@ -15,7 +15,7 @@ import { parseGLB, extractModel } from './glb.js';
 import { buildRig, solvePose, transformPoint } from './rig.js';
 import { createToon, roleColour, MAX_JOINTS } from './toon.js';
 import { hornFor } from './horn.js';
-import { clothFor } from './cloth.js';
+import { clothFor, hangsFor, hangOf as clothHang } from './cloth.js';
 import { anchorInPose, swayState, stepSway, SWAY_ANCHORS } from './sway.js';
 import { GL3D } from '../../config.js';
 import { FORMS } from '../../data/forms.js';
@@ -135,12 +135,21 @@ export function drawLayer3D(f, P, m, box, { elbowF, elbowB, jitter = 0, face = n
   drawModel(entry, f.def, f.state, f.unicornT > 0, P.face, face, {
     box, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight, hand: P.hand,
     sway: entry.sway.size ? (p) => hangOf(entry, p, lags) : null,
+    hangs: hangsOf(entry, P),
     screen: { m: [m.a, m.b, m.c, m.d, m.e, m.f], flash, keyline },
   }, layerR);
   if (perf) layerR.finish();
   const t2 = performance.now();
   if (perf) perf.add('3d', { solve: t1 - t0, gpu: t2 - t1, blit: 0 });
   return true;
+}
+
+// A skirt's hang this frame (cloth.js), let go as the body tips over: the
+// floor is below only while it stands. Null for a model with none.
+function hangsOf(entry, P) {
+  if (!entry.hangs?.size) return null;
+  const upright = Math.cos(P.rot || 0);
+  return (p) => clothHang(entry.hangs, p, upright);
 }
 
 // A model's meshes on a renderer: each renderer has its own context, and
@@ -166,6 +175,7 @@ function load(id) {
       // and a skirt riding the hips handed to the legs as it falls (cloth.js)
       entry.cloth = new Set(clothFor(model, spec));
       entry.rig = buildRig(model, spec);
+      entry.hangs = hangsFor(model, spec);          // and its back hangs from the waist
       entry.model = model;                 // kept for each renderer's upload (gpuFor)
       if (!renderer.lost) gpuFor(entry, renderer);   // now, not on the first frame
       entry.inkless = new Set(spec.inkless || []);
@@ -337,6 +347,7 @@ export function render3D(B, f, P, { elbowF, elbowB, jitter = 0, face = null }) {
   const { vw, vh } = drawModel(entry, f.def, f.state, f.unicornT > 0, P.face, face, {
     box: { ox: B.ox, oy: B.oy, w: B.w, h: B.h }, squash: { x: sq(P.sx), y: sq(P.sy) }, jitter, light: stageLight, hand: P.hand,
     sway: entry.sway.size ? (p) => hangOf(entry, p, lags) : null,
+    hangs: hangsOf(entry, P),
   });
   if (perf) renderer.finish();
   const t2 = performance.now();

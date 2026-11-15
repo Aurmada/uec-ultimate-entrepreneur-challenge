@@ -10,6 +10,7 @@ import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHO
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 import { resolveParts, drawParts, partLagState } from './parts.js';
 import { has3D, form3D, pending3D, on3DReady, render3D, renderBust3D, mark2D, timing3D, layerActive3D, drawLayer3D, athlete3D, sink3D } from './gl3d/index.js';
+import { closeGuard, tuckOf } from './gl3d/close.js';
 import { PAINTED_LOOKS, resolveLook3D } from '../data/models3d.js';
 import { FX_STYLE } from './fx.js';
 import { throwParted } from './fighter.js';
@@ -1967,13 +1968,15 @@ function heave(P, { u, w }) {
   return P;
 }
 
-export function drawFighter(ctx, f, t) {
+// `foe`, the other fighter, when there is one: up close a 3D fighter keeps its
+// guard and feet to its own side of them (gl3d/close.js).
+export function drawFighter(ctx, f, t, foe = null) {
   const tDraw = timing3D() ? performance.now() : 0;
   const def = f.def;
   const body = f.body || clampBody(def.body);
   const thrown = throwPose(f);
   const own = computePose(f, t, form3D(def), roundStart);
-  const P = applyProportions(thrown?.heave ? heave(own, thrown.heave) : own, body);
+  let P = applyProportions(thrown?.heave ? heave(own, thrown.heave) : own, body);
   // The hit's white flash fades on the fight's clock, which a throw's hold
   // stops: held, it would stay white all the way over. It shows as they land.
   const flashing = f.flashT > 0 && !thrown?.held;
@@ -2014,6 +2017,8 @@ export function drawFighter(ctx, f, t) {
       ctx.translate(g.x + lift * Math.sin(P.rot || 0), g.y + lift * Math.cos(P.rot || 0));
     }
     if (form3D(def)) landStrike(f, P, t, form3D(def), body, athlete3D(def));
+    const tuck = foe ? tuckOf(f, t) : 0;
+    if (tuck > 0) P = closeGuard(P, Math.abs(foe.x - f.x), tuck);
     const metrics = bufferMetrics(body);
     const stanceEl = f.state === 'idle' ? (def.stance || null) : null;
     // On the 3D layer (GL3D.LAYER, set up by render.js for this frame): drawn

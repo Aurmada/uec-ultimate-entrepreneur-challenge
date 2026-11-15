@@ -75,6 +75,8 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 - 🛡 **LEGAL SHIELD pushes a grabber away.** When the shield stops a grab, the two of you now come apart, as they do when it stops a strike or a steal. It used to leave you standing right next to the grabber. Online, both players need this version to play each other.
 - 📺 **Sponsor boards you can read.** On every stage the boards behind the fight now show their sponsor in bright lettering. The Unicorn Club's pink board was the hardest to make out.
+- 🥊 **No more fists through chests.** Up close, fighters keep their guards and feet on their own side, so two guards meet in the middle instead of passing through each other. Only the drawing changes: every hit lands exactly where it did.
+- 🧥 **Cathie's coat hangs.** When she crouches, the back of her coat falls straight down to the floor instead of bunching up between her knees.
 - 💍 **Kim's ring light faces you in her portrait.** It looked like an oval, because her head turns further in a portrait than in a fight; now it is round, as it is in the fight.
 - 🔒 **Steadier sign-in and online play.** The game now loads one fixed version of the library behind sign-in and online play, so an update elsewhere cannot break it without warning.
 

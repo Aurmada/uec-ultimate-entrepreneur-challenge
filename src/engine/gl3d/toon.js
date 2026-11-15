@@ -46,6 +46,8 @@ uniform vec2 uSway;       // the anchor's lag, model units; zero for what does n
 uniform vec3 uSwayHang;   // pivot x, y and reach, in bind space
 uniform vec2 uSwayDir;    // the way the mesh hangs from the pivot
 uniform vec4 uTurn;       // a part turned about the bind-space vertical: pivot x, z, then cos and sin; sin 0 for none
+uniform vec4 uHangCol;    // a skirt's hang (cloth.js): from, to (bind heights), the anchor's x, z
+uniform vec4 uHangOpt;    // its strength (0 for none), the anchor joint, the floor's height, how far round the sides
 out vec3 vNrm;
 out vec2 vFaceUV;
 out float vFaceMask;
@@ -64,6 +66,19 @@ void main() {
   }
   vec3 n = normalize(mat3(skin) * nrm);
   vec4 p = skin * vec4(pos, 1.0);
+  // A skirt's back hangs (cloth.js hangs): each vertex is drawn toward the
+  // point straight below where its column leaves the waist, riding the
+  // anchor, as far below as it was built, and no lower than the floor. Most at
+  // the back and the hem, less round toward the sides, which follow the legs.
+  // Skipped for every other part.
+  if (uHangOpt.x > 0.0) {
+    float down = smoothstep(0.0, 1.0, clamp((uHangCol.x - pos.y) / (uHangCol.x - uHangCol.y), 0.0, 1.0));
+    vec2 off = pos.xz - uHangCol.zw;
+    float side = abs(off.y) / max(length(off), 1e-4);
+    vec4 top = uBones[int(uHangOpt.y)] * vec4(pos.x, uHangCol.x, pos.z, 1.0);
+    vec3 hung = vec3(top.x, max(top.y - (uHangCol.x - pos.y), uHangOpt.z), top.z);
+    p.xyz = mix(p.xyz, hung, uHangOpt.x * down * pow(1.0 - side, uHangOpt.w));
+  }
   // Secondary motion: the further a vertex hangs from its pivot, the more of
   // the anchor's lag it takes, so a ponytail bends from the tie, not the scalp.
   float hang = clamp(dot(aPos.xy - uSwayHang.xy, uSwayDir) / max(uSwayHang.z, 1e-4), 0.0, 1.0);
@@ -262,7 +277,7 @@ export function createToon({ onScreen = null } = {}) {
     for (const n of ['uBones', 'uView', 'uInflate', 'uInkBias', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
       'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
       'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
-      'uSway', 'uSwayHang', 'uSwayDir', 'uTurn', 'uRimDir', 'uFlash']) {
+      'uSway', 'uSwayHang', 'uSwayDir', 'uTurn', 'uHangCol', 'uHangOpt', 'uRimDir', 'uFlash']) {
       loc[n] = gl.getUniformLocation(prog, n);
     }
     gl.useProgram(prog);
@@ -318,6 +333,7 @@ export function createToon({ onScreen = null } = {}) {
   const NO_FACE = [0, 0, 0, 0];
   const NO_SWAY = [0, 0];
   const NO_TURN = [0, 0, 1, 0];
+  const NO_HANG = [0, 0, 0, 0];
   const NONE = new Set(), NO_GLASS = new Map();
 
   const renderer = {
@@ -428,6 +444,8 @@ export function createToon({ onScreen = null } = {}) {
     // or null for one that rides its bones rigidly. `turn(p)`, when given, is
     // a primitive's turn about the bind-space vertical, [pivot x, pivot z,
     // radians], or null for none (a portrait's ring light, index.js).
+    // `hangs(p)`, when given, is a skirt's hang ({ col, opt }, cloth.js
+    // hangOf) or null.
     //
     // `screen`, on a renderer made with `onScreen`, draws onto that canvas
     // instead, over what is already there: { m, flash, keyline }, where m is
@@ -438,7 +456,7 @@ export function createToon({ onScreen = null } = {}) {
     // fighter facing left is drawn mirrored just as the 2D buffer is.
     render(gpu, matrices, {
       colours, box, squash = { x: 1, y: 1 }, jitter = 0, ss = GL3D.SS, visible = () => true, face = null,
-      inkless = NONE, glass = NO_GLASS, light = null, sway = null, turn = null, screen = null,
+      inkless = NONE, glass = NO_GLASS, light = null, sway = null, turn = null, hangs = null, screen = null,
     }) {
       let vw, vh, view, flip = false, rimDir = IDENTITY2, reach = GL3D.RIM_REACH, keyRect = null, keyRadius = 0;
       if (screen) {
@@ -497,6 +515,9 @@ export function createToon({ onScreen = null } = {}) {
       const swayOf = (p) => {
         const r = turn && turn(p);
         gl.uniform4fv(loc.uTurn, r ? [r[0], r[1], Math.cos(r[2]), Math.sin(r[2])] : NO_TURN);
+        const g = hangs && hangs(p);
+        gl.uniform4fv(loc.uHangOpt, g ? g.opt : NO_HANG);
+        if (g) gl.uniform4fv(loc.uHangCol, g.col);
         const h = sway && sway(p);
         gl.uniform2fv(loc.uSway, h ? h.lag : NO_SWAY);
         if (h) {

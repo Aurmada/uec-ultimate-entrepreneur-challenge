@@ -49,3 +49,32 @@ export function clothFor(model, spec) {
   }
   return done;
 }
+
+// A skirt's back hangs from the waist rather than riding the legs: built riding
+// the hips, then handed to the legs as it falls (above), Cathie's coat came up
+// behind her in a deep crouch, bunched round the rear knee, where a coat's
+// back falls straight down from the waist and lies on the floor (the graphics
+// reviews of v3.21 and v3.22.3). `hang` in the model's cloth data is how much
+// of the back's hem falls straight down (the shader's uHangCol and uHangOpt,
+// toon.js), and `hangSides` how far round toward the sides: the share at a
+// vertex is (1 - side) to that power (cloth's `side` above, 0 straight behind
+// the anchor, 1 at the side), so 1 hangs the back alone and less hangs more
+// of the way round. What the shader needs, per primitive, or null for one
+// that does not hang. `upright` scales it, so a body tipping over (a
+// knockout) lets go of it: lying, the floor is no longer below.
+export function hangsFor(model, spec) {
+  const out = new Map();
+  for (const [name, c] of Object.entries(spec?.cloth || {})) {
+    const anchor = model.jointNames.indexOf(c.anchor);
+    if (!(c.hang > 0) || anchor < 0) continue;
+    const [ax, , az] = model.restHeads[anchor];
+    out.set(name, { col: [c.from, c.to, ax, az], strength: c.hang, anchor, floor: c.floor ?? 0.02, sides: c.hangSides ?? 1 });
+  }
+  return out;
+}
+
+export function hangOf(hangs, p, upright = 1) {
+  const h = hangs.get(p.name);
+  if (!h || !(upright > 0.01)) return null;
+  return { col: h.col, opt: [h.strength * Math.min(1, upright), h.anchor, h.floor, h.sides] };
+}

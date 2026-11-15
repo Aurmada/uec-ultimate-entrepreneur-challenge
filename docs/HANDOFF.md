@@ -22,8 +22,9 @@ so a push to `main` is a release.
 - **What v3.22.3 changed:** the owner's calls of 2026-11-15 (see "v3.22.3"):
   LEGAL SHIELD absorbing a grab pushes the two apart (`SIM_VERSION` 14), the
   Supabase client pinned, the sponsor boards readable on every rendered
-  stage, Kim's ring light square in a portrait. The Ahlo 1 stays at about
-  30 fps and the balance as it is, by the owner's call.
+  stage, Kim's ring light square in a portrait, guards and feet that no
+  longer cross up close, and Cathie's coat hanging in a crouch. The Ahlo 1
+  stays at about 30 fps and the balance as it is, by the owner's call.
 - **What v3.22.2 changed:** one version, 3D: the 2D or 3D choice is out of
   Settings, and the 2D game is only the fallback where 3D cannot be drawn.
   And the 2D fighters' shading draws one way between its canvases, the fix
@@ -215,11 +216,12 @@ was never pushed.
   the fighter in front does not wash over a 3D fighter behind it, every trail
   lies over every 3D fighter, and 3D edges are crisper (ARCHITECTURE section 7).
 - Body knobs still scale bones rather than using shape keys.
-- In 3D, at close range guards and lead feet still cross (trunks no longer
-  do, v3.21), as in any fighting game; and Cathie's coat bunches behind her
-  rear knee in a deep crouch rather than hanging to the floor, which would
-  take cloth with gravity (it reads as a coat folded behind her; looked at
-  again for v3.22.3 and left).
+- Up close, the 3D fighters' bodies still overlap on screen: at the push gap
+  (56 to 64 px between centres) their turned shoulders are wider than that,
+  though no hand, foot or trunk passes through the other since v3.22.3.
+- Cathie's coat hangs from the waist and follows the legs, with no cloth
+  solved: the back falls straight down, and a thigh can still pass through a
+  side panel in an extreme pose.
 - A local `main` in a checkout can lag `origin/main` (this one sat at v3.12),
   and `lab/pixels.js` compares against `main` by default: run
   `git branch -f main origin/main`, or name the release commit.
@@ -408,14 +410,51 @@ back about the head in a portrait, through a per-part turn in the shader
 height: 0.996 in a match, 0.94 unturned in a portrait, the match's figure
 turned. `test/passes.test.js` checks only the named part is turned.
 
-**Looked at and left:** guards and lead feet crossing at close range (as in
-any fighting game; the trunks no longer do), and Cathie's coat in a deep
-crouch (it bunches behind the rear knee, and reads as a coat folded behind
-her; hanging it to the floor would take cloth with gravity).
+**Guards and feet up close** (asked for on 2026-11-15, after first being
+left as "as in any fighting game"). Two fighters part at their push halves
+(v3.21), so their trunks no longer pass through each other, but a guard
+reaches 40 px or more in front of the trunk and a lead foot 30: at the
+closest, each lead fist stood in the other's chest and the feet crossed.
+`gl3d/close.js` draws a 3D fighter in a stance (standing, walking,
+crouching, blocking: `GL3D.CLOSE.STATES`) with its hands and feet no further
+forward than the midpoint between the two, less a fist's or a toe's length
+(`HAND` 6, `FOOT` 16 px), giving smoothly over `SOFT` (14 px) before it, and
+lifts a hand by `LIFT` (0.35) of what it is pulled back, tucked toward the
+chin. Two guards then meet at the midpoint, as two boxers' gloves do. The
+tuck eases in and out over `EASE` (0.08 s), so an attack does not jump out of
+it, and only the drawing changes: every hurtbox, the push and every attack's
+reach are the simulation's. `drawFighter` takes the foe from `render.js`
+(`game.other`), and the 2D fighters, the fallback, are as they were.
+`test/close.test.js`: every sculpted fighter against every other, in every
+stance at their closest, hands and feet behind the midpoint (untucked, lead
+fists crossed it all over the cast); far apart nothing moves; closing in it
+never jumps; the tuck eases.
+
+**Cathie's coat in a crouch** (asked for on 2026-11-15 too). Handed to both
+legs as it falls (v3.21), the back of the coat's hem was drawn 21 to 25 px
+forward in a deep crouch, under her between her knees, where it lay as a
+cream lump. Its back now hangs from the waist: each vertex is drawn toward
+the point straight below where its column leaves the waist, riding the
+hips, as far below as it was built and no lower than the floor (the shader's
+`uHangCol` and `uHangOpt`, from `cloth.js` `hangsFor`, and `hang` and
+`hangSides` in her `cloth` data). All of it at the back, less round toward
+the sides (the share is (1 - side) to the power 0.2; at 1 the half-way
+round still followed both legs and lay between them), and none at the
+sides, which follow their own leg as before. A body tipping over lets go of
+it (`upright`, the cosine of its roll), as lying the floor is no longer
+below. `test/cloth.test.js` does the hang as the shader does: in a crouch
+the back of the hem is within 6 px of straight below her hips (it was 21 to
+25 ahead), the sides still follow the legs, nothing goes through the floor,
+and standing, each band of the hem moves less than 3 px on average (a
+vertex at most 10, where the stance had spread it with the legs).
 
 **Checked:** `npm test`; each new test fails without its change;
 `lab/pixels.js` against v3.22.2, 30 2D frames identical, and with `--flags
-gl` the 3D frames differ only inside the sponsor boards' rectangles.
+gl` the 3D frames differ only inside the sponsor boards' rectangles (no
+frame of that match has the two in a stance close enough to tuck, or
+Cathie); screenshots up close of four pairs, standing and crouching, and of
+Cathie crouching, walking, standing and knocked out, each with the change
+off and on.
 
 ## v3.22.2, released 2026-11-15: one version, 3D, and the 2D shading draws one way
 

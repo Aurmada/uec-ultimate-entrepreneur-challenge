@@ -702,6 +702,16 @@ export const GL3D = {
   // above it the hip and shoulders sit on the back, the head's centre, and a
   // hand (a foot's point is its sole), in px.
   LIE: { BACK: 13, HEAD: 15, LIMB: 4, SOLE: 5 },   // SOLE: a 3D model's lowest point, as deep as its soles stand
+  // Up close, a 3D fighter's guard and feet keep to their own side of the
+  // midpoint between the two, so two guards meet there rather than passing
+  // through each other's chest (gl3d/close.js). HAND and FOOT: how far short
+  // of the midpoint a hand's and a foot's target stop (the fist and the toe
+  // reach past them), in px; SOFT: over how many px before that they start to
+  // give; LIFT: how much of what a hand is pulled back it rises, tucking up
+  // toward the chin; EASE: seconds to come in or let go, so an attack does
+  // not jump out of the tucked guard. Only standing, walking, crouching and
+  // blocking: an attack reaches, and the fight decides what it hits.
+  CLOSE: { HAND: 6, FOOT: 16, SOFT: 14, LIFT: 0.35, EASE: 0.08, STATES: ['idle', 'walk', 'crouch', 'block'] },
   // A basic punch, slap or kick lands where it hits (drawFighter's landStrike):
   // the fist or foot no nearer than this to the hitbox's top, bottom or far
   // edge, in px.

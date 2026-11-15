@@ -2,14 +2,16 @@
 // her hips, it stood out behind her as a stiff wedge in a crouch, reaching
 // under the floor, and in a knockout poked 12 px through it. The skirt is now
 // handed to her thighs as it falls (gl3d/cloth.js, models3d.js `cloth`), and
-// a knockout is laid by the coat as well as the body (index.js sinkOf).
+// a knockout is laid by the coat as well as the body (index.js sinkOf). Since
+// v3.22.3 its back hangs from the waist too (cloth.js hangsFor, the shader's
+// uHang), where in a deep crouch it was drawn under her between her knees.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseGLB, extractModel } from '../src/engine/gl3d/glb.js';
 import { buildRig, solvePose } from '../src/engine/gl3d/rig.js';
-import { clothFor } from '../src/engine/gl3d/cloth.js';
+import { clothFor, hangsFor, hangOf } from '../src/engine/gl3d/cloth.js';
 import { sinkOf } from '../src/engine/gl3d/index.js';
 import { MODELS3D } from '../src/data/models3d.js';
 import { FORMS } from '../src/data/forms.js';
@@ -130,4 +132,84 @@ test('a knockout is laid by the coat too, not the body alone', () => {
   stiff.entry.samples = null;
   const body = sinkOf(stiff.entry, stiff.P);
   assert.ok(counted > body + 5, `the knockout's sampling leaves the coat out (${counted.toFixed(1)} against ${body.toFixed(1)})`);
+});
+
+// Her coat's back hangs from the waist (cloth.js hangsFor, the shader's uHang):
+// in a deep crouch it bunched round her rear knee, handed to both legs at
+// once (the graphics reviews of v3.21 and v3.22.3); a coat's back falls
+// straight from the waist and lies on the floor. The hang is done here as the
+// shader does it (toon.js): each vertex drawn toward the point straight below
+// where its column leaves the waist, riding the hips, no lower than the floor.
+function hungCoat(state, extra, hang) {
+  const model = load(cathie);
+  clothFor(model, cathie);
+  const rig = buildRig(model, cathie);
+  const def = getFighter('eleanor'), form = FORMS[cathie.form];
+  const P = figureFrame(applyProportions(computePose({ def, state, stateT: 0.5, walkPhase: 0, side: 0, vy: 0, airborne: false, crouching: false, movingBack: false, ...extra }, 0, form), clampBody(def.body)));
+  const m = solvePose(rig, P);
+  const p = model.primitives.find((q) => q.name === COAT);
+  const h = hang ? hangOf(hangsFor(model, cathie), p, Math.cos(P.rot || 0)) : null;
+  const at = (o, x, y, z) => [0, 1, 2].map((i) => m[o + i] * x + m[o + 4 + i] * y + m[o + 8 + i] * z + m[o + 12 + i]);
+  const out = [];
+  for (let v = 0; v < p.positions.length / 3; v++) {
+    const [x, y, z] = [p.positions[v * 3], p.positions[v * 3 + 1], p.positions[v * 3 + 2]];
+    let q = [0, 0, 0];
+    for (let k = 0; k < 4; k++) {
+      const w = p.weights[v * 4 + k];
+      if (w) q = q.map((c, i) => c + w * at(p.joints[v * 4 + k] * 16, x, y, z)[i]);
+    }
+    const [from, to, ax, az] = h ? h.col : [1, 0, 0, 0];
+    const t = Math.min(1, Math.max(0, (from - y) / (from - to))), down = t * t * (3 - 2 * t);
+    const side = Math.abs(z - az) / (Math.hypot(x - ax, z - az) || 1e-4);
+    const g = h ? h.opt[0] * down * (1 - side) ** h.opt[3] : 0;
+    const top = at(h ? h.opt[1] * 16 : 0, x, from, z);
+    const hung = [top[0], Math.max(top[1] - (from - y), h ? h.opt[2] : 0), top[2]];
+    out.push({ y, side, at: q.map((c, i) => c + (hung[i] - c) * g) });
+  }
+  return { out, hips: at(model.jointNames.indexOf('hips') * 16, 0, 0, 0), spec: cathie.cloth[COAT] };
+}
+
+// The coat's hem in bands, by how far round it is from straight behind (0)
+// to the side (1): where each band lies on average, ahead of her hips and up
+// from the floor, in px.
+function bands(r) {
+  const out = [];
+  for (const [a, b] of [[0, 0.2], [0.2, 0.4], [0.4, 0.6], [0.6, 0.8], [0.8, 1.01]]) {
+    const vs = r.out.filter((v) => v.y <= r.spec.to + 0.1 && v.side >= a && v.side < b);
+    const mean = (f) => (vs.reduce((s, v) => s + f(v), 0) / vs.length) * GL3D.UNIT;
+    out.push({ round: a, n: vs.length, ahead: mean((v) => v.at[0] - r.hips[0]), up: mean((v) => v.at[1]) });
+  }
+  return out;
+}
+
+test("Cathie's coat: in a deep crouch the back hangs straight below her hips, not pulled under her", () => {
+  // Handed to both legs, the back of the hem was drawn 21 to 25 px forward,
+  // under her between her knees, where it lay as a lump; hung, it is below her
+  // hips. The sides still follow their own leg.
+  const was = bands(hungCoat('crouch', { crouching: true }, false)), now = bands(hungCoat('crouch', { crouching: true }, true));
+  for (let i = 0; i < 3; i++) {
+    assert.ok(now[i].n > 20, `the hem ${now[i].round} round was not found`);
+    assert.ok(was[i].ahead > 15, `${was[i].round} round, the hem already lay ${was[i].ahead.toFixed(1)} px ahead of her hips`);
+    assert.ok(Math.abs(now[i].ahead) < 6, `${now[i].round} round, the hem lies ${now[i].ahead.toFixed(1)} px ahead of her hips, from ${was[i].ahead.toFixed(1)}`);
+  }
+  assert.ok(now[4].ahead > 20, 'the sides no longer follow her legs');
+  assert.ok(hungCoat('crouch', { crouching: true }, true).out.every((v) => v.at[1] >= 0), 'the coat goes through the floor');
+});
+
+test("Cathie's coat: standing, the hang moves it next to nothing, and a knockout lets go of it", () => {
+  const was = bands(hungCoat('idle', {}, false)), now = bands(hungCoat('idle', {}, true));
+  now.forEach((b, i) => {
+    assert.ok(Math.abs(b.ahead - was[i].ahead) < 3 && Math.abs(b.up - was[i].up) < 3,
+      `standing, the hem ${b.round} round moved ${(b.ahead - was[i].ahead).toFixed(1)} px across and ${(b.up - was[i].up).toFixed(1)} up`);
+  });
+  const model = load(cathie);
+  const hangs = hangsFor(model, cathie);
+  const coatPart = { name: COAT };
+  assert.equal(hangOf(hangs, { name: 'body' }), null, 'a part with no hang hangs');
+  assert.equal(hangOf(hangs, coatPart, Math.cos(Math.PI / 2)), null, 'lying down, the coat still hangs toward the floor below her');
+  assert.equal(hangOf(hangs, coatPart).opt[1], model.jointNames.indexOf('hips'), 'it hangs from the wrong joint');
+  // and the shader does what the test does
+  const toon = readFileSync(new URL('../src/engine/gl3d/toon.js', import.meta.url), 'utf8');
+  assert.match(toon, /vec4 top = uBones\[int\(uHangOpt\.y\)\] \* vec4\(pos\.x, uHangCol\.x, pos\.z, 1\.0\);/);
+  assert.match(toon, /p\.xyz = mix\(p\.xyz, hung, uHangOpt\.x \* down \* pow\(1\.0 - side, uHangOpt\.w\)\);/);
 });

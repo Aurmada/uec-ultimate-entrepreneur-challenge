@@ -1254,4 +1254,8 @@ exists for the same reason: hooks for a driver that isn't committed yet.
   their push gap apart (each fighter's `pushHalf`, at least `PHYS.PUSH_HALF`,
   added: `Fighter pushGap`), in the air too until one is 120 px above
   the other, so a jump toward the rival stops against them rather than passing
-  (`restsAt` in `ai.js`).
+  (`restsAt` in `ai.js`). What is drawn up close is not the fight's: a 3D
+  fighter in a stance keeps its hands and feet behind the midpoint between the
+  two (`gl3d/close.js`, `GL3D.CLOSE`, since v3.22.3), so two guards meet
+  rather than pass through each other's chest, while every hurtbox and every
+  attack's reach stay as the simulation has them.

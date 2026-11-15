@@ -764,7 +764,7 @@ function renderSharp(ctx, game, t, c) {
   setRoundStart(game.state === 'intro' ? game.stateT : null);   // and open the round their own way
   for (const f of order) {
     atDrawn(ctx, f, () => drawAura(ctx, f, t));
-    if (RENDER.fighters) drawFighter(ctx, f, t);
+    if (RENDER.fighters) drawFighter(ctx, f, t, game.other(f));
     drawTrail(ctx, f, game.simT);
   }
   ctx.restore();
@@ -833,12 +833,12 @@ function renderLayered(ctx, L, game, t, c) {
     if (!RENDER.fighters) {
       // not drawn (the phone test's switch)
     } else if (in3D) {
-      drawFighter(ctx, f, t);              // onto the layer (drawFighter asks layerActive3D)
+      drawFighter(ctx, f, t, game.other(f));   // onto the layer (drawFighter asks layerActive3D)
       over = true;
     } else {
       const g = over ? top : ctx;
       if (g === top) top.setTransform(world);
-      drawFighter(g, f, t);
+      drawFighter(g, f, t, game.other(f));
     }
     trail.setTransform(world);
     if (drawTrail(trail, f, game.simT)) trails = true;
@@ -888,7 +888,7 @@ function renderWorld(ctx, game, t, cam = null) {
   setRoundStart(game.state === 'intro' ? game.stateT : null);
   for (const f of fighterOrder(game)) {
     atDrawn(ctx, f, () => drawAura(ctx, f, t));
-    if (RENDER.fighters) drawFighter(ctx, f, t);
+    if (RENDER.fighters) drawFighter(ctx, f, t, game.other(f));
     drawTrail(ctx, f, game.simT);
   }
   renderInFront(ctx, game, t);

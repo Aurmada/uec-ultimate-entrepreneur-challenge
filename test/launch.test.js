@@ -174,6 +174,6 @@ test("the phone test's switches are all on in the game, and each leaves out what
   const { STYLE } = await import('../src/engine/drawFighter.js');
   assert.deepEqual({ light: R.light, shadows: R.shadows, fighters: R.fighters, shaded: STYLE.shaded }, { light: true, shadows: true, fighters: true, shaded: true });
   assert.match(render, /function drawShadow\(ctx, f\) \{\s*if \(!RENDER\.shadows\) return;/);
-  assert.equal((render.match(/if \(RENDER\.fighters\) drawFighter\(ctx, f, t\);/g) || []).length, 2);
+  assert.equal((render.match(/if \(RENDER\.fighters\) drawFighter\(ctx, f, t, game\.other\(f\)\);/g) || []).length, 2);
   assert.match(render, /if \(!RENDER\.fighters\) \{/);
 });

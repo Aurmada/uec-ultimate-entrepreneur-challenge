@@ -347,7 +347,13 @@ export const SCULPTED = {
     // both a little less (engine/gl3d/cloth.js). Less still (0.25) pulled the
     // back into a point behind her crouch; as much (1) wrapped it round her
     // knees like shorts.
-    cloth: { 'prop:coat': { anchor: 'hips', legs: ['thigh.L', 'thigh.R'], from: 1.2, to: 0.85, follow: 0.85, back: 0.6 } },
+    // And it hangs from the waist (cloth.js hangsFor): all of the back's hem
+    // falls straight down, to the floor in a deep crouch, instead of following
+    // the legs up behind her and bunching round the rear knee, and most of
+    // the way round to the sides (`hangSides` 0.2: the share at a vertex is
+    // (1 - side) to that power, 0 straight behind, 1 at the side). At 1 the
+    // half-way round still followed both legs, and lay between them as a lump.
+    cloth: { 'prop:coat': { anchor: 'hips', legs: ['thigh.L', 'thigh.R'], from: 1.2, to: 0.85, follow: 0.85, back: 0.6, hang: 1, hangSides: 0.2 } },
     form: 'taiChi',
   },
 };
