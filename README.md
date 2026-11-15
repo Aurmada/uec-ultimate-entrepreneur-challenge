@@ -71,6 +71,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.22.4: 3D only
+
+- 🎮 **One game, in 3D.** The classic 2D game is gone. A browser that cannot draw 3D now says so plainly instead of switching to the old 2D look; any current Chrome, Safari, Firefox or Edge plays it.
+- ⏳ **Fighters ready before the bell.** A match waits on the VS screen until both fighters have loaded, so you never see a fighter appear late.
+
 ## What's new in v3.22.3: a fairer shield, and easier to read
 
 - 🛡 **LEGAL SHIELD pushes a grabber away.** When the shield stops a grab, the two of you now come apart, as they do when it stops a strike or a steal. It used to leave you standing right next to the grabber. Online, both players need this version to play each other.

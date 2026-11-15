@@ -57,10 +57,10 @@ deployed artifact.** There is no build step. The browser loads `src/*.js` as
 native ES modules, so the file you edit is literally the file that runs, and
 deploying is `git push`. This is a deliberate constraint, not an oversight.
 
-One branch matters. `main` is the live game: a push to it deploys. It is 3D
-by default since v3.14 (3D fighters, rendered stages, hit effects), the
-classic 2D game where a player chooses it in Settings, where the browser has
-no WebGL2, or with `?gl=0` in the address. Read `docs/HANDOFF.md` before working on it: it
+One branch matters. `main` is the live game: a push to it deploys. It is 3D,
+and only 3D since v3.22.4 (3D fighters, rendered stages, hit effects): a
+browser without WebGL2 is told so rather than given the classic 2D game, and
+the 2D rig is the lab's alone (`RIG2D`). Read `docs/HANDOFF.md` before working on it: it
 says where things stand, what is next, and which decisions belong to the owner.
 
 ---

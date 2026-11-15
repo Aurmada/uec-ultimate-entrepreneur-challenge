@@ -4,8 +4,6 @@
 import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, PLAYER_SPECIALS, playerSpecialId, UNICORN_META, LOOKS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
-import { graphicsFlags, hasWebGL2 } from '../graphics.js';
-import { stats3D } from '../engine/gl3d/index.js';
 import { STYLES, rankFor, AI_LEVELS, BODY } from '../config.js';
 import { SLOT_GLYPH, commandCost } from '../data/schema.js';
 import { PLAYER_MOVES, PLAYER_BUDGET, toCommandNormal } from '../data/playerMoves.js';
@@ -1164,7 +1162,7 @@ function wireSound() {
     syncSoundUI();
     audio.sfx('click');
   };
-  $('btn-settings').onclick = () => { audio.sfx('click'); syncGraphicsUI(); syncPerfUI(); openModal('modal-settings'); };
+  $('btn-settings').onclick = () => { audio.sfx('click'); syncPerfUI(); openModal('modal-settings'); };
   wirePerf();
 }
 
@@ -1189,21 +1187,6 @@ function wirePerf() {
     Save.setSetting('perf', Save.settings.perf === false);
     syncPerfUI();
   };
-}
-
-// ---------------------------------------------------------------- graphics
-
-// One version, 3D (graphics.js): nothing to choose since v3.22.2. Where the
-// 3D cannot be drawn (no WebGL2, or it would not start), the game is the 2D
-// one, and Settings says why the fighters look flat. A ?gl=0 in the address
-// asks for 2D, so that says nothing.
-let webgl2 = null;
-
-function syncGraphicsUI() {
-  const s3 = stats3D();
-  const flat = graphicsFlags(location.search).gl && (!(webgl2 ??= hasWebGL2()) || (s3.enabled === false && !s3.renderer));
-  $('setGfxHint').textContent = flat ? 'This browser cannot draw the 3D fighters, so the game is in 2D.' : '';
-  $('setGfxHint').classList.toggle('hidden', !flat);
 }
 
 // ---------------------------------------------------------------- misc

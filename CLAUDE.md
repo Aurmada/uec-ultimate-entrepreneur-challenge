@@ -6,13 +6,13 @@ Read in this order: `docs/HANDOFF.md` (where things stand, how the parts connect
 
 ## Branches
 
-- `main`: the live game (see `VERSION` in `src/config.js`; v3.22.3 in November 2026). It is 3D by default since v3.14: 3D fighters, Blender-rendered stages and fighting-game effects, the roster in their sculpted models fighting in their own forms. Since v3.22.2 it is one version, 3D, with no 2D choice in Settings (the owner's call); the classic 2D game is the fallback without WebGL2 or when the GPU context is lost, and `?gl=0` in the address shows it for the lab. `docs/HANDOFF.md` lists the other branches and which are released.
+- `main`: the live game (see `VERSION` in `src/config.js`; v3.22.4 in November 2026). It is 3D, and only 3D since v3.22.4 (the owner's call): 3D fighters, Blender-rendered stages and fighting-game effects, the roster in their sculpted models fighting in their own forms. A browser without WebGL2 is told so instead of being given the classic 2D game, and the 2D rig is kept for the lab alone (`RIG2D` in `src/engine/drawFighter.js`). `docs/HANDOFF.md` lists the other branches and which are released.
 - `live-3d` and `claude/game-review-enhance-29bffb`: the prototype's earlier branches, superseded by `main`. Work on the 3D path now branches from `main`.
 
 ## Run and test
 
 ```bash
-python3 dev-server.py 4173    # then http://localhost:4173/?debug=1  (3D by default; add &gl=0 for the 2D game)
+python3 dev-server.py 4173    # then http://localhost:4173/?debug=1  (the game is 3D only)
 npm test                      # Node 21+, no npm install: there are no dependencies
 ```
 
@@ -35,7 +35,7 @@ npm test                      # Node 21+, no npm install: there are no dependenc
 ## Before calling something done
 
 - `npm test` passes, and a regression test you add fails without your fix (revert the fix and watch it fail).
-- With the flags off, the default game must look exactly as it did. Pixel baselines are machine-specific, so compare before and after in the same browser (ARCHITECTURE section 10): `node lab/pixels.js` does that, rendering 30 seeded match frames from `main` and from your tree in one headless browser (Playwright, preinstalled in cloud sessions; `--flags gl` for the 3D path's renderers).
+- The game must look exactly as it did unless the change means it to. Pixel baselines are machine-specific, so compare before and after in the same browser (ARCHITECTURE section 10): `node lab/pixels.js` does that, rendering 30 seeded frames of the 3D game from `main` and from your tree in one headless browser (Playwright, preinstalled in cloud sessions; `--flags 2d` for the lab's 2D rig).
 - Markdown in this repo is published by GitHub Pages' Jekyll build, which reads Liquid tags first: two opening curly braces in a row, or an opening curly brace followed by a percent sign, anywhere in a `.md` file (code spans included) can fail the deploy. Write them some other way.
 
 ## Environment

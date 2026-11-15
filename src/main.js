@@ -13,7 +13,7 @@ import { renderGame, RENDER } from './engine/render.js';
 import { STAGES } from './engine/stage.js';
 import { FX_STYLE } from './engine/fx.js';
 import { drawPortrait, enableSprites, spritesReady, STYLE } from './engine/drawFighter.js';
-import { enable3D, stats3D, startTiming, athletes3D, sculpts3D } from './engine/gl3d/index.js';
+import { enable3D, stats3D, startTiming, athletes3D, sculpts3D, pending3D, failed3D, retry3D, on3DReady } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
 import { ResolutionGovernor } from './engine/resolution.js';
 import { PerfMeter } from './engine/perfmeter.js';
@@ -163,6 +163,18 @@ function startMatch(cfg) {
 
 const HINT_MATCHES = 3;
 
+// The fighters' 3D models, before a round starts: there is no 2D game to show
+// while they load (v3.22.4). The splash stays up, saying so, until both are
+// in; go() then, or fail() if one could not be fetched.
+function whenFightersReady(defs, go, fail) {
+  const check = () => {
+    if (defs.some((d) => pending3D(d))) { on3DReady(check); return; }
+    if (defs.some((d) => failed3D(d))) fail(); else go();
+  };
+  check();
+}
+const LOADING_FIGHTERS = 'LOADING THE FIGHTERS…';
+
 function reallyStartMatch(cfg) {
   clearTimeout(splashTimer);
   closeModals();
@@ -179,6 +191,7 @@ function reallyStartMatch(cfg) {
   input.reset();
   // the same fighter on both sides: the second in a colourway of its own
   const p2Def = mirrorDef(cfg.p1Def, cfg.p2Def);
+  for (const d of [cfg.p1Def, p2Def]) { retry3D(d); pending3D(d); }   // fetched now, if not yet
 
   openPerf();                         // timed afresh each match, for its report
   resolution.restart();               // judged afresh each match, from the step it keeps
@@ -218,14 +231,23 @@ function reallyStartMatch(cfg) {
   vs.classList.remove('hidden');
   currentGame.paused = true;
 
+  const game = currentGame;
   const begin = () => {
     clearTimeout(splashTimer);
-    vs.classList.add('hidden');
     vs.onclick = null;
-    if (currentGame) {
+    $('vsLevel').textContent = LOADING_FIGHTERS;
+    $('vsLevel').classList.remove('hidden');
+    whenFightersReady([cfg.p1Def, p2Def], () => {
+      if (currentGame !== game) return;          // left while they loaded
+      vs.classList.add('hidden');
       currentGame.paused = false;
       audio.startMusic(cfg.arena);
-    }
+    }, () => {
+      if (currentGame !== game) return;
+      vs.classList.add('hidden');
+      toast('A fighter could not load. Check your connection and try again.');
+      quitMatch();
+    });
   };
   vs.onclick = begin;
   splashTimer = setTimeout(begin, 1600);
@@ -705,14 +727,26 @@ function startOnlineMatch(cfg) {
   $('vsName2').textContent = guestDef.name;
   vs.classList.remove('hidden');
   currentGame.paused = true;
+  for (const d of [hostDef, guestDef]) { retry3D(d); pending3D(d); }   // fetched now, if not yet
+  // Online the other player waits for this one in lockstep, so a fighter that
+  // could not load is not a reason to walk out on them: the match goes ahead,
+  // that fighter undrawn, and the toast says why.
+  const game = currentGame;
   const begin = () => {
     clearTimeout(splashTimer);
-    vs.classList.add('hidden');
     vs.onclick = null;
-    if (currentGame) {
+    $('vsLevel').textContent = LOADING_FIGHTERS;
+    $('vsLevel').classList.remove('hidden');
+    const go = () => {
+      if (currentGame !== game) return;
+      vs.classList.add('hidden');
       currentGame.paused = false;
       audio.startMusic(currentGame.arena);
-    }
+    };
+    whenFightersReady([hostDef, guestDef], go, () => {
+      toast('A fighter could not load. Check your connection.');
+      go();
+    });
   };
   vs.onclick = begin;
   splashTimer = setTimeout(begin, 1600);
@@ -1353,23 +1387,24 @@ function boot() {
   // figure.js), opt-in via ?figure while it is reviewed. Render-only.
   if (new URLSearchParams(location.search).has('figure')) STYLE.figure = true;
 
-  // The 3D game wherever it can be drawn, its pieces switchable from the
-  // address (?gl and the rest; graphics.js has which flag does what). Live 3D
-  // fighters in their own look (?gl=max,dex for only those, &perf for a
-  // timing readout); fighters drawn at screen resolution (RENDER in
-  // render.js), so the 3D is judged at its real sharpness; the arenas rendered
-  // in Blender (engine/stage.js); and the fighting-game hit effects
-  // (engine/vfx.js). Each defaults to off, which is the classic game.
+  // The game is 3D only (graphics.js): the 3D fighters in their own look
+  // (&perf for a timing readout), fighters drawn at screen resolution (RENDER
+  // in render.js), the arenas rendered in Blender (engine/stage.js) and the
+  // fighting-game hit effects (engine/vfx.js), the last three switchable from
+  // the address for the lab.
   const gfx = graphicsFlags(location.search, { webgl2: hasWebGL2() });
   // In 3D the roster wear their sculpted models and fight in their own forms;
   // ?gl&athlete puts them in the athlete bodies instead, on test (models3d.js).
   if (gfx.sculpts) sculpts3D(true);
   if (gfx.gl && new URLSearchParams(location.search).has('athlete')) athletes3D(true);
   const on3D = gfx.gl && enable3D({ ids: gfx.ids, timing: gfx.perf });
+  // Where it cannot be drawn (no WebGL2, or the renderer would not start),
+  // there is no game to give: the notice says so, over everything, where the
+  // 2D game used to be given instead (until v3.22.4).
+  $('no3d').classList.toggle('hidden', !!on3D);
   if (!gfx.gl && gfx.perf && STYLE.figure) startTiming();   // ?figure&perf: what the figure costs here
-  // The fighters open the round with a gesture only in their own forms, so
-  // only then does ROUND and FIGHT! go up out of its way (styles.css): the 2D
-  // game keeps it where it always was.
+  // The fighters open the round with a gesture in their own forms, so ROUND
+  // and FIGHT! go up out of its way (styles.css).
   document.body.classList.toggle('gl3d', !!(on3D && gfx.sculpts));
   RENDER.sharpFighters = gfx.sharp;
   STAGES.enabled = gfx.stages;

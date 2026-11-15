@@ -319,6 +319,21 @@ export function pending3D(def) {
 }
 export function on3DReady(fn) { waiting.push(fn); }
 
+// Whether a fighter's model could not be fetched. Since v3.22.4 a match waits
+// for its fighters' models (main.js whenFightersReady), with no 2D game to
+// play in their place, and is called off if one failed.
+export function failed3D(def) {
+  if (!enabled || !renderer || !def || (only && !only.has(def.id))) return false;
+  return !!models.get(modelIdFor(def))?.failed;
+}
+// And fetched again: a failed fetch is kept, so it is not asked for every
+// frame, and a new match asks again.
+export function retry3D(def) {
+  if (!enabled || !renderer || !def) return;
+  const id = modelIdFor(def);
+  if (models.get(id)?.failed) models.delete(id);
+}
+
 // The last pose rendered, for probes and the lab: whose, in what state, and
 // whether every bone matrix came out finite. Worked out when asked, not per
 // frame.

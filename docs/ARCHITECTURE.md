@@ -546,19 +546,22 @@ restoring every context mid-match: the frame after matches the frame before.
 
 | Flag | Effect |
 | --- | --- |
-| `?gl` | Every fighter renders in 3D, wearing their own look: roster, base characters and player founders. |
-| `?gl=max,dex` | Only the fighters with those ids do, for comparisons and benchmarks. |
 | `&perf` | On-screen timing, with `gl.finish()` per 3D fighter, so GPU time is included (worst case). |
-| `&stages=0`, `&fx=0` | Turn off the rendered stages or the fighting-game effects, which `?gl` includes. `?gl=0&stages` or `?gl=0&fx` tries either with 2D fighters. |
-| `?gl=0` | The classic 2D game, the fallback, for the lab. |
+| `&stages=0`, `&fx=0` | Turn off the rendered stages or the fighting-game effects. |
 | `&sculpts=0` | The roster in the founder model instead of their sculpted ones. |
+| `?athlete` | The athlete bodies, on test. |
 
-Since v3.22.2 the game is one version, 3D, unless the browser has no WebGL2,
-which is then the classic 2D game (the owner's call; from v3.13 to v3.22.1
-Settings had a 2D or 3D choice, `Save.settings.graphics`, which old saves
-still hold and nothing reads). In 3D the roster wear their sculpted models and
-fight in their own forms. `src/graphics.js` decides each flag from the
-address alone, and the renderers are set up once, at load.
+`?gl`, `?gl=max,dex` and `?gl=0` (every fighter in 3D, only some, or the 2D
+game) are read no more: since v3.22.4 the game is 3D, and only 3D (the owner's
+call). A browser without WebGL2, or where the renderer will not start, is
+shown a notice (`#no3d`, `main.js`) instead of the 2D game; a match holds its
+VS splash until both fighters' models are in (`whenFightersReady`), and is
+called off if one could not be fetched; a fighter with no model to draw this
+frame (the GPU context lost, until it is restored) is not drawn. The 2D rig
+is kept for the lab and its own tests (`drawFighter.js` `RIG2D`). From v3.13
+to v3.22.1 Settings had a 2D or 3D choice, `Save.settings.graphics`, which
+old saves still hold and nothing reads. `src/graphics.js` decides each flag
+from the address alone, and the renderers are set up once, at load.
 `test/graphics.test.js`.
 
 The pipeline, end to end:
@@ -1191,9 +1194,10 @@ commit (default `main`) out into a temporary worktree, serves it and the
 working tree, renders the same 30 seeded frames of a Champion match (five
 moments on each arena, through the real `Game` and `renderGame`) from both in
 one headless browser, and lists any frame that differs, with both saved.
-Same browser, same moment, so the machine never matters. `--flags gl` turns on
-the 3D path's 2D renderers (sharp fighters, rendered stages, effects) on both
-sides. It needs Playwright, which cloud sessions have and the game never
+Same browser, same moment, so the machine never matters. Since v3.22.4 the
+frames are the 3D game (the 3D fighters drawn into the 2D canvas, so the
+picture is one canvas, with the rendered stages and the effects); `--flags 2d`
+draws the lab's 2D rig on both sides, as the flags off did until then. It needs Playwright, which cloud sessions have and the game never
 loads. Checked when written: identical against `main` for a render-neutral
 branch, and against v3.9.4 it finds the attack face, which v3.10 changed.
 

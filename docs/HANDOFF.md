@@ -16,9 +16,13 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
-- **Live:** v3.22.3, released 2026-11-15 (`VERSION` in `src/config.js`;
-  `SIM_VERSION` 14 in `src/net/online.js`). One version, 3D; 2D only as
-  the fallback.
+- **Live:** v3.22.4, released 2026-11-15 (`VERSION` in `src/config.js`;
+  `SIM_VERSION` 14 in `src/net/online.js`). 3D only: no 2D game at all.
+- **What v3.22.4 changed:** 3D only (the owner, 2026-11-15: "let's only have
+  3d"). A browser that cannot draw 3D is shown a notice instead of the 2D
+  game, a match waits on its VS splash for both fighters' models, the phone
+  test is 3D only, and `lab/pixels.js` compares the 3D game (see "v3.22.4").
+  The 2D rig stays in the code for the lab (`RIG2D`).
 - **What v3.22.3 changed:** the owner's calls of 2026-11-15 (see "v3.22.3"):
   LEGAL SHIELD absorbing a grab pushes the two apart (`SIM_VERSION` 14), the
   Supabase client pinned, the sponsor boards readable on every rendered
@@ -135,7 +139,8 @@ In the order they pay off:
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.22.3 (`SIM_VERSION` 14): one version, 3D, with the sculpted cast; 2D only as the fallback | Deployed. A push here is a release. |
+| `main` | The live game, v3.22.4 (`SIM_VERSION` 14): 3D only, with the sculpted cast | Deployed. A push here is a release. |
+| `claude/v3.22.4` | 3D only: the notice without WebGL2, a match waiting for its fighters, the phone test and `lab/pixels.js` in 3D (see "v3.22.4") | Released in v3.22.4 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.3` | The owner's calls of 2026-11-15: the shield against a grab, the pinned client, the boards, the ring light (see "v3.22.3") | Released in v3.22.3 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.2` | One version, 3D (no 2D choice in Settings), the 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.1` | Round ten of the phone test, and the stack's old canvases leaving the page with a dropped 3D layer (see "v3.22.1") | Released in v3.22.1 on 2026-11-14, merged into `main`. |
@@ -162,9 +167,16 @@ was never pushed.
    `claude/gl3d-restore`. A cloud session cannot delete a branch on GitHub
    (the push is cut off and the API call refused; tried again on 2026-11-14),
    so the owner deletes them on the repository's Branches page.
-1. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
+1. **Delete the 2D rig?** Since v3.22.4 the game never draws it: the
+   procedural 2D fighters (most of `drawFighter.js`), their shading, the
+   baked-sprite and `?figure` paths and the 2D portrait bust (kept for photo
+   founders, whose photo is the face) stay for the lab and their own tests
+   (`RIG2D`, `--flags 2d` in `lab/pixels.js`). Deleting them is a large,
+   careful job; the pose code (`computePose`, `applyProportions`) poses the
+   3D fighters and stays either way.
+2. **The sprite sources in `lab/assets/`** (see "Not in the repo" below): keep a
    private copy, or let them go.
-2. **Art direction.** The model and stages are scripted, which has a ceiling. An
+3. **Art direction.** The model and stages are scripted, which has a ceiling. An
    artist working in Blender to the same contract (ARCHITECTURE section 7, "The
    model contract") is the step up, and the runtime would not need to change.
 **Settled:**
@@ -182,8 +194,9 @@ was never pushed.
   stays: the fallback without WebGL2 or when the GPU context is lost.
 - **One version, 3D** (v3.22.2, asked for on 2026-11-15, "keep one version
   3D"): no 2D or 3D choice in Settings; a 2D choice saved before is not read.
-  The 2D rig stays as the fallback, so its speed still matters (the shading
-  fix in the same release).
+- **3D only** (v3.22.4, asked for on 2026-11-15, "let's only have 3d"): no
+  2D fallback either. Where 3D cannot be drawn the page says so; the 2D rig
+  is the lab's alone (`RIG2D`), and whether to delete it is open (Decisions).
 - **Fighters overlap at close range** (v3.21): each fighter keeps a push half
   of their own, measured from their sculpt, not by `build`.
 - **Balance for Jeff and Elo** (v3.22, asked for on 2026-11-14): Elo's
@@ -205,7 +218,13 @@ was never pushed.
 
 ## Known limits
 
-- Phone performance: every phone measured holds 60 fps in 3D and in 2D but a
+- 3D only since v3.22.4: a browser without WebGL2 cannot play (a notice
+  says so); when a phone takes the GPU context away mid-match (the app sent
+  to the background, memory pressure), the fighters are not drawn until it is
+  restored, the stage and the fight going on; and a match whose fighter's
+  model could not be fetched is called off with a toast (online it goes
+  ahead, that fighter undrawn, so as not to walk out on the other player).
+- Phone performance: every phone measured holds 60 fps but a
   budget Android (Ahlo 1, Adreno 613), about 21 at full resolution and 30
   once the game steps its resolution down: the graphics chip, not the
   processor, is the limit, and round ten found no one piece of the 3D
@@ -364,6 +383,46 @@ Everything below is how the game got here: each release with what changed,
 why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
+
+## v3.22.4, released 2026-11-15: 3D only
+
+The owner, after the v3.22.3 phone test: "let's only have 3d. make any
+updates needed and push it live". v3.22.2 had taken the 2D or 3D choice out
+of Settings; the 2D game was still the fallback without WebGL2, while a
+fighter's model loaded, with the GPU context lost, and with `?gl=0`.
+
+- **No 2D game.** `graphicsFlags` (`src/graphics.js`) turns the 3D fighters
+  on wherever WebGL2 is there and reads `?gl`, `?gl=0` and `?gl=max,dex` no
+  more. Where 3D cannot be drawn (no WebGL2, or the renderer would not
+  start) `main.js` shows a notice over everything (`#no3d` in `index.html`,
+  `.no3d` in `styles.css`) saying so and naming the browsers that play it;
+  the Settings line that said the game was in 2D is gone.
+- **Nothing drawn in 2D.** `drawFighter` draws no 2D rig unless the lab asks
+  (`RIG2D.on`): a fighter with no model to draw this frame is not drawn. A
+  portrait waits for its 3D bust (backdrop only until it lands, then drawn
+  again), except a photo founder's, whose photo is the face and keeps the
+  2D bust.
+- **A match waits for its fighters.** The VS splash stays up, saying
+  LOADING THE FIGHTERS, until both fighters' models are in
+  (`whenFightersReady`, `main.js`, with `pending3D`, `on3DReady` and the new
+  `failed3D` and `retry3D` in `gl3d/index.js`); a model that could not be
+  fetched is asked for again at the next match. Offline a match whose
+  fighter failed is called off with a toast; online it goes ahead, that
+  fighter undrawn, since the other player waits in lockstep.
+- **The lab.** The phone test is 3D only: nine setups, round twelve
+  (`lab/phone-test.html`), the 2D ones gone. `lab/pixels.js` renders the 3D
+  game by default (the fighters drawn into the 2D canvas through the copy
+  path, so the picture is one canvas), and `--flags 2d` the 2D rig, as the
+  flags off did; CLAUDE.md says so. Against v3.22.3, 30 frames identical
+  either way; against v3.22.2 it finds the guard tuck and the boards, which
+  shows the fighters are in the frames.
+- **Tests.** `test/graphics.test.js` (3D whatever the address says, the
+  notice, no 2D in Settings), `test/passes.test.js` (no 2D fighter drawn
+  without `RIG2D`, which fails with the gate off; the portrait and the match
+  wait, structurally), the 2D rig's own tests turning `RIG2D` on, and
+  `test/launch.test.js` (the phone test holds no 2D setup).
+
+Not done, and open (Decisions, 1): deleting the 2D rig's code itself.
 
 ## v3.22.3, released 2026-11-15: the owner's calls, the boards, the ring light
 

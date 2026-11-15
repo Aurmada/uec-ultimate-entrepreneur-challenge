@@ -59,10 +59,12 @@ async function frame() {
 }
 
 test('the 2D shading never draws a canvas back into one it was drawn from', async () => {
-  const { STYLE, SHADE_PASSES } = await import('../src/engine/drawFighter.js');
+  const { STYLE, SHADE_PASSES, RIG2D } = await import('../src/engine/drawFighter.js');
   assert.equal(STYLE.shaded, true);
   assert.deepEqual({ ...SHADE_PASSES }, { key: true, form: true, rim: true });
+  RIG2D.on = true;                   // the 2D rig is the lab's since v3.22.4
   const { screen, log } = await frame();
+  RIG2D.on = false;
   // The frame: the screen and the world canvas renderGame draws into and
   // copies onto it. Anything drawn there ends a fighter's chain.
   const frameEls = new Set([screen, ...log.filter((e) => e.onto === screen && e.from).map((e) => e.from)]);

@@ -8,6 +8,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { STYLIZE } from '../src/config.js';
 
 // ---- 2D: a frame of the game onto canvases that log every fill and copy ----
@@ -74,7 +75,8 @@ function lost(on, off) {
 }
 
 test("the 2D shading's passes are all on in the game, and each switch leaves out only its own", async () => {
-  const { SHADE_PASSES, STYLE } = await import('../src/engine/drawFighter.js');
+  const { SHADE_PASSES, STYLE, RIG2D } = await import('../src/engine/drawFighter.js');
+  RIG2D.on = true;                   // the 2D rig is the lab's since v3.22.4
   assert.deepEqual({ ...SHADE_PASSES }, { key: true, form: true, rim: true }, 'a shading pass is off in the game');
   assert.equal(STYLE.shaded, true);
   assert.equal(STYLIZE.SHADE_KEY_MODE, 'overlay');
@@ -101,7 +103,32 @@ test("the 2D shading's passes are all on in the game, and each switch leaves out
   } finally {
     SHADE_PASSES.key = SHADE_PASSES.form = SHADE_PASSES.rim = true;
     STYLIZE.SHADE_KEY_MODE = key;
+    RIG2D.on = false;
   }
+});
+
+// Since v3.22.4 the game is 3D only: a fighter with no 3D model to draw (here,
+// with no WebGL at all) is not drawn, rather than drawn by the 2D rig, which
+// only the lab turns on (RIG2D). Nor is a portrait given the 2D bust, unless
+// the founder's photo is the face; and a match waits for its fighters.
+test('with no 3D model to draw, a fighter is not drawn in 2D, and a match waits for its fighters', async () => {
+  const { RIG2D } = await import('../src/engine/drawFighter.js');
+  assert.equal(RIG2D.on, false, 'the 2D rig is on in the game');
+  const none = await frame2D();
+  const key = STYLIZE.SHADE_KEY_MODE;
+  assert.equal(none[`fill ${key}`] || 0, 0, 'a fighter was shaded in 2D');
+  assert.equal(none['copy lighter'] || 0, 0, 'a fighter was given a 2D rim');
+  RIG2D.on = true;
+  try {
+    assert.equal((await frame2D())[`fill ${key}`], 2, 'the lab lost the 2D rig');
+  } finally {
+    RIG2D.on = false;
+  }
+  const src = readFileSync(new URL('../src/engine/drawFighter.js', import.meta.url), 'utf8');
+  assert.match(src, /if \(!drawBust3D\(canvas, ctx, def, opts\) && \(def\.photo \|\| RIG2D\.on\)\) \{/);
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.equal((main.match(/whenFightersReady\(\[/g) || []).length, 2, 'a match, offline or online, starts without waiting for its fighters');
+  assert.match(main, /if \(defs\.some\(\(d\) => pending3D\(d\)\)\) \{ on3DReady\(check\); return; \}/);
 });
 
 // ---- 3D: the renderer on a fake WebGL context that logs its draws ----

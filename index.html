@@ -28,6 +28,15 @@
 <div id="app">
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
 
+  <!-- shown by main.js where the 3D game cannot be drawn: there is no 2D game since v3.22.4 -->
+  <div id="no3d" class="no3d hidden" role="alert">
+    <div class="no3d-card">
+      <div class="modal-title">THIS BROWSER CAN'T DRAW THE FIGHT</div>
+      <p>UEC is drawn in 3D, which needs WebGL2, and this browser does not have it (or has it turned off).</p>
+      <p>Update it, or open the game in a current Chrome, Safari, Firefox or Edge.</p>
+    </div>
+  </div>
+
   <!-- ============ TITLE ============ -->
   <section id="scr-title" class="screen">
     <div class="corner-ui">
@@ -565,7 +574,6 @@
         <button id="setMusic" class="btn btn-sm">MUSIC: ON</button>
         <button id="setSfx" class="btn btn-sm">SFX: ON</button>
       </div>
-      <p class="hint hidden" id="setGfxHint"></p>
       <button id="setPerf" class="btn btn-sm">PERFORMANCE REPORTS: ON</button>
       <p class="hint" id="setPerfHint"></p>
       <button class="btn btn-sm" data-close>CLOSE</button>

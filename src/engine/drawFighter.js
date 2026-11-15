@@ -1968,6 +1968,13 @@ function heave(P, { u, w }) {
   return P;
 }
 
+// The 2D rig. The game is 3D only since v3.22.4 (graphics.js): a fighter with
+// no 3D model to draw this frame (still loading, which a match waits out, or
+// the GPU context lost, until it is restored) is not drawn at all, rather
+// than drawn in 2D, and a portrait waits for its model the same way. On for
+// the lab and the tests that judge the 2D rig itself.
+export const RIG2D = { on: false };
+
 // `foe`, the other fighter, when there is one: up close a 3D fighter keeps its
 // guard and feet to its own side of them (gl3d/close.js).
 export function drawFighter(ctx, f, t, foe = null) {
@@ -2050,6 +2057,8 @@ export function drawFighter(ctx, f, t, foe = null) {
       return;
     }
   }
+
+  if (!RIG2D.on) { ctx.restore(); return; }
 
   // Baked sprite path. Body proportions scale the sheet rather than re-posing
   // a rig, so the P1 knobs still give a lanky zoner and a squat grappler.
@@ -2300,8 +2309,8 @@ function drawPortraitNeckline(ctx, def, S, k) {
 // frame where a guard would cover the face. `opts.mirror` turns them to face
 // left. A photo founder keeps the 2D bust, since the photo is the face.
 //
-// A portrait drawn while the model is still loading is drawn in 2D, and again
-// once the model lands (or fails, when it simply stays 2D). Only the latest
+// A portrait drawn while the model is still loading is drawn without a bust
+// (the 2D one, until v3.22.4), and again once the model lands. Only the latest
 // thing drawn into a canvas counts: drawPortrait cancels a queued redraw of
 // its canvas, and anything else that draws into a portrait canvas (the
 // RANDOM tile) calls releasePortrait, or the late redraw would paint over it.
@@ -2369,7 +2378,9 @@ export function drawPortrait(canvas, def, opts = {}) {
     }
   }
   ctx.globalAlpha = 1;
-  if (!drawBust3D(canvas, ctx, def, opts)) {
+  // The 2D bust only for a photo founder, whose photo is the face, or the lab:
+  // anyone else waits for their 3D bust (drawBust3D redraws when it lands)
+  if (!drawBust3D(canvas, ctx, def, opts) && (def.photo || RIG2D.on)) {
     // shoulders
     blob(ctx, () => {
       ctx.moveTo(S * 0.1, S * 1.05);

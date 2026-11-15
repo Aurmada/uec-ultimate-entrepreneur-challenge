@@ -1,12 +1,17 @@
 // Same frames, two commits, one browser: does the game still look exactly as
 // it did?
 //
-//   node lab/pixels.js                  # the working tree against main
+//   node lab/pixels.js                  # the working tree against main, as players see it (3D)
 //   node lab/pixels.js v3.10.2          # ... against any commit, tag or branch
-//   node lab/pixels.js main --flags gl  # with ?gl's renderers on, both sides
+//   node lab/pixels.js main --flags 2d  # the lab's 2D rig instead, both sides
 //
-// CLAUDE.md asks that, with the flags off, the default game look exactly as it
-// did, and pixel baselines only reproduce in the browser that wrote them
+// The game is 3D only since v3.22.4, so the frames are the 3D game by default:
+// the 3D fighters (drawn into the 2D canvas, not on the 3D layer, so the
+// picture is one canvas to compare), the rendered stages and the hit effects.
+// `--flags 2d` draws the 2D rig, as `flags off` did until then, and `--flags
+// gl` (the stages and effects with the 2D rig, before v3.22.4) is the 3D game
+// now. CLAUDE.md asks that the game look exactly as it did unless a change
+// means it to, and pixel baselines only reproduce in the browser that wrote them
 // (ARCHITECTURE section 10). So this renders the same seeded frames from both
 // trees in the same headless browser, side by side, and compares them: six
 // arenas, a few moments in a Champion AI match on each, through the real
@@ -45,11 +50,22 @@ import { getArena } from './src/data/arenas.js';
 import { AIController } from './src/engine/ai.js';
 const q = new URLSearchParams(location.search);
 window.frame = async () => {
-  if (q.get('flags') === 'gl') {
+  const flags = q.get('flags') || '3d';
+  const [a0, b0] = q.get('pair').split(',').map(getFighter);
+  if (flags !== '2d') {
     const { STAGES, stageFor } = await import('./src/engine/stage.js');
     const { FX_STYLE } = await import('./src/engine/fx.js');
     R.RENDER.sharpFighters = true; STAGES.enabled = true; FX_STYLE.impact = true;
     for (let i = 0; i < 100 && !stageFor(getArena(q.get('arena'))); i++) await new Promise((r) => setTimeout(r, 100));
+    const G = await import('./src/engine/gl3d/index.js');
+    const { GL3D } = await import('./src/config.js');
+    GL3D.LAYER = false;                // into the 2D canvas: one picture to compare
+    G.sculpts3D?.(true);
+    G.enable3D({ ids: null });
+    for (let i = 0; i < 300 && !(G.has3D(a0) && G.has3D(b0)); i++) await new Promise((r) => setTimeout(r, 100));
+  } else {
+    const D = await import('./src/engine/drawFighter.js');
+    if (D.RIG2D) D.RIG2D.on = true;    // the lab's 2D rig (the game's own until v3.22.4)
   }
   const canvas = document.getElementById('c');
   canvas.width = STAGE.W * 2; canvas.height = STAGE.H * 2;
@@ -57,7 +73,7 @@ window.frame = async () => {
   ctx.setTransform(2, 0, 0, 2, 0, 0);
   let s = 20261029;
   Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const [a, b] = q.get('pair').split(',').map(getFighter);
+  const [a, b] = [a0, b0];
   const game = new Game({
     p1: { def: a, controller: new AIController('mogul', a) }, p2: { def: b, controller: new AIController('mogul', b) },
     arena: getArena(q.get('arena')), mode: 'solo', difficulty: 'mogul',
@@ -171,7 +187,7 @@ async function main() {
       }
     }
     const total = ARENAS.length * FRAMES.length;
-    console.log(`${total} frames${o.flags ? ` with --flags ${o.flags}` : ', flags off'}, ${PAIR.join(' v ')}, against ${o.base}:`);
+    console.log(`${total} frames${o.flags === '2d' ? ', the 2D rig' : ', the 3D game'}, ${PAIR.join(' v ')}, against ${o.base}:`);
     if (!differing.length) console.log(`  all ${total} identical`);
     else console.log(differing.join('\n') + `\n  both frames of each are in ${o.out}`);
     process.exitCode = differing.length ? 1 : 0;
