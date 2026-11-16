@@ -176,3 +176,33 @@ test("the phone test's switches are all on in the game, and each leaves out what
   assert.equal((render.match(/if \(RENDER\.fighters\) drawFighter\(ctx, f, t, game\.other\(f\)\);/g) || []).length, 2);
   assert.match(render, /if \(!RENDER\.fighters\) \{/);
 });
+
+// The owner's standing rule for anything written: no em dashes, Canadian
+// spelling. The docs and comments kept to it and the game's own words did
+// not: about a hundred em dashes in what a player reads (the title, the
+// tutorial, HOW TO PLAY, the story, every toast), "colors", "DEFENSE",
+// "memorise" (2026-11-15). Comments are left out here: CLAUDE.md rule 8
+// covers them as they are touched.
+test('nothing a player reads has an em dash, and the spelling is Canadian', () => {
+  const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+  const page = read('index.html').replace(/<!--[\s\S]*?-->/g, '');
+  assert.ok(!page.includes('—'), `index.html: ${page.match(/.{0,40}—.{0,40}/)?.[0]}`);
+  assert.ok(!read('manifest.json').includes('—'), 'manifest.json');
+  const code = ['src/main.js', 'src/config.js', 'src/ui/screens.js', 'src/ui/tutorial.js', 'src/ui/hud.js',
+    'src/ui/resultCard.js', 'src/ui/flow.js', 'src/engine/game.js', 'src/engine/input.js', 'src/engine/fx.js',
+    'src/data/fighters.js', 'src/data/authored.js', 'src/data/playerMoves.js', 'src/data/arenas.js', 'src/auth.js'];
+  for (const p of code) {
+    const said = read(p).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '');
+    assert.ok(!said.includes('—'), `${p}: ${said.match(/.{0,40}—.{0,40}/)?.[0]}`);
+  }
+  for (const [word, right] of [[/\bcolors?\b/i, 'colour'], [/\bdefense\b/i, 'defence'], [/\b(memor|custom)is(e|ed|ing)\b/i, '-ize']]) {
+    const text = page.replace(/<[^>]*>/g, ' ');
+    assert.ok(!word.test(text), `index.html says ${text.match(word)?.[0]}, not ${right}`);
+  }
+});
+
+// JORDAN BLA… BLAZE R… and CATHIE WOO… on a phone held sideways (2026-11-15):
+// the stage is under 900 px wide there, and the company gives its room up.
+test('on a phone held sideways the HUD shows the whole name, without the company', () => {
+  assert.match(landscape(), /\.hud-co \{ display: none; \}/);
+});

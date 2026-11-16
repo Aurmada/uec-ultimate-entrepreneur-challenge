@@ -7,7 +7,7 @@ export const AUTHORED = [
     "title": "THE DOWN ROUND",
     "company": "BRIDGEWAY",
     "tagline": "Raised on a napkin. Spent it on a jet.",
-    "rap": "No convictions — yet",
+    "rap": "No convictions. Yet",
     "special": "pitchdeck",
     "style": "technical",
     "body": {

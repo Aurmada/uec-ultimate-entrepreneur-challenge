@@ -390,6 +390,11 @@ export class FXSystem {
     ctx.globalAlpha = 1;
   }
 
+  // The words in the air cleared: K.O.! goes up across the middle of the
+  // stage, where the last hit's POW! and the special's shout were still
+  // hanging, one word under another (seen 2026-11-15, WHAM! behind K.O.!).
+  hush() { this.popups.length = 0; }
+
   drawOverlay(ctx, W, H) {
     if (this.flashA > 0 && this.flashCol) {
       ctx.globalAlpha = Math.min(0.85, this.flashA);

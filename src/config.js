@@ -59,6 +59,10 @@ export const STAGE_ART = {
 // else was switched off; round eight found an iPhone 12 Pro at 19 in 2D and
 // 20.6 at 1x, where a step only blurs, as it does on a phone that Low Power
 // Mode holds to 30.
+// On a screen larger than the stage (a monitor, a laptop) the ratio is the one
+// the fight is shown at, so it is drawn at the size it is seen and not
+// stretched (resolution.js shownRatio); a window that changes size is fitted
+// again REFIT_MS ms after it stops.
 export const RESOLUTION = {
   STEPS: [2, 1.5, 1],
   MIN_FPS: 50,
@@ -66,6 +70,7 @@ export const RESOLUTION = {
   WINDOW: 2000,
   SETTLE: 1000,
   STALL: 1000,
+  REFIT_MS: 200,
 };
 
 // How a match ran, sent when it ends (engine/perfmeter.js, net/perf.js), so
@@ -283,7 +288,7 @@ export const STYLES = {
     startup: 1.00, dmg: 1.00, reach: 1.00, recovery: 1.00, speed: 1.00, hp: 1.00, stance: 'ready',
   },
   rushdown: {
-    name: 'RUSHDOWN', blurb: 'Fastest hands and feet — but the thinnest skin.',
+    name: 'RUSHDOWN', blurb: 'Fastest hands and feet, but the thinnest skin.',
     startup: 0.82, dmg: 0.88, reach: 0.94, recovery: 0.90, speed: 1.12, hp: 0.93, stance: 'coiled',
   },
   brawler: {

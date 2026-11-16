@@ -105,7 +105,7 @@ export function openSelect(mode, side = 'p1') {
 }
 
 function selectTitle() {
-  if (sel.mode === 'online') return '🔴 LIVE — PICK YOUR FIGHTER';
+  if (sel.mode === 'online') return '🔴 LIVE · PICK YOUR FIGHTER';
   if (sel.ghost) return `FACE ${sel.ghost.def.name}!`;
   return 'CHARACTER SELECT';
 }
@@ -187,7 +187,7 @@ function renderSelect() {
   if (sel.mode === 'online') {
     const locked = A.netInfo?.()?.pickLocked;
     $('btn-fight').disabled = !!locked;
-    $('btn-fight').textContent = locked ? '✓ READY — WAITING FOR RIVAL…' : 'LOCK IN ➤';
+    $('btn-fight').textContent = locked ? '✓ READY · WAITING FOR RIVAL…' : 'LOCK IN ➤';
     return;
   }
   const ready = !!sel.ghost || !!sel.p2;
@@ -203,7 +203,7 @@ function renderSide(prefix, def, fallbackLabel) {
   $(`${prefix}-title`).textContent = def ? (def.title || '') : 'ROLL THE DICE';
   $(`${prefix}-co`).textContent = def ? def.company : 'Could be anyone…';
   const st = def ? (STYLES[def.style] || STYLES.balanced) : null;
-  $(`${prefix}-style`).textContent = st ? st.name : '—';
+  $(`${prefix}-style`).textContent = st ? st.name : '·';
   $(`${prefix}-rap`).textContent = def?.rap || (def?.id === 'custom' ? 'Unindicted · so far' : '');
   const sp = def ? SPECIALS[def.special] : null;
   $(`${prefix}-sp`).textContent = sp ? `${sp.icon} ${sp.name}` : '🎲 MYSTERY';
@@ -248,7 +248,7 @@ function renderPreview() {
 
   // style blurb explains what picking this character actually changes
   const st = STYLES[youDef?.style] || STYLES.balanced;
-  $('style-blurb').textContent = `${st.name} — ${st.blurb}`;
+  $('style-blurb').textContent = `${st.name}: ${st.blurb}`;
 }
 
 function onFight() {
@@ -463,8 +463,8 @@ function renderLookRows() {
     host.appendChild(row);
   }
   $('look-hint').textContent = draft.photo
-    ? 'Your photo is your face — hair sits behind it and headwear on top. Eyewear and facial hair come from the photo itself.'
-    : 'Customise every layer — all cosmetic, none of it changes your stats.';
+    ? 'Your photo is your face: hair sits behind it and headwear on top. Eyewear and facial hair come from the photo itself.'
+    : 'Customize every layer. All cosmetic, none of it changes your stats.';
 }
 
 function renderAvatarPreview() {
@@ -693,7 +693,7 @@ async function openCropModal(img) {
   $('cropZoom').value = Math.round(crop.zoom * 100);
   renderCrop();
   openModal('modal-crop');
-  if (found) toast('🙂 Face found — fine-tune if you like.');
+  if (found) toast('🙂 Face found. Fine-tune if you like.');
 }
 
 function wireCrop() {
@@ -749,7 +749,7 @@ function wireCrop() {
     renderAvatarPreview();
     renderStyleGrid();
     renderLookRows();     // photo now drives the face; hint + disabled rows update
-    toast('📷 Face locked in — now pick your hair and headwear below.');
+    toast('📷 Face locked in. Now pick your hair and headwear below.');
     audio.sfx('select');
   };
 }
@@ -784,7 +784,7 @@ function wireProfile() {
       const img = await readFileToImage(file);
       await openCropModal(img);
     } catch (err) {
-      toast('Could not read that image — try another file.');
+      toast('Could not read that image. Try another file.');
     }
     e.target.value = '';
   };
@@ -805,7 +805,7 @@ function wireProfile() {
     if (currentUser()) {
       syncProfileUp().then((ok) => toast(ok
         ? '☁️ Profile synced to your account.'
-        : '⚠️ Cloud sync failed — will retry on your next sign-in.'));
+        : '⚠️ Cloud sync failed. It will retry on your next sign-in.'));
     }
     // First founder: the gate was holding them here, so let them out.
     if (wasFirst) A.onFirstProfile?.();
@@ -813,7 +813,7 @@ function wireProfile() {
   $('btn-build-suggest').onclick = () => suggestBuild();
   $('btn-invite').onclick = () => openInvite();
   $('btn-reset').onclick = () => {
-    openConfirm('RESET EVERYTHING?', 'Profile, record, points — all gone. This cannot be undone.', () => {
+    openConfirm('RESET EVERYTHING?', 'Profile, record, points: all gone. This cannot be undone.', () => {
       Save.resetAll();
       location.reload();
     });
@@ -856,7 +856,7 @@ export function renderLeaderboard() {
     b.onclick = () => { audio.sfx('click'); lbTab = b.dataset.lb; renderLeaderboard(); };
   });
   $('lb-note').textContent = lbTab === 'global'
-    ? '🌍 Signed-in founders only — confirmed live matches vs real players.'
+    ? '🌍 Signed-in founders only: confirmed live matches vs real players.'
     : '🏠 Practice season on this device (AI fights & call-outs).';
   if (lbTab === 'global') renderGlobalBoard();
   else renderLocalBoard();
@@ -879,7 +879,7 @@ async function renderGlobalBoard() {
     rows = await fetchLeaderboard();
   } catch (e) {
     if (lbTab !== 'global') return;
-    list.innerHTML = '<div class="hint center">Couldn\'t reach the global ladder — check your connection and try again.</div>';
+    list.innerHTML = '<div class="hint center">Couldn\'t reach the global ladder. Check your connection and try again.</div>';
     return;
   }
   if (lbTab !== 'global') return;                     // switched tabs mid-fetch
@@ -974,12 +974,12 @@ export function renderHelp() {
     list.appendChild(row);
   }
   const universals = [
-    ['⚖️', 'CEASE & DESIST — EVERYONE', '25 ENERGY', 'Hurl legal paperwork in a vicious arc. You have been served — and knocked down.'],
-    ['💸', 'ACQUI-HIRE — EVERYONE', 'FREE · COOLDOWN', 'Raid their team at close range and siphon their energy into your meter. Blockable, parryable, extremely rude.'],
-    ['🛡', 'PARRY — EVERYONE', 'TAP BLOCK LAST-INSTANT', 'A perfectly timed block turns the attack away: the attacker staggers, you gain energy. Grabs cannot be parried.'],
-    ['💨', 'HUSTLE DASH — EVERYONE', 'FREE · SHORT COOLDOWN', 'A burst of pure grind. Closes gaps fast and cancels straight into attacks.'],
-    ['🦄', `${UNICORN_META.name} — EVERYONE`, 'FULL METER SUPER', UNICORN_META.desc],
-    ['💼', 'MYSTERY DROPS', 'RANDOM BRIEFCASES', 'Briefcases fall mid-round with hidden powers: secret funding, 10x engineers, legal shields, rockets… and the occasional toxic asset. Race your rival to them — or let them gamble.'],
+    ['⚖️', 'CEASE & DESIST · EVERYONE', '25 ENERGY', 'Hurl legal paperwork in a vicious arc. You have been served, and knocked down.'],
+    ['💸', 'ACQUI-HIRE · EVERYONE', 'FREE · COOLDOWN', 'Raid their team at close range and siphon their energy into your meter. Blockable, parryable, extremely rude.'],
+    ['🛡', 'PARRY · EVERYONE', 'TAP BLOCK LAST-INSTANT', 'A perfectly timed block turns the attack away: the attacker staggers, you gain energy. Grabs cannot be parried.'],
+    ['💨', 'HUSTLE DASH · EVERYONE', 'FREE · SHORT COOLDOWN', 'A burst of pure grind. Closes gaps fast and cancels straight into attacks.'],
+    ['🦄', `${UNICORN_META.name} · EVERYONE`, 'FULL METER SUPER', UNICORN_META.desc],
+    ['💼', 'MYSTERY DROPS', 'RANDOM BRIEFCASES', 'Briefcases fall mid-round with hidden powers: secret funding, 10x engineers, legal shields, rockets… and the occasional toxic asset. Race your rival to them, or let them gamble.'],
   ];
   for (const [icon, name, owner, desc] of universals) {
     const row = document.createElement('div');
@@ -1253,12 +1253,12 @@ export function initScreens(actions) {
     // a room that never opened has no link: copying nothing said it was copied
     if (!$('liveLink').value) { toast('No link yet: the room is not open.'); return; }
     const ok = await copyText($('liveLink').value, $('liveLink'));
-    toast(ok ? '🔗 Live link copied — send it now!' : 'Link selected — press Ctrl/Cmd+C to copy.');
+    toast(ok ? '🔗 Live link copied. Send it now!' : 'Link selected. Press Ctrl/Cmd+C to copy.');
     audio.sfx('click');
   };
   $('btn-live-share').onclick = () => {
     navigator.share?.({
-      title: 'UEC — fight me LIVE',
+      title: 'UEC: fight me LIVE',
       text: 'I\'m in the arena right now. Join my live room and fight me. 🥊',
       url: $('liveLink').value,
     }).catch(() => {});
@@ -1301,12 +1301,12 @@ export function initScreens(actions) {
   $('btn-copylink').onclick = async () => {
     if (!$('inviteLink').value) { toast('No link yet.'); return; }
     const ok = await copyText($('inviteLink').value, $('inviteLink'));
-    toast(ok ? '🔗 Link copied — go start a rivalry.' : 'Link selected — press Ctrl/Cmd+C to copy.');
+    toast(ok ? '🔗 Link copied. Go start a rivalry.' : 'Link selected. Press Ctrl/Cmd+C to copy.');
     audio.sfx('click');
   };
   $('btn-nativeshare').onclick = () => {
     navigator.share?.({
-      title: 'UEC — Ultimate Entrepreneur Challenge',
+      title: 'UEC: Ultimate Entrepreneur Challenge',
       text: 'I challenge you to a founder fight. Winner takes the valuation. 🥊',
       url: $('inviteLink').value,
     }).catch(() => {});

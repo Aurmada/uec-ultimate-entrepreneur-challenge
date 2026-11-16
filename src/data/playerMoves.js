@@ -36,7 +36,7 @@ export const PLAYER_MOVES = [
     id: 'uppercut',
     slot: 'fwd+punch', archetype: 'strike', displayName: 'DOWN ROUND',
     tags: ['launcher'],
-    blurb: 'Pops them into the air so you can keep going. Costs the most — launching opens routes nothing else can.',
+    blurb: 'Pops them into the air so you can keep going. Costs the most: launching opens routes nothing else can.',
     frameData: {
       startup: punch.startup, active: punch.active, recovery: punch.recovery * 1.05,
       dmg: 8, reach: 84, hitY: -120, kb: 90, kbUp: -400, stun: 0.3,
@@ -66,7 +66,7 @@ export const PLAYER_MOVES = [
     id: 'shakedown',
     slot: 'fwd+kick', archetype: 'grab', displayName: 'DUE DILIGENCE',
     tags: ['command-grab'],
-    blurb: 'Unblockable — but they can jump it, and you have to be close enough to smell the fear.',
+    blurb: 'Unblockable, but they can jump it, and you have to be close enough to smell the fear.',
     frameData: {
       startup: kick.startup * 1.25, active: kick.active, recovery: kick.recovery * 1.2,
       dmg: 15, reach: 88, hitY: -95, kb: 300, kbUp: -180, stun: 0.34,

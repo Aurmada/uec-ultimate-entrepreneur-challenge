@@ -1,6 +1,6 @@
 // Boot, screen router, match lifecycle, render loop, menu background.
 
-import { STAGE, DEBUG, VERSION, AI_LEVELS } from './config.js';
+import { STAGE, DEBUG, VERSION, AI_LEVELS, RESOLUTION } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
 import { graphicsFlags, hasWebGL2 } from './graphics.js';
 import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter, toCharacter } from './data/fighters.js';
@@ -15,7 +15,7 @@ import { FX_STYLE } from './engine/fx.js';
 import { drawPortrait, enableSprites, spritesReady, STYLE } from './engine/drawFighter.js';
 import { enable3D, stats3D, startTiming, athletes3D, sculpts3D, pending3D, failed3D, retry3D, on3DReady } from './engine/gl3d/index.js';
 import { hud } from './ui/hud.js';
-import { ResolutionGovernor } from './engine/resolution.js';
+import { ResolutionGovernor, shownRatio } from './engine/resolution.js';
 import { PerfMeter } from './engine/perfmeter.js';
 import { reportPerf } from './net/perf.js';
 import {
@@ -217,6 +217,7 @@ function reallyStartMatch(cfg) {
   $('touchControls').classList.toggle('hidden', !(touch && cfg.mode !== 'versus'));
   // touch shows every button already — the controls card would just cover them
   document.body.classList.toggle('touch-active', touch && cfg.mode !== 'versus');
+  fitGameResolution();                // at the size the fight is shown at, laid out by now
 
   // VS splash
   const vs = $('vsSplash');
@@ -313,7 +314,7 @@ function renderResults() {
       `<span class="pts">+${lastRanked.gained} PTS</span> → ${lastRanked.total} total · ` +
       `<span class="rank-chip">${lastRanked.rank}</span>` +
       (lastRanked.streak > 1 ? ` · 🔥 ${lastRanked.streak} WIN STREAK` : '') +
-      (lastRanked.rankUp ? `<br>📈 RANK UP — welcome to <b>${lastRanked.rank}</b>. That belongs on LinkedIn. 👇` : '');
+      (lastRanked.rankUp ? `<br>📈 RANK UP! Welcome to <b>${lastRanked.rank}</b>. That belongs on LinkedIn. 👇` : '');
   } else {
     pts.classList.add('hidden');
   }
@@ -390,7 +391,7 @@ const netEvents = {
     // Lobby match: nothing to choose, so re-send our pick (covers the race
     // where one side locked in before the other had subscribed) and go.
     if (netAuto && netPhase === 'picking') {
-      toast(`🥊 ${meta.n} is in — fight!`);
+      toast(`🥊 ${meta.n} is in. Fight!`);
       net?.sendPick(defToSpec(savedSelfDef()));
       maybeHostStart();
       return;
@@ -399,7 +400,7 @@ const netEvents = {
       netPhase = 'picking';
       netPickLocked = false;
       closeModals();
-      toast(`🥊 ${meta.n} is here — pick your fighter!`);
+      toast(`🥊 ${meta.n} is here. Pick your fighter!`);
       sel.ghost = null;
       openSelect('online');
     }
@@ -411,11 +412,11 @@ const netEvents = {
     else if (!currentGame) toast('📶 Reconnecting…');
   },
   onNetBack() {
-    if (netPhase === 'waiting') setLiveStatus('wait', "Room is live — send the link. You'll know the second they join!");
+    if (netPhase === 'waiting') setLiveStatus('wait', "Room is live. Send the link: you'll know the second they join!");
     else toast('📶 Back online.');
   },
   onNetDown() {
-    if (netPhase === 'waiting') setLiveStatus('wait', 'Lost the room — close this and start a new one.');
+    if (netPhase === 'waiting') setLiveStatus('wait', 'Lost the room. Close this and start a new one.');
     else abortOnline('Connection lost.');
   },
   onPeerLeave() {
@@ -432,7 +433,7 @@ const netEvents = {
     // not agree to fight would otherwise desync the match several seconds in,
     // which reads to both players as a network fault.
     const why = specRejection(spec);
-    if (why) { abortOnline(`⚠ Match refused — ${why}.`); return; }
+    if (why) { abortOnline(`⚠ Match refused: ${why}.`); return; }
     toast('⚔ Your rival locked in!');
     maybeHostStart();
   },
@@ -452,7 +453,7 @@ const netEvents = {
     tryOnlineRematch();
   },
   onDesync() {
-    abortOnline('⚠ Desync detected — match void. Blame the wifi.');
+    abortOnline('⚠ Desync detected: match void. Blame the wifi.');
   },
 };
 
@@ -474,7 +475,7 @@ let lobbyPairing = false;
 // With nobody else in the lobby there was no way on but CANCEL: after a
 // while waiting, a fight with the AI is offered instead.
 const LOBBY_AI_AFTER_MS = 20000;
-const LOBBY_HINT = 'Stay on this screen — you\'ll be matched automatically the moment another founder shows up.';
+const LOBBY_HINT = 'Stay on this screen. You\'ll be matched automatically the moment another founder shows up.';
 let lobbyAiTimer = null;
 
 async function leaveLobby() {
@@ -487,7 +488,7 @@ function setLobbyStatus(kind, text, count) {
   $('lobbyDot').classList.toggle('ok', kind === 'ok');
   $('lobbyStatusText').textContent = text;
   $('lobbyCount').textContent = count == null ? ''
-    : count <= 1 ? '1 founder in the lobby — you'
+    : count <= 1 ? '1 founder in the lobby: you'
     : `${count} founders in the lobby`;
 }
 
@@ -518,7 +519,7 @@ async function enterLobby() {
       // so they meet without any handshake.
       lobbyPairing = true;
       const rival = roster.find(r => r.sid === pair.partner);
-      setLobbyStatus('ok', `Matched with ${rival?.n || 'a founder'} — entering the arena…`, roster.length);
+      setLobbyStatus('ok', `Matched with ${rival?.n || 'a founder'}. Entering the arena…`, roster.length);
       startPairedMatch(pair);
     },
   });
@@ -526,7 +527,7 @@ async function enterLobby() {
   try {
     await lobby.join();
   } catch (e) {
-    setLobbyStatus('wait', 'Could not reach the lobby — check your connection.', null);
+    setLobbyStatus('wait', 'Could not reach the lobby. Check your connection.', null);
     await leaveLobby();
     // Nobody can join a lobby that is not there: no "stay on this screen", and
     // the AI on offer now rather than after the 20 s wait that never came (it
@@ -549,7 +550,7 @@ async function startPairedMatch({ role, roomId }) {
   try {
     await net.connect();
   } catch (e) {
-    toast('Could not open the match room — try again.');
+    toast('Could not open the match room. Try again.');
     await endNetSession();
     lobbyPairing = false;      // allow the next roster sync to re-pair us
     return;
@@ -572,7 +573,7 @@ async function createLiveRoom() {
   try {
     await net.connect();
   } catch (e) {
-    setLiveStatus('wait', 'Connection failed — check your network and try again.');
+    setLiveStatus('wait', 'Connection failed. Check your network and try again.');
     await endNetSession();
     return;
   }
@@ -580,7 +581,7 @@ async function createLiveRoom() {
   url.searchParams.set('room', roomId);
   url.searchParams.set('hn', identity().n);
   $('liveLink').value = url.toString();
-  setLiveStatus('wait', "Room is live — send the link. You'll know the second they join!");
+  setLiveStatus('wait', "Room is live. Send the link: you'll know the second they join!");
 }
 
 async function joinLiveRoom(roomId) {
@@ -594,14 +595,14 @@ async function joinLiveRoom(roomId) {
     await net.connect();
   } catch (e) {
     // a dropped connection said the room was gone, sending them looking for a new link
-    setLiveStatus('wait', 'Could not join — check your connection, or the room may have closed.');
+    setLiveStatus('wait', 'Could not join. Check your connection, or the room may have closed.');
     await endNetSession();
     return;
   }
-  setLiveStatus('ok', 'Connected — looking for the host…');
+  setLiveStatus('ok', 'Connected. Looking for the host…');
   setTimeout(() => {
     if (net && !net.peer && netPhase === 'picking' && !currentGame) {
-      setLiveStatus('wait', 'No host here — the room may have closed. You can cancel.');
+      setLiveStatus('wait', 'No host here. The room may have closed. You can cancel.');
     }
   }, 5000);
 }
@@ -659,7 +660,7 @@ function onlinePick(def, arenaId) {
   netPickLocked = true;
   if (net.role === 'host') netArenaChoice = arenaId || 'random';
   net.sendPick(defToSpec(def));
-  toast(net.peerPick ? '⚔ Both locked in!' : '✓ Locked in — waiting for your rival…');
+  toast(net.peerPick ? '⚔ Both locked in!' : '✓ Locked in. Waiting for your rival…');
   maybeHostStart();
 }
 
@@ -690,7 +691,7 @@ function startOnlineMatch(cfg) {
   // Both sides run this, so a character either peer rejects stops the match on
   // both clients rather than starting a fight only one of them believes in.
   if (!hostDef || !guestDef) {
-    abortOnline('⚠ Match refused — a fighter failed validation.');
+    abortOnline('⚠ Match refused: a fighter failed validation.');
     return;
   }
   netLocalIdx = net.role === 'host' ? 0 : 1;
@@ -719,6 +720,7 @@ function startOnlineMatch(cfg) {
   const touch = isTouchDevice() || new URLSearchParams(location.search).has('touch');
   $('touchControls').classList.toggle('hidden', !touch);
   document.body.classList.toggle('touch-active', !!touch);
+  fitGameResolution();                // at the size the fight is shown at, laid out by now
 
   const vs = $('vsSplash');
   drawPortrait($('vsFace1'), hostDef);
@@ -782,7 +784,7 @@ function onOnlineMatchEnd(result) {
       koRounds: result.koRounds[netLocalIdx],
     }).then((status) => {
       if (status === 'applied') toast('🌍 Global leaderboard updated!');
-      else if (status === 'pending') toast('🌍 Result recorded — waiting for your rival\'s confirmation.');
+      else if (status === 'pending') toast('🌍 Result recorded. Waiting for your rival\'s confirmation.');
     });
   }
 }
@@ -890,7 +892,7 @@ function togglePause() {
   if (!$('vsSplash').classList.contains('hidden')) return;
   if (netMatchActive()) {
     // you can't pause a live opponent — offer to forfeit instead
-    confirmDialog('LEAVE LIVE MATCH?', 'The fight keeps running — leaving now forfeits it.', leaveOnlineMatch);
+    confirmDialog('LEAVE LIVE MATCH?', 'The fight keeps running. Leaving now forfeits it.', leaveOnlineMatch);
     return;
   }
   if (currentGame.paused) {
@@ -946,7 +948,7 @@ function wireShareStrip() {
     audio.sfx('select');
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${enc(shareUrl())}`, '_blank', 'noopener');
     copyToClipboard(`${bragText()} ${shareUrl()}`);
-    toast('🔗 Brag copied too — paste it into your LinkedIn post!');
+    toast('🔗 Brag copied too. Paste it into your LinkedIn post!');
   };
   $('sh-x').onclick = () => {
     audio.sfx('select');
@@ -959,7 +961,7 @@ function wireShareStrip() {
   $('sh-copy').onclick = async () => {
     audio.sfx('click');
     const ok = await copyToClipboard(`${bragText()} ${shareUrl()}`);
-    toast(ok ? '⧉ Brag copied — paste it anywhere.' : 'Copy blocked — long-press to copy manually.');
+    toast(ok ? '⧉ Brag copied. Paste it anywhere.' : 'Copy blocked. Long-press to copy manually.');
   };
 }
 
@@ -1100,6 +1102,12 @@ const resolution = new ResolutionGovernor(fixedRes || window.devicePixelRatio ||
 function setupGameCanvas() {
   gctx = $('gameCanvas').getContext('2d');
   setGameResolution(resolution.scale);
+  // once the window has stopped changing size, not at every step of a drag
+  let fitting = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(fitting);
+    fitting = setTimeout(fitGameResolution, RESOLUTION.REFIT_MS);
+  });
 }
 
 // The game canvas at `scale` times the stage's size. The 3D layer and the
@@ -1110,6 +1118,20 @@ function setGameResolution(scale) {
   canvas.width = Math.round(STAGE.W * scale);
   canvas.height = Math.round(STAGE.H * scale);
   gctx.setTransform(scale, 0, 0, scale, 0, 0);
+}
+
+// The fight drawn at the size it is shown: on a screen larger than the stage
+// (a monitor, a laptop) the canvas was the stage's size times the device's
+// ratio and stretched from there, soft (resolution.js shownRatio). Measured
+// when a match starts, the fight screen laid out by then, and when the window
+// changes size. A phone's stage is narrower than the stage's own width, so
+// nothing changes there.
+function fitGameResolution() {
+  if (fixedRes || !gctx) return;
+  const shown = gctx.canvas.getBoundingClientRect().width;
+  if (!(shown > 0)) return;           // the fight screen is not up: nothing to measure
+  const scale = resolution.refit(shownRatio(window.devicePixelRatio || 1, shown, STAGE.W));
+  if (scale) setGameResolution(scale);
 }
 
 // ---------------------------------------------------------------- loop
@@ -1265,7 +1287,7 @@ function boot() {
   // the CDN's address; it says what to do instead.
   const authFail = (e) => toast(
     /not enabled|unsupported|disabled/i.test(e?.message || '')
-      ? '🔐 That provider isn\'t switched on yet — see README → Enabling sign-in.'
+      ? '🔐 That provider isn\'t switched on yet. See README → Enabling sign-in.'
       : /fetch|network|import|load/i.test(e?.message || '')
         ? 'Sign-in could not connect. Check your connection and try again.'
         : `Sign-in failed: ${e?.message || e}`);
@@ -1284,7 +1306,7 @@ function boot() {
     const email = $('authEmail').value.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('Enter a valid email first.'); return; }
     signInEmail(email)
-      .then(() => toast('📬 Magic link sent — check your inbox!'))
+      .then(() => toast('📬 Magic link sent. Check your inbox!'))
       .catch(authFail);
   };
   $('btn-auth-back').onclick = () => { audio.sfx('back'); if (!AUTH.REQUIRED || currentUser()) showScreen('scr-title'); };
@@ -1337,7 +1359,7 @@ function boot() {
         showScreen('scr-profile');
         if (!firstTimeShown) {
           firstTimeShown = true;
-          toast('👋 Welcome, founder! Build your fighter — you fight as yourself.');
+          toast('👋 Welcome, founder! Build your fighter: you fight as yourself.');
         }
       } else if (pendingChallenge || pendingLive) {
         maybeShowPendingInvite();

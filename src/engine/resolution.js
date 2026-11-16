@@ -16,6 +16,20 @@
 
 import { RESOLUTION } from '../config.js';
 
+// The ratio the fight is really shown at: device pixels across the stage as
+// it lies on the screen, over the stage's own width. The device's ratio alone
+// is right for a phone, whose stage is narrower than 960 CSS px, and wrong for
+// a monitor: at ratio 1 a window 1920 wide showed a 960 px canvas stretched to
+// twice its size, and a laptop at 125% a 1200 px one stretched to 1920, soft
+// either way (seen 2026-11-15, a 1280 px window at ratio 1). So the larger of
+// the two: never below the device's ratio, which is what every phone was
+// measured at, and up to the size shown on a screen larger than the stage.
+export function shownRatio(dpr, shownWidth, stageWidth) {
+  const ratio = dpr > 0 ? dpr : 1;
+  if (!(shownWidth > 0) || !(stageWidth > 0)) return ratio;
+  return Math.max(ratio, (ratio * shownWidth) / stageWidth);
+}
+
 // The scales to try, from the device's own ratio (up to the first of STEPS)
 // down: a phone at 1.5 starts at 1.5, one at 1 has nowhere to go.
 export function resolutionSteps(dpr) {
@@ -29,10 +43,28 @@ export class ResolutionGovernor {
     this.at = 0;
     this.before = null;               // the frame rate before the step being proved
     this.done = false;                // a step was taken back: nothing more this session
+    this.limit = null;                // the scale a step settled on: a refit stays under it
     this.restart();
   }
 
   get scale() { return this.steps[this.at]; }
+
+  // The ratio changed: the window was resized, or the fight screen was first
+  // laid out. Returns the scale to draw at when it changes, otherwise null.
+  // A governor that has not stepped starts from the new top. One that has
+  // stays at or under the scale it settled on: a wider window does not make a
+  // slow graphics chip faster.
+  refit(ratio) {
+    const steps = resolutionSteps(ratio);
+    if (steps[0] === this.steps[0]) return null;
+    const was = this.scale;
+    this.steps = steps;
+    const kept = this.limit === null ? 0 : steps.findIndex((s) => s <= this.limit);
+    this.at = kept < 0 ? steps.length - 1 : kept;
+    this.before = null;
+    this.restart();
+    return this.scale === was ? null : this.scale;
+  }
 
   // Waits SETTLE ms again before judging: a new match, or a new scale.
   restart() {
@@ -59,12 +91,14 @@ export class ResolutionGovernor {
       if (!paid) {
         this.at--;
         this.done = true;
+        this.limit = this.scale;
         return this.scale;
       }
     }
     if (fps >= RESOLUTION.MIN_FPS || this.at === this.steps.length - 1) return null;
     this.before = fps;
     this.at++;
+    this.limit = this.scale;
     this.restart();
     return this.scale;
   }

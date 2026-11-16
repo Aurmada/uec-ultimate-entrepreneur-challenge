@@ -7,6 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { FXSystem, FX_STYLE } from '../src/engine/fx.js';
 import { burstEnvelope, cutInEnvelope, limbsInWorld, strikingLimb, signatureColour, drawStageDim, drawCutIn } from '../src/engine/vfx.js';
 import { FX_ART, METER } from '../src/config.js';
@@ -275,7 +276,6 @@ test("an ordinary special's nameplate stays on its fighter's side and dims nothi
 // special (a graphics review, 2026-11-09).
 test("the super's band does not repeat its word under itself, and a hint goes when a special starts", async () => {
   const { FXSystem: FX, FX_STYLE } = await import('../src/engine/fx.js');
-  const { readFileSync } = await import('node:fs');
   const fx = new FX();
   const was = FX_STYLE.impact;
   FX_STYLE.impact = true;
@@ -294,4 +294,18 @@ test("the super's band does not repeat its word under itself, and a hint goes wh
     const body = game.slice(game.indexOf(`  ${fn}(`), game.indexOf('\n  }\n', game.indexOf(`  ${fn}(`)));
     assert.match(body, /this\.hud\.hideHint\?\.\(\)/, `${fn} leaves the hint up`);
   }
+});
+
+// K.O.! goes up across the middle of the stage, where the last hit's word and
+// the special's shout were still hanging (2026-11-15: WHAM! behind K.O.!, and
+// ONE MORE THING across it). The knockout clears the words first.
+test('a knockout clears the words in the air before K.O.! goes up', () => {
+  const fx = new FXSystem();
+  fx.popup(480, 300, 'WHAM!');
+  fx.popup(480, 300, 'ONE MORE THING');
+  assert.equal(fx.popups.length, 2);
+  fx.hush();
+  assert.equal(fx.popups.length, 0);
+  const game = readFileSync(new URL('../src/engine/game.js', import.meta.url), 'utf8');
+  assert.match(game, /this\.fx\.hush\(\);[^\n]*\n\s*this\.hud\.announce\('K\.O\.!', 'ko'\);/);
 });

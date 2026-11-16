@@ -30,7 +30,7 @@ export const SPECIALS = {
     name: 'PIVOT PUNCH',
     icon: '🔄',
     type: 'teleport',
-    desc: 'Vanishes mid-strategy and reappears behind you — fist first.',
+    desc: 'Vanishes mid-strategy and reappears behind you, fist first.',
     dmg: 16, startup: 0.12, active: 0.10, recovery: 0.30, kb: 340, kbUp: -160,
   },
   growthhack: {
@@ -46,7 +46,7 @@ export const SPECIALS = {
     name: 'FUNDING ROUND',
     icon: '💰',
     type: 'rain',
-    desc: 'Makes it rain a punishing round of gold — and pockets energy on every hit.',
+    desc: 'Makes it rain a punishing round of gold, and pockets energy on every hit.',
     dmg: 7, count: 3, startup: 0.24, recovery: 0.4, energyRefund: 8,
   },
   takeover: {
@@ -71,7 +71,7 @@ export const SPECIALS = {
     name: 'BURN IT ALL',
     icon: '🔥',
     type: 'burn',
-    desc: 'Torches every remaining dollar of runway. The more left, the harder it lands — '
+    desc: 'Torches every remaining dollar of runway. The more left, the harder it lands, '
         + 'and you are winded the moment it connects.',
     startup: 0.18, active: 0.12, recovery: 0.40, reach: 130,
     kb: 420, kbUp: -180,
@@ -135,7 +135,7 @@ export function playerSpecialId(id, fallback) {
 export const UNICORN_META = {
   name: 'UNICORN MODE',
   icon: '🦄',
-  desc: 'Full meter: ascend to mythical valuation for 6s — +35% damage, +25% speed, no chip damage. Fabulous.',
+  desc: 'Full meter: ascend to mythical valuation for 6s: +35% damage, +25% speed, no chip damage. Fabulous.',
 };
 
 // hair: 'ponytail' | 'cap' | 'neat' | 'puffs' | 'bob' | 'slick'
@@ -993,7 +993,7 @@ export function toCharacter(def) {
       title: def.title || 'CHALLENGER',
       company: def.company || 'STEALTH STARTUP',
       tagline: def.tagline || 'Player-founded. Player-funded.',
-      rap: def.rap || 'No convictions — yet',
+      rap: def.rap || 'No convictions. Yet',
     },
     body: { ...DEFAULT_BODY, ...(def.body || {}) },
     look: {

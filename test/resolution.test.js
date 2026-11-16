@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ResolutionGovernor, resolutionSteps } from '../src/engine/resolution.js';
+import { ResolutionGovernor, resolutionSteps, shownRatio } from '../src/engine/resolution.js';
 import { RESOLUTION } from '../src/config.js';
 
 // Frames for `ms` ms, `gap` ms apart, or as far apart as `gap(scale)` says at
@@ -92,4 +92,59 @@ test('the game sizes its canvas from the governor and feeds it only a round bein
   assert.match(main, /canvas\.width = Math\.round\(STAGE\.W \* scale\);\s*canvas\.height = Math\.round\(STAGE\.H \* scale\);\s*gctx\.setTransform\(scale, 0, 0, scale, 0, 0\);/);
   assert.match(main, /const judged = fightActive && currentGame\?\.state === 'fighting' && !currentGame\.paused && !document\.hidden;\s*if \(judged && !fixedRes\) \{\s*const scale = resolution\.sample\(gap\);\s*if \(scale\) setGameResolution\(scale\);/);
   assert.equal((main.match(/resolution\.restart\(\);[^\n]*\n\s*currentGame = new Game\(\{/g) || []).length, 2, 'a match, solo or online, is not judged afresh');
+});
+
+// A monitor at ratio 1 showed the 960 px stage stretched to the window's
+// width (2026-11-15: soft at 1280 px, softer at 1920), and a laptop at 125% a
+// 1200 px canvas stretched to 1920. The fight is drawn at the size it is
+// shown, where that is larger than the stage; a phone, whose stage is
+// narrower, is left exactly where it was measured.
+test('on a screen larger than the stage, the fight is drawn at the size it is shown', () => {
+  const W = 960;
+  assert.equal(shownRatio(1, 1920, W), 2);                 // a 1080p monitor, full screen
+  assert.equal(shownRatio(1.25, 1536, W), 2);              // a laptop at 125%
+  assert.equal(shownRatio(1, 1266, W), 1266 / 960);        // a 1280 px window
+  assert.deepEqual(resolutionSteps(shownRatio(1, 1266, W)), [1266 / 960, 1]);
+  assert.deepEqual(resolutionSteps(shownRatio(1, 1700, W)), [1700 / 960, 1.5, 1]);
+  assert.deepEqual(resolutionSteps(shownRatio(1, 2560, W)), [2, 1.5, 1], 'past 2x');
+  // phones: the stage is narrower than 960 CSS px, and the ratio is the device's
+  assert.equal(shownRatio(3, 693, W), 3);                  // an iPhone on its side
+  assert.equal(shownRatio(2, 640, W), 2);
+  assert.equal(shownRatio(1.5, 800, W), 1.5);
+  assert.equal(shownRatio(3, 390, W), 3);                  // upright
+  // nothing measured yet (the fight screen not laid out): the device's ratio
+  assert.equal(shownRatio(2, 0, W), 2);
+  assert.equal(shownRatio(undefined, 1920, W), 2);
+});
+
+test('a refit starts from the new top, but keeps a step already taken', () => {
+  const g = new ResolutionGovernor(1);
+  assert.equal(g.refit(1), null, 'nothing changed');
+  assert.equal(g.refit(2), 2, 'a monitor: up to the size shown');
+  assert.equal(g.scale, 2);
+  assert.equal(g.refit(1.5), 1.5, 'the window made smaller');
+  assert.equal(g.refit(2), 2);
+  // too slow at 2: it steps down as a phone does, and a resize does not undo it
+  assert.deepEqual(feed(g, phone({ 2: 30, 1.5: 60, 1: 60 }), 20000), [1.5]);
+  assert.equal(g.refit(1.8), null, 'a slow chip went back up on a resize');
+  assert.equal(g.scale, 1.5);
+  assert.equal(g.refit(1.2), 1.2, 'never above what the window shows');
+  assert.equal(g.refit(2), 1.5, 'back to what it settled on, and no higher');
+  assert.equal(g.scale, 1.5);
+  // a step that did not pay was taken back: it stays where it is
+  const h = new ResolutionGovernor(1.5);
+  feed(h, CAPPED_30, 20000);
+  assert.equal(h.done, true);
+  assert.equal(h.refit(2), null);
+  assert.equal(h.scale, 1.5);
+});
+
+test('the game fits the resolution when a match starts and when the window changes size', () => {
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.equal((main.match(/\n  fitGameResolution\(\);/g) || []).length, 2, 'both ways into a match fit it');
+  for (const m of main.matchAll(/showScreen\('scr-fight'\);[\s\S]*?fitGameResolution\(\);/g)) assert.ok(m[0].length < 700, 'fitted long after the screen is shown');
+  assert.match(main, /if \(fixedRes \|\| !gctx\) return;/, '?res= no longer holds the scale');
+  assert.match(main, /if \(!\(shown > 0\)\) return;/);
+  assert.match(main, /resolution\.refit\(shownRatio\(window\.devicePixelRatio \|\| 1, shown, STAGE\.W\)\)/);
+  assert.match(main, /addEventListener\('resize', \(\) => \{\s*clearTimeout\(fitting\);\s*fitting = setTimeout\(fitGameResolution, RESOLUTION\.REFIT_MS\);/);
 });

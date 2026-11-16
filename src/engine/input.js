@@ -22,7 +22,7 @@ const P2_KEYS = {
 
 export const KEY_LABELS = {
   solo: [
-    ['Move', '← → / A D'], ['Jump', '↑ / W'], ['Crouch', '↓ / S'], ['NDA — block (hold) 📄', '/ or Q'],
+    ['Move', '← → / A D'], ['Jump', '↑ / W'], ['Crouch', '↓ / S'], ['NDA · block (hold) 📄', '/ or Q'],
     ['Slap 🖐', 'H / X'], ['Punch 👊', 'J / C'], ['Kick 👟', 'K / V'], ['Launch 🚀 (anti-air)', 'N / Z'],
     ['Cease & Desist ⚖️', 'I / F'], ['Acqui-Hire 💸', 'M / T'],
     ['Dash 💨', 'O / R'], ['Special ⚡', 'L / B'], ['Unicorn Mode 🦄', 'U / G'], ['Pause', 'Esc'],

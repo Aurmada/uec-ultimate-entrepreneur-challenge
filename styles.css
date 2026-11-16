@@ -1007,6 +1007,9 @@ label.btn { display: inline-block; }
      than the 120 px the two of them and SAVE left it. */
   .profile-sticky { position: static; box-shadow: none; }
   .avatar-frame { width: 64px; height: 64px; }
+  /* The stage is under 900 px wide: the company gives its room to the name,
+     which was cut short beside it (JORDAN BLA… BLAZE R…, CATHIE WOO…). */
+  .hud-co { display: none; }
   /* TAP TO CONTINUE between the pads, not under the unicorn button */
   .skip-hint { right: auto; left: 50%; bottom: 8%; transform: translateX(-50%); }
   /* The title: it is taller than the screen, and could not scroll (the logo

@@ -888,18 +888,18 @@ export class Game {
     if (!this.hintFlags.special && f.energy >= METER.SPECIAL_COST) {
       this.hintFlags.special = true;
       this.hud.hint(touch
-        ? `⚡ SPECIAL READY — tap ⚡ for ${f.special.name}`
-        : `⚡ SPECIAL READY — press L (or B) for ${f.special.name}`);
+        ? `⚡ SPECIAL READY: tap ⚡ for ${f.special.name}`
+        : `⚡ SPECIAL READY: press L (or B) for ${f.special.name}`);
     }
     if (!this.hintFlags.super && f.energy >= METER.SUPER_COST) {
       this.hintFlags.super = true;
       this.hud.hint(touch
-        ? '🦄 FULL METER — tap 🦄 for UNICORN MODE'
-        : '🦄 FULL METER — press U (or G) for UNICORN MODE');
+        ? '🦄 FULL METER: tap 🦄 for UNICORN MODE'
+        : '🦄 FULL METER: press U (or G) for UNICORN MODE');
     }
     if (!this.hintFlags.combo && this.maxCombo[0] >= 3) {
       this.hintFlags.combo = true;
-      this.hud.hint('🔥 COMBO! Keep hitting — punch, punch, punch, then 👟, then ⚡!');
+      this.hud.hint('🔥 COMBO! Keep hitting: punch, punch, punch, then 👟, then ⚡!');
     }
   }
 
@@ -912,6 +912,7 @@ export class Game {
     loser.vx = dir * 380;
     loser.vy = -420;
     loser.airborne = true;
+    this.fx.hush();                    // K.O.! alone, not over the last hit's POW!
     this.hud.announce('K.O.!', 'ko');
     this.audio.sfx('ko');
     this.fx.flash('#ffffff', 0.65);
