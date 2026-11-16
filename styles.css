@@ -1052,6 +1052,20 @@ label.btn { display: inline-block; }
   .stage-wrap { --fight-btns: 42px; }
 }
 
+@media (orientation: portrait) and (max-width: 760px) {
+  /* Upright, the pause and controls buttons go under the stage, where the
+     screen is empty. Over its corner they cost each side of the top bar their
+     width, and every fighter's name was cut short on a phone (STEVE N…: 60 px
+     for a name that needs 83, seen 2026-11-15). After the block above, which
+     sets the same things for a narrow screen. */
+  .stage-wrap { --fight-btns: 0px; }
+  #btn-pause { top: calc(100% + 8px); right: 8px; }
+  .moves-ref { top: calc(100% + 8px); right: 52px; }
+  .hud-name { letter-spacing: 0; }
+  /* the line about turning the phone keeps clear of them */
+  .screen-fight::after { padding: 0 60px; }
+}
+
 @media (max-width: 560px) {
   /* The pinned preview must not eat the phone screen — at full size the
      PHOTO/REMOVE buttons wrapped onto two rows and the block took ~28% of a

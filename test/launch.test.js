@@ -230,3 +230,19 @@ test('the VS splash grows with a large screen, and its faces are drawn large eno
   assert.match(page, /<canvas id="vsFace1" width="640" height="640">/);
   assert.match(page, /<canvas id="vsFace2" width="640" height="640">/);
 });
+
+// Upright on a phone every fighter's name was cut short (STEVE N…, 60 px
+// for a name that needs 83, 2026-11-15): the pause and controls buttons kept
+// their width clear at both ends of the top bar. Upright there is an empty
+// screen under the stage, and the buttons go there.
+test('on an upright phone the fight buttons sit under the stage and the names are whole', () => {
+  const css = src('styles.css');
+  const narrow = css.indexOf('@media (max-width: 480px)');
+  const at = css.indexOf('@media (orientation: portrait) and (max-width: 760px)', narrow);
+  assert.ok(narrow > 0 && at > narrow, 'the upright block must come after the narrow one, which sets the same things');
+  const block = css.slice(at, css.indexOf('\n}\n', at));
+  assert.match(block, /\.stage-wrap \{ --fight-btns: 0px; \}/);
+  assert.match(block, /#btn-pause \{ top: calc\(100% \+ 8px\); right: 8px; \}/);
+  assert.match(block, /\.moves-ref \{ top: calc\(100% \+ 8px\); right: 52px; \}/);
+  assert.match(block, /\.hud-name \{ letter-spacing: 0; \}/);
+});

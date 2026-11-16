@@ -135,7 +135,7 @@ docs/                 this file and friends
 | `stage.js` | Rendered stages for the 3D prototype: loads an arena's Blender render and draws it with its glow, live screens and overlay. See section 7. |
 | `vfx.js` | Fighting-game effects for the 3D prototype: impact bursts, guard flashes, strike trails, projectile wakes, special cut-ins. Draws the state `fx.js` keeps. See section 7. |
 | `ai.js` | AI opponent. Decision ticks plus a per frame reflex layer. |
-| `resolution.js` | Render only: the game canvas's resolution, stepped down while a round is fought below `RESOLUTION.MIN_FPS`, and back once if a step does not pay (v3.22). |
+| `resolution.js` | Render only: the game canvas's resolution. It starts at the size the fight is shown at (the device's ratio on a phone, more on a screen larger than the stage, up to 2x: v3.22.5), is stepped down while a round is fought below `RESOLUTION.MIN_FPS`, and back once if a step does not pay (v3.22). |
 | `perfmeter.js` | Render only: how a match ran (frame rate, slow frames, drawing time), for the report `net/perf.js` sends when it ends (v3.22). |
 | `input.js`, `audio.js`, `fx.js`, `sprites.js` | Input mapping, synthesized audio, particles and juice, and a dormant sprite-atlas path behind `?sprites`. |
 
@@ -1076,7 +1076,7 @@ by intuition.
   fighters and diffing, then reports contrast against the stage per arena. Use
   `measure()` for all arenas.
 * `lab/roster.js` renders the whole cast, auto framed by bounding box.
-* `lab/marketing.js` regenerates the social image and screenshots.
+* `lab/marketing.js` regenerates the social image (`og-image.jpg`, cut from a frame of the 3D fight since v3.22.5) and the two screenshots in `shots/`; `node lab/marketing-run.js` runs it headless, with `dev-server.py` up. Run it when the fighters, a stage or the roster's size change: the card is what every shared link shows.
 * `lab/balance.js` is the one that runs in Node rather than the browser: the
   roster against itself, AI against AI, whole best-of-three matches through
   the real `Game`, seeded so a run reproduces. It reports win rates by

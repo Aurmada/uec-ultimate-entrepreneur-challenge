@@ -16,6 +16,12 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
+- **Built, not yet released:** v3.22.5, on `claude/v3.22.5` (2026-11-16),
+  waiting for the owner's word to push. A check of everything before launch:
+  the fight sharp on a monitor, the share card cut from the 3D game, whole
+  names on a phone, K.O.! alone, a larger VS splash, and the game's words
+  without em dashes (see "v3.22.5"). Nothing in the fight changed
+  (`SIM_VERSION` still 14).
 - **Live:** v3.22.4, released 2026-11-15 (`VERSION` in `src/config.js`;
   `SIM_VERSION` 14 in `src/net/online.js`). 3D only: no 2D game at all.
 - **What v3.22.4 changed:** 3D only (the owner, 2026-11-15: "let's only have
@@ -140,6 +146,7 @@ In the order they pay off:
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.22.4 (`SIM_VERSION` 14): 3D only, with the sculpted cast | Deployed. A push here is a release. |
+| `claude/v3.22.5` | The check before launch: sharp on a monitor, the share card, names on a phone, the words (see "v3.22.5") | Built 2026-11-16 in a cloud session and not pushed (rule 7): it goes to GitHub, and to `main`, when the owner says. |
 | `claude/v3.22.4` | 3D only: the notice without WebGL2, a match waiting for its fighters, the phone test and `lab/pixels.js` in 3D (see "v3.22.4") | Released in v3.22.4 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.3` | The owner's calls of 2026-11-15: the shield against a grab, the pinned client, the boards, the ring light (see "v3.22.3") | Released in v3.22.3 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.2` | One version, 3D (no 2D choice in Settings), the 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-15, merged into `main`. |
@@ -398,6 +405,75 @@ Everything below is how the game got here: each release with what changed,
 why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
+
+## v3.22.5, built 2026-11-16: a check of everything before launch
+
+The owner: "Let's check everything. Graphic to be really good and improve.
+check the code, the game, so when we launch we are perfect". The whole game
+was walked in a headless browser at three sizes (a 1440 px monitor, a phone
+on its side, a phone upright): every screen, a first fight from the tutorial
+to the results, the guest's one fight, six AI matches across the six arenas
+with all nine fighters, and every button, watching the console. No errors
+anywhere. What it found, and what was done:
+
+- **Soft on a monitor.** The game canvas was the stage's size times the
+  device's ratio, up to 2: right for a phone, whose stage is narrower than
+  960 CSS px, and wrong for any screen larger than the stage. A 1920 px
+  window at ratio 1 showed a 960 px canvas stretched to twice its size, and
+  a laptop at 125% a 1200 px one stretched to 1920. The fight is now drawn
+  at the size it is shown (`shownRatio` in `engine/resolution.js`, never
+  below the device's ratio, so every phone is where it was measured, and
+  never above 2). `main.js` `fitGameResolution` measures it when a match
+  starts and `RESOLUTION.REFIT_MS` after the window stops changing size;
+  `ResolutionGovernor.refit` starts from the new top, and a chip that had to
+  step down stays at or under what it settled on (`limit`). `?res=` still
+  holds a scale. Not measured on a real desktop from here (the headless
+  browser draws about a frame a second): the governor is what protects a
+  weak laptop, as it does a weak phone, and `perf_reports` will show it.
+- **The share card was October's.** `og-image.jpg`, which every shared link
+  shows, was still two 2D busts: `lab/marketing.js` drew portraits before any
+  model had loaded, and nobody had run it since 2026-10-28. It is cut from a
+  frame of the fight now (Lizbeth in UNICORN MODE landing a punch on Kim at
+  the Unicorn Club, the words on the left), `gameShot` waits for both models
+  and the stage and refuses a shot without them, and
+  `node lab/marketing-run.js` renders the card and the two shots in `shots/`
+  headless. All three were re-rendered.
+- **Names cut short on a phone.** On its side: JORDAN BLA… beside BLAZE R…;
+  the company gives its room up there now. Upright: every name (STEVE N…,
+  60 px for a name that needs 83), because the pause and controls buttons
+  kept their width clear at both ends of the top bar; upright they sit under
+  the stage, where the screen is empty, and the bars and portraits are wider
+  for it.
+- **K.O.! under the last hit's word.** WHAM! and the special's shout hung
+  across the middle of the stage as K.O.! went up over them. `doKO` clears
+  the words first (`fx.hush()`, render state only).
+- **A small VS splash on a monitor.** The two faces were 200 px of a 1440 px
+  stage; they go to 320 px (drawn at 640), the names and the VS mark with
+  them, held to the screen's height so a phone on its side keeps what it had.
+- **The words.** About a hundred em dashes in what a player reads (the page
+  title, the tutorial, HOW TO PLAY, the story, the toasts, the move blurbs),
+  and "colors", "DEFENSE", "memorise", "Customise": all rewritten, in
+  Canadian spelling. The em dashes are out of `README.md`,
+  `docs/AUTH-SETUP.md`, `docs/CHARACTER-ART-BRIEF.md` and `docs/GAME-MATH.md`
+  too (a mechanical pass: a colon or a comma in their place), and README's
+  opening says what the game is now (3D, a guest fight, WebGL2).
+- **Tests.** `test/resolution.test.js` (the shown ratio, the refit, the
+  wiring), `test/vfx.test.js` (the knockout clears the words) and
+  `test/launch.test.js` (no em dash in what a player reads, the HUD on a
+  phone both ways, the share card, the VS splash). The copy and resolution
+  tests were watched failing with the fix stashed.
+
+Looked at and left: the stages are dark and soft behind the fighters by
+design (the scrim and the depth of field `lab/contrast.js` set); the player's
+own founder is the cartoon founder model beside the sculpted roster, which is
+an art decision (Decisions, 2); upright, the fight is a strip over an empty
+screen, and the game says to turn the phone.
+
+Not checked from here: online play (the headless browser cannot reach the
+Supabase client's CDN through this session's proxy), and real frame rates.
+The 48 release tags are still not on GitHub (`git ls-remote --tags` is
+empty on 2026-11-16): `lab/tag-releases.sh` has yet to be run and pushed
+from a checkout.
 
 ## v3.22.4, released 2026-11-15: 3D only
 
