@@ -206,3 +206,27 @@ test('nothing a player reads has an em dash, and the spelling is Canadian', () =
 test('on a phone held sideways the HUD shows the whole name, without the company', () => {
   assert.match(landscape(), /\.hud-co \{ display: none; \}/);
 });
+
+// The card a shared link shows (og-image.jpg) was still two of October's 2D
+// busts on 2026-11-15, three weeks into 3D: lab/marketing.js drew portraits
+// before any model had loaded. It is cut from a frame of the fight now, and a
+// shot is refused without the 3D fighters.
+test('the share card is cut from the 3D fight, and no shot is taken without the models', () => {
+  const lab = src('lab/marketing.js');
+  const og = lab.slice(lab.indexOf('export async function renderOg('), lab.indexOf('// A real frame of the real game'));
+  assert.match(og, /const frame = await gameShot\(\{/);
+  assert.doesNotMatch(og, /drawPortrait/);
+  assert.match(lab, /await wait\(\(\) => g\.fighters\.every\(\(f\) => G3\.has3D\(f\.def\)\)\);/);
+  assert.match(lab, /throw new Error\('the 3D fighters did not load: no shot without them'\);/);
+  // counted, not typed
+  assert.match(og, /`\$\{FIGHTERS\.length\} FIGHTERS`,\s*`\$\{ARENAS\.length\} ARENAS`/);
+});
+
+// On a monitor the VS splash's two faces were 200 px of a 1440 px stage.
+test('the VS splash grows with a large screen, and its faces are drawn large enough for it', () => {
+  const css = src('styles.css');
+  assert.match(css, /\.vs-card canvas \{ width: clamp\(90px, min\(22vw, 48vh\), 320px\); aspect-ratio: 1; \}/);
+  const page = src('index.html');
+  assert.match(page, /<canvas id="vsFace1" width="640" height="640">/);
+  assert.match(page, /<canvas id="vsFace2" width="640" height="640">/);
+});

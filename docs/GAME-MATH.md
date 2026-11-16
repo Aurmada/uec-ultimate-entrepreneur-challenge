@@ -1,4 +1,4 @@
-# UEC — the math
+# UEC: the math
 
 Every number here is the real one, read out of the source. Tuning lives in
 [`src/config.js`](../src/config.js); the roster lives in
@@ -16,17 +16,17 @@ time, capped at 0.05 s. Durations below are in seconds; the frame column is
 | Stat | What it actually does |
 |---|---|
 | **SPEED** | Multiplies walk speed. Base walk is `250 px/s`, so speed `1.10` = `275 px/s`. Also scales air drift (`0.78 ×` walk). |
-| **POWER** | Multiplies every point of damage you deal — basics, specials, projectiles and chip alike. |
+| **POWER** | Multiplies every point of damage you deal: basics, specials, projectiles and chip alike. |
 | **HP** | Your health pool. Rounds are won by emptying the other bar or leading when the 60 s clock expires. |
 
-### Are they the same for everyone? — **Not any more (v2.3).**
+### Are they the same for everyone?: **Not any more (v2.3).**
 
-Since v2.3 you choose **who you play as** — your own founder or any roster
-character — and each character has a **fighting style** that is the *single*
+Since v2.3 you choose **who you play as**: your own founder or any roster
+character, and each character has a **fighting style** that is the *single*
 source of variation:
 
 ```js
-// src/engine/fighter.js — every fighter, no exceptions
+// src/engine/fighter.js: every fighter, no exceptions
 const st = STYLES[def.style] || STYLES.balanced;
 this.stats = {
   speed: PLAYER_STATS.speed * st.speed,
@@ -37,7 +37,7 @@ this.stats = {
 
 The roster's old per-character `stats` block is **no longer read**. It used to
 stack on top of the style, which made Carl hit 58 % harder *and* carry 10 % more
-HP than a player's own founder — a straight power tier rather than a playstyle.
+HP than a player's own founder: a straight power tier rather than a playstyle.
 
 **Your own founder is `BALANCED`** and sits mid-table: 5th of 10 on damage,
 median HP, median speed. Playing as yourself is never a handicap.
@@ -48,7 +48,7 @@ median HP, median speed. Playing as yourself is never a handicap.
 | Carl Icahnt | GRAPPLER | 8.54 | 108 | 0.92 | 72 | shortest reach |
 | Adam Weumann | BRAWLER | 8.26 | 110 | 0.88 | 87 | slowest startup + movement |
 | Steve Nojobs | SHOWMAN | 7.42 | 99 | 1.00 | 82 | near-baseline all round |
-| **Your founder** | **BALANCED** | **7.00** | **100** | **1.00** | **84** | — |
+| **Your founder** | **BALANCED** | **7.00** | **100** | **1.00** | **84** |: |
 | Cathie Woodz | ZONER | 6.72 | 102 | 0.94 | 102 | low damage, slow startup |
 | Jeff Bozo | TECHNICAL | 6.58 | 100 | 0.98 | 89 | lowest damage of the tanks |
 | Scam Alt | TRICKSTER | 6.44 | 96 | 1.06 | 86 | low damage |
@@ -56,14 +56,14 @@ median HP, median speed. Playing as yourself is never a handicap.
 | Lizbeth Holmez | PHANTOM | 6.02 | 92 | 1.10 | 91 | lowest damage in the game |
 
 No two characters share a style, so no two play the same. Exact balance still
-wants real playtesting — the numbers are compensating by construction, not by
+wants real playtesting: the numbers are compensating by construction, not by
 measured win rates.
 
-### Do stats grow as you rank up? — **No. Deliberately.**
+### Do stats grow as you rank up?: **No. Deliberately.**
 
 There is no stat growth, no unlock, no gear. A `DECACORN` and a first-day
 `GARAGE DREAMER` bring **identical tools** to the ring. Progression is
-**reputation, not power** — otherwise the ladder would compound: the people
+**reputation, not power**: otherwise the ladder would compound: the people
 winning most would hit hardest, and new players could never catch up.
 
 What *does* change during a fight is temporary. Unicorn Mode and mystery-crate
@@ -146,7 +146,7 @@ recovery, damage and reach, and a stance scales startup and recovery on top.
 | 🔄 Pivot Punch | teleport | **16** | reappears behind you |
 | 📈 Growth Hack | rush | `5 × 4` = **20** | locks on and chases |
 | 💰 Funding Round | rain | `7 × 3` = **21** | refunds **8 energy** on hit |
-| 🦈 Hostile Takeover | grab | **20** | **unblockable** — jump it. Beats parry. |
+| 🦈 Hostile Takeover | grab | **20** | **unblockable**: jump it. Beats parry. |
 | ⚖️ Alignment Shift | stance | none | switches stance (below); 0.8 s cooldown, and the 50 is only spent if the switch happens. Scam Alt only. |
 | 🔥 Burn It All | burn | `8 + 0.18 × runway`, up to **26** | runway is read at contact, and a clean hit empties it (§4). 130 px reach, 0.18 s startup. Adam Weumann only. |
 | 📦 Same-Day Delivery | deferred | **18** | the order goes out on the rival's spot at the end of a 0.14 s startup and lands **1.5 s** later on anyone within 62 px of it, airborne or not. Blockable (chip), parryable, pops the rival up on a clean hit. One order out at a time; a second press is refused and costs nothing. Jeff Bozo only. |
@@ -175,16 +175,16 @@ Startup and recovery apply to basics and command normals, not to specials.
 | Move | Cost | Effect |
 |---|---|---|
 | ⚖️ Cease & Desist | 25 energy | **10** damage, 92 px blast radius, arcing throw |
-| 💸 Acqui-Hire | free, 3.5 s cooldown | **no damage** — siphons **15 energy** from them to you |
+| 💸 Acqui-Hire | free, 3.5 s cooldown | **no damage**: siphons **15 energy** from them to you |
 | 💨 Dash | free, 1.6 s cooldown | 1450 px/s for 0.16 s; punch, kick or special can cancel it after 0.06 s |
 | 🦄 Unicorn Mode | 100 energy | 6 s of `×1.35` damage, `×1.25` speed, **immune to chip** |
 
 ---
 
-## 3. Combos — the magic series
+## 3. Combos: the magic series
 
 One rule: **when an attack lands, press any other attack and it chains.** There
-is no order to memorise and no wrong answer — the rank ladder (slap < punch <
+is no order to memorise and no wrong answer: the rank ladder (slap < punch <
 kick with per-move caps) was removed in v2.1 because a wrong guess silently did
 nothing.
 
@@ -199,7 +199,7 @@ So all of these are legal, among many others:
 👊👊👟 → ⚡        🖐👟👊 → ⚖️        👟🚀👊🖐👊 → 🦄
 ```
 
-Whiffs cancel nothing — miss and you eat the full recovery, which is what keeps
+Whiffs cancel nothing: miss and you eat the full recovery, which is what keeps
 mashing punishable.
 
 ### Damage scaling
@@ -287,7 +287,7 @@ There are **two separate ladders**, and this trips people up:
 | Earned from | fights vs AI and challenge links, plus live matches | **verified live PvP only** |
 | Stored in | your browser (`localStorage`) | the `profiles` table |
 | Who can see it | just you | everyone |
-| Can it be faked | it's your own device, so yes | **no** — see below |
+| Can it be faked | it's your own device, so yes | **no**: see below |
 
 Beating the AI will never move the global board. That's intentional: a public
 ladder that counts offline wins is a ladder that counts nothing.
@@ -305,12 +305,12 @@ win  = round(20 × mult) + 5 × koRounds + min(15, streak × 3)
 loss = 3
 ```
 
-`streak` is your **new** streak, counting the win you just took — so your first
+`streak` is your **new** streak, counting the win you just took, so your first
 win pays a 3-point streak bonus, and it caps out at 15 on your fifth in a row.
 Worked: a **Champion** win with **both** rounds by KO on your first win is
 `round(20 × 2.5) + 2 × 5 + min(15, 1 × 3)` = **63**.
 
-`mult` comes from the difficulty you picked — this is why **Champion is worth
+`mult` comes from the difficulty you picked: this is why **Champion is worth
 2.5× a Rookie win**:
 
 | AI level | Internal key | `mult` | Base win |
@@ -318,7 +318,7 @@ Worked: a **Champion** win with **both** rounds by KO on your first win is
 | **ROOKIE** | `intern` | 1.0 | 20 |
 | **CONTENDER** | `founder` | 1.5 | 30 |
 | **CHAMPION** | `mogul` | 2.5 | **50** |
-| *accepted challenge link* | — | 2.0 | 40 |
+| *accepted challenge link* |: | 2.0 | 40 |
 
 ### Global points (live PvP)
 
@@ -331,7 +331,7 @@ loser  = 3
 
 **Both players must independently report mirror-image results for the same
 room** before anything is written. A single-sided report returns `pending` and
-changes nothing. Stat columns aren't writable by clients at all — only that
+changes nothing. Stat columns aren't writable by clients at all: only that
 function can touch them, under an advisory lock so a match can't double-apply.
 Losing is still worth 3, so playing is never worse than not playing.
 
@@ -365,7 +365,7 @@ roughly that rate:
 | DECACORN | 3200 | 60 |
 
 The streak bonus caps at **15** (a 5-win streak), so streaks are worth chasing
-but can't run away with the ladder. Rank is **cosmetic** — it changes the badge
+but can't run away with the ladder. Rank is **cosmetic**: it changes the badge
 on your card, never your stats.
 
 ---

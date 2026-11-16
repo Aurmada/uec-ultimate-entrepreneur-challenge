@@ -10,10 +10,16 @@
 // So the copy is derived from the data, not typed in. Add a fighter and the
 // card counts it.
 //
-//   import { renderAll } from '/lab/marketing.js';
-//   await renderAll();            // writes og-image.jpg + shots/*.jpg
+//   node lab/marketing-run.js     # writes og-image.jpg + shots/*.jpg (Playwright)
 //
-// Needs dev-server.py (its PUT handler is what puts bytes on disk).
+// or, in a browser at http://localhost:4173/?debug=1&res=2 :
+//
+//   import { renderAll } from '/lab/marketing.js';
+//   await renderAll();
+//
+// Needs dev-server.py (its PUT handler is what puts bytes on disk), a
+// signed-in profile (UEC.signInAs() in debug) and `?res=2`, so the frame is
+// drawn at twice the stage's size.
 
 const YELLOW = '#ffd23f', PINK = '#ff3d6e', CYAN = '#29d9ff', INK = '#05070f';
 
@@ -65,63 +71,89 @@ function backdrop(ctx, W, H) {
   ctx.restore();
 }
 
+// The share card: a real frame of the 3D game, with the words beside it.
+//
+// Until v3.22.5 it was two portraits either side of the title, and they were
+// the 2D busts: drawPortrait run before any model had loaded. The game had
+// been 3D for three weeks and 3D only for a day, and the card every shared
+// link shows was still the cartoon faces of October (seen 2026-11-15). So it
+// is cut from a frame of the fight itself, which cannot be drawn without the
+// models: the fighters on the right, the words over a dark fall-off on the
+// left.
 export async function renderOg(path = '/og-image.jpg') {
-  const { drawPortrait } = await import('/src/engine/drawFighter.js');
-  const { FIGHTERS, getFighter } = await import('/src/data/fighters.js');
+  const { FIGHTERS } = await import('/src/data/fighters.js');
   const { ARENAS } = await import('/src/data/arenas.js');
+  const { STAGE, UNICORN } = await import('/src/config.js');
 
   const W = 1200, H = 630;
   const cv = canvas(W, H);
   const ctx = cv.getContext('2d');
-  backdrop(ctx, W, H);
 
-  // Two portraits at the real portrait size, drawn by the game's own renderer,
-  // so the cel shading and silhouette work show up here automatically.
-  //
-  // Layout note: the portraits flank a centre column, and the bullet line is
-  // the widest element on the card — it goes BELOW them rather than beside
-  // them, or it runs straight through both frames.
-  const P = 260, fy = 210;
-  const faces = ['ava', 'dex'].map((id) => {
-    const pc = canvas(P, P);
-    drawPortrait(pc, getFighter(id));
-    return pc;
+  const frame = await gameShot({
+    arena: 'unicorn', p1: 'ava', p2: 'zara',
+    setup: (g, a, b) => {
+      a.x = 520; b.x = 640;
+      a.unicornT = UNICORN.DURATION; a.energy = 100;
+      a.startAttack('punch', g);
+    },
+    steps: 4,
+    // the hit's white flash off her: it bleaches the face the card is there to show
+    dress: (g, a, b) => { g.fx.shakeMag = 0; b.flashT = 0; g.fx.sparkles(600, 400, 10); },
   });
-  [[52, faces[0], PINK], [W - 52 - P, faces[1], CYAN]].forEach(([x, pc, ring]) => {
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 26; ctx.shadowOffsetY = 8;
-    ctx.drawImage(pc, x, fy, P, P);
-    ctx.restore();
-    ctx.strokeStyle = ring; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.roundRect(x, fy, P, P, 32); ctx.stroke();
-  });
+  // The part of the stage the card shows, in stage px: the fighters land in
+  // the right half, a head's room over them.
+  const k = frame.width / STAGE.W;
+  const view = { x: 112, y: 196, w: 640, h: 336 };
+  ctx.drawImage(frame, view.x * k, view.y * k, view.w * k, view.h * k, 0, 0, W, H);
+
+  // the words' side falls off to the card's ink, and the bottom edge a little
+  const fall = ctx.createLinearGradient(0, 0, W, 0);
+  fall.addColorStop(0, 'rgba(5,7,15,0.96)'); fall.addColorStop(0.36, 'rgba(5,7,15,0.9)');
+  fall.addColorStop(0.58, 'rgba(5,7,15,0.25)'); fall.addColorStop(0.72, 'rgba(5,7,15,0)');
+  ctx.fillStyle = fall; ctx.fillRect(0, 0, W, H);
+  const foot = ctx.createLinearGradient(0, H - 150, 0, H);
+  foot.addColorStop(0, 'rgba(5,7,15,0)'); foot.addColorStop(1, 'rgba(5,7,15,0.9)');
+  ctx.fillStyle = foot; ctx.fillRect(0, H - 150, W, 150);
+
+  ctx.save();                                   // the corner stripes of the old card
+  ctx.fillStyle = PINK;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(54, 0); ctx.lineTo(18, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = YELLOW;
+  ctx.beginPath(); ctx.moveTo(W, H); ctx.lineTo(W - 54, H); ctx.lineTo(W - 18, 0); ctx.lineTo(W, 0); ctx.closePath(); ctx.fill();
+  ctx.restore();
 
   ctx.textBaseline = 'alphabetic';
-  shout(ctx, 'UEC', W / 2, 190, 132, YELLOW, { stroke: 14 });
-  shout(ctx, 'ULTIMATE ENTREPRENEUR CHALLENGE', W / 2, 240, 27, CYAN, { stroke: 8 });
-  shout(ctx, 'FOUNDERS FIGHT. VALUATIONS FALL.', W / 2, 286, 24, '#c9d4f5', { stroke: 7 });
+  const L = 84;
+  ctx.save();                                   // the logo, as the title screen draws it
+  ctx.font = '900 italic 190px system-ui'; ctx.lineJoin = 'round';
+  ctx.fillStyle = PINK; ctx.fillText('UEC', L + 9, 239);
+  ctx.strokeStyle = INK; ctx.lineWidth = 12; ctx.strokeText('UEC', L, 230);
+  ctx.fillStyle = YELLOW; ctx.fillText('UEC', L, 230);
+  ctx.restore();
+  shout(ctx, 'ULTIMATE ENTREPRENEUR', L + 4, 292, 34, CYAN, { align: 'left', stroke: 8 });
+  shout(ctx, 'CHALLENGE', L + 4, 332, 34, CYAN, { align: 'left', stroke: 8 });
+  shout(ctx, 'FOUNDERS FIGHT. VALUATIONS FALL.', L + 4, 384, 25, '#e3e9ff', { align: 'left', stroke: 7 });
 
-  // CTA. It no longer claims "no signup" — AUTH.REQUIRED is true, and the card
-  // was sending people to a sign-in wall it had promised did not exist.
+  // CTA. It does not claim "no signup": AUTH.REQUIRED is true, and the card
+  // once sent people to a sign-in wall it had promised did not exist.
   const label = 'PLAY FREE IN YOUR BROWSER';
   ctx.font = '900 italic 27px system-ui';
-  const pw = ctx.measureText(label).width + 72;
-  const px = (W - pw) / 2, py = 322;
+  const pw = ctx.measureText(label).width + 64;
+  const py = 420;
   ctx.save();
-  ctx.fillStyle = 'rgba(6,9,22,0.85)';
-  ctx.strokeStyle = YELLOW; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.roundRect(px, py, pw, 58, 29); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = YELLOW; ctx.strokeStyle = INK; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.roundRect(L, py, pw, 60, 16); ctx.fill(); ctx.stroke();
   ctx.restore();
-  shout(ctx, label, W / 2, py + 39, 27, YELLOW, { stroke: 0 });
+  shout(ctx, label, L + pw / 2, py + 40, 27, INK, { stroke: 0 });
 
-  // Counted, not typed — this is how the card went wrong last time.
+  // Counted, not typed: this is how the card went wrong the time before.
   const bullets = [
     `${FIGHTERS.length} FIGHTERS`,
     `${ARENAS.length} ARENAS`,
     'BUILD YOUR OWN FOUNDER',
     'FIGHT FRIENDS LIVE',
   ].join('  ·  ');
-  shout(ctx, bullets, W / 2, 556, 25, '#9fb0d9', { stroke: 6 });
+  shout(ctx, bullets, L + 4, 574, 23, '#c9d4f5', { align: 'left', stroke: 6 });
 
   return put(path, cv);
 }
@@ -164,7 +196,19 @@ async function cast(p1, p2, arenaId) {
 
 async function gameShot({ arena, p1, p2, setup, steps = 0, dress = null }) {
   const R = await import('/src/engine/render.js');
+  const G3 = await import('/src/engine/gl3d/index.js');
+  const { GL3D } = await import('/src/config.js');
+  const { stageFor } = await import('/src/engine/stage.js');
   const g = await cast(p1, p2, arena);
+  // The game is 3D: the shot waits for both models and the stage's pictures,
+  // and the fighters are drawn into the game canvas (not on the 3D layer over
+  // it) so the frame is one picture, as lab/pixels.js does it.
+  const wait = async (ok) => { for (let i = 0; i < 300 && !ok(); i++) await new Promise((r) => setTimeout(r, 100)); };
+  await wait(() => g.fighters.every((f) => G3.has3D(f.def)));
+  await wait(() => stageFor(g.arena));
+  if (!g.fighters.every((f) => G3.has3D(f.def))) throw new Error('the 3D fighters did not load: no shot without them');
+  const layer = GL3D.LAYER;
+  GL3D.LAYER = false;
   const cv = document.getElementById('gameCanvas');
   const ctx = cv.getContext('2d');
   const [a, b] = g.fighters;
@@ -183,6 +227,7 @@ async function gameShot({ arena, p1, p2, setup, steps = 0, dress = null }) {
   R.renderGame(ctx, g);
   const out = canvas(cv.width, cv.height);
   out.getContext('2d').drawImage(cv, 0, 0);
+  GL3D.LAYER = layer;
   return out;
 }
 

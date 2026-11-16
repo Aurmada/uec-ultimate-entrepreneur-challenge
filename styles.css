@@ -553,13 +553,16 @@ body.gl3d #announce.intro { background: radial-gradient(ellipse 44% 46% at 50% 5
 
 #vsSplash {
   position: absolute; inset: 0; z-index: 5;
-  display: flex; align-items: center; justify-content: center; gap: clamp(10px, 4vw, 50px);
+  display: flex; align-items: center; justify-content: center; gap: clamp(10px, 4vw, 70px);
   background: radial-gradient(ellipse at center, rgba(16,21,42,.5), rgba(5,7,15,.93));
 }
 .vs-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.vs-card canvas { width: clamp(90px, 22vw, 200px); aspect-ratio: 1; }
+/* Up to 320 px on a monitor: at 200 the two faces were a seventh of a 1440 px
+   stage's width, small cards in the middle of it. Held to the height too, so
+   a phone on its side keeps what it had. */
+.vs-card canvas { width: clamp(90px, min(22vw, 48vh), 320px); aspect-ratio: 1; }
 .vs-card div {
-  font-weight: 900; font-style: italic; font-size: clamp(13px, 2.6vw, 24px);
+  font-weight: 900; font-style: italic; font-size: clamp(13px, 2.6vw, 34px);
   letter-spacing: 1px; text-shadow: 3px 3px 0 var(--shadow); text-align: center;
 }
 .vs-left { animation: vsInL .45s cubic-bezier(.2,1.4,.4,1) both; }
@@ -567,7 +570,7 @@ body.gl3d #announce.intro { background: radial-gradient(ellipse 44% 46% at 50% 5
 @keyframes vsInL { from { transform: translateX(-70vw) } }
 @keyframes vsInR { from { transform: translateX(70vw) } }
 .vs-mark {
-  font-size: clamp(40px, 10vw, 110px); font-weight: 900; font-style: italic; color: var(--pink);
+  font-size: clamp(40px, 10vw, 150px); font-weight: 900; font-style: italic; color: var(--pink);
   -webkit-text-stroke: 2px var(--shadow);
   text-shadow: 4px 4px 0 var(--gold), 8px 8px 0 var(--shadow);
   animation: vsMark .5s .25s cubic-bezier(.2,2,.4,1) both;
@@ -577,7 +580,7 @@ body.gl3d #announce.intro { background: radial-gradient(ellipse 44% 46% at 50% 5
 /* the AI's level, said before every solo fight */
 .vs-level {
   -webkit-text-stroke: 0;   /* .vs-mid's, meant for the select screen's VS, made it unreadable */
-  font-size: clamp(11px, 1.8vw, 16px); font-weight: 900; letter-spacing: 3px; color: var(--cyan);
+  font-size: clamp(11px, 1.8vw, 22px); font-weight: 900; letter-spacing: 3px; color: var(--cyan);
   background: rgba(5,7,15,.75); border: 2px solid var(--cyan); border-radius: 999px; padding: 4px 12px;
   animation: vsMark .5s .4s cubic-bezier(.2,2,.4,1) both;
 }
