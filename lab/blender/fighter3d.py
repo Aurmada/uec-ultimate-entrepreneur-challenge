@@ -638,7 +638,7 @@ def vest():
     for zi in np.arange(1.06, 1.66, 0.065):
         sl = _zslab(zi - 0.02, zi + 0.02)
         Z = _grid(sl)[2]
-        d[sl] += np.float32(0.0035) * np.exp(-((Z - np.float32(zi)) / np.float32(0.004)) ** 2)
+        d[sl] += np.float32(0.005) * np.exp(-((Z - np.float32(zi)) / np.float32(0.004)) ** 2)
     return S
 
 
@@ -696,6 +696,7 @@ def trousers():
     sl = _zslab(-0.01, 0.86)
     Y = _grid(sl)[1]
     S.d[sl] = np.maximum(S.d[sl], np.float32(0.004) - np.abs(Y))
+    _trouser_folds(S, knee, hem, low)
     d = S.d
     _keep_below(d, WAIST)
     _keep_above(d, low - 0.004)
@@ -704,9 +705,51 @@ def trousers():
     return S
 
 
+# Cloth folds (v3.23): where trousers gather. A leg fell from the hip to the
+# hem as one smooth tube, which under the modelled light read as a limb in
+# paint, not a leg in cloth. FOLD is how each is pressed in: wider and softer
+# than a line between two muscles, since cloth rolls into a fold.
+FOLD = dict(depth=0.0045, width=0.014, k=0.012)
+
+
+def _arc(c, r, a0, a1, tilt=0.0, n=7):
+    """Points round a leg at c: from angle a0 to a1 about the vertical
+    (degrees, 0 the front), r out, rising `tilt` from its start to its end."""
+    out = []
+    for i in range(n):
+        t = i / (n - 1)
+        a = math.radians(lerp(a0, a1, t))
+        out.append(V(c[0] + r * math.cos(a), c[1] + r * math.sin(a), c[2] + tilt * (t - 0.5)))
+    return out
+
+
+def _trouser_folds(S, knee, hem, low):
+    for s in (1, -1):
+        Hj, K, A = LEG[s]
+        foot = V(A[0], A[1], low)
+        shin = lambda t: lerp(K, foot, t)
+        # the cloth stacks on the shoe: two folds round the front above the hem
+        S.groove(_arc(shin(0.86), lerp(knee, hem, 0.86), -95 * s, 95 * s, tilt=0.02), **FOLD)
+        S.groove(_arc(shin(0.72), lerp(knee, hem, 0.72), 70 * s, -100 * s, tilt=0.025), **FOLD)
+        # it pulls across the back of the knee, and breaks under the kneecap
+        S.groove(_arc(lerp(Hj, K, 0.97), knee, 115 * s, 245 * s, tilt=0.015), **FOLD)
+        S.groove(_arc(shin(0.1), lerp(knee, hem, 0.1), -60 * s, 55 * s, tilt=-0.02), **FOLD)
+        # and two folds run from the crotch down across the front of the thigh
+        thigh = lambda t: lerp(Hj, K, t)
+        S.groove(_arc(thigh(0.2), lerp(0.09, knee, 0.2), -110 * s, 20 * s, tilt=-0.07), **FOLD)
+        S.groove(_arc(thigh(0.42), lerp(0.09, knee, 0.42), -95 * s, 35 * s, tilt=-0.06), **FOLD)
+
+
 def shoes():
-    """Shoes: the foot pushed out, the sole flat on the floor."""
+    """Shoes: the foot pushed out, the sole flat on the floor, with a welt
+    pressed in round it where the upper meets the sole (v3.23: without it a
+    shoe was one rounded lump)."""
     S = _shell(0.008)
+    for s in (1, -1):
+        A = LEG[s][2]
+        ring = [V(A[0] + 0.07 + 0.15 * math.cos(a), A[1] + 0.07 * math.sin(a), 0.022)
+                for a in np.linspace(0, 2 * math.pi, 14)]
+        S.groove(ring, depth=0.004, width=0.007, k=0.005)
     d = S.d
     _keep_below(d, ANKLE + 0.02)
     _keep_above(d, -0.006)
@@ -2187,6 +2230,90 @@ def _decimate(ob, target):
         bpy.ops.object.modifier_apply(modifier=dec.name)
 
 
+# Baked shade (v3.23): how much of the sky each vertex sees, written into the
+# model as a vertex colour (`ao`, COLOR_0 in the .glb) for the game's renderer
+# to darken by. The modelled light rounds a form into its shadow, but it lights
+# every surface as if nothing stood near it: an armpit, the fold of a collar,
+# the vest's hem over the trousers and the gap between the thighs were as
+# bright as an open chest. OCC_RAYS rays leave each vertex over the half space
+# its normal faces, OCC_START out from the surface; one that meets the model
+# within OCC_REACH (model units: about a hand's width) shades it, more the
+# nearer it lands. Baked in the rest pose, so the reach is short: only what
+# stays close when the body moves (a crease, a seam, a layer over a layer)
+# is shaded, and a limb does not carry the shadow of where it once hung.
+OCC_RAYS, OCC_REACH, OCC_START, OCC_SMOOTH = 32, 0.085, 0.004, 2
+
+
+def _hemisphere(n):
+    """n directions over the half space about +z, cosine weighted, the same
+    every build (a spiral, no random numbers)."""
+    i = np.arange(n) + 0.5
+    r = np.sqrt(i / n)
+    th = i * math.pi * (3 - math.sqrt(5))
+    return np.stack([r * np.cos(th), r * np.sin(th), np.sqrt(1 - r * r)], axis=1)
+
+
+def occlude(rig):
+    """Bakes `ao` onto every mesh the rig carries. The body, its clothes and
+    what it wears on its head shade one another; the open hand and the fist
+    lie in the same place and do not; a prop, which moves with its grip, and
+    eyewear, whose glass the face is seen through, shade only themselves."""
+    import bpy
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    meshes = [o for o in bpy.data.objects if o.type == 'MESH' and o.parent is rig]
+    alone = lambda o: o.name.startswith('prop:') or any(s.material and s.material.name in ('lens', 'frame') for s in o.material_slots)
+
+    def tree(obs):
+        verts, polys = [], []
+        for o in obs:
+            base = len(verts)
+            verts += [tuple(v.co) for v in o.data.vertices]
+            polys += [tuple(base + i for i in p.vertices) for p in o.data.polygons]
+        return BVHTree.FromPolygons(verts, polys) if polys else None
+
+    body = [o for o in meshes if not alone(o)]
+    trees = {
+        'hand:open': tree([o for o in body if o.name != 'hand:fist']),
+        None: tree([o for o in body if o.name != 'hand:open']),
+    }
+    rays = _hemisphere(OCC_RAYS)
+    for o in meshes:
+        me = o.data
+        t = tree([o]) if alone(o) else trees.get(o.name, trees[None])
+        ao = np.ones(len(me.vertices))
+        for i, v in enumerate(me.vertices):
+            n = np.array(v.normal)
+            # any frame about the normal: the spiral covers the half space evenly
+            if not n.any():
+                continue                    # a vertex no face uses: left unshaded
+            a = np.cross(n, (0.0, 0.0, 1.0) if abs(n[2]) < 0.9 else (1.0, 0.0, 0.0))
+            a /= np.linalg.norm(a)
+            b = np.cross(n, a)
+            start = Vector(np.array(v.co) + n * OCC_START)
+            shade = 0.0
+            for r in rays:
+                hit = t.ray_cast(start, Vector(a * r[0] + b * r[1] + n * r[2]), OCC_REACH)
+                if hit[0] is not None:
+                    shade += 1 - hit[3] / OCC_REACH
+            ao[i] = 1 - shade / OCC_RAYS
+        # a decimated mesh is uneven, and one ray more or less shows as a
+        # speckle: each vertex takes the mean of itself and its neighbours
+        ed = np.zeros(len(me.edges) * 2, dtype=np.int64)
+        me.edges.foreach_get('vertices', ed)
+        ed = ed.reshape(-1, 2)
+        for _ in range(OCC_SMOOTH):
+            total, count = ao.copy(), np.ones(len(ao))
+            np.add.at(total, ed[:, 0], ao[ed[:, 1]])
+            np.add.at(total, ed[:, 1], ao[ed[:, 0]])
+            np.add.at(count, ed[:, 0], 1)
+            np.add.at(count, ed[:, 1], 1)
+            ao = total / count
+        attr = me.color_attributes.get('ao') or me.color_attributes.new('ao', 'FLOAT_COLOR', 'POINT')
+        attr.data.foreach_set('color', np.repeat(ao, 4).reshape(-1, 4).__mul__([1, 1, 1, 0]).__add__([0, 0, 0, 1]).ravel())
+    return meshes
+
+
 def export_rigged(data, spec, path, tris=44000):
     """The fighter as a game model: dressed, decimated, weighted to the
     skeleton, with his eyewear riding his head and his props his grips."""
@@ -2283,12 +2410,14 @@ def export_rigged(data, spec, path, tris=44000):
         mod = prop.modifiers.new('Armature', 'ARMATURE')
         mod.object = rig
         prop.parent = rig
+    occlude(rig)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=path, export_format='GLB', use_selection=False,
         export_skins=True, export_animations=False, export_morph=False,
         export_materials='EXPORT', export_texcoords=False, export_yup=True,
         export_apply=False, export_def_bones=False,
+        export_vertex_color='NAME', export_vertex_color_name='ao', export_all_vertex_colors=False,
     )
     print(f'[{data["id"]}] rigged: {len(me.polygons)} faces, {os.path.getsize(path)} bytes -> {path}', flush=True)
     print(model_numbers(J), flush=True)

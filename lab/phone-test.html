@@ -26,8 +26,10 @@
   into a scratch canvas and back; v3.22.2 draws them one way, and round
   eleven is the same sixteen setups again, to read row for row against round
   ten. From round twelve (v3.22.4) the game is 3D only, and the 2D setups are
-  gone with the 2D game: the nine left are round ten's 3D ones. The
-  processor's time is shown for the drawing and for the fight apart.
+  gone with the 2D game: the nine left are round ten's 3D ones. Round thirteen
+  (v3.23) adds a tenth, the fighters in v3.22's flat bands, which says what
+  the modelled light costs. The processor's time is shown for the drawing and
+  for the fight apart.
 
   It reads the game's own files, so on the site it tests whatever version is
   live:  https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/lab/phone-test.html
@@ -171,9 +173,10 @@ const arena = getArena('garage');
 // is a piece of a larger part, and the report says what share of that part's
 // cost it is: of the 3D fighters, as "no fighters drawn" gains.
 const KEYLINE = STYLIZE.KEYLINE_A;          // the fighters' key line, as shipped
+const SOFT = GL3D.SOFT;                     // the modelled light (v3.23), as shipped
 const FULL = {
   dpr: 2, light: true, stage: 'layers', fx: true, fighters: true, shadows: true, frozen: false,
-  keyline: true, aa: true, ink: true, mask: true,
+  keyline: true, aa: true, ink: true, mask: true, soft: true,
 };
 const SETUPS = [
   { id: 'ceiling', name: 'Ceiling (a blank screen)', blank: true },
@@ -184,6 +187,8 @@ const SETUPS = [
   { id: 'd3-nomask', name: '3D, no mask or key line', ...FULL, keyline: false, mask: false, change: 'without the mask or the key line', of: 'd3-nofighters' },
   { id: 'd3-noink', name: '3D, no ink outline', ...FULL, ink: false, change: 'without the ink outline', of: 'd3-nofighters' },
   { id: 'd3-noaa', name: '3D, no antialiasing', ...FULL, aa: false, change: 'without antialiasing', of: 'd3-nofighters' },
+  // round thirteen (v3.23): the three flat bands of v3.22 in place of the modelled light
+  { id: 'd3-flat', name: '3D, flat bands', ...FULL, soft: false, change: 'with the flat bands, not the modelled light', of: 'd3-nofighters' },
   { id: 'd3-nofighters', name: '3D, no fighters drawn', ...FULL, fighters: false, change: 'without the fighters' },
   { id: 'd3-again', name: '3D, as shipped (again)', ...FULL },
 ];
@@ -316,6 +321,7 @@ function apply(s) {
   STYLIZE.KEYLINE_A = s.keyline ? KEYLINE : 0;
   TOON.ink = s.ink;
   TOON.mask = s.mask;
+  GL3D.SOFT = s.soft ? SOFT : 0;
   antialias(s.aa);
   FX_STYLE.impact = s.fx;
   STAGES.enabled = s.stage !== 'none';
@@ -339,6 +345,7 @@ function restore() {
   RENDER.shadows = true;
   STYLIZE.KEYLINE_A = KEYLINE;
   TOON.ink = TOON.mask = true;
+  GL3D.SOFT = SOFT;
   antialias(true);
   FX_STYLE.impact = true;
   STAGES.enabled = true;
@@ -407,7 +414,7 @@ const feel = (fps, ceiling) => {
 };
 
 function report() {
-  const lines = [`UEC 3D phone test, round twelve (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
+  const lines = [`UEC 3D phone test, round thirteen (${VERSION}, ${pairName}), ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, deviceLine, ''];
   for (const s of SETUPS) {
     const r = results[s.id];
     if (!r || r.skipped) { lines.push(`${s.name.padEnd(30)} skipped${r ? ` (${r.why})` : ''}`); continue; }

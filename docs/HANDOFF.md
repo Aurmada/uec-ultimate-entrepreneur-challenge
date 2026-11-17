@@ -16,6 +16,11 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
+- **Built, shown to the owner, not yet approved:** v3.23, on `claude/v3.23`
+  (2026-11-17, on top of v3.22.5): the fighters in modelled light, and Jeff
+  with baked shade and cloth folds, the first of the nine (see "v3.23"). The
+  owner asked to see it before it goes to the rest of the cast. Two of his
+  questions are still open: the cast's heights, and the pale key line.
 - **Built, not yet released:** v3.22.5, on `claude/v3.22.5` (2026-11-16),
   waiting for the owner's word to push. A check of everything before launch:
   the fight sharp on a monitor, the share card cut from the 3D game, whole
@@ -146,6 +151,7 @@ In the order they pay off:
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.22.4 (`SIM_VERSION` 14): 3D only, with the sculpted cast | Deployed. A push here is a release. |
+| `claude/v3.23` | Modelled light for every fighter; Jeff rebuilt with baked shade and cloth folds (see "v3.23") | Built 2026-11-17 on top of `claude/v3.22.5`, not pushed (rule 7), waiting on the owner's view of it. |
 | `claude/v3.22.5` | The check before launch: sharp on a monitor, the share card, names on a phone, the words (see "v3.22.5") | Built 2026-11-16 in a cloud session and not pushed (rule 7): it goes to GitHub, and to `main`, when the owner says. |
 | `claude/v3.22.4` | 3D only: the notice without WebGL2, a match waiting for its fighters, the phone test and `lab/pixels.js` in 3D (see "v3.22.4") | Released in v3.22.4 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.3` | The owner's calls of 2026-11-15: the shield against a grab, the pinned client, the boards, the ring light (see "v3.22.3") | Released in v3.22.3 on 2026-11-15, merged into `main`. |
@@ -405,6 +411,71 @@ Everything below is how the game got here: each release with what changed,
 why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
+
+## v3.23, built 2026-11-17: modelled light, and Jeff with more definition
+
+The owner, shown the fight on 2026-11-16: "Can the graphic be updated to what
+we wanted?", the heroic look of the modern arcade fighters he asked for at the
+start of November. Three routes were put to him: light and shading in the
+renderer, more definition in the bodies, or a 3D artist. He chose the artist,
+asked to see one fighter first, was given a rough cost (one guide's figures
+for a stylized game character from a freelancer, about $2,800 to $7,000 CAD
+each, so $28,000 to $70,000 CAD for the nine and the player's founder) and
+said: "The 3D costs that much then let's go with the other 2 options". If an
+artist is ever hired: the game moves any model on its 17 bones, so nothing
+needs animating, but it draws flat colours only, and an artist's detail lives
+in painted textures, which the renderer does not draw.
+
+**The light (all nine, and the founder model).** `toon.js` drew a fighter in
+three flat bands. With `GL3D.SOFT` above zero the same three tones, at the
+same places, turn one into the next across `SOFT` of the key light's cosine,
+so a shoulder or a thigh rounds into its shadow where a band cut across it;
+what faces up is a little brighter and what faces down a little darker
+(`SKY`); each material takes the key light's highlight as wide and bright as
+it is glossy (`GLOSS` by role: skin broad and faint, a shoe or brass small
+and bright; `glossOf`); the rim fades in (`RIM_SOFT`); and a stage's back
+light wraps the whole outline, strongest on the head and shoulders, where a
+hard test had left the arms and legs with no edge. `SOFT: 0` draws v3.22's
+bands exactly, which is how the before pictures were made and what the phone
+test's new `d3-flat` setup times. The ground shadow is deeper
+(`RENDER_SHADOW` in `render.js`). Portraits and the VS splash take the same
+light. Render only.
+
+**Baked shade.** The light treats every surface as if nothing stood near it.
+`lab/blender/fighter3d.py` `occlude` now casts `OCC_RAYS` rays from each
+vertex over the half space its normal faces and writes how open it is as a
+vertex colour (`ao`, COLOR_0 in the .glb, 8 bytes a vertex: Jeff's file went
+from 1.58 to 1.81 MB). The reach is short (`OCC_REACH`, about a hand's
+width), since it is baked in the rest pose: a crease, a seam or one layer
+over another is shaded, and a limb does not carry the shadow of where it
+hung. The open hand and the fist lie in the same place and do not shade one
+another; a prop and eyewear shade only themselves. `glb.js` reads it
+(`occlusion`, null for a model without it), `toon.js` takes it as attribute 4
+(1 where a model has none) and darkens by `GL3D.OCCLUSION` of it.
+
+**Jeff's cloth.** `trousers()` presses folds in where trousers gather
+(`_trouser_folds`: two stacked on the shoe, one across the back of the knee
+and one under the kneecap, two from the crotch across the thigh), `shoes()` a
+welt round the sole, and the vest's quilting is deeper. These are in the
+shared pieces, so each of the other eight takes them when it is rebuilt
+(`python3 lab/blender/fighter3d.py -- <id> --rig`, about a minute each, with
+the `bpy` module this session has; Jeff's unchanged build came out byte for
+byte the committed file before any of this). Only `bozo.glb` was rebuilt: the
+owner sees one before the rest.
+
+**Not measured.** The shader's extra work is two smoothsteps, a `pow` and a
+`normalize` a pixel, small beside the mask tap it already makes, but no phone
+has run it: round thirteen of `lab/phone-test.html` (`d3-flat`) is that
+check, and it should be run before v3.23 is released.
+
+**Open with the owner.** (1) The heights: in their stances Cathie stands 1.33
+times Jeff and Carl 0.92 (`lab/previews/lineup-heights.png`), 44% from the
+shortest to the tallest; suggested, about 15% in the same order, which
+changes hurtboxes (`body.height`), so `SIM_VERSION`, a balance run and a
+rebuild of each model. (2) The pale key line round each fighter
+(`STYLIZE.KEYLINE_*`) is the most cut-out thing left in the picture; with a
+stronger rim it could be thinner or fainter, his call. (3) Whether the eight
+others get Jeff's treatment.
 
 ## v3.22.5, built 2026-11-16: a check of everything before launch
 

@@ -71,6 +71,13 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window): the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.23: a new light on the fighters
+
+- 💡 **Modelled light.** Every fighter was drawn in three flat tones. They are now lit like solid figures: forms round into shadow, skin, hair and shoes catch a highlight, and each stage's back light traces the whole outline.
+- 🧥 **Jeff, first.** His trousers fold where cloth gathers, his shoes have soles, and creases and seams carry their own shade. The rest of the cast follow.
+- 🌑 A deeper shadow under each fighter.
+- 🌐 Online, v3.23 still plays v3.22.3 and later: nothing in the fight itself changed.
+
 ## What's new in v3.22.5: sharper, and tidier
 
 - 🖥️ **Sharp on a monitor.** On a laptop or a desktop screen the fight was drawn small and stretched to fit, which made it soft. It is now drawn at the size you see it. Phones are unchanged, and a slow graphics chip still gets a lighter picture by itself.

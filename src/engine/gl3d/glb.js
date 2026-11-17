@@ -54,6 +54,21 @@ export function readAccessor(json, bin, index) {
   return out;
 }
 
+// A model's baked shade (COLOR_0, written by lab/blender/fighter3d.py
+// `occlude`): one value a vertex, 1 in the open and less in a crease, from the
+// colour's first channel, whatever it was stored as. Null for a model built
+// without it, which is drawn as it always was.
+function readOcclusion(json, bin, index) {
+  if (index === undefined) return null;
+  const acc = json.accessors[index];
+  const raw = readAccessor(json, bin, index);
+  const width = WIDTH[acc.type];
+  const k = acc.componentType === 5126 ? 1 : acc.componentType === 5123 ? 1 / 65535 : 1 / 255;
+  const out = new Float32Array(acc.count);
+  for (let i = 0; i < acc.count; i++) out[i] = raw[i * width] * k;
+  return out;
+}
+
 const toSRGB = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
 
 // Joint names and REST positions, plus one draw record per primitive. Joint
@@ -89,6 +104,7 @@ export function extractModel({ json, bin }) {
         normals: readAccessor(json, bin, a.NORMAL),
         joints: readAccessor(json, bin, a.JOINTS_0),
         weights: readAccessor(json, bin, a.WEIGHTS_0),
+        occlusion: readOcclusion(json, bin, a.COLOR_0),
         indices: readAccessor(json, bin, prim.indices),
       });
     }

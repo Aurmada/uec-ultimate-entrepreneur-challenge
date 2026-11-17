@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.22.5';
+export const VERSION = 'v3.23';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -779,6 +779,29 @@ export const GL3D = {
   KEY: [0.42, 0.58, 0.70],  // toward the key light: forward, up, toward camera
   BANDS: [0.40, -0.12],     // lit above the first, mid above the second
   BAND_K: [1.0, 0.80, 0.60],
+  // Modelled light (v3.23, the owner: the heroic look of the modern arcade
+  // fighters, short of hiring a 3D artist). The three tones stay where they
+  // are and each turns into the next across SOFT of the key light's cosine,
+  // so a form rounds into its shadow where a flat band cut across it; 0 draws
+  // the three flat bands of v3.9 to v3.22. SOFT_K are the tones' brightnesses
+  // with it: the dark one deeper than a band's, since a gradient reads
+  // lighter than the flat tone it ends at. SKY: what faces up is this much
+  // brighter and what faces down this much darker. RIM_SOFT: the rim fades in
+  // over this much of the edge measure, either side of where it began.
+  // GLOSS: the key light's highlight by material, [strength, tightness]:
+  // skin broad and faint, hair a band, a shoe or brass small and bright,
+  // cloth almost none.
+  // OCCLUSION: how much of a model's baked shade is taken (toon.js uOcc), for
+  // the models built with it (lab/blender/fighter3d.py `occlude`).
+  SOFT: 0.24,
+  OCCLUSION: 0.9,
+  SOFT_K: [1.0, 0.78, 0.44],
+  SKY: 0.12,
+  RIM_SOFT: 0.10,
+  GLOSS: {
+    skin: [0.16, 12], hair: [0.20, 22], shoe: [0.24, 34], brass: [0.6, 44], frame: [0.35, 44],
+    lens: [0.5, 70], case: [0.14, 20], other: [0.05, 8],
+  },
   SHADOW_TINT: [0.86, 0.88, 1.06],
   RIM: 0.40,
   RIM_COLOR: [0.5, 0.47, 0.42],   // the rim on the key side, scaled by RIM

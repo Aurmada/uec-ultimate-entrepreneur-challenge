@@ -572,7 +572,7 @@ assets/models/founder.glb      the only file the game loads, worn by every fight
 data/models3d.js               model registry, and how a fighter's look picks its meshes
 engine/gl3d/glb.js             minimal .glb reader: one skin, indexed triangles, base colours
 engine/gl3d/rig.js             2D pose -> 3D joints -> two-bone IK -> skinning matrices
-engine/gl3d/toon.js            WebGL2: an ink pass (inflated back faces), then banded lighting
+engine/gl3d/toon.js            WebGL2: an ink pass (inflated back faces), then modelled light (v3.23; flat bands at GL3D.SOFT 0)
 engine/gl3d/index.js           flags, loading, what a fighter wears, faces, render3D() and renderBust3D()
 ```
 

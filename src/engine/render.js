@@ -189,7 +189,11 @@ function atDrawn(ctx, f, draw, lift = true) {
   ctx.restore();
 }
 
-// Contact shadow — softer, wider, layered so fighters feel planted on the floor.
+// Contact shadow: softer, wider, layered so fighters feel planted on the floor.
+// How dark, wide then core. Deeper with the modelled light (v3.23, from 0.30
+// and 0.28): a body that now has weight in its shading stood on a shadow too
+// faint to hold it down.
+const RENDER_SHADOW = { WIDE: 0.42, CORE: 0.40 };
 function drawShadow(ctx, f) {
   if (!RENDER.shadows) return;
   const at = drawnAt(f);                  // under a thrown body, not where the fight set it down
@@ -197,13 +201,13 @@ function drawShadow(ctx, f) {
   const s = 1 - airK * 0.45;
   ctx.save();
   ctx.filter = 'blur(3px)';
-  ctx.fillStyle = `rgba(0,0,0,${0.30 * (1 - airK * 0.5)})`;
+  ctx.fillStyle = `rgba(0,0,0,${RENDER_SHADOW.WIDE * (1 - airK * 0.5)})`;
   ctx.beginPath();
   ctx.ellipse(at.x, FLOOR + 11, 50 * s, 11 * s, 0, 0, 7);
   ctx.fill();
   ctx.filter = 'none';
   // tight core shadow directly under the feet
-  ctx.fillStyle = `rgba(0,0,0,${0.28 * (1 - airK * 0.6)})`;
+  ctx.fillStyle = `rgba(0,0,0,${RENDER_SHADOW.CORE * (1 - airK * 0.6)})`;
   ctx.beginPath();
   ctx.ellipse(at.x, FLOOR + 11, 26 * s, 6 * s, 0, 0, 7);
   ctx.fill();

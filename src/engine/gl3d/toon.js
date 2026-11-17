@@ -6,7 +6,9 @@
 //   1. INK: back faces pushed out along their normals, flat ink colour. Only
 //      the sliver that clears the body survives the depth test, which gives the
 //      silhouette line and the line between a limb and the torso behind it.
-//   2. BODY: front faces, lit in three flat bands with a rim on the lit side.
+//   2. BODY: front faces, in modelled light (three tones turning one into the
+//      next, a highlight by material, the model's baked shade; three flat
+//      bands at GL3D.SOFT 0, as v3.9 to v3.22 drew them), with a rim.
 //      The face primitive also takes the fighter's face texture, projected
 //      onto the head in bind space.
 //   3. GLASS: see-through materials, lit the same way and blended over the
@@ -34,6 +36,7 @@ layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNrm;
 layout(location = 2) in vec4 aJoint;
 layout(location = 3) in vec4 aWeight;
+layout(location = 4) in float aOcc;   // baked shade: 1 in the open, less in a crease; 1 for a model without it
 uniform mat4 uBones[${MAX_JOINTS}];
 uniform mat4 uView;
 uniform float uInflate;
@@ -51,7 +54,9 @@ uniform vec4 uHangOpt;    // its strength (0 for none), the anchor joint, the fl
 out vec3 vNrm;
 out vec2 vFaceUV;
 out float vFaceMask;
+out float vOcc;
 void main() {
+  vOcc = aOcc;
   mat4 skin = aWeight.x * uBones[int(aJoint.x)] + aWeight.y * uBones[int(aJoint.y)]
             + aWeight.z * uBones[int(aJoint.z)] + aWeight.w * uBones[int(aJoint.w)];
   // A part built to face the camera at the match's turn (Kim's ring light),
@@ -109,6 +114,8 @@ uniform vec3 uKey;
 uniform vec3 uTint;       // what shadow does to a colour
 uniform vec2 uBands;      // lit threshold, mid threshold
 uniform vec3 uBandK;      // lit, mid and dark brightness
+uniform vec3 uSoft;       // how wide a tone turns into the next (0: three flat bands), the sky's share, the rim's width
+uniform vec2 uGloss;      // this material's highlight: strength and tightness
 uniform vec3 uLit;        // the key light's colour on lit surfaces
 uniform vec3 uRimColor;   // the rim on the key side, colour and strength together
 uniform vec3 uBack;       // toward the back light
@@ -124,6 +131,8 @@ uniform vec4 uFaceCell;   // the expression's rect in the face texture; zero wid
 uniform float uAlpha;
 in vec2 vFaceUV;
 in float vFaceMask;
+in float vOcc;
+uniform float uOcc;       // how much of the model's baked shade is taken
 out vec4 outColor;
 void main() {
   if (uMaskPass > 0.5) { outColor = vec4(1.0); return; }
@@ -139,18 +148,47 @@ void main() {
   float d = dot(n, uKey);
   vec3 shade = base * uTint;
   vec3 lit = base * uLit;
-  vec3 c = d > uBands.x ? lit * uBandK.x
-         : d > uBands.y ? mix(lit, shade, 0.5) * uBandK.y
-         : shade * uBandK.z;
+  vec3 mid = mix(lit, shade, 0.5) * uBandK.y;
   float edge = 1.0 - clamp(n.z * 1.6, 0.0, 1.0);
+  vec3 c;
+  float rimAt, backAt;
+  float toBack = dot(n, uBack);
+  if (uSoft.x > 0.0) {
+    // Modelled, not banded: each tone turns into the next across uSoft.x of
+    // the key light's cosine, so a form (a shoulder, a thigh, a cheek) rounds
+    // into its shadow where a band cut across it. The same three tones at the
+    // same places, so a stage's light and the palette read as they did.
+    float a = smoothstep(uBands.x - uSoft.x, uBands.x + uSoft.x, d);
+    float b = smoothstep(uBands.y - uSoft.x, uBands.y + uSoft.x, d);
+    c = mix(mix(shade * uBandK.z, mid, b), lit * uBandK.x, a);
+    // the sky over the fighter and the floor under: what faces up is a little
+    // brighter, what faces down a little darker, on either side of the key
+    c *= 1.0 + uSoft.y * n.y;
+    // the key light's highlight, as wide and as bright as the material is
+    // glossy (skin broad and faint, a shoe or a brass clasp small and bright)
+    vec3 h = normalize(uKey + vec3(0.0, 0.0, 1.0));
+    c += uLit * (uGloss.x * pow(max(dot(n, h), 0.0), uGloss.y) * a);
+    // what the model itself shades (lab/blender/fighter3d.py occlude): a
+    // crease, a seam, one layer lying over another
+    c *= mix(1.0, vOcc, uOcc);
+    rimAt = smoothstep(0.78 - uSoft.z, 0.78 + uSoft.z, edge);
+    // The back light wraps the outline: strongest on what faces it (the head
+    // and shoulders, lit from behind and above), and still there down the
+    // sides, where a hard test left the arms and legs with no edge at all.
+    backAt = smoothstep(0.62 - uSoft.z, 0.62 + uSoft.z, edge) * smoothstep(-0.35, 0.15, toBack);
+  } else {
+    c = d > uBands.x ? lit * uBandK.x : d > uBands.y ? mid : shade * uBandK.z;
+    rimAt = step(0.78, edge);
+    backAt = step(0.62, edge) * step(0.15, toBack);
+  }
   // Background a few px out along the normal: this is the outline. Body
   // there: an inner edge (a leg over a leg, an arm over the chest), no rim.
   vec2 out2 = uRimDir * n.xy;
   out2 /= max(length(out2), 1e-4);
   float outer = 1.0 - texture(uMask, (gl_FragCoord.xy + out2 * uRimReach) * uMaskTexel).a;
-  float rim = step(0.78, edge) * step(0.0, d + 0.25) * outer;
+  float rim = rimAt * step(0.0, d + 0.25) * outer;
   c += rim * uRimColor;
-  float back = step(0.62, edge) * step(0.15, dot(n, uBack)) * outer;
+  float back = backAt * outer;
   c += back * uBackColor;
   // The 2D path's hit flash, CSS brightness(2.2) then saturate(0.4).
   if (uFlash > 0.5) {
@@ -221,6 +259,10 @@ export const roleColour = (palette, role, own) => {
   return hexToRGB(hex).map((v) => v * k);
 };
 
+// A material's highlight by its role (GL3D.GLOSS): [strength, tightness]. A
+// role in shade ('suit*0.78') is its palette colour's material.
+export const glossOf = (role) => GL3D.GLOSS[String(role || '').split('*')[0]] || GL3D.GLOSS.other;
+
 // Three parts of a 3D fighter, each on in the game: the antialiased drawing
 // buffer (read when a context is made, so a change needs a new one:
 // gl3d/index.js dropLayer3D), the ink outline (the inflated hull drawn behind
@@ -277,7 +319,7 @@ export function createToon({ onScreen = null } = {}) {
     for (const n of ['uBones', 'uView', 'uInflate', 'uInkBias', 'uColor', 'uKey', 'uTint', 'uBands', 'uBandK', 'uInk', 'uInkColor',
       'uFace', 'uFaceCell', 'uFaceMap', 'uFaceFront', 'uFaceAxis', 'uFaceFade', 'uAlpha',
       'uLit', 'uRimColor', 'uBack', 'uBackColor', 'uMaskPass', 'uMask', 'uMaskTexel', 'uRimReach',
-      'uSway', 'uSwayHang', 'uSwayDir', 'uTurn', 'uHangCol', 'uHangOpt', 'uRimDir', 'uFlash']) {
+      'uSway', 'uSwayHang', 'uSwayDir', 'uTurn', 'uHangCol', 'uHangOpt', 'uRimDir', 'uFlash', 'uSoft', 'uGloss', 'uOcc']) {
       loc[n] = gl.getUniformLocation(prog, n);
     }
     gl.useProgram(prog);
@@ -285,6 +327,7 @@ export function createToon({ onScreen = null } = {}) {
     gl.uniform1i(loc.uMask, 1);
     gl.uniformMatrix2fv(loc.uRimDir, false, IDENTITY2);
     gl.uniform1f(loc.uFlash, 0);
+    gl.vertexAttrib1f(4, 1);                // no baked shade: fully in the open
 
     // The key line's program, only for a renderer on screen.
     key = null;
@@ -388,6 +431,8 @@ export function createToon({ onScreen = null } = {}) {
         attrib(1, p.normals, 3, gl.FLOAT);
         attrib(2, p.joints, 4, p.joints instanceof Uint16Array ? gl.UNSIGNED_SHORT : gl.UNSIGNED_BYTE);
         attrib(3, p.weights, 4, gl.FLOAT);
+        // a model built without baked shade leaves 4 off, and reads the 1 set in build()
+        if (p.occlusion) attrib(4, p.occlusion, 1, gl.FLOAT);
         const ibo = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, p.indices, gl.STATIC_DRAW);
@@ -488,7 +533,9 @@ export function createToon({ onScreen = null } = {}) {
       gl.uniform3fv(loc.uKey, L.key);
       gl.uniform3fv(loc.uTint, L.shadow);
       gl.uniform2f(loc.uBands, GL3D.BANDS[0], GL3D.BANDS[1]);
-      gl.uniform3fv(loc.uBandK, GL3D.BAND_K);
+      gl.uniform3fv(loc.uBandK, GL3D.SOFT > 0 ? GL3D.SOFT_K : GL3D.BAND_K);
+      gl.uniform3f(loc.uSoft, GL3D.SOFT, GL3D.SKY, GL3D.RIM_SOFT);
+      gl.uniform1f(loc.uOcc, GL3D.OCCLUSION);
       gl.uniform3fv(loc.uLit, L.lit);
       gl.uniform3fv(loc.uRimColor, L.rim);
       gl.uniform3fv(loc.uBack, L.back);
@@ -591,7 +638,10 @@ export function createToon({ onScreen = null } = {}) {
           const skip = pass === 'glass' ? alpha === undefined : alpha !== undefined || (ink && inkless.has(p.role));
           if (skip) continue;
           const faced = pass === 'body' && face && p.name === face.mesh && p.role === face.role;
-          if (!ink) gl.uniform3fv(loc.uColor, colours(p));
+          if (!ink) {
+            gl.uniform3fv(loc.uColor, colours(p));
+            gl.uniform2fv(loc.uGloss, glossOf(p.role));
+          }
           if (alpha !== undefined) gl.uniform1f(loc.uAlpha, alpha);
           if (faced) gl.uniform4fv(loc.uFaceCell, face.cell);
           swayOf(p);

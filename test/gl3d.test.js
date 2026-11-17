@@ -574,3 +574,53 @@ test("Kim's ring light faces the camera in a portrait as it does in a match", as
   assert.ok(bustBefore < 0.96, `unturned, a portrait's ring was already square (${bustBefore.toFixed(3)})`);
   assert.ok(Math.abs(bust - match) < 0.01, `in a portrait the ring is ${bust.toFixed(3)} as wide as tall, in a match ${match.toFixed(3)}`);
 });
+
+// v3.23, the owner: the heroic look of the modern arcade fighters, short of
+// hiring a 3D artist. The three flat bands turn one into the next (modelled
+// light), with a sky term, a highlight by material and a back light that
+// wraps the outline; and a model can carry baked shade (COLOR_0), which the
+// renderer darkens by. A model without it, and GL3D.SOFT at 0, draw exactly
+// what v3.22 drew.
+test('the modelled light: soft tones, a highlight by material, and the flat bands still there at SOFT 0', async () => {
+  const { GL3D } = await import('../src/config.js');
+  const { glossOf } = await import('../src/engine/gl3d/toon.js');
+  assert.ok(GL3D.SOFT > 0 && GL3D.SOFT < 0.5, 'the game ships the modelled light');
+  assert.equal(GL3D.SOFT_K.length, 3);
+  assert.ok(GL3D.SOFT_K[2] < GL3D.BAND_K[2], 'the dark tone is deeper than a flat band, since a gradient reads lighter');
+  assert.equal(glossOf('skin'), GL3D.GLOSS.skin);
+  assert.equal(glossOf('suit*0.78'), GL3D.GLOSS.other, 'a role in shade is its colour\'s material');
+  assert.equal(glossOf('shoe'), GL3D.GLOSS.shoe);
+  assert.equal(glossOf(undefined), GL3D.GLOSS.other);
+  assert.ok(GL3D.GLOSS.skin[1] < GL3D.GLOSS.shoe[1], 'skin\'s highlight is broader than a shoe\'s');
+  const toon = readFileSync(new URL('../src/engine/gl3d/toon.js', import.meta.url), 'utf8');
+  // the flat bands, exactly as they were, when SOFT is 0
+  assert.match(toon, /c = d > uBands\.x \? lit \* uBandK\.x : d > uBands\.y \? mid : shade \* uBandK\.z;\s*rimAt = step\(0\.78, edge\);\s*backAt = step\(0\.62, edge\) \* step\(0\.15, toBack\);/);
+  assert.match(toon, /gl\.uniform3fv\(loc\.uBandK, GL3D\.SOFT > 0 \? GL3D\.SOFT_K : GL3D\.BAND_K\);/);
+  // and the modelled light when it is not
+  assert.match(toon, /float a = smoothstep\(uBands\.x - uSoft\.x, uBands\.x \+ uSoft\.x, d\);/);
+  assert.match(toon, /c \*= mix\(1\.0, vOcc, uOcc\);/);
+  // render only, and never simulation time
+  assert.doesNotMatch(toon, /hitstop/);
+});
+
+test('a model can carry baked shade, and one without it is drawn in the open', async () => {
+  const { parseGLB, extractModel } = await import('../src/engine/gl3d/glb.js');
+  const load = (p) => { const b = readFileSync(new URL(`../${p}`, import.meta.url)); return extractModel(parseGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))); };
+  const jeff = load('assets/models/sculpt/bozo.glb');
+  let creased = 0, total = 0;
+  for (const p of jeff.primitives) {
+    assert.ok(p.occlusion instanceof Float32Array, `${p.name}/${p.role} has no baked shade`);
+    assert.equal(p.occlusion.length, p.positions.length / 3);
+    for (const v of p.occlusion) { assert.ok(v >= 0 && v <= 1); total++; if (v < 0.8) creased++; }
+  }
+  assert.ok(creased / total > 0.05 && creased / total < 0.6, `${creased} of ${total} vertices shaded: it shades creases, not the whole body`);
+  // the founder model was built without it: null, and attribute 4 reads 1
+  for (const p of load('assets/models/founder.glb').primitives) assert.equal(p.occlusion, null);
+  const toon = readFileSync(new URL('../src/engine/gl3d/toon.js', import.meta.url), 'utf8');
+  assert.match(toon, /if \(p\.occlusion\) attrib\(4, p\.occlusion, 1, gl\.FLOAT\);/);
+  assert.match(toon, /gl\.vertexAttrib1f\(4, 1\);/);
+  // and the build writes it: baked just before the export, which is told to carry it
+  const build = readFileSync(new URL('../lab/blender/fighter3d.py', import.meta.url), 'utf8');
+  assert.match(build, /occlude\(rig\)\s*os\.makedirs/);
+  assert.match(build, /export_vertex_color='NAME', export_vertex_color_name='ao'/);
+});
