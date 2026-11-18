@@ -16,20 +16,19 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
-- **Built, not yet released:** v3.23, on `claude/v3.23` (2026-11-17, on top
-  of v3.22.5): the fighters in modelled light, all nine rebuilt with baked
-  shade and cloth folds, the cast's heights brought in to about 15%, and a
-  thinner key line (see "v3.23"). `SIM_VERSION` 15. The owner: "push later
-  when everything is complete". Still to do before that: a phone test round
-  (`lab/phone-test.html`, round thirteen), and his pick of the key line.
-- **Built, not yet released:** v3.22.5, on `claude/v3.22.5` (2026-11-16),
-  waiting for the owner's word to push. A check of everything before launch:
-  the fight sharp on a monitor, the share card cut from the 3D game, whole
-  names on a phone, K.O.! alone, a larger VS splash, and the game's words
-  without em dashes (see "v3.22.5"). Nothing in the fight changed
-  (`SIM_VERSION` still 14).
-- **Live:** v3.22.4, released 2026-11-15 (`VERSION` in `src/config.js`;
-  `SIM_VERSION` 14 in `src/net/online.js`). 3D only: no 2D game at all.
+- **Live:** v3.23, released 2026-11-17 (`VERSION` in `src/config.js`;
+  `SIM_VERSION` 15 in `src/net/online.js`), with v3.22.5 inside it (v3.22.5
+  was never released on its own). 3D only.
+- **What v3.23 changed:** the fighters in modelled light, all nine rebuilt
+  with baked shade and cloth folds, the cast's heights brought in to about
+  15%, and a thinner, fainter key line (see "v3.23"). It plays only v3.23
+  online. Not yet timed on a phone: run round thirteen of
+  `lab/phone-test.html` on the live site (its `d3-flat` setup says what the
+  new light costs), and tell the owner if it is over rule 9's budget.
+- **What v3.22.5 changed:** a check of everything before launch: the fight
+  sharp on a monitor, the share card cut from the 3D game, whole names on a
+  phone, K.O.! alone, a larger VS splash, and the game's words without em
+  dashes (see "v3.22.5").
 - **What v3.22.4 changed:** 3D only (the owner, 2026-11-15: "let's only have
   3d"). A browser that cannot draw 3D is shown a notice instead of the 2D
   game, a match waits on its VS splash for both fighters' models, the phone
@@ -151,9 +150,9 @@ In the order they pay off:
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.22.4 (`SIM_VERSION` 14): 3D only, with the sculpted cast | Deployed. A push here is a release. |
-| `claude/v3.23` | Modelled light, all nine rebuilt with baked shade and cloth folds, heights brought in, a thinner key line (see "v3.23") | Built 2026-11-17 on top of `claude/v3.22.5`, not pushed (rule 7): the owner will say when. |
-| `claude/v3.22.5` | The check before launch: sharp on a monitor, the share card, names on a phone, the words (see "v3.22.5") | Built 2026-11-16 in a cloud session and not pushed (rule 7): it goes to GitHub, and to `main`, when the owner says. |
+| `main` | The live game, v3.23 (`SIM_VERSION` 15): 3D only, the sculpted cast in modelled light | Deployed. A push here is a release. |
+| `claude/v3.23` | Modelled light, all nine rebuilt with baked shade and cloth folds, heights brought in, a thinner key line (see "v3.23") | Released as v3.23 on 2026-11-17 (the owner: "push"); `main` is this branch. |
+| `claude/v3.22.5` | The check before launch: sharp on a monitor, the share card, names on a phone, the words (see "v3.22.5") | Released inside v3.23 on 2026-11-17. |
 | `claude/v3.22.4` | 3D only: the notice without WebGL2, a match waiting for its fighters, the phone test and `lab/pixels.js` in 3D (see "v3.22.4") | Released in v3.22.4 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.3` | The owner's calls of 2026-11-15: the shield against a grab, the pinned client, the boards, the ring light (see "v3.22.3") | Released in v3.22.3 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.2` | One version, 3D (no 2D choice in Settings), the 2D shading drawn one way, and round ten's results (see "v3.22.2", "v3.22.1") | Released in v3.22.2 on 2026-11-15, merged into `main`. |
@@ -413,7 +412,7 @@ why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
 
-## v3.23, built 2026-11-17: modelled light, the cast rebuilt, heights brought in
+## v3.23, released 2026-11-17: modelled light, the cast rebuilt, heights brought in
 
 The owner, shown the fight on 2026-11-16: "Can the graphic be updated to what
 we wanted?", the heroic look of the modern arcade fighters he asked for at the
@@ -508,10 +507,10 @@ with the new look (`node lab/marketing-run.js`).
 has run it: round thirteen of `lab/phone-test.html` (`d3-flat`) is that
 check, and it should be run before v3.23 is released.
 
-**Open with the owner.** His pick of the key line, and the word to push
-(v3.22.5 and v3.23 go out together, as v3.23).
+**Released** 2026-11-17, with v3.22.5 inside it, on the owner's "push",
+with the thinner key line (B of the three he was shown).
 
-## v3.22.5, built 2026-11-16: a check of everything before launch
+## v3.22.5, built 2026-11-16 (released inside v3.23): a check of everything before launch
 
 The owner: "Let's check everything. Graphic to be really good and improve.
 check the code, the game, so when we launch we are perfect". The whole game
