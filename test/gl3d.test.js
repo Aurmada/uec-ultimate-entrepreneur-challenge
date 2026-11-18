@@ -606,14 +606,16 @@ test('the modelled light: soft tones, a highlight by material, and the flat band
 test('a model can carry baked shade, and one without it is drawn in the open', async () => {
   const { parseGLB, extractModel } = await import('../src/engine/gl3d/glb.js');
   const load = (p) => { const b = readFileSync(new URL(`../${p}`, import.meta.url)); return extractModel(parseGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))); };
-  const jeff = load('assets/models/sculpt/bozo.glb');
-  let creased = 0, total = 0;
-  for (const p of jeff.primitives) {
-    assert.ok(p.occlusion instanceof Float32Array, `${p.name}/${p.role} has no baked shade`);
-    assert.equal(p.occlusion.length, p.positions.length / 3);
-    for (const v of p.occlusion) { assert.ok(v >= 0 && v <= 1); total++; if (v < 0.8) creased++; }
+  // all nine of the cast were rebuilt with it
+  for (const id of ['bozo', 'max', 'kai', 'zara', 'ava', 'dex', 'elo', 'scam', 'eleanor']) {
+    let creased = 0, total = 0;
+    for (const p of load(`assets/models/sculpt/${id}.glb`).primitives) {
+      assert.ok(p.occlusion instanceof Float32Array, `${id}: ${p.name}/${p.role} has no baked shade`);
+      assert.equal(p.occlusion.length, p.positions.length / 3);
+      for (const v of p.occlusion) { assert.ok(v >= 0 && v <= 1); total++; if (v < 0.8) creased++; }
+    }
+    assert.ok(creased / total > 0.05 && creased / total < 0.6, `${id}: ${creased} of ${total} vertices shaded: it shades creases, not the whole body`);
   }
-  assert.ok(creased / total > 0.05 && creased / total < 0.6, `${creased} of ${total} vertices shaded: it shades creases, not the whole body`);
   // the founder model was built without it: null, and attribute 4 reads 1
   for (const p of load('assets/models/founder.glb').primitives) assert.equal(p.occlusion, null);
   const toon = readFileSync(new URL('../src/engine/gl3d/toon.js', import.meta.url), 'utf8');
@@ -623,4 +625,13 @@ test('a model can carry baked shade, and one without it is drawn in the open', a
   const build = readFileSync(new URL('../lab/blender/fighter3d.py', import.meta.url), 'utf8');
   assert.match(build, /occlude\(rig\)\s*os\.makedirs/);
   assert.match(build, /export_vertex_color='NAME', export_vertex_color_name='ao'/);
+});
+
+// The pale key line round each fighter, thinner and fainter since v3.23 (the
+// owner agreed it made them look cut out), but not gone: without it black
+// trousers on the garage's dark floor were lost, and a kick is read from legs.
+test('the key line is thin and faint, and still there', async () => {
+  const { STYLIZE } = await import('../src/config.js');
+  assert.ok(STYLIZE.KEYLINE_PX <= 1.5 && STYLIZE.KEYLINE_PX >= 1, `${STYLIZE.KEYLINE_PX} px`);
+  assert.ok(STYLIZE.KEYLINE_A <= 0.45 && STYLIZE.KEYLINE_A >= 0.25, `alpha ${STYLIZE.KEYLINE_A}`);
 });

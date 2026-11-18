@@ -1527,7 +1527,10 @@ export const FORMS = {
     // He crouches as a boxer ducks: knees deep, the gloves still at his face,
     // chin tucked over them. He dashes in low behind the gloves, and pulls
     // straight back out, upright, the gloves still up.
-    crouch: { hip: 48, shoulder: 62, head: 64, headX: 4, lean: 0.52, sx: 1.04, sy: 0.84, legF: { x: 30, y: 0 }, legB: { x: -32, y: 0 }, armF: { x: 18, y: -2 }, armB: { x: 18, y: -2 } },
+    // (2 px deeper and less far over since v3.23: hip 50, shoulder 64, head 66,
+    // headX 0 and lean 0.46, from 48, 62, 64, 4 and 0.52. A taller Jeff's head
+    // came 6 px out past the front of his crouched hurtbox.)
+    crouch: { hip: 50, shoulder: 64, head: 66, headX: 0, lean: 0.46, sx: 1.04, sy: 0.84, legF: { x: 30, y: 0 }, legB: { x: -32, y: 0 }, armF: { x: 18, y: -2 }, armB: { x: 18, y: -2 } },
     dash: {
       drop: 8, lean: 0.3, headX: 2, legF: { x: 38, y: -4 }, legB: { x: -34, y: -8 },
       back: { drop: 2, lean: -0.08, headX: 0, legF: { x: 22, y: -8 }, legB: { x: -36, y: -2 } },
@@ -1578,7 +1581,10 @@ export const FORMS = {
     // He swaggers: wide, heavy steps, the shoulders rolling with each one and
     // the fists swinging low. He throws himself into the air, legs flung
     // apart and both arms up, and comes down in a stomp.
-    walk: { cycle: 98, lift: 8, bob: 5, lean: 0.16, back: 0.08, roll: 0.14, hip: 0.06, swing: 6 },
+    // cycle 94 since v3.23 (from 98): his legs are shorter (stride 1.08, from
+    // 1.13), a step of the old cycle no longer fitted between his feet, and
+    // the planted one slid 3% of the walk
+    walk: { cycle: 94, lift: 8, bob: 5, lean: 0.16, back: 0.08, roll: 0.14, hip: 0.06, swing: 6 },
     jump: {
       up: { legF: { x: 38, y: -30 }, legB: { x: -34, y: -22 }, armF: { x: 50, y: -196 }, armB: { x: -14, y: -190 }, lean: -0.06 },
       down: { legF: { x: 32, y: -10 }, legB: { x: -30, y: -8 } },
@@ -1655,7 +1661,8 @@ export const FORMS = {
     // He crouches as a wrestler changes level, hunched further over, the open
     // hand reaching low for the legs. He shoots in for the takedown lower
     // still, and steps back heavily, still hunched.
-    crouch: { hip: 42, shoulder: 42, head: 44, lean: 0.69, sx: 1.08, sy: 0.91, legF: { x: 38, y: 0 }, legB: { x: -32, y: 0 }, armF: { x: 26, y: 25 }, armB: { x: 20, y: 11 } },
+    // (v3.23: 44, 44, 46 and lean 0.66, from 42, 42, 44 and 0.69: Carl, taller, had the head past the crouched hurtbox)
+    crouch: { hip: 44, shoulder: 44, head: 46, lean: 0.66, sx: 1.08, sy: 0.91, legF: { x: 38, y: 0 }, legB: { x: -32, y: 0 }, armF: { x: 26, y: 25 }, armB: { x: 20, y: 11 } },
     dash: {
       drop: 16, lean: 0.46, legF: { x: 42, y: -4 }, legB: { x: -36, y: -2 }, armF: { x: 16, y: 12 },
       back: { drop: 6, lean: 0.14, legF: { x: 24, y: -4 }, legB: { x: -36, y: -4 }, armF: { x: 0, y: 0 } },
@@ -1710,7 +1717,8 @@ export const FORMS = {
     // He struts: tall, the chest out, the knees lifting high, the presenting
     // hand keeping time. He jumps in a split for the crowd, the presenting
     // hand thrown up, and gathers his legs to land.
-    walk: { cycle: 85, lag: Math.PI / 2, lift: 14, bob: 3, lean: -0.08, back: -0.1, roll: 0.06, hip: 0.08, swing: 4, beat: 6 },
+    // cycle 83 since v3.23 (from 85), for his shorter legs, as Adam's
+    walk: { cycle: 83, lag: Math.PI / 2, lift: 14, bob: 3, lean: -0.08, back: -0.1, roll: 0.06, hip: 0.08, swing: 4, beat: 6 },
     jump: {
       up: { legF: { x: 46, y: -36 }, legB: { x: -42, y: -30 }, armF: { x: 60, y: -214 }, lean: -0.1 },
       down: { legF: { x: 22, y: -20 }, legB: { x: -14, y: -14 }, lean: -0.06 },
@@ -1767,7 +1775,9 @@ export const FORMS = {
     // He glides in, unhurried: the lead hand low and loose, the shoulders
     // rolling. He jumps with one knee up and the other leg hanging, no
     // effort in it.
-    walk: { cycle: 105, lag: Math.PI / 2, lift: 5, bob: 2, back: -0.06, roll: 0.1, hip: 0.03, swing: 5 },
+    // cycle 98 since v3.23 (from 105), for his shorter legs (stride 1.10,
+    // from 1.18), as Adam's
+    walk: { cycle: 98, lag: Math.PI / 2, lift: 5, bob: 2, back: -0.06, roll: 0.1, hip: 0.03, swing: 5 },
     jump: {
       up: { legF: { x: 26, y: -40 }, legB: { x: -14, y: -6 } },
       down: { legF: { x: 22, y: -16 }, legB: { x: -18, y: -4 } },
@@ -1830,7 +1840,8 @@ export const FORMS = {
     },
     // He squats, knees out, the hand still in his pocket. He scurries in
     // hunched, and backs off as if he had never been there.
-    crouch: { hip: 54, shoulder: 54, head: 56, lean: 0.7, sx: 1.1, sy: 0.87, legF: { x: 26, y: 0 }, legB: { x: -22, y: 0 }, armF: { x: 30, y: 13 }, armB: { x: 0, y: 0 } },
+    // (v3.23: 55, 55, 57 and lean 0.68, from 54, 54, 56 and 0.7: Scam, taller, had the head past the crouched hurtbox)
+    crouch: { hip: 55, shoulder: 55, head: 57, lean: 0.68, sx: 1.1, sy: 0.87, legF: { x: 26, y: 0 }, legB: { x: -22, y: 0 }, armF: { x: 30, y: 13 }, armB: { x: 0, y: 0 } },
     dash: {
       drop: 10, lean: 0.3, legF: { x: 30, y: -8 }, legB: { x: -26, y: -6 },
       back: { drop: 2, lean: -0.06, legF: { x: 16, y: -4 }, legB: { x: -26, y: -6 } },
@@ -1959,7 +1970,8 @@ export const FORMS = {
     },
     // She ducks deep, tight behind the fists, the head forward over them. She
     // darts in low, the head moved off the line, and pulls straight back.
-    crouch: { hip: 46, shoulder: 46, head: 48, headX: 4, lean: 0.57, sx: 1.04, sy: 0.9, legF: { x: 28, y: 0 }, legB: { x: -24, y: 0 }, armF: { x: 16, y: 10 }, armB: { x: 16, y: 10 } },
+    // (v3.23: 48, 48, 50 and lean 0.56, from 46, 46, 48 and 0.57: Kim, taller, had the head past the crouched hurtbox)
+    crouch: { hip: 48, shoulder: 48, head: 50, headX: 4, lean: 0.56, sx: 1.04, sy: 0.9, legF: { x: 28, y: 0 }, legB: { x: -24, y: 0 }, armF: { x: 16, y: 10 }, armB: { x: 16, y: 10 } },
     dash: {
       drop: 14, lean: 0.34, twist: 0.12, legF: { x: 34, y: -6 }, legB: { x: -30, y: -4 },
       back: { drop: 8, lean: -0.06, twist: 0, legF: { x: 20, y: -4 }, legB: { x: -32, y: -6 } },
@@ -2016,7 +2028,9 @@ export const FORMS = {
     // it, the head never rising or falling, the arms drifting. She leaves the
     // floor as a crane stands, the lead knee lifted high and the rear leg long
     // beneath her, the lead hand opening.
-    walk: { cycle: 130, slip: 0.35, lag: Math.PI / 2, lift: 4, back: -0.04, roll: 0.05, hip: 0.05, swing: 4 },
+    // cycle 122 since v3.23 (from 130), for her shorter legs (stride 1.11,
+    // from 1.18), as Adam's
+    walk: { cycle: 122, slip: 0.35, lag: Math.PI / 2, lift: 4, back: -0.04, roll: 0.05, hip: 0.05, swing: 4 },
     jump: {
       up: { legF: { x: 22, y: -58 }, legB: { x: -6, y: -2 }, armF: { x: 70, y: -176 } },
       down: { legF: { x: 20, y: -30 }, legB: { x: -10, y: -4 } },

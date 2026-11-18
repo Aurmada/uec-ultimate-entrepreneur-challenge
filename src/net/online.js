@@ -171,7 +171,13 @@ export const CHARACTER_WIRE_VERSION = 1;
 // where it sent the victim toward the grabber and both slid the same way. A
 // v13 peer puts the victim elsewhere from the first shielded grab. v13
 // shipped in v3.22 to v3.22.2.
-export const SIM_VERSION = 14;
+//
+// v15: the cast's heights brought in (data/fighters.js, the ladder: every
+// height half as far from the middle as it was). A fighter's hurtbox is as
+// tall as their height makes it, so a v14 peer finds a blow landing on a head
+// that is not there, from the first high one. v14 shipped in v3.22.3 and
+// v3.22.4 (and v3.22.5, which changed nothing in the fight).
+export const SIM_VERSION = 15;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

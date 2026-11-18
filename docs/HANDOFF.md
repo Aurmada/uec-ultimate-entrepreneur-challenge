@@ -16,11 +16,12 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
-- **Built, shown to the owner, not yet approved:** v3.23, on `claude/v3.23`
-  (2026-11-17, on top of v3.22.5): the fighters in modelled light, and Jeff
-  with baked shade and cloth folds, the first of the nine (see "v3.23"). The
-  owner asked to see it before it goes to the rest of the cast. Two of his
-  questions are still open: the cast's heights, and the pale key line.
+- **Built, not yet released:** v3.23, on `claude/v3.23` (2026-11-17, on top
+  of v3.22.5): the fighters in modelled light, all nine rebuilt with baked
+  shade and cloth folds, the cast's heights brought in to about 15%, and a
+  thinner key line (see "v3.23"). `SIM_VERSION` 15. The owner: "push later
+  when everything is complete". Still to do before that: a phone test round
+  (`lab/phone-test.html`, round thirteen), and his pick of the key line.
 - **Built, not yet released:** v3.22.5, on `claude/v3.22.5` (2026-11-16),
   waiting for the owner's word to push. A check of everything before launch:
   the fight sharp on a monitor, the share card cut from the 3D game, whole
@@ -151,7 +152,7 @@ In the order they pay off:
 | Branch | What it is | State |
 | --- | --- | --- |
 | `main` | The live game, v3.22.4 (`SIM_VERSION` 14): 3D only, with the sculpted cast | Deployed. A push here is a release. |
-| `claude/v3.23` | Modelled light for every fighter; Jeff rebuilt with baked shade and cloth folds (see "v3.23") | Built 2026-11-17 on top of `claude/v3.22.5`, not pushed (rule 7), waiting on the owner's view of it. |
+| `claude/v3.23` | Modelled light, all nine rebuilt with baked shade and cloth folds, heights brought in, a thinner key line (see "v3.23") | Built 2026-11-17 on top of `claude/v3.22.5`, not pushed (rule 7): the owner will say when. |
 | `claude/v3.22.5` | The check before launch: sharp on a monitor, the share card, names on a phone, the words (see "v3.22.5") | Built 2026-11-16 in a cloud session and not pushed (rule 7): it goes to GitHub, and to `main`, when the owner says. |
 | `claude/v3.22.4` | 3D only: the notice without WebGL2, a match waiting for its fighters, the phone test and `lab/pixels.js` in 3D (see "v3.22.4") | Released in v3.22.4 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.3` | The owner's calls of 2026-11-15: the shield against a grab, the pinned client, the boards, the ring light (see "v3.22.3") | Released in v3.22.3 on 2026-11-15, merged into `main`. |
@@ -412,7 +413,7 @@ why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
 
-## v3.23, built 2026-11-17: modelled light, and Jeff with more definition
+## v3.23, built 2026-11-17: modelled light, the cast rebuilt, heights brought in
 
 The owner, shown the fight on 2026-11-16: "Can the graphic be updated to what
 we wanted?", the heroic look of the modern arcade fighters he asked for at the
@@ -453,29 +454,62 @@ another; a prop and eyewear shade only themselves. `glb.js` reads it
 (`occlusion`, null for a model without it), `toon.js` takes it as attribute 4
 (1 where a model has none) and darkens by `GL3D.OCCLUSION` of it.
 
-**Jeff's cloth.** `trousers()` presses folds in where trousers gather
+**Cloth, all nine.** `trousers()` presses folds in where trousers gather
 (`_trouser_folds`: two stacked on the shoe, one across the back of the knee
 and one under the kneecap, two from the crotch across the thigh), `shoes()` a
-welt round the sole, and the vest's quilting is deeper. These are in the
-shared pieces, so each of the other eight takes them when it is rebuilt
-(`python3 lab/blender/fighter3d.py -- <id> --rig`, about a minute each, with
-the `bpy` module this session has; Jeff's unchanged build came out byte for
-byte the committed file before any of this). Only `bozo.glb` was rebuilt: the
-owner sees one before the rest.
+welt round the sole, and the vest's quilting is deeper. Jeff was shown to the
+owner first ("1. yes" to the rest), and all nine were then rebuilt
+(`python3 lab/blender/fighter3d.py -- <id> --rig`, about a minute each with
+the `bpy` module this session has; Jeff's unchanged build had come out byte
+for byte the committed file before any of this). Each build prints the
+model's measurements (leaf bones, skull, joint widths, `fit.legs`, the face's
+centre), which go into `data/models3d.js`; the face's `px` is set from the
+body (0.0035 x head/1.12 x height/0.92), not from the print, which rounds it.
+
+**Heights.** In their stances Cathie stood 1.33 times Jeff and Carl 0.92,
+44% from the shortest to the tallest; the owner: "yes, to bring the spread
+in". A fighter stands as tall as their legs (`body.stride`, render only) and
+trunk (`body.height`, which is also the hurtbox's height) make them. Both are
+now half as far from the middle (1.03) as they were, which puts the nine
+within 15.6% standing, in the same order (`test/roster.test.js`); measured in
+their stances it is 18% from Kim to Cathie, with Carl, who fights hunched,
+lower still (`lab/previews/lineup-heights.png`). What followed from it:
+
+- `build` was left alone. Moved the other way to hold each hurtbox's area
+  (the convention Cathie's note describes) it shifted win rates 2 to 4
+  points a fighter; left alone, under 1 (`lab/balance.js`, 120 a pair, seeds
+  11 and 12: every fighter within 1.2 points of before, Cathie 2.5 down,
+  the spread 26.8 to 27.1). Balance is as the owner left it.
+- Elo, 0.08 shorter, came to 15.9 on the budget, past the 15 that blocks a
+  character: his build went from 0.96 to 0.99 (13.9).
+- `pushHalf` follows the rebuilt trunks: Adam 30 (from 32), Carl 31 (30),
+  Jeff 33 (32) (`test/push.test.js`).
+- Four walks step a little quicker so a planted foot does not slide on
+  shorter legs (`forms.js` `walk.cycle`: Adam 94, Steve 83, Elo 98, Cathie
+  122), and four crouches go a little deeper or less far over, so the head
+  stays on the crouched hurtbox (Jeff, Carl, Kim, Scam).
+- `SIM_VERSION` 15: a hurtbox is as tall as the height makes it, so v3.23
+  does not play earlier versions online.
+- A player's own founder can still be built from 0.82 to 1.22 tall (the
+  `BODY` range, paid for on the budget). Not asked about, and left.
+
+**The key line.** Shown three ways on the garage, the darkest stage, with
+Elo and Carl in dark clothes: as it was (2.0 px at 0.62), thinner and
+fainter (1.2 px at 0.38), and none. With none, black trousers were lost
+against the floor, and a kick is read from legs. The tree has the middle
+one; the owner had agreed to thin or fade it and was sent the three to
+choose from, so `STYLIZE.KEYLINE_PX` and `KEYLINE_A` are his to change.
+
+**The share card and shots** (`og-image.jpg`, `shots/`) were rendered again
+with the new look (`node lab/marketing-run.js`).
 
 **Not measured.** The shader's extra work is two smoothsteps, a `pow` and a
 `normalize` a pixel, small beside the mask tap it already makes, but no phone
 has run it: round thirteen of `lab/phone-test.html` (`d3-flat`) is that
 check, and it should be run before v3.23 is released.
 
-**Open with the owner.** (1) The heights: in their stances Cathie stands 1.33
-times Jeff and Carl 0.92 (`lab/previews/lineup-heights.png`), 44% from the
-shortest to the tallest; suggested, about 15% in the same order, which
-changes hurtboxes (`body.height`), so `SIM_VERSION`, a balance run and a
-rebuild of each model. (2) The pale key line round each fighter
-(`STYLIZE.KEYLINE_*`) is the most cut-out thing left in the picture; with a
-stronger rim it could be thinner or fainter, his call. (3) Whether the eight
-others get Jeff's treatment.
+**Open with the owner.** His pick of the key line, and the word to push
+(v3.22.5 and v3.23 go out together, as v3.23).
 
 ## v3.22.5, built 2026-11-16: a check of everything before launch
 

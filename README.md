@@ -74,9 +74,11 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 ## What's new in v3.23: a new light on the fighters
 
 - 💡 **Modelled light.** Every fighter was drawn in three flat tones. They are now lit like solid figures: forms round into shadow, skin, hair and shoes catch a highlight, and each stage's back light traces the whole outline.
-- 🧥 **Jeff, first.** His trousers fold where cloth gathers, his shoes have soles, and creases and seams carry their own shade. The rest of the cast follow.
+- 🧥 **More definition, all nine.** Trousers fold where cloth gathers, shoes have soles, and creases and seams carry their own shade.
+- 📏 **Heights brought in.** The tallest fighter stood a third taller than the shortest. The spread is now about 15%, in the same order: Cathie is still the tallest, Kim the smallest.
+- ✂️ **A finer outline.** The pale line round each fighter is thinner and fainter, so they sit in the scene and no longer look cut out.
 - 🌑 A deeper shadow under each fighter.
-- 🌐 Online, v3.23 still plays v3.22.3 and later: nothing in the fight itself changed.
+- 🌐 Online, v3.23 plays only v3.23: a fighter's height is part of the fight.
 
 ## What's new in v3.22.5: sharper, and tidier
 

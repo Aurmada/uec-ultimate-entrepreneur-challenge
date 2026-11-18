@@ -121,11 +121,11 @@ export const SCULPTED = {
   // head is about 26 px tall, and at the texture's 0.35 screen px a stroke px,
   // finer lines vanish in a match. He boxes.
   bozo: {
-    leaf: { forearm: 0.367, head: 0.255, foot: [0.18, -0.065, 0] },
-    skull: 0.16,
-    fit: { shoulderHalf: 0.2, hipHalf: 0.095 },
+    leaf: { forearm: 0.3869, head: 0.2689, foot: [0.1898, -0.0685, 0] },
+    skull: 0.1687,
+    fit: { shoulderHalf: 0.2109, hipHalf: 0.1002, legs: 1.0543 },
     face: {
-      at: [0, 1.79],
+      at: [0, 1.8873], px: [0.00369, 0.00369],
       layout: {
         eye: { x: 9.4, y: -10, w: 3.7 },
         brow: { y: -14.9, inner: 3.0, outer: 17.2 },
@@ -149,11 +149,11 @@ export const SCULPTED = {
   // (`lean` below zero) rather than further over: on top of the slouch, the
   // sculpts' usual lean rounded his back and brought his shoulders forward.
   max: {
-    leaf: { forearm: 0.4488, head: 0.2641, foot: [0.213, -0.0798, 0] },
-    skull: 0.1657,
-    fit: { shoulderHalf: 0.2416, hipHalf: 0.1124, legs: 1.2283, lean: -0.06 },
+    leaf: { forearm: 0.4217, head: 0.2482, foot: [0.2002, -0.0763, 0] },
+    skull: 0.1557,
+    fit: { shoulderHalf: 0.227, hipHalf: 0.1056, legs: 1.1739, lean: -0.06 },
     face: {
-      at: [0, 2.183], px: [0.003625, 0.003625],
+      at: [0, 2.0702], px: [0.003406, 0.003406],
       layout: {
         eye: { x: 9.7, y: -10.9, w: 4.0 },
         brow: { y: -17.4, inner: 3.4, outer: 16.0 },
@@ -173,11 +173,11 @@ export const SCULPTED = {
   // wrestler's, already hunched well forward, so his sculpt adds no lean of
   // its own (see Adam's). He grapples (data/forms.js), the lead hand open.
   dex: {
-    leaf: { forearm: 0.3701, head: 0.2466, foot: [0.1791, -0.0636, 0] },
-    skull: 0.1547,
-    fit: { shoulderHalf: 0.2031, hipHalf: 0.0945, legs: 0.9783, lean: 0 },
+    leaf: { forearm: 0.3858, head: 0.2571, foot: [0.1867, -0.0671, 0] },
+    skull: 0.1613,
+    fit: { shoulderHalf: 0.2118, hipHalf: 0.0985, legs: 1.0326, lean: 0 },
     face: {
-      at: [0, 1.777], px: [0.003385, 0.003385],
+      at: [0, 1.8648], px: [0.003529, 0.003529],
       layout: {
         eye: { x: 9.7, y: -9.1, w: 3.6 },
         brow: { y: -14.8, inner: 3.0, outer: 17.5 },
@@ -197,11 +197,11 @@ export const SCULPTED = {
   // His 2D stance stands tall with the chest open, so his sculpt adds no lean
   // of its own (see Adam's and Carl's). He showboats (data/forms.js).
   kai: {
-    leaf: { forearm: 0.4083, head: 0.2518, foot: [0.1928, -0.0749, 0] },
-    skull: 0.158,
-    fit: { shoulderHalf: 0.1893, hipHalf: 0.1018, legs: 1.1522, lean: 0 },
+    leaf: { forearm: 0.4006, head: 0.2471, foot: [0.1892, -0.0735, 0] },
+    skull: 0.155,
+    fit: { shoulderHalf: 0.1857, hipHalf: 0.0999, legs: 1.1304, lean: 0 },
     face: {
-      at: [0, 2.0311], px: [0.003457, 0.003457],
+      at: [0, 1.9928], px: [0.003391, 0.003391],
       layout: {
         eye: { x: 9.4, y: -10.3, w: 3.8 },
         brow: { y: -16.5, inner: 3.4, outer: 15.7 },
@@ -222,11 +222,11 @@ export const SCULPTED = {
   // at 1.855; a small mouth meeting at 1.7425. His 2D stance leans back, chin
   // up, so his sculpt adds no lean of its own. A shoulder roll (data/forms.js).
   elo: {
-    leaf: { forearm: 0.4525, head: 0.2628, foot: [0.2126, -0.0834, 0] },
-    skull: 0.1649,
-    fit: { shoulderHalf: 0.2028, hipHalf: 0.1122, legs: 1.2826, lean: 0 },
+    leaf: { forearm: 0.4246, head: 0.245, foot: [0.2011, -0.0777, 0] },
+    skull: 0.1537,
+    fit: { shoulderHalf: 0.1918, hipHalf: 0.1061, legs: 1.1957, lean: 0 },
     face: {
-      at: [0, 2.248], px: [0.003607, 0.003607],
+      at: [0, 2.0956], px: [0.003363, 0.003363],
       layout: {
         eye: { x: 9.7, y: -10.9, w: 4.0 },
         brow: { y: -18.6, inner: 3.1, outer: 15.7 },
@@ -246,11 +246,11 @@ export const SCULPTED = {
   // 1.851; a small even mouth meeting at 1.744. Unbothered, he stands easy,
   // so his sculpt adds no lean of its own. He fences (data/forms.js).
   scam: {
-    leaf: { forearm: 0.3909, head: 0.2619, foot: [0.1917, -0.0664, 0] },
-    skull: 0.1643,
-    fit: { shoulderHalf: 0.2024, hipHalf: 0.1012, legs: 1.0217, lean: 0 },
+    leaf: { forearm: 0.3989, head: 0.2673, foot: [0.1957, -0.0692, 0] },
+    skull: 0.1677,
+    fit: { shoulderHalf: 0.2065, hipHalf: 0.1033, legs: 1.0652, lean: 0 },
     face: {
-      at: [0, 1.858], px: [0.003595, 0.003595],
+      at: [0, 1.9175], px: [0.003668, 0.003668],
       layout: {
         eye: { x: 9.7, y: -10.3, w: 4.0 },
         brow: { y: -17.4, inner: 3.4, outer: 15.7 },
@@ -271,11 +271,11 @@ export const SCULPTED = {
   // the visor; an even mouth meeting at 1.744. Her fencer's guard is upright,
   // so her sculpt adds no lean of its own. She fences (data/forms.js).
   ava: {
-    leaf: { forearm: 0.4077, head: 0.2625, foot: [0.1963, -0.0721, 0] },
-    skull: 0.1647,
-    fit: { shoulderHalf: 0.1626, hipHalf: 0.1106, legs: 1.1087, lean: 0 },
+    leaf: { forearm: 0.4037, head: 0.26, foot: [0.1945, -0.0721, 0] },
+    skull: 0.1631,
+    fit: { shoulderHalf: 0.161, hipHalf: 0.1096, legs: 1.1087, lean: 0 },
     face: {
-      at: [0, 1.9835], px: [0.003603, 0.003603],
+      at: [0, 1.9746], px: [0.003569, 0.003569],
       layout: {
         eye: { x: 9.4, y: -10.9, w: 4.3 },
         brow: { y: -19.1, inner: 3.4, outer: 15.4 },
@@ -297,11 +297,11 @@ export const SCULPTED = {
   // `bomber`, `ringlight`). Her guard is already crouched in, so her sculpt
   // adds no lean of its own; she fights from a peek-a-boo (forms.js).
   zara: {
-    leaf: { forearm: 0.3421, head: 0.2472, foot: [0.1591, -0.0622, 0] },
-    skull: 0.1551,
-    fit: { shoulderHalf: 0.133, hipHalf: 0.0948, legs: 0.9565, lean: 0 },
+    leaf: { forearm: 0.3649, head: 0.2637, foot: [0.1697, -0.0678, 0] },
+    skull: 0.1655,
+    fit: { shoulderHalf: 0.1419, hipHalf: 0.1011, legs: 1.0435, lean: 0 },
     face: {
-      at: [0, 1.7287], px: [0.003393, 0.003393],
+      at: [0, 1.8661], px: [0.00362, 0.00362],
       layout: {
         eye: { x: 9.7, y: -10.3, w: 4.1 },
         brow: { y: -17.4, inner: 3.4, outer: 15.7 },
@@ -324,11 +324,11 @@ export const SCULPTED = {
   // `brooch`, `tablet`, `coat`). Upright, so no lean of her own; she stands
   // in tai chi (forms.js).
   eleanor: {
-    leaf: { forearm: 0.4532, head: 0.2792, foot: [0.209, -0.0834, 0] },
-    skull: 0.1752,
-    fit: { shoulderHalf: 0.1731, hipHalf: 0.1178, legs: 1.2826, lean: 0 },
+    leaf: { forearm: 0.4192, head: 0.2582, foot: [0.1934, -0.0784, 0] },
+    skull: 0.162,
+    fit: { shoulderHalf: 0.1601, hipHalf: 0.109, legs: 1.2065, lean: 0 },
     face: {
-      at: [0, 2.2742], px: [0.003831, 0.003831],
+      at: [0, 2.1228], px: [0.003544, 0.003544],
       layout: {
         eye: { x: 9.7, y: -10.9, w: 4.1 },
         brow: { y: -18.9, inner: 3.4, outer: 15.4 },

@@ -148,6 +148,19 @@ export const UNICORN_META = {
 // wanted (Cathie), `build` moves the other way so the hurtbox — and the price —
 // is untouched.
 //
+// The ladder was twice as steep until v3.23: Cathie stood a third taller
+// than Jeff, 44% from the shortest stance to the tallest, and the owner, shown
+// the nine side by side (2026-11-16), found it wrong: "bring the spread in".
+// Every height and stride is now half as far from the middle (1.03) as it was,
+// which leaves about 15% from Kim to Cathie standing, in the same order.
+// `build` was left alone: moved the other way to hold the hurtbox's area, as
+// for Cathie above, it shifted win rates by 2 to 4 points a fighter, and left
+// alone by under 1 (lab/balance.js, 120 a pair, seeds 11 and 12), since a
+// fight is mostly struck across, not down. One exception: Elo, shorter by
+// 0.08, came to 15.9 on the budget (a smaller target is worth points), past
+// the 15 that blocks a character, so his build went from 0.96 to 0.99, which
+// puts him at 13.8 and is too little to see.
+//
 // The ladder, tallest to shortest, and what each one is meant to tell you
 // before the fighter has moved:
 //
@@ -198,7 +211,7 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Slight and upright, a runner's frame inside a blazer that does the posing for her.
     figure: { frame: 'f', muscle: 0.5, chest: 0.9, waist: 0.86, hips: 1.04, jaw: 0.95,
       costume: { fit: 'tight', legs: 'skinny' } },
-    body: { height: 1.04, build: 1.06, reach: 0.96, stride: 1.02, shoulders: 0.88, head: 1.02 },
+    body: { height: 1.03, build: 1.06, reach: 0.96, stride: 1.02, shoulders: 0.88, head: 1.02 },
     stats: { speed: 1.0, power: 1.0, hp: 100 },
     ai: { aggr: 0.55, jump: 0.3, prefRange: 'far', ease: { intern: -0.30 }, rangeAt: { intern: 'mid' } },
     c: { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#e8dcc0', pants: '#23294f', shoe: '#eef1ff' },
@@ -249,10 +262,11 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Big, loose and broad through the chest, a heavy jaw, a little soft at the middle.
     figure: { muscle: 1.0, chest: 1.12, belly: 0.15, jaw: 1.08, neck: 1.1,
       costume: { fit: 'oversized', hem: 0.1, legs: 'baggy' } },
-    body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
-    // How near a rival may stand (PHYS.PUSH_HALF): Adam's sculpt stands 30 px
-    // in front of his centre in a guard, the ink line and a hair beyond (test/push.test.js).
-    pushHalf: 32,
+    body: { height: 1.09, build: 1.00, reach: 1.02, stride: 1.08, shoulders: 1.25, head: 0.92 },
+    // How near a rival may stand (PHYS.PUSH_HALF): Adam's sculpt stands 28.5 px
+    // in front of his centre in a guard, the ink line and a hair beyond
+    // (test/push.test.js). 32 until v3.23, when he stood shorter and so slighter.
+    pushHalf: 30,
     stats: { speed: 0.95, power: 1.2, hp: 95 },
     ai: { aggr: 0.85, jump: 0.35, prefRange: 'close', ease: { intern: 0.32, founder: 0.22 } },
     c: { skin: '#c68a5a', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#3b2a1c', pants: '#33241d', shoe: '#f5f5f5' },
@@ -306,7 +320,7 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Rake thin: narrow chest, no waist to speak of, a long neck in a roll collar.
     figure: { muscle: 0.45, chest: 0.84, waist: 0.9, jaw: 1.0, neck: 0.9,
       costume: { fit: 'tight', legs: 'skinny' } },
-    body: { height: 1.06, build: 0.98, reach: 1.00, stride: 1.06, shoulders: 0.92, head: 0.96 },
+    body: { height: 1.04, build: 0.98, reach: 1.00, stride: 1.04, shoulders: 0.92, head: 0.96 },
     stats: { speed: 1.15, power: 0.9, hp: 95 },
     ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid', ease: { intern: 0.11 } },
     // The keynote drift: the presenting hand rises like he is about to say
@@ -365,7 +379,7 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Small and curvy, narrow at the waist and wide through the hips.
     figure: { frame: 'f', muscle: 0.6, chest: 0.96, waist: 0.8, hips: 1.18, jaw: 0.94,
       costume: { fit: 'regular', legs: 'flared' } },
-    body: { height: 0.90, build: 0.92, reach: 0.96, stride: 0.88, shoulders: 0.90, head: 1.11 },
+    body: { height: 0.96, build: 0.92, reach: 0.96, stride: 0.96, shoulders: 0.90, head: 1.11 },
     stats: { speed: 1.1, power: 0.95, hp: 95 },
     ai: { aggr: 0.75, jump: 0.5, prefRange: 'mid', ease: { intern: 0.02 } },
     // Pump it, then pull the floor out. PUMP launches so she can juggle;
@@ -431,7 +445,7 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Tall, slim and straight-backed, with no hard edges anywhere.
     figure: { frame: 'f', muscle: 0.35, chest: 0.92, waist: 0.96, hips: 1.04, jaw: 0.96,
       costume: { fit: 'regular', legs: 'suit' } },
-    body: { height: 1.2, build: 0.89, reach: 1.06, stride: 1.18, shoulders: 0.88, head: 0.94 },
+    body: { height: 1.11, build: 0.89, reach: 1.06, stride: 1.11, shoulders: 0.88, head: 0.94 },
     stats: { speed: 0.9, power: 1.05, hp: 105 },
     ai: { aggr: 0.65, jump: 0.2, prefRange: 'far', ease: { intern: -0.09, founder: -0.13 } },
     // Almost motionless. The stillness is the threat — she is waiting for you
@@ -506,10 +520,11 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Barrel-chested and gone to seed: a paunch under the waistcoat, a bull neck, jowls.
     figure: { muscle: 0.6, chest: 1.04, waist: 1.18, belly: 0.65, jaw: 1.08, neck: 1.2,
       costume: { fit: 'regular', legs: 'suit' } },
-    body: { height: 0.94, build: 1.08, reach: 0.98, stride: 0.9, shoulders: 1.25, head: 1.06 },
-    // How near a rival may stand (PHYS.PUSH_HALF): Carl's sculpt stands 28 px
-    // in front of his centre in a guard, the ink line and a hair beyond (test/push.test.js).
-    pushHalf: 30,
+    body: { height: 0.98, build: 1.08, reach: 0.98, stride: 0.95, shoulders: 1.25, head: 1.06 },
+    // How near a rival may stand (PHYS.PUSH_HALF): Carl's sculpt stands 29.3 px
+    // in front of his centre in a guard, the ink line and a hair beyond
+    // (test/push.test.js). 30 until v3.23, when he stood taller and so broader.
+    pushHalf: 31,
     stats: { speed: 0.85, power: 1.25, hp: 110 },
     ai: { aggr: 0.8, jump: 0.15, prefRange: 'close', ease: { intern: 0.11 } },
     // A raider takes what he can reach. ASSET SEIZURE is unblockable and hits
@@ -571,7 +586,7 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Tall and heavy-set rather than built, the tee stretched at the middle.
     figure: { muscle: 0.7, chest: 1.06, waist: 1.06, belly: 0.3, jaw: 1.04,
       costume: { fit: 'regular', legs: 'baggy' } },
-    body: { height: 1.18, build: 0.96, reach: 1.00, stride: 1.18, shoulders: 0.86, head: 0.90 },
+    body: { height: 1.10, build: 0.99, reach: 1.00, stride: 1.10, shoulders: 0.86, head: 0.90 },
     stats: { speed: 1.05, power: 1.15, hp: 100 },
     // ease: re-measured with v3.22's PLATFORM BURN, so the easier levels
     // still play alike (Rookie 55%, Contender 54% of AI matches; were 65, 41)
@@ -625,10 +640,11 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): The gym-rat cameo: a chest like a crate, arms that strain the sleeves, a thick neck.
     figure: { muscle: 1.6, chest: 1.3, waist: 0.92, jaw: 1.1, neck: 1.35,
       costume: { fit: 'regular', sleeves: 'tight', legs: 'suit' } },
-    body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
-    // How near a rival may stand (PHYS.PUSH_HALF): Jeff's sculpt stands 30 px
-    // in front of his centre in a guard, the ink line and a hair beyond (test/push.test.js).
-    pushHalf: 32,
+    body: { height: 0.97, build: 1.14, reach: 0.90, stride: 0.97, shoulders: 1.20, head: 1.12 },
+    // How near a rival may stand (PHYS.PUSH_HALF): Jeff's sculpt stands 31.8 px
+    // in front of his centre in a guard, the ink line and a hair beyond
+    // (test/push.test.js). 32 until v3.23, when he stood taller and so broader.
+    pushHalf: 33,
     stats: { speed: 0.9, power: 1.2, hp: 108 },
     // ease: re-measured with v3.22's UNDERCUT (Rookie 49%, Contender 56%)
     ai: { aggr: 0.75, jump: 0.2, prefRange: 'close', ease: { intern: 0.17, founder: -0.04 } },
@@ -681,7 +697,7 @@ export const FIGHTERS = [
     // FIGURE (render-only, engine/figure.js): Soft all over: round shoulders, a belly, and nothing in the arms.
     figure: { muscle: 0.25, chest: 0.86, waist: 1.12, belly: 0.55, jaw: 0.94, neck: 0.9,
       costume: { fit: 'oversized', hem: 0.06, legs: 'baggy' } },
-    body: { height: 0.98, build: 1.14, reach: 0.96, stride: 0.94, shoulders: 1.08, head: 1.08 },
+    body: { height: 1.00, build: 1.14, reach: 0.96, stride: 0.98, shoulders: 1.08, head: 1.08 },
     stats: { speed: 1.1, power: 0.9, hp: 96 },
     ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid', ease: { intern: 0.09 } },
     c: { skin: '#ecc39e', suit: '#6d7382', suit2: '#4a4f5c', accent: '#29d9ff', hair: '#7a5230', pants: '#2c3040', shoe: '#f0f0f0' },

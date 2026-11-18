@@ -126,7 +126,9 @@ test('a sculpt built with long legs (fit.legs) is not stretched again by the str
     return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   };
   assert.ok(Math.abs(thigh(0.8) / thigh(1) - 1.25) < 1e-6, `${(thigh(0.8) / thigh(1)).toFixed(4)}`);
-  assert.equal(spec.fit.legs ?? 1, 1, "Jeff's legs are the reference");
+  // the reference is a body at stride 0.92, which was Jeff until v3.23 brought
+  // the cast's heights in: his own legs are as many times that as his stride
+  assert.ok(Math.abs(spec.fit.legs - getFighter('bozo').body.stride / 0.92) < 1e-3, `Jeff's fit.legs is ${spec.fit.legs}`);
 });
 
 // Brawling (data/forms.js), for the sculpted Adam: his own 2D guard, and a

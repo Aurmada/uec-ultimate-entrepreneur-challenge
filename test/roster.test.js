@@ -118,3 +118,18 @@ test('no two pale-haired fighters wear jackets of one colour family', () => {
     assert.ok(apart >= HUE_NEAR, `${a.name} and ${b.name}: pale hair and jackets ${apart.toFixed(0)} degrees of hue apart`);
   }
 });
+
+// The owner, shown the nine side by side (2026-11-16): the height difference
+// looked wrong, "bring the spread in". Cathie stood a third taller than Jeff.
+// A fighter stands as tall as their legs (stride) and trunk (height) make
+// them, the legs a little under half of it (the sculpts' hip is at 0.955 of
+// 1.955), and the nine now stand within 16% of one another, in the ladder's
+// order (fighters.js).
+test('the cast stand within 16% of one another, in the same order as before', () => {
+  const stand = (id) => { const b = FIGHTERS.find((f) => f.id === id).body; return 0.955 * b.stride + b.height; };
+  const ladder = ['zara', 'dex', 'bozo', 'scam', 'ava', 'kai', 'max', 'elo', 'eleanor'];   // shortest to tallest
+  assert.equal(ladder.length, FIGHTERS.length);
+  for (let i = 1; i < ladder.length; i++) assert.ok(stand(ladder[i]) > stand(ladder[i - 1]), `${ladder[i]} no longer stands over ${ladder[i - 1]}`);
+  const spread = stand('eleanor') / stand('zara');
+  assert.ok(spread > 1.12 && spread < 1.16, `the tallest stands ${spread.toFixed(3)} times the shortest`);
+});

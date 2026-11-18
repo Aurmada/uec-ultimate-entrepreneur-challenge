@@ -524,9 +524,14 @@ export const STYLIZE = {
   // 2.0px at 0.5 measured best and looked worst — the cast read as die-cut
   // stickers. The eye wins over the metric here: the line exists to make the
   // edge legible, not to be seen.
-  KEYLINE_PX: 2.0,
+  // v3.23: 1.2 px at 0.38, from 2.0 at 0.62. With the modelled light and a
+  // back light that wraps the outline, the full line was the most cut-out
+  // thing left in the picture (the owner agreed, 2026-11-17). With no line at
+  // all, black trousers on the garage's dark floor were lost (Elo, Carl), and
+  // legs are what a kick is read from, so it is thinned and faded, not removed.
+  KEYLINE_PX: 1.2,
   KEYLINE_COL: '#dce6ff',
-  KEYLINE_A: 0.62,
+  KEYLINE_A: 0.38,
   // The fighting face. Every founder used to stand in their idle wearing a
   // gentle closed-mouth smile — six disgraced executives beaming at the person
   // about to hit them. Nothing else on the character said "cartoon" as loudly.
