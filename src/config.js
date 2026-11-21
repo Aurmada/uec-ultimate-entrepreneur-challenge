@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.23';
+export const VERSION = 'v3.23.1';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -804,9 +804,15 @@ export const GL3D = {
   SKY: 0.12,
   RIM_SOFT: 0.10,
   GLOSS: {
-    skin: [0.16, 12], hair: [0.20, 22], shoe: [0.24, 34], brass: [0.6, 44], frame: [0.35, 44],
+    skin: [0, 12], hair: [0.08, 22], shoe: [0.24, 34], brass: [0.6, 44], frame: [0.35, 44],
     lens: [0.5, 70], case: [0.14, 20], other: [0.05, 8],
   },
+  // Skin and hair (v3.23.1, toon.js softOf): a face is a painted decal, and
+  // the light that models a coat made it a pale, waxy mask with grey smudges
+  // under the fringe (the owner: "the characters look really messed up").
+  // Their tones turn across HEAD.SOFT, not SOFT; they take HEAD.OCCLUSION of
+  // the baked shade and HEAD.SKY of the sky; skin has no highlight (GLOSS).
+  HEAD: { SOFT: 0.08, OCCLUSION: 0, SKY: 0 },
   SHADOW_TINT: [0.86, 0.88, 1.06],
   RIM: 0.40,
   RIM_COLOR: [0.5, 0.47, 0.42],   // the rim on the key side, scaled by RIM

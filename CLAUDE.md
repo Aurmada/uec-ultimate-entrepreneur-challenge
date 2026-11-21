@@ -6,7 +6,7 @@ Read in this order: `docs/HANDOFF.md` (where things stand, how the parts connect
 
 ## Branches
 
-- `main`: the live game (see `VERSION` in `src/config.js`; v3.23 in November 2026). It is 3D, and only 3D since v3.22.4 (the owner's call): 3D fighters, Blender-rendered stages and fighting-game effects, the roster in their sculpted models fighting in their own forms. A browser without WebGL2 is told so instead of being given the classic 2D game, and the 2D rig is kept for the lab alone (`RIG2D` in `src/engine/drawFighter.js`). `docs/HANDOFF.md` lists the other branches and which are released.
+- `main`: the live game (see `VERSION` in `src/config.js`; v3.23.1 in November 2026). It is 3D, and only 3D since v3.22.4 (the owner's call): 3D fighters, Blender-rendered stages and fighting-game effects, the roster in their sculpted models fighting in their own forms. A browser without WebGL2 is told so instead of being given the classic 2D game, and the 2D rig is kept for the lab alone (`RIG2D` in `src/engine/drawFighter.js`). `docs/HANDOFF.md` lists the other branches and which are released.
 - `live-3d` and `claude/game-review-enhance-29bffb`: the prototype's earlier branches, superseded by `main`. Work on the 3D path now branches from `main`.
 
 ## Run and test

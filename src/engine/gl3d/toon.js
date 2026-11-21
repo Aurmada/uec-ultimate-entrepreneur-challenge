@@ -263,6 +263,20 @@ export const roleColour = (palette, role, own) => {
 // role in shade ('suit*0.78') is its palette colour's material.
 export const glossOf = (role) => GL3D.GLOSS[String(role || '').split('*')[0]] || GL3D.GLOSS.other;
 
+// Skin and hair are lit their own way (GL3D.HEAD, v3.23.1): a face is a
+// painted decal on a smooth head, and the modelled light and the baked shade
+// that give a coat its folds made it a pale, waxy mask with grey smudges
+// under the fringe and round the eyes (the owner, 2026-11-21: "the
+// characters look really messed up"). Their tones turn across HEAD.SOFT, not
+// SOFT, so a face keeps a clean shadow side as in v3.22, they take
+// HEAD.OCCLUSION of the baked shade and HEAD.SKY of the sky (which paled a
+// forehead and the top of a cheek). At SOFT 0 everything is flat bands.
+const HEAD_ROLES = new Set(['skin', 'hair']);
+const onHead = (role) => HEAD_ROLES.has(String(role || '').split('*')[0]);
+export const softOf = (role) => (GL3D.SOFT > 0 && onHead(role) ? GL3D.HEAD.SOFT : GL3D.SOFT);
+export const occlusionOf = (role) => (onHead(role) ? GL3D.HEAD.OCCLUSION : GL3D.OCCLUSION);
+export const skyOf = (role) => (onHead(role) ? GL3D.HEAD.SKY : GL3D.SKY);
+
 // Three parts of a 3D fighter, each on in the game: the antialiased drawing
 // buffer (read when a context is made, so a change needs a new one:
 // gl3d/index.js dropLayer3D), the ink outline (the inflated hull drawn behind
@@ -641,6 +655,8 @@ export function createToon({ onScreen = null } = {}) {
           if (!ink) {
             gl.uniform3fv(loc.uColor, colours(p));
             gl.uniform2fv(loc.uGloss, glossOf(p.role));
+            gl.uniform3f(loc.uSoft, softOf(p.role), skyOf(p.role), GL3D.RIM_SOFT);
+            gl.uniform1f(loc.uOcc, occlusionOf(p.role));
           }
           if (alpha !== undefined) gl.uniform1f(loc.uAlpha, alpha);
           if (faced) gl.uniform4fv(loc.uFaceCell, face.cell);

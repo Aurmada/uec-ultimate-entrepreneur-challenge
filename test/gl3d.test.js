@@ -635,3 +635,31 @@ test('the key line is thin and faint, and still there', async () => {
   assert.ok(STYLIZE.KEYLINE_PX <= 1.5 && STYLIZE.KEYLINE_PX >= 1, `${STYLIZE.KEYLINE_PX} px`);
   assert.ok(STYLIZE.KEYLINE_A <= 0.45 && STYLIZE.KEYLINE_A >= 0.25, `alpha ${STYLIZE.KEYLINE_A}`);
 });
+
+// v3.23 lit skin and hair like cloth: the baked shade left grey smudges under
+// a fringe and round the eyes, the skin highlight and the sky washed a face
+// to a pale, waxy mask (the owner, 2026-11-21, with Cathie's portrait: "the
+// characters look really messed up - needs fixing"). Skin and hair take
+// their own softness, no baked shade, no sky, and skin no highlight.
+test('skin and hair are lit cleanly: no baked shade, no sky, no skin highlight, crisper tones', async () => {
+  const { GL3D } = await import('../src/config.js');
+  const { softOf, occlusionOf, skyOf, glossOf } = await import('../src/engine/gl3d/toon.js');
+  for (const role of ['skin', 'hair']) {
+    assert.equal(occlusionOf(role), 0, `${role} takes the baked shade`);
+    assert.equal(skyOf(role), 0, `${role} takes the sky`);
+    assert.ok(softOf(role) > 0 && softOf(role) < GL3D.SOFT / 2, `${role} turns tone to tone across ${softOf(role)}`);
+  }
+  assert.equal(glossOf('skin')[0], 0, 'skin has a highlight');
+  assert.ok(glossOf('hair')[0] <= 0.1, 'hair\'s highlight whitens it');
+  // cloth keeps the modelled light
+  for (const role of ['suit', 'pants', 'suit*0.78']) {
+    assert.equal(softOf(role), GL3D.SOFT);
+    assert.equal(occlusionOf(role), GL3D.OCCLUSION);
+    assert.equal(skyOf(role), GL3D.SKY);
+  }
+  // and at SOFT 0 everything, heads too, is the flat bands
+  const soft = GL3D.SOFT;
+  try { GL3D.SOFT = 0; assert.equal(softOf('skin'), 0); } finally { GL3D.SOFT = soft; }
+  const toon = readFileSync(new URL('../src/engine/gl3d/toon.js', import.meta.url), 'utf8');
+  assert.match(toon, /gl\.uniform3f\(loc\.uSoft, softOf\(p\.role\), skyOf\(p\.role\), GL3D\.RIM_SOFT\);\s*gl\.uniform1f\(loc\.uOcc, occlusionOf\(p\.role\)\);/);
+});

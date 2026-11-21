@@ -16,15 +16,18 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
+- **Built, not yet released:** v3.23.1 (2026-11-21), on `claude/v3.23`:
+  the faces fixed (see "v3.23.1"). Render only, `SIM_VERSION` still 15.
+  Waiting for the owner's word to push.
 - **Live:** v3.23, released 2026-11-17 (`VERSION` in `src/config.js`;
   `SIM_VERSION` 15 in `src/net/online.js`), with v3.22.5 inside it (v3.22.5
   was never released on its own). 3D only.
 - **What v3.23 changed:** the fighters in modelled light, all nine rebuilt
   with baked shade and cloth folds, the cast's heights brought in to about
   15%, and a thinner, fainter key line (see "v3.23"). It plays only v3.23
-  online. Not yet timed on a phone: run round thirteen of
-  `lab/phone-test.html` on the live site (its `d3-flat` setup says what the
-  new light costs), and tell the owner if it is over rule 9's budget.
+  online. Timed on the owner's phones 2026-11-20 (see "v3.23.1"): the new
+  light costs about a frame a second on the Ahlo 1 and nothing that shows
+  on the iPhones.
 - **What v3.22.5 changed:** a check of everything before launch: the fight
   sharp on a monitor, the share card cut from the 3D game, whole names on a
   phone, K.O.! alone, a larger VS splash, and the game's words without em
@@ -411,6 +414,40 @@ Everything below is how the game got here: each release with what changed,
 why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
+
+## v3.23.1, built 2026-11-21: the faces fixed
+
+The owner, four days after v3.23 went out, with a phone screenshot of
+Cathie's portrait: "the characters look really messed up - needs fixing".
+Rendered beside v3.22.4, every one of the nine had the same two faults, both
+from v3.23's light, which was tuned on bodies at fight size and never looked
+at in a portrait:
+
+- **Grey smudges** across the forehead under a fringe and round the eyes:
+  the baked shade (`occlude`) on the skin. A face is a painted decal on a
+  smooth head, and the hair sits a few millimetres off it, so every ray from
+  the forehead met the fringe.
+- **A pale, waxy mask**: the skin's broad highlight (`GLOSS.skin`) and the
+  sky term brightening every surface that faces up, which together washed
+  the painted features out.
+
+Switching each piece off in turn (`lab`-style renders of the nine portraits)
+put the blame there, and not on the face decals, which had scaled with each
+head when the heights were brought in. The fix is in `toon.js`: skin and
+hair are lit their own way (`softOf`, `occlusionOf`, `skyOf`, by role,
+from `GL3D.HEAD`): no baked shade, no sky, tones that turn across 0.08 of
+the key light's cosine (crisp, as v3.22's bands were, a little softened),
+no highlight on skin and a faint one on hair. Clothes keep everything v3.23
+gave them. The portraits now match v3.22.4's faces, and the fight at full
+size is unchanged but for the heads. Render only: `SIM_VERSION` stays 15.
+
+**The phone test** (round thirteen, rows 152 to 162 of `perf_reports`,
+2026-11-20 and 21, all on v3.23): the Ahlo 1 drew 19.5 frames a second in
+full (`d3`) and 20.8 and 20.0 with the flat bands (`d3-flat`), so the
+modelled light costs it about a frame a second; half resolution still gives
+28, which is where its governor settles. The owner's iPhones drew 55 to 60
+in full and the iPad 60, with nothing between `d3` and `d3-flat` beyond the
+noise between two runs of the same setup (`d3-again`). Within rule 9.
 
 ## v3.23, released 2026-11-17: modelled light, the cast rebuilt, heights brought in
 

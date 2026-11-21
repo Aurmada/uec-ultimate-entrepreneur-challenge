@@ -71,6 +71,10 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window): the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.23.1: faces fixed
+
+- 🙂 **Clean faces again.** v3.23's new light left grey smudges under the hair and washed faces out to a pale, waxy look. Skin and hair are now lit as they were before, while clothes keep the new light.
+
 ## What's new in v3.23: a new light on the fighters
 
 - 💡 **Modelled light.** Every fighter was drawn in three flat tones. They are now lit like solid figures: forms round into shadow, skin, hair and shoes catch a highlight, and each stage's back light traces the whole outline.
