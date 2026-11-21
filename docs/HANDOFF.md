@@ -16,12 +16,10 @@ step and no dependencies, and the repository is the website: GitHub Pages
 serves `main` at `https://aurmada.github.io/uec-ultimate-entrepreneur-challenge/`,
 so a push to `main` is a release.
 
-- **Built, not yet released:** v3.23.1 (2026-11-21), on `claude/v3.23`:
-  the faces fixed (see "v3.23.1"). Render only, `SIM_VERSION` still 15.
-  Waiting for the owner's word to push.
-- **Live:** v3.23, released 2026-11-17 (`VERSION` in `src/config.js`;
-  `SIM_VERSION` 15 in `src/net/online.js`), with v3.22.5 inside it (v3.22.5
-  was never released on its own). 3D only.
+- **Live:** v3.23.1, released 2026-11-21 (`VERSION` in `src/config.js`;
+  `SIM_VERSION` 15 in `src/net/online.js`). 3D only.
+- **What v3.23.1 changed:** the faces fixed: skin and hair lit as in v3.22.4,
+  clothes keeping v3.23's light (see "v3.23.1"). Render only.
 - **What v3.23 changed:** the fighters in modelled light, all nine rebuilt
   with baked shade and cloth folds, the cast's heights brought in to about
   15%, and a thinner, fainter key line (see "v3.23"). It plays only v3.23
@@ -153,8 +151,8 @@ In the order they pay off:
 
 | Branch | What it is | State |
 | --- | --- | --- |
-| `main` | The live game, v3.23 (`SIM_VERSION` 15): 3D only, the sculpted cast in modelled light | Deployed. A push here is a release. |
-| `claude/v3.23` | Modelled light, all nine rebuilt with baked shade and cloth folds, heights brought in, a thinner key line (see "v3.23") | Released as v3.23 on 2026-11-17 (the owner: "push"); `main` is this branch. |
+| `main` | The live game, v3.23.1 (`SIM_VERSION` 15): 3D only, the sculpted cast in modelled light, faces lit cleanly | Deployed. A push here is a release. |
+| `claude/v3.23` | Modelled light, all nine rebuilt with baked shade and cloth folds, heights brought in, a thinner key line (see "v3.23") | Released as v3.23 on 2026-11-17 and v3.23.1 on 2026-11-21 (the owner: "push" each time); `main` is this branch. |
 | `claude/v3.22.5` | The check before launch: sharp on a monitor, the share card, names on a phone, the words (see "v3.22.5") | Released inside v3.23 on 2026-11-17. |
 | `claude/v3.22.4` | 3D only: the notice without WebGL2, a match waiting for its fighters, the phone test and `lab/pixels.js` in 3D (see "v3.22.4") | Released in v3.22.4 on 2026-11-15, merged into `main`. |
 | `claude/v3.22.3` | The owner's calls of 2026-11-15: the shield against a grab, the pinned client, the boards, the ring light (see "v3.22.3") | Released in v3.22.3 on 2026-11-15, merged into `main`. |
@@ -415,7 +413,7 @@ why, what was measured and what was tried and dropped, then the work on
 branches, the 3D prototype's story, October's plan and the opening of this
 file as it stood on 2026-11-12.
 
-## v3.23.1, built 2026-11-21: the faces fixed
+## v3.23.1, released 2026-11-21: the faces fixed
 
 The owner, four days after v3.23 went out, with a phone screenshot of
 Cathie's portrait: "the characters look really messed up - needs fixing".
